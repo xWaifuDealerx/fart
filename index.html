@@ -146,6 +146,45 @@
   .btn.ghost:hover{border-color:var(--acid);color:var(--acid)}
   .btn .arrow{font-family:'VT323',monospace;font-size:18px}
 
+  /* contract address pill */
+  .ca-pill{
+    display:inline-flex;align-items:center;gap:12px;
+    margin-top:24px;padding:10px 14px;
+    border:1px solid var(--line);background:rgba(0,0,0,0.4);
+    font-family:'JetBrains Mono',monospace;font-size:12px;
+    cursor:pointer;transition:all .2s;
+    max-width:100%;
+    clip-path:polygon(0 0,calc(100% - 8px) 0,100% 8px,100% 100%,8px 100%,0 calc(100% - 8px));
+  }
+  .ca-pill:hover{
+    border-color:var(--acid);
+    background:rgba(182,255,61,0.04);
+    box-shadow:0 0 20px rgba(182,255,61,0.15);
+  }
+  .ca-pill .ca-label{
+    color:var(--magenta);letter-spacing:.2em;text-transform:uppercase;
+    font-size:11px;flex-shrink:0;
+  }
+  .ca-pill .ca-addr{
+    color:var(--ink);font-size:12px;letter-spacing:.02em;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    min-width:0;
+  }
+  .ca-pill .ca-copy{
+    display:inline-flex;align-items:center;gap:6px;
+    color:var(--acid);padding-left:12px;
+    border-left:1px solid var(--line);
+    font-size:11px;letter-spacing:.18em;text-transform:uppercase;
+    flex-shrink:0;
+  }
+  .ca-pill.copied{
+    border-color:var(--acid);
+    background:rgba(182,255,61,0.08);
+  }
+  .ca-pill.copied .ca-copy-text::before{content:"copied ✓";}
+  .ca-pill.copied .ca-copy-text{font-size:0}
+  .ca-pill.copied .ca-copy-text::before{font-size:11px}
+
   /* hero right - the printer */
   .hero-right{position:relative;display:flex;align-items:center;justify-content:center;min-height:520px}
   .printer-stage{
@@ -386,6 +425,8 @@
     .topbar{padding:12px 18px}
     .topbar .right{display:none}
     footer{padding:36px 28px}
+    .ca-pill{font-size:11px}
+    .ca-pill .ca-addr{font-size:11px}
   }
 
   /* selection */
@@ -426,6 +467,15 @@
     <div class="cta-row">
       <a class="btn" href="#stake">stake $fartprint <span class="arrow">→</span></a>
       <a class="btn ghost" href="#lore">read the lore <span class="arrow">↳</span></a>
+    </div>
+
+    <div class="ca-pill" id="ca-pill" data-ca="AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" title="Click to copy contract address">
+      <span class="ca-label">CA //</span>
+      <span class="ca-addr" id="ca-addr">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</span>
+      <span class="ca-copy">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span class="ca-copy-text">copy</span>
+      </span>
     </div>
   </div>
 
@@ -573,7 +623,7 @@
     <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">x / twitter</a>
     <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">telegram</a>
     <a href="#">docs</a>
-    <a href="#">contract</a>
+    <a href="#" class="ca-trigger">contract</a>
   </div>
   <div class="meta">
     <div>node://fartprint.art</div>
@@ -594,6 +644,51 @@
       }
     }, 600);
   }
+
+  // Copy contract address to clipboard
+  const CA = 'AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY';
+  const caPill = document.getElementById('ca-pill');
+
+  function copyCA(targetEl){
+    const target = targetEl || caPill;
+    const fallback = () => {
+      const ta = document.createElement('textarea');
+      ta.value = CA;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch(e){}
+      document.body.removeChild(ta);
+    };
+    const showCopied = () => {
+      if (!target) return;
+      target.classList.add('copied');
+      setTimeout(() => target.classList.remove('copied'), 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(CA).then(showCopied).catch(() => { fallback(); showCopied(); });
+    } else {
+      fallback(); showCopied();
+    }
+  }
+
+  if (caPill) {
+    caPill.addEventListener('click', () => copyCA(caPill));
+  }
+
+  // Footer "contract" link copies too
+  document.querySelectorAll('.ca-trigger').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      copyCA(caPill);
+      // brief flash on the link itself
+      const orig = el.textContent;
+      el.style.color = 'var(--acid)';
+      el.textContent = 'copied ✓';
+      setTimeout(() => { el.textContent = orig; el.style.color = ''; }, 1600);
+    });
+  });
 </script>
 </body>
 </html>
