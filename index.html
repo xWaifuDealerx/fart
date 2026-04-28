@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$FARTPRINT // printr.exe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Major+Mono+Display&family=JetBrains+Mono:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070b;
+    --bg-2:#0a0d14;
+    --ink:#e7ffe9;
+    --dim:#7a8b7d;
+    --acid:#b6ff3d;
+    --acid-2:#7dff8a;
+    --magenta:#ff2bd6;
+    --cyan:#3df5ff;
+    --violet:#a86bff;
+    --grid:rgba(182,255,61,0.06);
+    --line:rgba(182,255,61,0.18);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:'JetBrains Mono',monospace;overflow-x:hidden;scroll-behavior:smooth}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(255,43,214,0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 30%, rgba(61,245,255,0.08), transparent 60%),
+      radial-gradient(700px 400px at 50% 110%, rgba(182,255,61,0.10), transparent 60%),
+      var(--bg);
+    min-height:100vh;
+    position:relative;
+  }
+  /* scanline + grain */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:50;
+    background:repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 3px);
+    mix-blend-mode:overlay;
+  }
+  body::after{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:51;opacity:.18;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  /* grid background */
+  .grid-bg{
+    position:fixed;inset:0;z-index:-1;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:48px 48px;
+    mask-image:radial-gradient(ellipse at center, black 30%, transparent 80%);
+  }
+
+  /* ── TOP BAR ──────────────────────────── */
+  .topbar{
+    position:fixed;top:0;left:0;right:0;z-index:40;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 28px;font-size:11px;letter-spacing:.2em;
+    background:linear-gradient(180deg, rgba(6,7,11,0.9), rgba(6,7,11,0.5));
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+    text-transform:uppercase;
+  }
+  .topbar .left{display:flex;gap:24px;align-items:center}
+  .topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--acid);box-shadow:0 0 10px var(--acid);animation:blink 1.4s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  .topbar .right{display:flex;gap:18px;color:var(--dim)}
+  .topbar a{color:var(--ink);text-decoration:none;transition:color .2s}
+  .topbar a:hover{color:var(--acid)}
+
+  /* ── HERO ─────────────────────────────── */
+  .hero{
+    min-height:100vh;
+    display:grid;
+    grid-template-columns:1.1fr .9fr;
+    align-items:center;
+    padding:120px 64px 80px;
+    gap:48px;
+    position:relative;
+  }
+  .hero-left{position:relative;z-index:2}
+  .ticker{
+    font-family:'VT323',monospace;
+    font-size:14px;color:var(--acid);letter-spacing:.15em;
+    margin-bottom:20px;display:inline-flex;gap:12px;align-items:center;
+    padding:6px 12px;border:1px solid var(--line);
+    background:rgba(182,255,61,0.04);
+  }
+  .ticker .pulse{width:6px;height:6px;background:var(--acid);border-radius:50%;box-shadow:0 0 8px var(--acid);animation:blink 1s infinite}
+
+  h1.glitch{
+    font-family:'Major Mono Display',monospace;
+    font-size:clamp(48px, 9vw, 140px);
+    line-height:.92;
+    letter-spacing:-.02em;
+    color:var(--ink);
+    position:relative;
+    text-transform:lowercase;
+    margin-bottom:24px;
+  }
+  h1.glitch span{display:block}
+  h1.glitch .accent{
+    color:var(--acid);
+    text-shadow:0 0 30px rgba(182,255,61,.4);
+    position:relative;
+  }
+  h1.glitch .accent::before,
+  h1.glitch .accent::after{
+    content:attr(data-text);position:absolute;left:0;top:0;width:100%;height:100%;
+    mix-blend-mode:screen;opacity:.55;pointer-events:none;
+    filter:blur(0.6px);
+  }
+  h1.glitch .accent::before{color:var(--magenta);animation:gl1 6s ease-in-out infinite}
+  h1.glitch .accent::after{color:var(--cyan);animation:gl2 6s ease-in-out infinite}
+  @keyframes gl1{
+    0%,100%{transform:translate(0,0);opacity:.35}
+    25%{transform:translate(-1.5px,0.5px);opacity:.5}
+    50%{transform:translate(1px,-0.5px);opacity:.4}
+    75%{transform:translate(-0.5px,0.5px);opacity:.55}
+  }
+  @keyframes gl2{
+    0%,100%{transform:translate(0,0);opacity:.35}
+    25%{transform:translate(1.5px,-0.5px);opacity:.5}
+    50%{transform:translate(-1px,0.5px);opacity:.4}
+    75%{transform:translate(0.5px,-0.5px);opacity:.55}
+  }
+
+  .hero p.lede{
+    font-size:16px;line-height:1.7;color:#c9d4cb;max-width:520px;margin-bottom:32px;
+  }
+  .hero p.lede em{color:var(--acid);font-style:normal}
+
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:14px 22px;font-family:'JetBrains Mono',monospace;
+    font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+    text-decoration:none;border:1px solid var(--acid);
+    color:var(--bg);background:var(--acid);
+    transition:all .2s;cursor:pointer;
+    clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px));
+  }
+  .btn:hover{background:transparent;color:var(--acid);box-shadow:0 0 30px rgba(182,255,61,.35)}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+  .btn.ghost:hover{border-color:var(--acid);color:var(--acid)}
+  .btn .arrow{font-family:'VT323',monospace;font-size:18px}
+
+  /* hero right - the printer */
+  .hero-right{position:relative;display:flex;align-items:center;justify-content:center;min-height:520px}
+  .printer-stage{
+    position:relative;width:100%;max-width:480px;aspect-ratio:1;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ring{
+    position:absolute;inset:0;border-radius:50%;
+    border:1px solid rgba(182,255,61,0.2);
+  }
+  .ring.r2{inset:8%;border-color:rgba(255,43,214,0.18);border-style:dashed}
+  .ring.r3{inset:18%;border-color:rgba(61,245,255,0.15)}
+  .ring.r1{animation:spin 60s linear infinite}
+  .ring.r2{animation:spin 40s linear infinite reverse}
+  .ring.r3{animation:spin 80s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .ring-text{
+    position:absolute;inset:0;animation:spin 30s linear infinite;
+  }
+  .ring-text svg{width:100%;height:100%;overflow:visible}
+  .ring-text text{font-family:'VT323',monospace;font-size:14px;fill:var(--acid);letter-spacing:6px}
+
+  /* circular logo orb */
+  .logo-orb{
+    position:relative;z-index:3;
+    width:78%;aspect-ratio:1;
+    border-radius:50%;
+    overflow:hidden;
+    box-shadow:
+      0 0 0 1px rgba(182,255,61,0.3),
+      0 0 40px rgba(182,255,61,0.25),
+      0 0 80px rgba(255,43,214,0.15),
+      0 0 120px rgba(61,245,255,0.1);
+    animation:floatOrb 6s ease-in-out infinite;
+  }
+  @keyframes floatOrb{
+    0%,100%{transform:translateY(0)}
+    50%{transform:translateY(-10px)}
+  }
+  .logo-orb img{
+    width:108%;height:108%;
+    object-fit:cover;
+    object-position:center;
+    border-radius:50%;
+    display:block;
+    position:absolute;
+    top:-4%;left:-4%;
+    z-index:1;
+  }
+  /* glossy teardrop highlight overlay */
+  .logo-gloss{
+    position:absolute;inset:0;border-radius:50%;
+    pointer-events:none;z-index:2;
+    background:
+      radial-gradient(ellipse 55% 35% at 32% 22%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.12) 40%, rgba(255,255,255,0) 70%),
+      radial-gradient(ellipse 18% 7% at 70% 80%, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%);
+    mix-blend-mode:screen;
+  }
+  /* subtle inner rim */
+  .logo-rim{
+    position:absolute;inset:0;border-radius:50%;
+    pointer-events:none;z-index:2;
+    box-shadow:
+      inset 0 1px 2px rgba(255,255,255,0.2),
+      inset 0 -1px 4px rgba(0,0,0,0.25);
+  }
+
+  /* floating bills */
+  .bill{
+    position:absolute;font-family:'VT323',monospace;font-size:22px;
+    color:var(--acid-2);text-shadow:0 0 10px rgba(125,255,138,.6);
+    animation:fly 6s ease-in-out infinite;pointer-events:none;
+  }
+  .bill:nth-child(odd){color:var(--cyan);text-shadow:0 0 10px rgba(61,245,255,.5)}
+  .bill.b1{top:15%;left:8%;animation-delay:0s}
+  .bill.b2{top:45%;left:2%;animation-delay:1.2s}
+  .bill.b3{top:70%;left:12%;animation-delay:2.4s}
+  .bill.b4{top:20%;right:6%;animation-delay:.6s}
+  .bill.b5{top:55%;right:0%;animation-delay:1.8s}
+  .bill.b6{top:78%;right:10%;animation-delay:3s}
+  @keyframes fly{
+    0%,100%{transform:translateY(0) rotate(-8deg);opacity:.4}
+    50%{transform:translateY(-22px) rotate(8deg);opacity:1}
+  }
+
+  /* ── SECTION TITLES ───────────────────── */
+  .section{padding:120px 64px;position:relative}
+  .section-tag{
+    font-family:'VT323',monospace;font-size:14px;color:var(--magenta);
+    letter-spacing:.3em;margin-bottom:16px;text-transform:uppercase;
+    display:flex;align-items:center;gap:12px;
+  }
+  .section-tag::before{content:"";width:36px;height:1px;background:var(--magenta)}
+  .section h2{
+    font-family:'Major Mono Display',monospace;
+    font-size:clamp(36px, 6vw, 80px);line-height:.95;
+    margin-bottom:48px;text-transform:lowercase;letter-spacing:-.01em;
+  }
+  .section h2 em{color:var(--acid);font-style:normal}
+
+  /* ── LORE TERMINAL ────────────────────── */
+  .lore{
+    position:relative;
+  }
+  .terminal{
+    border:1px solid var(--line);background:rgba(10,13,20,0.7);
+    backdrop-filter:blur(6px);
+    max-width:880px;margin:0 auto;
+    box-shadow:0 0 60px rgba(182,255,61,.08), inset 0 0 80px rgba(0,0,0,.5);
+  }
+  .term-bar{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 16px;border-bottom:1px solid var(--line);
+    font-size:11px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;
+    background:rgba(0,0,0,.3);
+  }
+  .term-bar .dots{display:flex;gap:6px}
+  .term-bar .dots span{width:10px;height:10px;border-radius:50%;background:var(--dim)}
+  .term-bar .dots span:nth-child(1){background:#ff5f57}
+  .term-bar .dots span:nth-child(2){background:#febc2e}
+  .term-bar .dots span:nth-child(3){background:var(--acid)}
+  .term-body{
+    padding:32px 36px;font-size:14px;line-height:1.85;color:#c9d4cb;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .term-body .prompt{color:var(--acid)}
+  .term-body .cmd{color:var(--ink)}
+  .term-body .sys{color:var(--magenta);font-size:12px;letter-spacing:.1em}
+  .term-body p{margin-bottom:18px}
+  .term-body .highlight{color:var(--acid);background:rgba(182,255,61,.08);padding:0 4px}
+  .term-body .cyan{color:var(--cyan)}
+  .cursor{display:inline-block;width:9px;height:16px;background:var(--acid);vertical-align:middle;animation:blink 1s infinite}
+
+  /* ── HOW IT WORKS ─────────────────────── */
+  .steps{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--line);border:1px solid var(--line);
+  }
+  .step{
+    background:var(--bg-2);padding:40px 32px;position:relative;
+    transition:background .3s;
+  }
+  .step:hover{background:#0e1320}
+  .step .num{
+    font-family:'Major Mono Display',monospace;
+    font-size:64px;color:var(--acid);opacity:.3;line-height:1;margin-bottom:24px;
+  }
+  .step h3{
+    font-family:'JetBrains Mono',monospace;font-size:14px;
+    letter-spacing:.2em;text-transform:uppercase;margin-bottom:14px;color:var(--ink);
+  }
+  .step p{font-size:13px;line-height:1.7;color:var(--dim)}
+  .step .glyph{
+    position:absolute;top:24px;right:24px;
+    font-family:'VT323',monospace;font-size:18px;color:var(--magenta);opacity:.6;
+  }
+
+  /* ── STAKE PANEL ──────────────────────── */
+  .stake-simple{max-width:640px;margin:0 auto}
+  .stake-card{
+    border:1px solid var(--line);background:rgba(10,13,20,0.7);
+    backdrop-filter:blur(6px);padding:0;
+    box-shadow:0 0 80px rgba(182,255,61,.06), inset 0 0 60px rgba(0,0,0,.4);
+  }
+  .stake-head{
+    padding:20px 28px;border-bottom:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:11px;letter-spacing:.25em;text-transform:uppercase;color:var(--dim);
+  }
+  .stake-head .live{color:var(--acid);display:flex;align-items:center;gap:8px}
+  .stake-head .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--acid);box-shadow:0 0 8px var(--acid);animation:blink 1.2s infinite}
+  .stake-body{padding:36px 28px}
+  .stake-copy{
+    font-size:14px;line-height:1.8;color:#c9d4cb;margin-bottom:8px;
+  }
+  .acid-text{color:var(--acid)}
+
+  .input-block{margin-top:28px}
+  .input-block label{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:8px}
+  .input-row{
+    display:flex;align-items:center;gap:0;
+    border:1px solid var(--line);background:rgba(0,0,0,.4);
+  }
+  .input-row input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--ink);font-family:'JetBrains Mono',monospace;
+    font-size:18px;padding:14px 16px;letter-spacing:.05em;
+  }
+  .input-row input::placeholder{color:#3a4a3d}
+  .input-row .max{
+    padding:0 16px;font-size:11px;letter-spacing:.2em;color:var(--acid);
+    border-left:1px solid var(--line);height:48px;display:flex;align-items:center;
+    cursor:pointer;transition:background .2s;
+  }
+  .input-row .max:hover{background:rgba(182,255,61,.08)}
+  .stake-action{margin-top:20px;width:100%;justify-content:center}
+
+  /* ── MARQUEE ──────────────────────────── */
+  .marquee{
+    border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    overflow:hidden;padding:18px 0;
+    background:rgba(0,0,0,.3);
+  }
+  .marquee-track{
+    display:flex;gap:48px;white-space:nowrap;
+    animation:scroll 40s linear infinite;
+    font-family:'VT323',monospace;font-size:22px;
+    color:var(--acid);letter-spacing:.1em;
+  }
+  .marquee-track span{display:inline-flex;align-items:center;gap:12px}
+  .marquee-track .sep{color:var(--magenta)}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+
+  /* ── FOOTER ──────────────────────────── */
+  footer{
+    border-top:1px solid var(--line);padding:48px 64px 32px;
+    display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px;
+    font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+  }
+  footer .brand{
+    font-family:'Major Mono Display',monospace;font-size:28px;color:var(--ink);
+    text-transform:lowercase;letter-spacing:0;margin-bottom:8px;
+  }
+  footer .brand em{color:var(--acid);font-style:normal}
+  footer .sub{color:var(--dim);font-family:'VT323',monospace;font-size:14px;letter-spacing:.1em}
+  footer .links{display:flex;gap:24px}
+  footer a{color:var(--ink);text-decoration:none;border-bottom:1px solid transparent;transition:border-color .2s,color .2s}
+  footer a:hover{color:var(--acid);border-color:var(--acid)}
+  footer .meta{font-family:'VT323',monospace;font-size:13px;color:var(--dim);text-align:right}
+
+  /* ── RESPONSIVE ───────────────────────── */
+  @media (max-width:980px){
+    .hero{grid-template-columns:1fr;padding:120px 28px 60px}
+    .hero-right{min-height:380px}
+    .section{padding:80px 28px}
+    .steps{grid-template-columns:1fr}
+    .topbar{padding:12px 18px}
+    .topbar .right{display:none}
+    footer{padding:36px 28px}
+  }
+
+  /* selection */
+  ::selection{background:var(--acid);color:var(--bg)}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- ── TOPBAR ── -->
+<nav class="topbar">
+  <div class="left">
+    <span class="dot"></span>
+    <span><strong style="color:var(--acid)">$FARTPRINT</strong>&nbsp;//&nbsp;printr.exe</span>
+  </div>
+  <div class="right">
+    <a href="#lore">lore</a>
+    <a href="#flow">how it works</a>
+    <a href="#stake">stake</a>
+    <a href="https://x.com/FARTPRINT" target="_blank" rel="noopener">x</a>
+    <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">tg</a>
+    <a href="#" style="color:var(--acid)">[ launch app ]</a>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="ticker"><span class="pulse"></span> SYS://printr_v2.4.1 — methane levels: NOMINAL</div>
+    <h1 class="glitch">
+      <span>the printer</span>
+      <span>has a</span>
+      <span class="accent" data-text="fat ass.">fat ass.</span>
+    </h1>
+    <p class="lede">
+      $FARTPRINT is the gas-fueled reward layer of <em>printr</em> — a degenerate trading engine that converts every swap, every pump, every cope into <em>passive yield</em> for stakers. Lock the bag. Sit on the throne. Let the machine rip.
+    </p>
+    <div class="cta-row">
+      <a class="btn" href="#stake">stake $fartprint <span class="arrow">→</span></a>
+      <a class="btn ghost" href="#lore">read the lore <span class="arrow">↳</span></a>
+    </div>
+  </div>
+
+  <div class="hero-right">
+    <div class="printer-stage">
+      <div class="ring r1"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+      <div class="ring-text">
+        <svg viewBox="0 0 400 400">
+          <defs>
+            <path id="circle" d="M 200,200 m -170,0 a 170,170 0 1,1 340,0 a 170,170 0 1,1 -340,0" />
+          </defs>
+          <text><textPath href="#circle">BRRRRR — PFFFFTTTT — BRRRRR — PFFFFTTTT — GAINS LOADING — </textPath></text>
+        </svg>
+      </div>
+
+      <div class="bill b1">$</div>
+      <div class="bill b2">¥</div>
+      <div class="bill b3">€</div>
+      <div class="bill b4">$</div>
+      <div class="bill b5">฿</div>
+      <div class="bill b6">$</div>
+
+      <div class="logo-orb">
+        <img src="logo.png" alt="$FARTPRINT" />
+        <div class="logo-gloss"></div>
+        <div class="logo-rim"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── MARQUEE ── -->
+<div class="marquee">
+  <div class="marquee-track">
+    <span>★ printr.exe initialized</span><span class="sep">//</span>
+    <span>fees → stakers, always</span><span class="sep">//</span>
+    <span>methane: rising</span><span class="sep">//</span>
+    <span>the bag prints itself</span><span class="sep">//</span>
+    <span>BRRRRR — PFFFFTTTT</span><span class="sep">//</span>
+    <span>★ printr.exe initialized</span><span class="sep">//</span>
+    <span>fees → stakers, always</span><span class="sep">//</span>
+    <span>methane: rising</span><span class="sep">//</span>
+    <span>the bag prints itself</span><span class="sep">//</span>
+    <span>BRRRRR — PFFFFTTTT</span><span class="sep">//</span>
+  </div>
+</div>
+
+<!-- ── LORE ── -->
+<section class="section lore" id="lore">
+  <div class="section-tag">// 01 — origin.log</div>
+  <h2>the <em>fartprinter</em></h2>
+
+  <div class="terminal">
+    <div class="term-bar">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div>~/lore/fartprinter.log</div>
+      <div>READ-ONLY</div>
+    </div>
+    <div class="term-body">
+      <p><span class="sys">[ DECRYPTING NEON-NET ARCHIVE — 73% — 91% — DONE ]</span></p>
+      <p><span class="prompt">$</span> <span class="cmd">cat ./origin.log</span></p>
+
+      <p>Year 2069. The chain was clogged with cope. Dead memes drifted through the mempool like jellyfish in a dying sea. Liquidity had gone <span class="cyan">brain-dead</span>. The market needed something <span class="highlight">stupid enough to be alive</span>.</p>
+
+      <p>In a basement under Neo-Solana, a syndicate of degens fed a salvaged tax-printer their wallets, their dreams, and a single can of expired chili. They called it <span class="highlight">the FARTPRINTER</span> — a sentient machine that runs on methane, leverage, and pure unfiltered conviction.</p>
+
+      <p>It hummed. It groaned. It <span class="cyan">ripped one</span>. And out of that holy emission came the first $FARTPRINT — a token nobody asked for, but everybody <span class="highlight">needed</span>.</p>
+
+      <p>The legend says: every time a degen places a trade on <span class="cyan">printr</span>, the machine eats the slippage and exhales a fresh cloud of yield. The fees don't go to a treasury. They don't go to a VC. They go straight back to the stakers — the loyal few who plugged their bags into the exhaust pipe and <span class="highlight">refused to flinch</span>.</p>
+
+      <p>Some say the Fartprinter is just code. Others say it's a god of small intestines. Either way, when it rips, <span class="highlight">your wallet fills.</span></p>
+
+      <p><span class="sys">[ END OF LOG ]</span></p>
+      <p><span class="prompt">$</span> <span class="cmd">printr --start</span><span class="cursor"></span></p>
+    </div>
+  </div>
+</section>
+
+<!-- ── HOW IT WORKS ── -->
+<section class="section" id="flow">
+  <div class="section-tag">// 02 — protocol.flow</div>
+  <h2>how the <em>machine</em> rips</h2>
+
+  <div class="steps">
+    <div class="step">
+      <div class="glyph">{ 01 }</div>
+      <div class="num">01</div>
+      <h3>// degens trade</h3>
+      <p>Every swap, every leveraged long, every revenge short on <strong style="color:var(--acid)">printr</strong> generates trading fees. The machine eats the slippage.</p>
+    </div>
+    <div class="step">
+      <div class="glyph">{ 02 }</div>
+      <div class="num">02</div>
+      <h3>// methane builds</h3>
+      <p>Fees are routed into the exhaust chamber — no treasury cut, no VC dump-bag, no team unlock. Just raw, fermenting yield.</p>
+    </div>
+    <div class="step">
+      <div class="glyph">{ 03 }</div>
+      <div class="num">03</div>
+      <h3>// printr rips</h3>
+      <p>The Fartprinter exhales. Fees are distributed proportionally to every wallet staking <strong style="color:var(--acid)">$FARTPRINT</strong>. Real revenue. Real stink. Real gains.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── STAKE ── -->
+<section class="section" id="stake">
+  <div class="section-tag">// 03 — exhaust.port</div>
+  <h2>plug into the <em>exhaust</em></h2>
+
+  <div class="stake-simple">
+    <div class="stake-card">
+      <div class="stake-head">
+        <div>stake.module</div>
+        <div class="live">soon</div>
+      </div>
+      <div class="stake-body">
+        <p class="stake-copy">
+          Lock $FARTPRINT into the printr staking contract and receive a proportional cut of every fee the machine generates. <span class="acid-text">No emissions. No inflation.</span> Just real protocol revenue, piped straight into your bag for as long as the printer keeps ripping.
+        </p>
+
+        <div class="input-block">
+          <label>amount to stake</label>
+          <div class="input-row">
+            <input type="text" placeholder="0.00" />
+            <div class="max">MAX</div>
+          </div>
+        </div>
+
+        <a href="#" class="btn stake-action">connect wallet → rip <span class="arrow">⚡</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div>
+    <div class="brand">$<em>fartprint</em></div>
+    <div class="sub">// fartprint.art — printing gains since 2069</div>
+  </div>
+  <div class="links">
+    <a href="https://x.com/FARTPRINT" target="_blank" rel="noopener">x / twitter</a>
+    <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">telegram</a>
+    <a href="#">docs</a>
+    <a href="#">contract</a>
+  </div>
+  <div class="meta">
+    <div>node://fartprint.art</div>
+    <div style="color:var(--acid)">█ status: ripping</div>
+  </div>
+</footer>
+
+<script>
+  // Subtle drift on title accent
+  const accent = document.querySelector('.glitch .accent');
+  if (accent) {
+    accent.style.transition = 'transform 0.4s ease';
+    setInterval(() => {
+      if (Math.random() > 0.7) {
+        accent.style.transform = `translate(${(Math.random()-.5)*1.5}px, ${(Math.random()-.5)*0.8}px)`;
+      } else {
+        accent.style.transform = '';
+      }
+    }, 600);
+  }
+</script>
+</body>
+</html>
