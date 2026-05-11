@@ -709,7 +709,7 @@
 
   <!-- DEGEN CHAT (token-gated) -->
   <div class="panel col-12">
-    <h2>// DEGEN.CHAT <span class="tag" id="chatTag">[gated · 100,000 $FARTPRINT min]</span></h2>
+    <h2>// $FARTPRINT CHAT <span class="tag" id="chatTag">[gated · 100,000 min]</span></h2>
     <div id="chatPanel">
       <div class="loading">Initializing secure comms</div>
     </div>
@@ -1104,29 +1104,6 @@ async function loadMeta(){
 }
 
 // ===== FART INTEL: weird-but-interesting metrics =====
-const ORACLE = [
-  "the printr never sleeps.",
-  "fat ass detected on-chain.",
-  "diamond hands, gaseous bowels.",
-  "ascend or descend, the printer continues.",
-  "in printr we trust.",
-  "memecoin = ass = liquidity.",
-  "the gas is cheap, the dump is steep.",
-  "buying is for chads, selling is for fads.",
-  "your bags are heavy because they are full of methane.",
-  "the bonding curve waits for no man.",
-  "patience is a fart that will eventually be released.",
-  "wagmi, but the second m is silent.",
-  "do not let the candle enter your soul.",
-  "the chart only goes down because gravity is bullish.",
-  "every red candle is a story your therapist won't believe.",
-  "ngmi if you sniff before you sign.",
-  "liquidity is fleeting. the smell remains.",
-  "a wallet without conviction is a fart in a windstorm.",
-  "the printr knows when you blink.",
-  "all charts lead to the same toilet.",
-];
-
 function moodFromChange(ch){
   if(ch == null || isNaN(ch)) return { label: "UNKNOWN", cls: "" };
   if(ch >= 100) return { label: "ASCENDED",  cls: "up" };
@@ -1225,9 +1202,6 @@ function loadIntel(pairs){
   const score = fartIndex(main);
   const sLbl  = fartLabel(score);
 
-  // Rotate oracle line about once per minute so it's not jittery.
-  const oracle = ORACLE[Math.floor(Date.now() / 60000) % ORACLE.length];
-
   tag.textContent = "[" + sLbl.toLowerCase() + "]";
 
   const ratioStr = ratio === Infinity ? "∞" : ratio.toFixed(2);
@@ -1247,10 +1221,6 @@ function loadIntel(pairs){
     <div class="bonding-meter" style="margin-top:10px;">
       <div class="fill" style="width:${score}%"></div>
       <div class="lbl">${sLbl}</div>
-    </div>
-    <div class="small" style="margin-top:14px; color: var(--green-dim);">// ORACLE</div>
-    <div style="margin-top:4px; color: var(--green); font-style: italic; text-shadow: 0 0 4px var(--green-glow);">
-      &gt; ${oracle}
     </div>
   `;
 }
@@ -1574,6 +1544,9 @@ const Chat = {
   wallet: null,
   balance: 0,
   eligible: false,
+  checking: false,
+  balanceError: null,
+  connecting: false,
   es: null,
   seen: new Set(),
   // Periodic balance recheck handle
@@ -1587,30 +1560,44 @@ function getPhantom(){
 }
 
 async function fetchFartprintBalance(walletAddress){
-  try{
-    const result = await rpc("getTokenAccountsByOwner", [
-      walletAddress,
-      { mint: TOKEN },
-      { encoding: "jsonParsed" }
-    ]);
-    const accounts = result?.value || [];
-    let total = 0;
-    for(const acct of accounts){
-      total += acct.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
-    }
-    return total;
-  } catch(e){
-    console.error("[chat] balance fetch failed", e);
-    return 0;
-  }
+  // Race the RPC against a 15s timeout so a slow public node can't hang
+  // the chat UI indefinitely.
+  return await Promise.race([
+    (async () => {
+      const result = await rpc("getTokenAccountsByOwner", [
+        walletAddress,
+        { mint: TOKEN },
+        { encoding: "jsonParsed" }
+      ]);
+      const accounts = result?.value || [];
+      let total = 0;
+      for(const acct of accounts){
+        total += acct.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+      }
+      return total;
+    })(),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("rpc timeout")), 15000))
+  ]);
 }
 
 async function refreshChatBalance(){
   if(!Chat.wallet) return;
-  const bal = await fetchFartprintBalance(Chat.wallet);
-  Chat.balance = bal;
-  Chat.eligible = bal >= MIN_HOLD;
+  Chat.checking = true;
+  Chat.balanceError = null;
   renderChatPanel();
+  try{
+    const bal = await fetchFartprintBalance(Chat.wallet);
+    Chat.balance = bal;
+    Chat.eligible = bal >= MIN_HOLD;
+  } catch(e){
+    console.error("[chat] balance fetch failed", e);
+    Chat.balanceError = String(e.message || e);
+    Chat.balance = 0;
+    Chat.eligible = false;
+  } finally {
+    Chat.checking = false;
+    renderChatPanel();
+  }
 }
 
 async function connectWallet(){
@@ -1621,18 +1608,38 @@ async function connectWallet(){
     }
     return;
   }
+
+  // Show "CONNECTING..." button state immediately
+  Chat.connecting = true;
+  renderChatPanel();
+
+  let resp;
   try{
-    const resp = await phantom.connect();
-    Chat.wallet = resp.publicKey.toString();
-    try{ localStorage.setItem("fp_chat_trusted", "1"); }catch(_){}
-    await refreshChatBalance();
-    startChatStream();
-    await loadChatHistory();
-    if(Chat.balTimer) clearInterval(Chat.balTimer);
-    Chat.balTimer = setInterval(refreshChatBalance, 60000);
+    resp = await phantom.connect();
   } catch(e){
     console.warn("[chat] connect rejected", e);
+    Chat.connecting = false;
+    renderChatPanel();
+    return;
   }
+
+  // Capture wallet and render the connected state RIGHT AWAY so the user
+  // doesn't sit there waiting on the RPC call.
+  Chat.wallet = resp.publicKey.toString();
+  Chat.balance = 0;
+  Chat.eligible = false;
+  Chat.connecting = false;
+  Chat.checking = true;
+  Chat.balanceError = null;
+  try{ localStorage.setItem("fp_chat_trusted", "1"); }catch(_){}
+  renderChatPanel();
+
+  // All slow work runs in the background. UI updates as each finishes.
+  refreshChatBalance();
+  startChatStream();
+  loadChatHistory();
+  if(Chat.balTimer) clearInterval(Chat.balTimer);
+  Chat.balTimer = setInterval(refreshChatBalance, 60000);
 }
 
 async function disconnectWallet(){
@@ -1654,17 +1661,22 @@ async function tryAutoConnect(){
   let trusted = false;
   try{ trusted = localStorage.getItem("fp_chat_trusted") === "1"; }catch(_){}
   if(!trusted){ renderChatPanel(); return; }
+  let resp;
   try{
-    const resp = await phantom.connect({ onlyIfTrusted: true });
-    Chat.wallet = resp.publicKey.toString();
-    await refreshChatBalance();
-    startChatStream();
-    await loadChatHistory();
-    if(Chat.balTimer) clearInterval(Chat.balTimer);
-    Chat.balTimer = setInterval(refreshChatBalance, 60000);
+    resp = await phantom.connect({ onlyIfTrusted: true });
   } catch(_){
     renderChatPanel();
+    return;
   }
+  Chat.wallet = resp.publicKey.toString();
+  Chat.checking = true;
+  renderChatPanel();
+  // Background — don't await
+  refreshChatBalance();
+  startChatStream();
+  loadChatHistory();
+  if(Chat.balTimer) clearInterval(Chat.balTimer);
+  Chat.balTimer = setInterval(refreshChatBalance, 60000);
 }
 
 function startChatStream(){
@@ -1768,10 +1780,11 @@ function renderChatPanel(){
 
   // Not connected → CTA
   if(!Chat.wallet){
-    tag.textContent = "[disconnected]";
+    tag.textContent = Chat.connecting ? "[connecting]" : "[disconnected]";
+    const btnLabel = Chat.connecting ? "CONNECTING..." : "CONNECT PHANTOM";
     root.innerHTML = `
       <div class="chat-cta">
-        <button class="chat-btn big-btn" id="btnConnect">CONNECT PHANTOM</button>
+        <button class="chat-btn big-btn" id="btnConnect" ${Chat.connecting ? 'disabled' : ''}>${btnLabel}</button>
         <div class="pitch">
           Token-gated comms. Connect Phantom and hold at least
           <b style="color: var(--green); text-shadow:0 0 4px var(--green-glow);">100,000 $FARTPRINT</b>
@@ -1783,18 +1796,42 @@ function renderChatPanel(){
     return;
   }
 
-  // Connected
-  const eligible = Chat.eligible;
-  tag.textContent = eligible ? "[authorized]" : "[insufficient]";
+  // Connected — figure out display state
+  let statusHtml, statusKey;
+  if(Chat.checking){
+    statusKey = "checking";
+    statusHtml = `<span class="v">CHECKING<span class="blink">_</span></span>`;
+    tag.textContent = "[checking balance]";
+  } else if(Chat.balanceError){
+    statusKey = "error";
+    statusHtml = `<span class="v deny">RPC ERROR</span>`;
+    tag.textContent = "[rpc error]";
+  } else if(Chat.eligible){
+    statusKey = "ok";
+    statusHtml = `<span class="v ok">✓ AUTHORIZED</span>`;
+    tag.textContent = "[authorized]";
+  } else {
+    statusKey = "deny";
+    statusHtml = `<span class="v deny">✗ INSUFFICIENT</span>`;
+    tag.textContent = "[insufficient]";
+  }
+
+  const eligible = Chat.eligible && !Chat.checking && !Chat.balanceError;
   const need = Math.max(0, MIN_HOLD - Math.floor(Chat.balance));
+  const showNeed = !Chat.checking && !Chat.balanceError && !Chat.eligible;
+  const balanceText = Chat.checking
+    ? '—'
+    : (Chat.balanceError ? '?' : fmt(Chat.balance));
+
   root.innerHTML = `
     <div class="chat-wrap">
       <div class="chat-state">
         <div class="left">
           <span class="field"><span class="k">WALLET</span><span class="v"><a href="https://solscan.io/account/${Chat.wallet}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none; border-bottom:1px dotted var(--green-dim);">${shortAddr(Chat.wallet, 5)}</a></span></span>
-          <span class="field"><span class="k">BALANCE</span><span class="v">${fmt(Chat.balance)} $FARTPRINT</span></span>
-          <span class="field"><span class="k">STATUS</span><span class="v ${eligible ? 'ok' : 'deny'}">${eligible ? '✓ AUTHORIZED' : '✗ INSUFFICIENT'}</span></span>
-          ${!eligible ? `<span class="field"><span class="k">NEED</span><span class="v deny">+${fmt(need)}</span></span>` : ''}
+          <span class="field"><span class="k">BALANCE</span><span class="v">${balanceText} $FARTPRINT</span></span>
+          <span class="field"><span class="k">STATUS</span>${statusHtml}</span>
+          ${showNeed ? `<span class="field"><span class="k">NEED</span><span class="v deny">+${fmt(need)}</span></span>` : ''}
+          ${Chat.balanceError ? `<button class="chat-btn" id="btnRetry" style="font-size:11px; padding:4px 10px;">RETRY</button>` : ''}
         </div>
         <div class="right">
           <button class="chat-btn danger" id="btnDisconnect">DISCONNECT</button>
@@ -1821,6 +1858,7 @@ function renderChatPanel(){
   `;
 
   document.getElementById("btnDisconnect")?.addEventListener("click", disconnectWallet);
+  document.getElementById("btnRetry")?.addEventListener("click", refreshChatBalance);
 
   if(eligible){
     const input = document.getElementById("chatInput");
