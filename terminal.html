@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$FARTPRINT // TERMINAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #00ff66;
+    --green-dim: #00b347;
+    --green-dark: #003b1a;
+    --green-glow: #00ff6688;
+    --bg: #000800;
+    --panel-bg: rgba(0, 15, 5, 0.85);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--green);
+    font-family: 'Share Tech Mono', 'VT323', 'Courier New', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body {
+    position: relative;
+  }
+
+  /* Matrix rain canvas */
+  #matrix {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    opacity: 0.18;
+    pointer-events: none;
+  }
+
+  /* CRT scanlines overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,20,5,0.15) 3px,
+      rgba(0,20,5,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Subtle vignette */
+  body::after {
+    content: "";
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%);
+    pointer-events: none;
+    z-index: 998;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 24px 0 14px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .dollar-sign {
+    font-family: 'Consolas', 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;
+    font-weight: 900;
+    font-size: 96px;
+    line-height: 0.85;
+    color: var(--green);
+    text-shadow:
+      0 0 5px var(--green),
+      0 0 12px var(--green-glow),
+      0 0 24px var(--green-glow);
+    display: inline-block;
+    transform: translateY(2px);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .ascii-header {
+    color: var(--green);
+    text-shadow:
+      0 0 5px var(--green),
+      0 0 10px var(--green-glow),
+      0 0 20px var(--green-glow);
+    font-size: 13px;
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: pre;
+    margin: 0;
+    font-family: 'Consolas', 'Menlo', 'DejaVu Sans Mono', 'Courier New', monospace;
+    font-weight: 700;
+    font-variant-ligatures: none;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  @media (max-width: 900px) {
+    .ascii-header { font-size: 9px; }
+    .dollar-sign { font-size: 68px; }
+  }
+  @media (max-width: 600px) {
+    .ascii-header { font-size: 6px; }
+    .dollar-sign { font-size: 46px; }
+    .header-row { gap: 8px; }
+  }
+
+  .slogan {
+    text-align: center;
+    color: var(--green-dim);
+    font-size: 18px;
+    letter-spacing: 4px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 6px var(--green-glow);
+  }
+
+  .slogan::before { content: "[ "; }
+  .slogan::after { content: " ]"; }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid var(--green-dim);
+    padding: 8px 14px;
+    margin: 16px 0;
+    background: var(--panel-bg);
+    font-size: 13px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .topbar .left, .topbar .right {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .topbar .item .label {
+    color: var(--green-dim);
+    margin-right: 6px;
+  }
+
+  .topbar .item .val {
+    color: var(--green);
+    text-shadow: 0 0 4px var(--green-glow);
+  }
+
+  .ca-full {
+    font-size: 12px;
+    word-break: break-all;
+  }
+  @media (max-width: 700px) {
+    .ca-full { font-size: 10px; }
+  }
+
+  .blink {
+    animation: blink 1s steps(2, start) infinite;
+  }
+
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 16px;
+    margin-top: 8px;
+  }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--green-dim);
+    box-shadow:
+      0 0 10px rgba(0, 255, 102, 0.15),
+      inset 0 0 30px rgba(0, 255, 102, 0.04);
+    padding: 14px 16px;
+    min-height: 200px;
+    position: relative;
+  }
+
+  .panel::before {
+    content: "";
+    position: absolute;
+    top: -1px; left: -1px;
+    width: 12px; height: 12px;
+    border-top: 2px solid var(--green);
+    border-left: 2px solid var(--green);
+  }
+  .panel::after {
+    content: "";
+    position: absolute;
+    bottom: -1px; right: -1px;
+    width: 12px; height: 12px;
+    border-bottom: 2px solid var(--green);
+    border-right: 2px solid var(--green);
+  }
+
+  .panel h2 {
+    color: var(--green);
+    font-size: 15px;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed var(--green-dim);
+    text-shadow: 0 0 6px var(--green-glow);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .panel h2 .tag {
+    color: var(--green-dim);
+    font-size: 11px;
+  }
+
+  .col-4 { grid-column: span 4; }
+  .col-6 { grid-column: span 6; }
+  .col-8 { grid-column: span 8; }
+  .col-12 { grid-column: span 12; }
+
+  @media (max-width: 1024px) {
+    .col-4, .col-6, .col-8 { grid-column: span 12; }
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px 0;
+    border-bottom: 1px dotted rgba(0,255,102,0.15);
+    font-size: 14px;
+  }
+
+  .stat-row:last-child { border-bottom: 0; }
+
+  .stat-row .k {
+    color: var(--green-dim);
+  }
+
+  .stat-row .v {
+    color: var(--green);
+    text-shadow: 0 0 4px var(--green-glow);
+    text-align: right;
+  }
+
+  .up { color: #6dff00 !important; }
+  .down { color: #ff5050 !important; text-shadow: 0 0 4px #ff5050aa !important; }
+
+  table.t {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  table.t th, table.t td {
+    text-align: left;
+    padding: 5px 8px 5px 0;
+    border-bottom: 1px dotted rgba(0,255,102,0.15);
+  }
+
+  table.t th {
+    color: var(--green-dim);
+    font-weight: normal;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 11px;
+    border-bottom: 1px solid var(--green-dim);
+  }
+
+  table.t td {
+    color: var(--green);
+  }
+
+  table.t tr:hover td {
+    background: rgba(0, 255, 102, 0.06);
+    color: #aaffbe;
+  }
+
+  .rank {
+    color: var(--green-dim);
+    width: 24px;
+  }
+
+  .addr {
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--green);
+  }
+
+  .addr a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted var(--green-dim);
+  }
+  .addr a:hover {
+    color: #aaffbe;
+    border-bottom-color: var(--green);
+    text-shadow: 0 0 6px var(--green-glow);
+  }
+
+  .pct-bar {
+    height: 4px;
+    background: rgba(0,255,102,0.1);
+    margin-top: 3px;
+    width: 100%;
+    position: relative;
+  }
+  .pct-bar > span {
+    display: block;
+    height: 100%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green);
+  }
+
+  .loading {
+    color: var(--green-dim);
+    font-style: italic;
+    padding: 10px 0;
+  }
+  .loading::after {
+    content: "...";
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: "."; }
+    40% { content: ".."; }
+    60%, 100% { content: "..."; }
+  }
+
+  .err {
+    color: #ff7575;
+    padding: 8px 0;
+    font-size: 12px;
+  }
+
+  .footer {
+    margin-top: 30px;
+    padding: 12px 0;
+    border-top: 1px dashed var(--green-dim);
+    color: var(--green-dim);
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .footer a { color: var(--green); text-decoration: none; }
+  .footer a:hover { text-shadow: 0 0 6px var(--green-glow); }
+
+  .price-big {
+    font-size: 36px;
+    text-shadow: 0 0 12px var(--green);
+    letter-spacing: 2px;
+    margin: 6px 0 2px;
+  }
+
+  .price-change {
+    font-size: 14px;
+    margin-bottom: 14px;
+  }
+
+  .bonding-meter {
+    height: 22px;
+    background: rgba(0,255,102,0.08);
+    border: 1px solid var(--green-dim);
+    position: relative;
+    margin-top: 12px;
+    margin-bottom: 6px;
+  }
+  .bonding-meter > .fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, var(--green-dim), var(--green));
+    box-shadow: 0 0 12px var(--green);
+    transition: width 0.6s ease;
+  }
+  .bonding-meter > .lbl {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #000;
+    font-weight: bold;
+    mix-blend-mode: screen;
+    letter-spacing: 2px;
+  }
+
+  .badge {
+    display: inline-block;
+    border: 1px solid var(--green-dim);
+    padding: 1px 6px;
+    font-size: 10px;
+    color: var(--green-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .badge.live { color: var(--green); border-color: var(--green); animation: pulse 1.6s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
+    50% { opacity: 0.55; box-shadow: 0 0 1px var(--green); }
+  }
+
+  .scroll-x { overflow-x: auto; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #000; }
+  ::-webkit-scrollbar-thumb { background: var(--green-dark); border: 1px solid var(--green-dim); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--green-dim); }
+
+  .copy-btn {
+    cursor: pointer;
+    color: var(--green-dim);
+    margin-left: 6px;
+    font-size: 11px;
+    border: 1px solid var(--green-dim);
+    padding: 0 5px;
+    background: transparent;
+    font-family: inherit;
+  }
+  .copy-btn:hover { color: var(--green); border-color: var(--green); }
+
+  .small { font-size: 11px; color: var(--green-dim); }
+
+  /* ===== Chat ===== */
+  .chat-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .chat-state {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border: 1px dashed var(--green-dim);
+    background: rgba(0, 15, 5, 0.5);
+    font-size: 13px;
+  }
+  .chat-state .left, .chat-state .right {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .chat-state .field .k {
+    color: var(--green-dim);
+    margin-right: 5px;
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .chat-state .field .v {
+    color: var(--green);
+    text-shadow: 0 0 4px var(--green-glow);
+  }
+  .chat-state .ok { color: var(--green); }
+  .chat-state .deny { color: #ff7575; text-shadow: 0 0 4px #ff757588; }
+
+  .chat-log {
+    height: 280px;
+    overflow-y: auto;
+    border: 1px solid var(--green-dim);
+    padding: 10px 12px;
+    background: rgba(0, 15, 5, 0.6);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .chat-msg {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 2px 0;
+    line-height: 1.4;
+  }
+  .chat-msg .ts {
+    color: var(--green-dim);
+    font-size: 11px;
+    width: 52px;
+    flex-shrink: 0;
+  }
+  .chat-msg .who {
+    color: var(--green);
+    font-size: 12px;
+    width: 96px;
+    flex-shrink: 0;
+    opacity: 0.8;
+  }
+  .chat-msg.me .who { color: #6dff00; text-shadow: 0 0 4px var(--green-glow); opacity: 1; }
+  .chat-msg .arrow {
+    color: var(--green-dim);
+    flex-shrink: 0;
+  }
+  .chat-msg .text {
+    color: var(--green);
+    word-break: break-word;
+    flex: 1;
+    text-shadow: 0 0 3px var(--green-glow);
+  }
+  .chat-system {
+    color: var(--green-dim);
+    font-style: italic;
+    padding: 2px 0;
+  }
+
+  .chat-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .chat-prompt {
+    color: var(--green);
+    font-weight: bold;
+    text-shadow: 0 0 6px var(--green-glow);
+  }
+  .chat-input {
+    flex: 1;
+    background: rgba(0, 15, 5, 0.6);
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 12px;
+    outline: none;
+    caret-color: var(--green);
+  }
+  .chat-input::placeholder { color: var(--green-dim); opacity: 0.7; }
+  .chat-input:focus {
+    border-color: var(--green);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+  .chat-input:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .chat-btn {
+    background: transparent;
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 9px 16px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .chat-btn:hover:not(:disabled) {
+    border-color: var(--green);
+    background: rgba(0, 255, 102, 0.08);
+    text-shadow: 0 0 6px var(--green-glow);
+    box-shadow: 0 0 8px var(--green-glow);
+  }
+  .chat-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .chat-btn.danger { border-color: #ff7575; color: #ff7575; }
+  .chat-btn.danger:hover:not(:disabled) {
+    background: rgba(255, 117, 117, 0.08);
+    box-shadow: 0 0 8px #ff757588;
+  }
+
+  .chat-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 10px;
+    border: 1px dashed var(--green-dim);
+    background: rgba(0, 15, 5, 0.5);
+  }
+  .chat-cta .pitch {
+    color: var(--green-dim);
+    text-align: center;
+    max-width: 480px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .chat-cta .big-btn {
+    font-size: 14px;
+    padding: 12px 22px;
+    letter-spacing: 3px;
+  }
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+
+<div class="wrap">
+
+<div class="header-row">
+  <pre class="ascii-header" id="asciiHeader">███████╗ █████╗ ██████╗ ████████╗██████╗ ██████╗ ██╗███╗   ██╗████████╗
+██╔════╝██╔══██╗██╔══██╗╚══██╔══╝██╔══██╗██╔══██╗██║████╗  ██║╚══██╔══╝
+█████╗  ███████║██████╔╝   ██║   ██████╔╝██████╔╝██║██╔██╗ ██║   ██║
+██╔══╝  ██╔══██║██╔══██╗   ██║   ██╔═══╝ ██╔══██╗██║██║╚██╗██║   ██║
+██║     ██║  ██║██║  ██║   ██║   ██║     ██║  ██║██║██║ ╚████║   ██║
+╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝     ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝   ╚═╝</pre>
+</div>
+
+<div class="slogan">THE PRINTR HAS A FAT ASS 3~</div>
+
+<div class="topbar">
+  <div class="left">
+    <span class="badge live">● LIVE</span>
+    <span class="item ca-item"><span class="label">CONTRACT:</span>
+      <span class="val addr ca-full">
+        <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</a>
+      </span>
+      <button class="copy-btn" onclick="copyCA()">[COPY]</button>
+    </span>
+  </div>
+  <div class="right">
+    <span class="item"><span class="label">LAST SYNC:</span><span class="val" id="lastSync">--:--:--</span></span>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- PRICE / MARKET STATS -->
+  <div class="panel col-4">
+    <h2>// MARKET FEED <span class="tag" id="priceTag">[dexscreener]</span></h2>
+    <div id="priceBlock">
+      <div class="loading">Establishing uplink</div>
+    </div>
+  </div>
+
+  <!-- BONDING CURVE -->
+  <div class="panel col-4">
+    <h2>// BONDING CURVE <span class="tag" id="bcTag">[status]</span></h2>
+    <div id="bondingBlock">
+      <div class="loading">Probing curve</div>
+    </div>
+  </div>
+
+  <!-- TOKEN INFO -->
+  <div class="panel col-4">
+    <h2>// TOKEN MANIFEST <span class="tag">[on-chain]</span></h2>
+    <div id="metaBlock">
+      <div class="loading">Pulling manifest</div>
+    </div>
+  </div>
+
+  <!-- FART INTEL -->
+  <div class="panel col-6">
+    <h2>// FART INTEL <span class="tag" id="intelTag">[anomaly scan]</span></h2>
+    <div id="intelBlock">
+      <div class="loading">Running degen diagnostics</div>
+    </div>
+  </div>
+
+  <!-- LIQUIDITY POOLS -->
+  <div class="panel col-6">
+    <h2>// LIQUIDITY POOLS <span class="tag">[dex routes]</span></h2>
+    <div class="scroll-x" id="poolsBlock">
+      <div class="loading">Tracing liquidity</div>
+    </div>
+  </div>
+
+  <!-- STAKING (PRINTR POB) -->
+  <div class="panel col-6">
+    <h2>// POB STAKING <span class="tag" id="stakeTag">[printr.money]</span></h2>
+    <div id="stakeBlock">
+      <div class="loading">Querying belief pool</div>
+    </div>
+  </div>
+
+  <!-- STAKER PAYOUTS -->
+  <div class="panel col-6">
+    <h2>// STAKER PAYOUTS <span class="tag" id="payoutTag">[fee flow]</span></h2>
+    <div id="payoutBlock">
+      <div class="loading">Counting printed rewards</div>
+    </div>
+  </div>
+
+  <!-- TRANSACTIONS -->
+  <div class="panel col-12">
+    <h2>// LAST TRANSACTIONS <span class="tag">[mempool sniffer]</span></h2>
+    <div class="scroll-x" id="txBlock">
+      <div class="loading">Sniffing tx feed</div>
+    </div>
+  </div>
+
+  <!-- DEGEN CHAT (token-gated) -->
+  <div class="panel col-12">
+    <h2>// $FARTPRINT CHAT <span class="tag" id="chatTag">[gated · 100,000 min]</span></h2>
+    <div id="chatPanel">
+      <div class="loading">Initializing secure comms</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="footer">
+  <div>
+    <span>// $FARTPRINT TERMINAL v0.2.0</span> &nbsp;
+    <a href="index.html">[ ← ECOSYSTEM ]</a>
+    <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">[ SOLSCAN ]</a>
+    <a href="https://dexscreener.com/solana/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">[ DEXSCREENER ]</a>
+    <a href="https://birdeye.so/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY?chain=solana" target="_blank" rel="noopener">[ BIRDEYE ]</a>
+    <a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">[ PRINTR ]</a>
+  </div>
+  <div class="small">THE PRINTR REMAINS THICC.</div>
+</div>
+
+</div>
+
+<script>
+// ===== Configuration =====
+const TOKEN = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const REFRESH_MS = 30000;
+
+// Free public Solana RPC. Mainnet-beta has tight rate limits; fall back if it errors.
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana"
+];
+
+// ===== Helpers =====
+function $(id){ return document.getElementById(id); }
+
+function fmt(n, dec){
+  if(n === null || n === undefined || isNaN(n)) return "--";
+  const num = Number(n);
+  if(num === 0) return "0";
+  if(num < 0.000001) return num.toExponential(3);
+  if(num < 1) return num.toFixed(Math.max(dec ?? 6, 6));
+  if(num < 1000) return num.toLocaleString(undefined,{maximumFractionDigits: dec ?? 4});
+  if(num < 1e6) return num.toLocaleString(undefined,{maximumFractionDigits: 0});
+  if(num < 1e9) return (num/1e6).toFixed(2) + "M";
+  if(num < 1e12) return (num/1e9).toFixed(2) + "B";
+  return (num/1e12).toFixed(2) + "T";
+}
+
+function fmtUsd(n){
+  if(n === null || n === undefined || isNaN(n)) return "$--";
+  const num = Number(n);
+  if(num < 0.01) return "$" + num.toFixed(8).replace(/0+$/,"").replace(/\.$/,"");
+  if(num < 1) return "$" + num.toFixed(6);
+  if(num < 1000) return "$" + num.toFixed(4);
+  return "$" + fmt(num);
+}
+
+function shortAddr(a, l){
+  if(!a) return "--";
+  l = l || 4;
+  if(a.length <= l*2 + 3) return a;
+  return a.slice(0, l) + "..." + a.slice(-l);
+}
+
+function ago(ts){
+  if(!ts) return "--";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if(d < 60) return d + "s ago";
+  if(d < 3600) return Math.floor(d/60) + "m ago";
+  if(d < 86400) return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+
+function setLastSync(){
+  const d = new Date();
+  $("lastSync").textContent = d.toTimeString().slice(0,8);
+}
+
+async function rpc(method, params){
+  let lastErr;
+  for(const url of RPCS){
+    try{
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({jsonrpc: "2.0", id: 1, method, params})
+      });
+      if(!r.ok){ lastErr = new Error("HTTP " + r.status); continue; }
+      const j = await r.json();
+      if(j.error){ lastErr = new Error(j.error.message); continue; }
+      return j.result;
+    } catch(e){
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error("All RPCs failed");
+}
+
+function copyCA(){
+  navigator.clipboard?.writeText(TOKEN);
+  const btn = event.target;
+  const orig = btn.textContent;
+  btn.textContent = "[COPIED]";
+  setTimeout(() => { btn.textContent = orig; }, 1200);
+}
+
+// ===== Data loaders =====
+
+async function loadDexScreener(){
+  const url = "https://api.dexscreener.com/latest/dex/tokens/" + TOKEN;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("dexscreener http " + r.status);
+  const j = await r.json();
+  const pairs = j.pairs || [];
+  recomputeMarketContext(pairs);
+  return pairs;
+}
+
+// Market-level context derived once per refresh: best known SOL/USD rate and
+// best known FARTPRINT/USD price. Used by the liquidity fallback.
+let _solUsd = 0;
+let _bestFartUsd = 0;
+
+const STABLE_SET = new Set(["USDC", "USDT", "USDS", "USDP", "USDH", "PYUSD", "DAI", "UXD", "USDR", "FDUSD"]);
+const SOL_SET    = new Set(["SOL", "WSOL", "WRAPPED SOL", "WRAPPED-SOL", "W-SOL"]);
+
+function recomputeMarketContext(pairs){
+  let solUsd = 0, fartUsd = 0;
+  for(const p of pairs){
+    const qs = (p?.quoteToken?.symbol || "").toUpperCase();
+    const pu = Number(p?.priceUsd) || 0;
+    const pn = Number(p?.priceNative) || 0;
+    if(pu > 0 && !fartUsd) fartUsd = pu;
+    if(SOL_SET.has(qs) && pu > 0 && pn > 0 && !solUsd){
+      solUsd = pu / pn;
+    }
+  }
+  _solUsd = solUsd;
+  _bestFartUsd = fartUsd;
+}
+
+// DexScreener sometimes omits liquidity.usd for newer / non-standard AMMs
+// (Meteora DBC and DLMM most notably). Derive USD from base/quote token
+// amounts plus the price feed, with SOL/WSOL conversion and bonding-curve
+// awareness (curves are single-sided so we don't double the value).
+function poolLiquidityUsd(p){
+  if(p?.liquidity?.usd && Number(p.liquidity.usd) > 0) return Number(p.liquidity.usd);
+
+  const baseAmt  = Number(p?.liquidity?.base) || 0;
+  const quoteAmt = Number(p?.liquidity?.quote) || 0;
+  const priceUsd = Number(p?.priceUsd) || _bestFartUsd || 0;
+  const quoteSym = (p?.quoteToken?.symbol || "").toUpperCase();
+  const dexId    = (p?.dexId || "").toLowerCase();
+  const labels   = (p?.labels || []).map(l => String(l).toLowerCase());
+  const isCurve  = dexId.includes("pump") || dexId.includes("dbc") ||
+                   labels.some(l => /dbc|bonding|curve/.test(l));
+
+  let qUsd = 0, bUsd = 0;
+  if(baseAmt > 0 && priceUsd > 0) bUsd = baseAmt * priceUsd;
+  if(quoteAmt > 0){
+    if(STABLE_SET.has(quoteSym)) qUsd = quoteAmt;
+    else if(SOL_SET.has(quoteSym) && _solUsd > 0) qUsd = quoteAmt * _solUsd;
+  }
+
+  // Bonding curves are single-sided. Don't double.
+  if(isCurve){
+    if(qUsd > 0) return qUsd;
+    if(bUsd > 0) return bUsd;
+    return null;
+  }
+
+  // AMM: sum both sides if we have them, else 2x the known side.
+  if(qUsd > 0 && bUsd > 0) return qUsd + bUsd;
+  if(qUsd > 0) return qUsd * 2;
+  if(bUsd > 0) return bUsd * 2;
+  return null;
+}
+
+// Last-resort enrichment: hit Meteora's own public APIs for pools where
+// DexScreener gave us nothing usable. CORS-permitting, this works in-browser.
+async function meteoraLiquidityProbe(pairAddress, dexId){
+  const dex = (dexId || "").toLowerCase();
+  const urls = [];
+  if(dex.includes("dlmm")) urls.push(`https://dlmm-api.meteora.ag/pair/${pairAddress}`);
+  if(dex.includes("meteora")){
+    urls.push(`https://amm-v2.meteora.ag/pools/${pairAddress}`);
+    urls.push(`https://dbc-api.meteora.ag/pool/${pairAddress}`);
+  }
+  for(const url of urls){
+    try{
+      const r = await fetch(url);
+      if(!r.ok) continue;
+      const j = await r.json();
+      // Common Meteora shapes
+      const candidates = [
+        j.liquidity, j.pool_tvl, j.usd_value, j.tvl,
+        j?.metrics?.tvl, j?.metrics?.liquidity
+      ];
+      for(const c of candidates){
+        const n = Number(c);
+        if(n > 0) return n;
+      }
+      // DLMM: compute from reserves if we have SOL price
+      if(j.reserve_x_amount && j.reserve_y_amount && _solUsd > 0){
+        const xDec = Number(j.token_x_decimal) || 9;
+        const yDec = Number(j.token_y_decimal) || 9;
+        const x = Number(j.reserve_x_amount) / Math.pow(10, xDec);
+        const y = Number(j.reserve_y_amount) / Math.pow(10, yDec);
+        // Which side is SOL? Mint y === wSOL normally for Meteora pairs.
+        if(j.mint_y === "So11111111111111111111111111111111111111112") return y * _solUsd * 2;
+        if(j.mint_x === "So11111111111111111111111111111111111111112") return x * _solUsd * 2;
+      }
+    } catch(_){ /* CORS or network — try next */ }
+  }
+  return null;
+}
+
+async function enrichMissingLiquidity(){
+  const cells = document.querySelectorAll('td[data-needs-liq="1"]');
+  for(const cell of cells){
+    const addr = cell.getAttribute('data-pair');
+    const dex  = cell.getAttribute('data-dex');
+    if(!addr) continue;
+    const v = await meteoraLiquidityProbe(addr, dex);
+    if(v != null){
+      cell.textContent = "~" + fmtUsd(v);
+      cell.removeAttribute('data-needs-liq');
+    } else {
+      cell.textContent = "n/a";
+      cell.title = "DexScreener and Meteora API both returned no liquidity for this pool";
+    }
+  }
+}
+
+function renderPrice(pairs){
+  const root = $("priceBlock");
+  if(!pairs || pairs.length === 0){
+    root.innerHTML = '<div class="err">No active pairs found on DexScreener.</div>';
+    return;
+  }
+  // Pick the pair with the highest liquidity (using derived fallback)
+  const sorted = [...pairs].sort((a,b) => (poolLiquidityUsd(b) || 0) - (poolLiquidityUsd(a) || 0));
+  const main = sorted[0];
+
+  const price = parseFloat(main.priceUsd);
+  const ch1 = main.priceChange?.h1;
+  const ch24 = main.priceChange?.h24;
+  const mcap = main.marketCap || main.fdv;
+  const fdv = main.fdv;
+  const vol24 = main.volume?.h24;
+  // Total liquidity across all pairs (with derived fallback for Meteora etc.)
+  const liq = pairs.reduce((sum, p) => sum + (poolLiquidityUsd(p) || 0), 0);
+  const buys = main.txns?.h24?.buys;
+  const sells = main.txns?.h24?.sells;
+
+  const ch1Cls = (ch1 ?? 0) >= 0 ? "up" : "down";
+  const ch24Cls = (ch24 ?? 0) >= 0 ? "up" : "down";
+  const sign1 = (ch1 ?? 0) >= 0 ? "+" : "";
+  const sign24 = (ch24 ?? 0) >= 0 ? "+" : "";
+
+  root.innerHTML = `
+    <div class="price-big">${fmtUsd(price)}</div>
+    <div class="price-change">
+      <span class="${ch1Cls}">${sign1}${(ch1 ?? 0).toFixed(2)}% 1h</span> &nbsp;|&nbsp;
+      <span class="${ch24Cls}">${sign24}${(ch24 ?? 0).toFixed(2)}% 24h</span>
+    </div>
+    <div class="stat-row"><span class="k">MARKET CAP</span><span class="v">${fmtUsd(mcap)}</span></div>
+    <div class="stat-row"><span class="k">FDV</span><span class="v">${fmtUsd(fdv)}</span></div>
+    <div class="stat-row"><span class="k">24H VOLUME</span><span class="v">${fmtUsd(vol24)}</span></div>
+    <div class="stat-row"><span class="k">TOTAL LIQUIDITY</span><span class="v">${fmtUsd(liq)}</span></div>
+    <div class="stat-row"><span class="k">24H BUYS / SELLS</span><span class="v"><span class="up">${buys ?? "--"}</span> / <span class="down">${sells ?? "--"}</span></span></div>
+    <div class="stat-row"><span class="k">PAIRS</span><span class="v">${pairs.length}</span></div>
+  `;
+  return main;
+}
+
+function renderPools(pairs){
+  const root = $("poolsBlock");
+  if(!pairs || pairs.length === 0){
+    root.innerHTML = '<div class="err">No liquidity pools detected.</div>';
+    return;
+  }
+  const enriched = pairs.map(p => ({...p, _liqUsd: poolLiquidityUsd(p)}));
+  const sorted = [...enriched].sort((a,b) => (b._liqUsd || 0) - (a._liqUsd || 0));
+  const rows = sorted.slice(0, 12).map((p,i) => {
+    const dex = p.dexId || "?";
+    const base = p.baseToken?.symbol || "?";
+    const quote = p.quoteToken?.symbol || "?";
+    const liq = p._liqUsd;
+    const vol = p.volume?.h24 || 0;
+    const pairUrl = p.url || `https://dexscreener.com/solana/${p.pairAddress}`;
+    let liqCellAttrs = "";
+    let liqDisplay;
+    if(liq != null){
+      liqDisplay = (p.liquidity?.usd && Number(p.liquidity.usd) > 0)
+        ? fmtUsd(liq)
+        : "~" + fmtUsd(liq);
+    } else {
+      // Couldn't price from DexScreener — mark for async enrichment via Meteora API
+      liqDisplay = "querying…";
+      liqCellAttrs = ` data-needs-liq="1" data-pair="${p.pairAddress}" data-dex="${dex}"`;
+    }
+    return `
+      <tr>
+        <td class="rank">${String(i+1).padStart(2,"0")}</td>
+        <td>${dex.toUpperCase()}</td>
+        <td>${base}/${quote}</td>
+        <td class="addr"><a href="${pairUrl}" target="_blank" rel="noopener">${shortAddr(p.pairAddress, 4)}</a></td>
+        <td${liqCellAttrs}>${liqDisplay}</td>
+        <td>${fmtUsd(vol)}</td>
+      </tr>
+    `;
+  }).join("");
+  root.innerHTML = `
+    <table class="t">
+      <thead><tr>
+        <th>#</th><th>DEX</th><th>PAIR</th><th>POOL</th><th>LIQ</th><th>VOL 24H</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="small" style="margin-top:6px; opacity:0.7;">~ = derived liquidity (DexScreener didn't report USD value)</div>
+  `;
+  // Fire-and-forget enrichment for pools we couldn't price (Meteora DBC etc.)
+  enrichMissingLiquidity();
+}
+
+function renderBonding(pairs){
+  const root = $("bondingBlock");
+  const tag = $("bcTag");
+  // pump.fun bonding curve completes around $69k market cap and migrates to Raydium.
+  // If a Raydium pool exists, we'll mark it as migrated/graduated.
+  if(!pairs || pairs.length === 0){
+    root.innerHTML = '<div class="err">No pool data yet.</div>';
+    return;
+  }
+  const sorted = [...pairs].sort((a,b) => (poolLiquidityUsd(b) || 0) - (poolLiquidityUsd(a) || 0));
+  const main = sorted[0];
+  const mcap = main.marketCap || main.fdv || 0;
+
+  const hasRaydium = pairs.some(p => (p.dexId || "").toLowerCase().includes("raydium"));
+  const hasPumpfun = pairs.some(p => (p.dexId || "").toLowerCase().includes("pump"));
+  const TARGET = 69000;
+  const pct = Math.min(100, (mcap / TARGET) * 100);
+  let status, color;
+
+  if(hasRaydium && !hasPumpfun){
+    status = "GRADUATED → RAYDIUM";
+    tag.textContent = "[graduated]";
+  } else if(hasPumpfun){
+    status = "ON CURVE";
+    tag.textContent = "[active]";
+  } else {
+    status = mcap > TARGET ? "POST-CURVE" : "UNKNOWN";
+    tag.textContent = "[live pool]";
+  }
+
+  root.innerHTML = `
+    <div class="stat-row"><span class="k">STATUS</span><span class="v up">${status}</span></div>
+    <div class="stat-row"><span class="k">MARKET CAP</span><span class="v">${fmtUsd(mcap)}</span></div>
+    <div class="stat-row"><span class="k">CURVE TARGET</span><span class="v">$69,000</span></div>
+    <div class="stat-row"><span class="k">PROGRESS</span><span class="v">${pct.toFixed(1)}%</span></div>
+    <div class="bonding-meter">
+      <div class="fill" style="width:${pct.toFixed(2)}%"></div>
+      <div class="lbl">${pct >= 100 ? "MIGRATED" : pct.toFixed(1) + "%"}</div>
+    </div>
+  `;
+}
+
+async function loadMeta(){
+  const root = $("metaBlock");
+  try{
+    const info = await rpc("getAccountInfo", [TOKEN, {encoding: "jsonParsed"}]);
+    const supply = await rpc("getTokenSupply", [TOKEN]);
+    const parsed = info?.value?.data?.parsed?.info;
+    const decimals = parsed?.decimals ?? supply?.value?.decimals ?? "--";
+    const mintAuth = parsed?.mintAuthority || "renounced / null";
+    const freezeAuth = parsed?.freezeAuthority || "renounced / null";
+    const total = supply?.value?.uiAmount;
+    window.__supplyCache = total;
+
+    root.innerHTML = `
+      <div class="stat-row"><span class="k">DECIMALS</span><span class="v">${decimals}</span></div>
+      <div class="stat-row"><span class="k">TOTAL SUPPLY</span><span class="v">${fmt(total)}</span></div>
+      <div class="stat-row"><span class="k">MINT AUTH</span><span class="v">${typeof mintAuth === 'string' && mintAuth.length > 20 ? shortAddr(mintAuth, 5) : mintAuth}</span></div>
+      <div class="stat-row"><span class="k">FREEZE AUTH</span><span class="v">${typeof freezeAuth === 'string' && freezeAuth.length > 20 ? shortAddr(freezeAuth, 5) : freezeAuth}</span></div>
+      <div class="stat-row"><span class="k">PROGRAM</span><span class="v">${info?.value?.owner ? shortAddr(info.value.owner, 5) : "--"}</span></div>
+      <div class="stat-row"><span class="k">CHAIN</span><span class="v">SOLANA</span></div>
+    `;
+  } catch(e){
+    root.innerHTML = '<div class="err">RPC fetch failed: ' + (e.message || e) + '</div>';
+  }
+}
+
+// ===== FART INTEL: weird-but-interesting metrics =====
+function moodFromChange(ch){
+  if(ch == null || isNaN(ch)) return { label: "UNKNOWN", cls: "" };
+  if(ch >= 100) return { label: "ASCENDED",  cls: "up" };
+  if(ch >= 30)  return { label: "PUMPING",   cls: "up" };
+  if(ch >= 5)   return { label: "HEATING",   cls: "up" };
+  if(ch > -5)   return { label: "CRABBING",  cls: "" };
+  if(ch > -20)  return { label: "BLEEDING",  cls: "down" };
+  if(ch > -50)  return { label: "DUMPING",   cls: "down" };
+  return            { label: "REKT",      cls: "down" };
+}
+
+function fartIndex(main){
+  // Custom degen composite, 0-100. Higher = more printer activity.
+  let score = 0;
+  const buys = main.txns?.h24?.buys || 0;
+  const sells = main.txns?.h24?.sells || 0;
+  const total = buys + sells;
+  // (a) buy/sell ratio — up to 25
+  if(total > 0){
+    const ratio = buys / Math.max(1, sells);
+    score += Math.min(25, ratio * 12.5);
+  }
+  // (b) liquidity / mcap — up to 20 (10% LP→20 pts)
+  const liq = poolLiquidityUsd(main) || 0;
+  const mcap = main.marketCap || main.fdv || 0;
+  if(liq && mcap){
+    const lp = (liq / mcap) * 100;
+    score += Math.min(20, lp * 2);
+  }
+  // (c) turnover (volume / mcap) — up to 25 (50% turnover→25)
+  const vol = main.volume?.h24 || 0;
+  if(vol && mcap){
+    const t = (vol / mcap) * 100;
+    score += Math.min(25, t * 0.5);
+  }
+  // (d) momentum (24h price change) — up to 30
+  const ch = main.priceChange?.h24 || 0;
+  score += Math.min(30, Math.max(0, ch * 0.6));
+  return Math.round(Math.min(100, Math.max(0, score)));
+}
+
+function fartLabel(s){
+  if(s >= 85) return "HYPERDEGEN";
+  if(s >= 70) return "DEGENERATE";
+  if(s >= 50) return "BASED";
+  if(s >= 30) return "COMFY";
+  return "NGMI";
+}
+
+function ageStr(ms){
+  if(!ms) return "—";
+  const diff = Date.now() - ms;
+  if(diff < 0) return "—";
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if(d > 0) return `${d}d ${h}h`;
+  if(h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function loadIntel(pairs){
+  const root = $("intelBlock");
+  const tag  = $("intelTag");
+  if(!pairs || pairs.length === 0){
+    root.innerHTML = '<div class="err">No signal.</div>';
+    return;
+  }
+  const sorted = [...pairs].sort((a,b) => (poolLiquidityUsd(b) || 0) - (poolLiquidityUsd(a) || 0));
+  const main = sorted[0];
+
+  const buys  = main.txns?.h24?.buys  || 0;
+  const sells = main.txns?.h24?.sells || 0;
+  const total = buys + sells;
+  const velocity = total / 1440;                       // tx / min over 24h
+  const avgSwap  = total > 0 ? (main.volume?.h24 || 0) / total : 0;
+  const ratio    = sells > 0 ? buys / sells : (buys > 0 ? Infinity : 0);
+  const ratioLbl = ratio === Infinity ? "ALL BUYS" :
+                   ratio >= 1.5 ? "BUY HEAVY" :
+                   ratio <= 0.67 ? "SELL HEAVY" : "BALANCED";
+  const ratioCls = ratio >= 1.5 ? "up" : ratio <= 0.67 ? "down" : "";
+
+  const ch24 = main.priceChange?.h24;
+  const ch1  = main.priceChange?.h1;
+  const mood = moodFromChange(ch24);
+
+  const liq  = pairs.reduce((s,p) => s + (poolLiquidityUsd(p) || 0), 0);
+  const mcap = main.marketCap || main.fdv || 0;
+  const liqRatio = mcap > 0 ? (liq / mcap) * 100 : 0;
+  const liqHealth = liqRatio >= 10 ? "DEEP" : liqRatio >= 3 ? "OK" : liqRatio >= 1 ? "THIN" : "CRISPY";
+
+  const vol = main.volume?.h24 || 0;
+  const turnover = mcap > 0 ? (vol / mcap) * 100 : 0;
+
+  const age = ageStr(main.pairCreatedAt);
+  const score = fartIndex(main);
+  const sLbl  = fartLabel(score);
+
+  tag.textContent = "[" + sLbl.toLowerCase() + "]";
+
+  const ratioStr = ratio === Infinity ? "∞" : ratio.toFixed(2);
+  const ch1Sign  = (ch1 ?? 0) >= 0 ? "▲" : "▼";
+  const ch1Cls   = (ch1 ?? 0) >= 0 ? "up" : "down";
+
+  root.innerHTML = `
+    <div class="stat-row"><span class="k">PRINT VELOCITY</span><span class="v">${velocity.toFixed(2)} <span class="small">tx/min · 24h</span></span></div>
+    <div class="stat-row"><span class="k">AVG SWAP SIZE</span><span class="v">${fmtUsd(avgSwap)}</span></div>
+    <div class="stat-row"><span class="k">BUY/SELL RATIO</span><span class="v ${ratioCls}">${ratioStr} <span class="small">[${ratioLbl}]</span></span></div>
+    <div class="stat-row"><span class="k">HOURLY MOMENTUM</span><span class="v ${ch1Cls}">${ch1Sign} ${(ch1 ?? 0).toFixed(2)}%</span></div>
+    <div class="stat-row"><span class="k">MARKET MOOD</span><span class="v ${mood.cls}">[ ${mood.label} ]</span></div>
+    <div class="stat-row"><span class="k">LIQUIDITY DEPTH</span><span class="v">${liqRatio.toFixed(2)}% of mcap <span class="small">[${liqHealth}]</span></span></div>
+    <div class="stat-row"><span class="k">DAILY TURNOVER</span><span class="v">${turnover.toFixed(1)}%</span></div>
+    <div class="stat-row"><span class="k">TOKEN AGE</span><span class="v">${age}</span></div>
+    <div class="stat-row"><span class="k">FART INDEX</span><span class="v">${score}/100 <span class="small">[${sLbl}]</span></span></div>
+    <div class="bonding-meter" style="margin-top:10px;">
+      <div class="fill" style="width:${score}%"></div>
+      <div class="lbl">${sLbl}</div>
+    </div>
+  `;
+}
+
+// Known Solana programs / accounts heuristic labelling
+const KNOWN = {
+  "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1": "Raydium AMM Auth",
+  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8": "Raydium V4",
+  "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C": "Raydium CPMM",
+  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P": "Pump.fun Program",
+  "BSfTAcBdqmvW5iE5TGkmwzaJVqHvyXkSPi9ZSP3p98R6": "Pump.fun Fees",
+};
+
+function labelForAccount(addr, fallback){
+  if(KNOWN[addr]) return KNOWN[addr];
+  return fallback || "";
+}
+
+// DEX / AMM / launchpad programs whose PDAs hold pool vaults. If a token
+// account's owner (a PDA) is itself owned by one of these programs, that
+// token account is a liquidity pool vault — not a real holder.
+const DEX_PROGRAMS = new Set([
+  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", // Raydium AMM V4
+  "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C", // Raydium CPMM
+  "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK", // Raydium CLMM
+  "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",  // Pump.fun bonding curve
+  "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",  // PumpSwap AMM
+  "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",  // Orca Whirlpool
+  "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP", // Orca v2
+  "Eo7WjKq67rjJQSZxS6z3YkapzY3eMj6Xy8X5EQVn5UaB", // Meteora Dynamic AMM
+  "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",  // Meteora DLMM
+  "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN",  // Meteora dbc
+  "EewxydAPCCVuNEyrVN68PuSYdQ7wKn27V9Gjeoi8dy3S", // Lifinity v1
+  "2wT8Yq49kHgDzXuPxZSaeLaH1qbmGXtEyPy64bL7aD3c", // Lifinity v2
+  "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY",  // Phoenix
+  "SSwpkEEcbUqx4vtoEByFjSkhKdCT862DNVb52nZg1UZ",  // Saber
+  "FLUXubRmkEi2q6K3Y9kBPg9248ggaZVsoSFhtJHSrm1X", // FluxBeam
+  "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",  // Sanctum
+  "MERLuDFBMmsHnsBPZw2sDQZHvXFMwp8EdjudcU2HKky",  // Mercurial
+  "27haf8L6oxUeXrHrgEgsexjSY5hbVUWEmvv9Nyxg8vQv", // Lifinity v2 (variant)
+  "SSwapUtytfBdBn1b9NUGG6foMVPtcWgpRU32HToDUZr",  // Saros
+  "CURVGoZn8zycx6FXwwevgBTB2gVvdbGTEpvMJDbgs2t4", // Crema
+  "DecZY86MU5Gj7kppfUCEmd4LbXXuyZH1yHaP2NTqdiZB", // Saros DLMM
+]);
+
+
+async function loadTransactions(){
+  const root = $("txBlock");
+  try{
+    const sigs = await rpc("getSignaturesForAddress", [TOKEN, {limit: 20}]);
+    if(!sigs || sigs.length === 0){
+      root.innerHTML = '<div class="err">No transactions yet.</div>';
+      return;
+    }
+    const rows = sigs.map((s,i) => {
+      const ts = s.blockTime ? s.blockTime * 1000 : null;
+      const ok = !s.err;
+      return `
+        <tr>
+          <td class="rank">${String(i+1).padStart(2,"0")}</td>
+          <td class="addr"><a href="https://solscan.io/tx/${s.signature}" target="_blank" rel="noopener">${shortAddr(s.signature, 6)}</a></td>
+          <td>${ts ? new Date(ts).toLocaleTimeString() : "--"}</td>
+          <td>${ago(ts)}</td>
+          <td>${ok ? '<span class="up">OK</span>' : '<span class="down">ERR</span>'}</td>
+          <td>${s.slot || "--"}</td>
+        </tr>
+      `;
+    }).join("");
+    root.innerHTML = `
+      <table class="t">
+        <thead><tr>
+          <th>#</th><th>SIGNATURE</th><th>TIME</th><th>AGE</th><th>STATUS</th><th>SLOT</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  } catch(e){
+    root.innerHTML = '<div class="err">RPC fetch failed: ' + (e.message || e) + '</div>';
+  }
+}
+
+// ===== Printr POB Staking =====
+// Printr is an SPA; we don't have published endpoint specs, so we probe the
+// most common patterns its frontend would call, take the first one that
+// returns JSON with a recognizable shape, and render. If everything 4xx/CORS-
+// errors, we fall back to a "view on Printr" card.
+const PRINTR_BASES = [
+  "https://app.printr.money",
+  "https://api.printr.money",
+  "https://app.printr.money/api",
+];
+const PRINTR_PATHS = [
+  "/api/tokens/" + TOKEN,
+  "/api/token/" + TOKEN,
+  "/api/trade/" + TOKEN,
+  "/api/staking/" + TOKEN,
+  "/api/pob/" + TOKEN,
+  "/api/v1/tokens/" + TOKEN,
+  "/api/v2/tokens/" + TOKEN,
+  "/api/solana/tokens/" + TOKEN,
+  "/api/solana/token/" + TOKEN,
+  "/tokens/" + TOKEN,
+  "/staking/" + TOKEN,
+];
+
+async function tryPrintrProbe(){
+  const tried = new Set();
+  for(const base of PRINTR_BASES){
+    for(const path of PRINTR_PATHS){
+      // dedupe (base already includes /api in one case)
+      let url = base + path;
+      url = url.replace("/api/api/", "/api/");
+      if(tried.has(url)) continue;
+      tried.add(url);
+      try{
+        const r = await fetch(url, {headers: {"accept": "application/json"}});
+        if(!r.ok) continue;
+        const ct = r.headers.get("content-type") || "";
+        if(!ct.includes("json")) continue;
+        const j = await r.json();
+        if(j && typeof j === "object") return {url, data: j};
+      } catch(_){ /* CORS or network — try next */ }
+    }
+  }
+  return null;
+}
+
+// Walk an arbitrary object looking for likely staking fields.
+function deepFind(obj, predicateKey){
+  const seen = new Set();
+  const out = [];
+  function walk(o){
+    if(!o || typeof o !== "object" || seen.has(o)) return;
+    seen.add(o);
+    for(const k of Object.keys(o)){
+      if(predicateKey(k)) out.push({key: k, value: o[k], parent: o});
+      const v = o[k];
+      if(v && typeof v === "object") walk(v);
+    }
+  }
+  walk(obj);
+  return out;
+}
+
+function pickNum(matches){
+  for(const m of matches){
+    const v = m.value;
+    if(typeof v === "number" && isFinite(v)) return v;
+    if(typeof v === "string" && v.trim() !== "" && !isNaN(Number(v))) return Number(v);
+  }
+  return null;
+}
+
+function extractStakingShape(data){
+  const lower = (k) => k.toLowerCase();
+  const totalStaked = pickNum(deepFind(data, k => /^(totalstaked|total_staked|staked|stakedamount|staked_amount|pobstaked|pob_staked)$/i.test(k)));
+  const stakedPct  = pickNum(deepFind(data, k => /(stakedpercent|staked_percent|stakedpct|staked_pct|percentstaked)/i.test(k)));
+  const stakerCount = pickNum(deepFind(data, k => /(stakerscount|staker_count|stakers|numstakers|stakerCount)$/i.test(lower(k))));
+  const totalPaid = pickNum(deepFind(data, k => /(totalpaid|total_paid|totalrewards|total_rewards|paidout|paid_out|totalfees|total_fees|feesdistributed|fees_distributed|stakerpayouts|staker_payouts)/i.test(k)));
+  const apr = pickNum(deepFind(data, k => /^(apr|apy)$/i.test(k)));
+  const feeModel = (deepFind(data, k => /(feemodel|fee_model|feeType|fee_type)/i.test(k))[0]?.value) || null;
+  const lockMin = pickNum(deepFind(data, k => /(minlock|min_lock|minduration)/i.test(k)));
+  const lockMax = pickNum(deepFind(data, k => /(maxlock|max_lock|maxduration)/i.test(k)));
+  const avgLock = pickNum(deepFind(data, k => /(avglock|avg_lock|averagelock|average_lock)/i.test(k)));
+  const stakers = deepFind(data, k => /^(stakers|topstakers|top_stakers|holders)$/i.test(k))
+    .map(m => m.value).find(v => Array.isArray(v));
+  return { totalStaked, stakedPct, stakerCount, totalPaid, apr, feeModel, lockMin, lockMax, avgLock, stakers };
+}
+
+async function loadStaking(pairs){
+  const root = $("stakeBlock");
+  const payRoot = $("payoutBlock");
+  const tag = $("stakeTag");
+  const ptag = $("payoutTag");
+
+  const supplyTotal = pairs?.[0]?.baseToken
+    ? null  // dexscreener doesn't expose supply; we'll use what we cached from RPC
+    : null;
+
+  const probe = await tryPrintrProbe();
+  if(!probe){
+    // CORS / no endpoint — clean fallback that points at Printr
+    tag.textContent = "[cors blocked]";
+    ptag.textContent = "[cors blocked]";
+    const fallback = `
+      <div class="stat-row"><span class="k">FEE MODEL</span><span class="v">POB STAKING</span></div>
+      <div class="stat-row"><span class="k">FEE FLOW</span><span class="v">100% → STAKERS</span></div>
+      <div class="stat-row"><span class="k">LOCK RANGE</span><span class="v">7 – 180 DAYS</span></div>
+      <div class="stat-row"><span class="k">DATA SOURCE</span><span class="v">printr.money</span></div>
+      <div class="small" style="margin-top:10px;">
+        Printr's app blocks cross-origin requests from this terminal, so live
+        staking totals can't be read directly here. Open the trade page to see
+        current staked supply, top stakers, and active locks:
+      </div>
+      <div style="margin-top:8px;">
+        <a class="addr" href="https://app.printr.money/trade/${TOKEN}" target="_blank" rel="noopener">→ app.printr.money/trade/${shortAddr(TOKEN, 5)}</a>
+      </div>
+    `;
+    const payFallback = `
+      <div class="stat-row"><span class="k">PAYOUT MECH</span><span class="v">REAL-TIME FEE STREAM</span></div>
+      <div class="stat-row"><span class="k">SOURCE</span><span class="v">Trading fees on every buy/sell</span></div>
+      <div class="stat-row"><span class="k">DISTRIBUTION</span><span class="v">Pro-rata by stake × lock</span></div>
+      <div class="small" style="margin-top:10px;">
+        Printr distributes 100% of the custom fee on every trade to active
+        stakers, weighted by stake size and remaining lock. Cumulative payouts
+        aren't exposed via a public API yet — track them inside the Printr UI.
+      </div>
+      <div style="margin-top:8px;">
+        <a class="addr" href="https://app.printr.money/trade/${TOKEN}" target="_blank" rel="noopener">→ View live payouts on Printr</a>
+      </div>
+    `;
+    root.innerHTML = fallback;
+    payRoot.innerHTML = payFallback;
+    return;
+  }
+
+  tag.textContent = "[live]";
+  ptag.textContent = "[live]";
+  const s = extractStakingShape(probe.data);
+
+  // STAKING PANEL
+  const totalSupplyCache = window.__supplyCache || null;
+  const stakedPct = s.stakedPct ?? (s.totalStaked && totalSupplyCache ? (s.totalStaked / totalSupplyCache) * 100 : null);
+  const barPct = Math.max(0, Math.min(100, stakedPct ?? 0));
+
+  let topStakersHTML = "";
+  if(Array.isArray(s.stakers) && s.stakers.length){
+    const rows = s.stakers.slice(0, 6).map((st, i) => {
+      const addr = st.owner || st.wallet || st.address || st.user || "—";
+      const amt  = st.amount ?? st.staked ?? st.balance ?? st.stake ?? null;
+      const lock = st.lockDays || st.lock || st.duration || null;
+      return `<tr>
+        <td class="rank">${String(i+1).padStart(2,"0")}</td>
+        <td class="addr"><a href="https://solscan.io/account/${addr}" target="_blank" rel="noopener">${shortAddr(addr,4)}</a></td>
+        <td>${amt != null ? fmt(amt) : "—"}</td>
+        <td>${lock ? lock + "d" : "—"}</td>
+      </tr>`;
+    }).join("");
+    topStakersHTML = `
+      <div class="small" style="margin-top:14px; color: var(--green-dim);">// TOP STAKERS</div>
+      <table class="t" style="margin-top:4px;">
+        <thead><tr><th>#</th><th>WALLET</th><th>STAKED</th><th>LOCK</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  root.innerHTML = `
+    <div class="stat-row"><span class="k">FEE MODEL</span><span class="v">${s.feeModel ?? "POB STAKING"}</span></div>
+    <div class="stat-row"><span class="k">TOTAL STAKED</span><span class="v">${s.totalStaked != null ? fmt(s.totalStaked) + " $FARTPRINT" : "—"}</span></div>
+    <div class="stat-row"><span class="k">% OF SUPPLY STAKED</span><span class="v">${stakedPct != null ? stakedPct.toFixed(2) + "%" : "—"}</span></div>
+    <div class="stat-row"><span class="k">ACTIVE STAKERS</span><span class="v">${s.stakerCount ?? "—"}</span></div>
+    <div class="stat-row"><span class="k">AVG LOCK</span><span class="v">${s.avgLock ? s.avgLock + " days" : (s.lockMin && s.lockMax ? s.lockMin + "–" + s.lockMax + " d" : "7–180 d")}</span></div>
+    ${stakedPct != null ? `
+      <div class="bonding-meter" style="margin-top:10px;">
+        <div class="fill" style="width:${barPct.toFixed(2)}%"></div>
+        <div class="lbl">${barPct.toFixed(1)}% LOCKED</div>
+      </div>` : ""}
+    ${topStakersHTML}
+    <div class="small" style="margin-top:8px; opacity:0.7;">src: ${probe.url.replace(/^https?:\/\//,"")}</div>
+  `;
+
+  // PAYOUTS PANEL
+  const paidUsd = (() => {
+    // try common shapes
+    const v = pickNum(deepFind(probe.data, k => /(paidusd|paid_usd|totalpaidusd|rewardsusd|feesusd)/i.test(k)));
+    return v;
+  })();
+  const paid24 = pickNum(deepFind(probe.data, k => /(paid24h|payouts24h|fees24h|rewards24h)/i.test(k)));
+  const paid7d = pickNum(deepFind(probe.data, k => /(paid7d|payouts7d|fees7d|rewards7d)/i.test(k)));
+
+  payRoot.innerHTML = `
+    <div class="stat-row"><span class="k">TOTAL PAID OUT</span><span class="v up">${s.totalPaid != null ? fmt(s.totalPaid) + (paidUsd ? " ("+fmtUsd(paidUsd)+")" : "") : (paidUsd ? fmtUsd(paidUsd) : "—")}</span></div>
+    <div class="stat-row"><span class="k">PAYOUTS 24H</span><span class="v">${paid24 != null ? fmt(paid24) : "—"}</span></div>
+    <div class="stat-row"><span class="k">PAYOUTS 7D</span><span class="v">${paid7d != null ? fmt(paid7d) : "—"}</span></div>
+    <div class="stat-row"><span class="k">CURRENT APR</span><span class="v ${s.apr ? 'up' : ''}">${s.apr ? s.apr.toFixed(2) + "%" : "—"}</span></div>
+    <div class="stat-row"><span class="k">PAYOUT MECH</span><span class="v">FEE STREAM</span></div>
+    <div class="stat-row"><span class="k">DISTRIBUTION</span><span class="v">Pro-rata · stake × lock</span></div>
+    <div class="small" style="margin-top:10px;">
+      100% of every custom trade fee flows into the POB pool and is split among
+      active stakers weighted by stake size and remaining lock.
+    </div>
+    <div style="margin-top:8px;">
+      <a class="addr" href="https://app.printr.money/trade/${TOKEN}" target="_blank" rel="noopener">→ stake / unstake on Printr</a>
+    </div>
+  `;
+}
+
+// ===== Master refresh =====
+async function refreshAll(){
+  setLastSync();
+  let pairs = [];
+  // DexScreener (price, pools, bonding curve)
+  try{
+    pairs = await loadDexScreener();
+    renderPrice(pairs);
+    renderPools(pairs);
+    renderBonding(pairs);
+  } catch(e){
+    $("priceBlock").innerHTML = '<div class="err">DexScreener fetch failed: ' + (e.message || e) + '</div>';
+    $("poolsBlock").innerHTML = '<div class="err">DexScreener fetch failed.</div>';
+    $("bondingBlock").innerHTML = '<div class="err">DexScreener fetch failed.</div>';
+  }
+  loadMeta();
+  loadIntel(pairs);
+  loadTransactions();
+  loadStaking(pairs);
+}
+
+refreshAll();
+setInterval(refreshAll, REFRESH_MS);
+
+// ============================================================
+// ===== DEGEN CHAT — Phantom-gated, 10k FARTPRINT minimum =====
+// ============================================================
+const MIN_HOLD = 100000;
+const CHAT_TOPIC = "fartprint-degens-thicc-printr-aa1gfbv-v1";
+const CHAT_BASE = "https://ntfy.sh";
+
+const Chat = {
+  wallet: null,
+  balance: 0,
+  eligible: false,
+  checking: false,
+  balanceError: null,
+  connecting: false,
+  es: null,
+  seen: new Set(),
+  // Periodic balance recheck handle
+  balTimer: null,
+};
+
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+
+async function fetchFartprintBalance(walletAddress){
+  // Race the RPC against a 15s timeout so a slow public node can't hang
+  // the chat UI indefinitely.
+  return await Promise.race([
+    (async () => {
+      const result = await rpc("getTokenAccountsByOwner", [
+        walletAddress,
+        { mint: TOKEN },
+        { encoding: "jsonParsed" }
+      ]);
+      const accounts = result?.value || [];
+      let total = 0;
+      for(const acct of accounts){
+        total += acct.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+      }
+      return total;
+    })(),
+    new Promise((_, rej) => setTimeout(() => rej(new Error("rpc timeout")), 15000))
+  ]);
+}
+
+async function refreshChatBalance(){
+  if(!Chat.wallet) return;
+  Chat.checking = true;
+  Chat.balanceError = null;
+  renderChatPanel();
+  try{
+    const bal = await fetchFartprintBalance(Chat.wallet);
+    Chat.balance = bal;
+    Chat.eligible = bal >= MIN_HOLD;
+  } catch(e){
+    console.error("[chat] balance fetch failed", e);
+    Chat.balanceError = String(e.message || e);
+    Chat.balance = 0;
+    Chat.eligible = false;
+  } finally {
+    Chat.checking = false;
+    renderChatPanel();
+  }
+}
+
+async function connectWallet(){
+  const phantom = getPhantom();
+  if(!phantom){
+    if(confirm("Phantom wallet not detected. Open install page?")){
+      window.open("https://phantom.com/download", "_blank", "noopener");
+    }
+    return;
+  }
+
+  // Show "CONNECTING..." button state immediately
+  Chat.connecting = true;
+  renderChatPanel();
+
+  let resp;
+  try{
+    resp = await phantom.connect();
+  } catch(e){
+    console.warn("[chat] connect rejected", e);
+    Chat.connecting = false;
+    renderChatPanel();
+    return;
+  }
+
+  // Capture wallet and render the connected state RIGHT AWAY so the user
+  // doesn't sit there waiting on the RPC call.
+  Chat.wallet = resp.publicKey.toString();
+  Chat.balance = 0;
+  Chat.eligible = false;
+  Chat.connecting = false;
+  Chat.checking = true;
+  Chat.balanceError = null;
+  try{ localStorage.setItem("fp_chat_trusted", "1"); }catch(_){}
+  renderChatPanel();
+
+  // All slow work runs in the background. UI updates as each finishes.
+  refreshChatBalance();
+  startChatStream();
+  loadChatHistory();
+  if(Chat.balTimer) clearInterval(Chat.balTimer);
+  Chat.balTimer = setInterval(refreshChatBalance, 60000);
+}
+
+async function disconnectWallet(){
+  const phantom = getPhantom();
+  try{ await phantom?.disconnect?.(); }catch(_){}
+  Chat.wallet = null;
+  Chat.balance = 0;
+  Chat.eligible = false;
+  if(Chat.es){ Chat.es.close(); Chat.es = null; }
+  Chat.seen.clear();
+  if(Chat.balTimer){ clearInterval(Chat.balTimer); Chat.balTimer = null; }
+  try{ localStorage.removeItem("fp_chat_trusted"); }catch(_){}
+  renderChatPanel();
+}
+
+async function tryAutoConnect(){
+  const phantom = getPhantom();
+  if(!phantom) { renderChatPanel(); return; }
+  let trusted = false;
+  try{ trusted = localStorage.getItem("fp_chat_trusted") === "1"; }catch(_){}
+  if(!trusted){ renderChatPanel(); return; }
+  let resp;
+  try{
+    resp = await phantom.connect({ onlyIfTrusted: true });
+  } catch(_){
+    renderChatPanel();
+    return;
+  }
+  Chat.wallet = resp.publicKey.toString();
+  Chat.checking = true;
+  renderChatPanel();
+  // Background — don't await
+  refreshChatBalance();
+  startChatStream();
+  loadChatHistory();
+  if(Chat.balTimer) clearInterval(Chat.balTimer);
+  Chat.balTimer = setInterval(refreshChatBalance, 60000);
+}
+
+function startChatStream(){
+  if(Chat.es){ Chat.es.close(); Chat.es = null; }
+  try{
+    Chat.es = new EventSource(`${CHAT_BASE}/${CHAT_TOPIC}/sse`);
+    Chat.es.onmessage = (evt) => {
+      try{
+        const e = JSON.parse(evt.data);
+        if(e.event === "message" && e.message){
+          if(Chat.seen.has(e.id)) return;
+          Chat.seen.add(e.id);
+          try{
+            const msg = JSON.parse(e.message);
+            appendChatMessage(msg);
+          } catch(_){}
+        }
+      } catch(_){}
+    };
+    Chat.es.onerror = () => { /* EventSource auto-retries */ };
+  } catch(e){
+    console.warn("[chat] SSE init failed", e);
+  }
+}
+
+async function loadChatHistory(){
+  try{
+    const r = await fetch(`${CHAT_BASE}/${CHAT_TOPIC}/json?poll=1&since=24h`);
+    if(!r.ok) return;
+    const text = await r.text();
+    if(!text.trim()) return;
+    const msgs = [];
+    for(const line of text.trim().split("\n")){
+      try{
+        const e = JSON.parse(line);
+        if(e.event === "message" && e.message){
+          Chat.seen.add(e.id);
+          const msg = JSON.parse(e.message);
+          msgs.push(msg);
+        }
+      } catch(_){}
+    }
+    msgs.sort((a,b) => (a.ts||0) - (b.ts||0));
+    // Clear any "no messages" placeholder and append in order
+    const log = document.getElementById("chatLog");
+    if(log) log.innerHTML = "";
+    for(const m of msgs) appendChatMessage(m, /*scroll=*/false);
+    if(log){ log.scrollTop = log.scrollHeight; }
+  } catch(e){
+    console.warn("[chat] history load failed", e);
+  }
+}
+
+async function sendChatMessage(text){
+  if(!Chat.eligible || !text) return;
+  const trimmed = text.trim().slice(0, 500);
+  if(!trimmed) return;
+  const payload = {
+    w: Chat.wallet,
+    b: Math.floor(Chat.balance),
+    t: trimmed,
+    ts: Date.now()
+  };
+  try{
+    await fetch(`${CHAT_BASE}/${CHAT_TOPIC}`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+  } catch(e){
+    console.error("[chat] publish failed", e);
+  }
+}
+
+function appendChatMessage(msg, scroll = true){
+  const log = document.getElementById("chatLog");
+  if(!log || !msg || !msg.t) return;
+  const ts = msg.ts ? new Date(msg.ts) : new Date();
+  const hh = String(ts.getHours()).padStart(2,"0");
+  const mm = String(ts.getMinutes()).padStart(2,"0");
+  const isMe = Chat.wallet && msg.w === Chat.wallet;
+  const wallet = msg.w || "anon";
+  const wShort = shortAddr(wallet, 4);
+  const div = document.createElement("div");
+  div.className = "chat-msg" + (isMe ? " me" : "");
+  div.innerHTML = `
+    <span class="ts">[${hh}:${mm}]</span>
+    <span class="who" title="${wallet}${msg.b ? ' · '+fmt(msg.b)+' FARTPRINT' : ''}">@${wShort}</span>
+    <span class="arrow">&gt;</span>
+    <span class="text"></span>
+  `;
+  // Use textContent to avoid HTML injection in message text
+  div.querySelector(".text").textContent = msg.t;
+  log.appendChild(div);
+  if(scroll) log.scrollTop = log.scrollHeight;
+}
+
+function renderChatPanel(){
+  const root = document.getElementById("chatPanel");
+  const tag  = document.getElementById("chatTag");
+  if(!root) return;
+
+  // Not connected → CTA
+  if(!Chat.wallet){
+    tag.textContent = Chat.connecting ? "[connecting]" : "[disconnected]";
+    const btnLabel = Chat.connecting ? "CONNECTING..." : "CONNECT PHANTOM";
+    root.innerHTML = `
+      <div class="chat-cta">
+        <button class="chat-btn big-btn" id="btnConnect" ${Chat.connecting ? 'disabled' : ''}>${btnLabel}</button>
+        <div class="pitch">
+          Token-gated comms. Connect Phantom and hold at least
+          <b style="color: var(--green); text-shadow:0 0 4px var(--green-glow);">100,000 $FARTPRINT</b>
+          to enter the printr lounge. Messages persist 24h.
+        </div>
+      </div>
+    `;
+    document.getElementById("btnConnect")?.addEventListener("click", connectWallet);
+    return;
+  }
+
+  // Connected — figure out display state
+  let statusHtml, statusKey;
+  if(Chat.checking){
+    statusKey = "checking";
+    statusHtml = `<span class="v">CHECKING<span class="blink">_</span></span>`;
+    tag.textContent = "[checking balance]";
+  } else if(Chat.balanceError){
+    statusKey = "error";
+    statusHtml = `<span class="v deny">RPC ERROR</span>`;
+    tag.textContent = "[rpc error]";
+  } else if(Chat.eligible){
+    statusKey = "ok";
+    statusHtml = `<span class="v ok">✓ AUTHORIZED</span>`;
+    tag.textContent = "[authorized]";
+  } else {
+    statusKey = "deny";
+    statusHtml = `<span class="v deny">✗ INSUFFICIENT</span>`;
+    tag.textContent = "[insufficient]";
+  }
+
+  const eligible = Chat.eligible && !Chat.checking && !Chat.balanceError;
+  const need = Math.max(0, MIN_HOLD - Math.floor(Chat.balance));
+  const showNeed = !Chat.checking && !Chat.balanceError && !Chat.eligible;
+  const balanceText = Chat.checking
+    ? '—'
+    : (Chat.balanceError ? '?' : fmt(Chat.balance));
+
+  root.innerHTML = `
+    <div class="chat-wrap">
+      <div class="chat-state">
+        <div class="left">
+          <span class="field"><span class="k">WALLET</span><span class="v"><a href="https://solscan.io/account/${Chat.wallet}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none; border-bottom:1px dotted var(--green-dim);">${shortAddr(Chat.wallet, 5)}</a></span></span>
+          <span class="field"><span class="k">BALANCE</span><span class="v">${balanceText} $FARTPRINT</span></span>
+          <span class="field"><span class="k">STATUS</span>${statusHtml}</span>
+          ${showNeed ? `<span class="field"><span class="k">NEED</span><span class="v deny">+${fmt(need)}</span></span>` : ''}
+          ${Chat.balanceError ? `<button class="chat-btn" id="btnRetry" style="font-size:11px; padding:4px 10px;">RETRY</button>` : ''}
+        </div>
+        <div class="right">
+          <button class="chat-btn danger" id="btnDisconnect">DISCONNECT</button>
+        </div>
+      </div>
+
+      <div class="chat-log" id="chatLog">
+        <div class="chat-system">// loading recent transmissions…</div>
+      </div>
+
+      <div class="chat-input-row">
+        <span class="chat-prompt">&gt;</span>
+        <input class="chat-input" id="chatInput"
+          ${eligible ? '' : 'disabled'}
+          maxlength="500"
+          placeholder="${eligible ? 'transmit to the printr…' : 'acquire 100,000 $FARTPRINT to chat'}"
+        />
+        <button class="chat-btn" id="btnSend" ${eligible ? '' : 'disabled'}>SEND</button>
+      </div>
+      <div class="small" style="opacity:0.7;">
+        msgs &lt;= 500 chars · history retained ~24h · this is a meme · wallet identity is unsigned (display-only)
+      </div>
+    </div>
+  `;
+
+  document.getElementById("btnDisconnect")?.addEventListener("click", disconnectWallet);
+  document.getElementById("btnRetry")?.addEventListener("click", refreshChatBalance);
+
+  if(eligible){
+    const input = document.getElementById("chatInput");
+    const btn   = document.getElementById("btnSend");
+    const fire = async () => {
+      const v = input.value;
+      if(!v.trim()) return;
+      input.value = "";
+      btn.disabled = true;
+      await sendChatMessage(v);
+      btn.disabled = false;
+      input.focus();
+    };
+    btn?.addEventListener("click", fire);
+    input?.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" && !e.shiftKey){
+        e.preventDefault();
+        fire();
+      }
+    });
+    input?.focus();
+  }
+}
+
+// Initialize chat panel on load
+renderChatPanel();
+tryAutoConnect();
+
+// ===== Matrix rain =====
+(function matrixRain(){
+  const c = document.getElementById("matrix");
+  const ctx = c.getContext("2d");
+  function size(){ c.width = window.innerWidth; c.height = window.innerHeight; }
+  size();
+  window.addEventListener("resize", size);
+
+  const chars = "01FARTPRINT$#%@&*~|^/\\<>:;.,abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".split("");
+  const fontSize = 14;
+  let cols = Math.floor(c.width / fontSize);
+  let drops = Array(cols).fill(1);
+
+  window.addEventListener("resize", () => {
+    cols = Math.floor(c.width / fontSize);
+    drops = Array(cols).fill(1);
+  });
+
+  function draw(){
+    ctx.fillStyle = "rgba(0, 5, 0, 0.08)";
+    ctx.fillRect(0,0,c.width,c.height);
+    ctx.fillStyle = "#00ff66";
+    ctx.font = fontSize + "px monospace";
+    for(let i = 0; i < drops.length; i++){
+      const text = chars[Math.floor(Math.random()*chars.length)];
+      ctx.fillText(text, i*fontSize, drops[i]*fontSize);
+      if(drops[i]*fontSize > c.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+  }
+  setInterva
