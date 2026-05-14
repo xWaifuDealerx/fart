@@ -176,7 +176,7 @@
     gap: 24px;
   }
   @media (max-width: 920px) {
-    .layout { grid-template-columns: 1fr; }
+    .layout { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 600px) {
     .wrap { padding: 24px 16px 60px; }
@@ -220,7 +220,12 @@
     border-radius: 20px;
     padding: 28px;
     box-shadow: var(--shadow-sm);
+    min-width: 0;
   }
+  /* Grid children must be allowed to shrink below content size,
+     otherwise wide inner content pushes the track past the wrap edge */
+  .layout > .card,
+  .layout > .preview-card { min-width: 0; }
   .card-title {
     font-size: 19px;
     font-weight: 700;
