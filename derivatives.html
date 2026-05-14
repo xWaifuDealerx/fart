@@ -1017,10 +1017,12 @@ import {
 // ============================================================
 // === Printr Derivatives Mint App ===
 // ============================================================
-// JWT is intentionally embedded for the dev preview. Move to a server-side
-// proxy before going public.
-const PRINTR_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWlseSJ9.Ml8JzU5AedtwjRHAy6qZBZB4FEyc9jy5CkXsLv__nRQ";
-const PRINTR_BASE = "https://api-preview.printr.money/v0";
+// All Printr API calls go through /api/printr — a Vercel serverless
+// proxy (file: api/printr.js in the repo). The Printr Partner Preview
+// API has no CORS headers, so the browser can't call it directly.
+// The proxy forwards the request server-side and keeps the JWT off
+// the client.
+const PRINTR_PROXY = "/api/printr";
 
 // Solana mainnet CAIP-2 identifier
 const SOL_CHAIN   = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
@@ -1242,18 +1244,23 @@ function updateMintButton(){
 // Printr API
 // ============================================================
 async function printrFetch(path, body){
-  const r = await fetch(PRINTR_BASE + path, {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + PRINTR_JWT,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let r;
+  try {
+    r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(path), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch(e) {
+    throw new Error("Could not reach the mint proxy (/api/printr). Make sure api/printr.js is deployed to your host.");
+  }
   const text = await r.text();
   let json = null;
   try { json = text ? JSON.parse(text) : null; } catch(_) {}
   if(!r.ok){
+    if(r.status === 404){
+      throw new Error("Mint proxy not found (/api/printr). Add api/printr.js to the repo and redeploy.");
+    }
     const msg = json?.error?.message || `HTTP ${r.status}`;
     const code = json?.error?.code || "";
     throw new Error(`${msg}${code ? " ["+code+"]" : ""}`);
@@ -1460,9 +1467,7 @@ async function mint(){
     let live = false;
     for(let i = 0; i < 30; i++){
       try{
-        const r = await fetch(`${PRINTR_BASE}/tokens/${tokenId}/deployments`, {
-          headers: { "Authorization": "Bearer " + PRINTR_JWT },
-        });
+        const r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${tokenId}/deployments`));
         if(r.ok){
           const j = await r.json();
           const sol = j.deployments?.find(d => d.chain_id === SOL_CHAIN);
