@@ -1034,10 +1034,11 @@ const RPC_URLS = [
 ];
 
 // Public registry of all FART derivatives ever minted via this app.
-// ntfy.sh is a free public pub/sub — every mint posts here; every page load
-// replays the topic's history so visitors see the family.
-const GALLERY_TOPIC = "fartprint-derivatives-mints-v1-9k3xq";
-const GALLERY_BASE  = "https://ntfy.sh";
+// The browser talks only to /api/registry — a serverless endpoint on this
+// same domain. Server-side it uses Vercel KV (a real database) if set up,
+// or falls back to ntfy.sh. Either way the browser never deals with CORS
+// or third-party flakiness.
+const REGISTRY_API  = "/api/registry";
 const GALLERY_LOCAL = "fp_derivatives_gallery_v1";
 
 // Every derivative gets the same canonical description. Hidden from the UI
@@ -1599,18 +1600,22 @@ function saveToLocalGallery(rec){
 }
 
 async function publishMintToGallery(rec){
-  // Save locally first so the user sees it instantly even if ntfy fails
+  // Save locally first so the user sees it instantly even if the registry fails
   saveToLocalGallery(rec);
   try{
-    const r = await fetch(`${GALLERY_BASE}/${GALLERY_TOPIC}`, {
+    const r = await fetch(REGISTRY_API, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rec),
     });
-    if(r.ok){
-      log("Mint registered to the FART Family registry.", "ok");
+    let j = null;
+    try { j = await r.json(); } catch(_) {}
+    if(r.ok && j && j.ok){
+      log(`Mint registered to the FART Family registry (${j.backend || "ok"}).`, "ok");
+    } else if(r.status === 404){
+      log("Registry endpoint not found (/api/registry) — add api/registry.js and redeploy.", "err");
     } else {
-      log(`Registry returned HTTP ${r.status} — token saved locally only.`, "err");
+      log(`Registry publish issue: ${(j && j.message) || ("HTTP " + r.status)} — token saved locally.`, "err");
     }
   } catch(e){
     log(`Registry publish failed (will retain locally): ${e.message}`, "err");
@@ -1622,26 +1627,17 @@ async function loadGallery(){
   const countEl = $("galleryCount");
   if(!root) return;
 
-  // Pull recent mints from the public registry, merge with anything we have
-  // locally (own mints persist across visits even after ntfy expires them).
+  // Pull all minted derivatives from the registry endpoint, merge with
+  // anything we have locally (own mints persist across visits regardless).
   let remote = [];
   try{
-    const r = await fetch(`${GALLERY_BASE}/${GALLERY_TOPIC}/json?poll=1&since=all`);
+    const r = await fetch(REGISTRY_API + "?t=" + Date.now());
     if(r.ok){
-      const text = await r.text();
-      if(text.trim()){
-        for(const line of text.trim().split("\n")){
-          try{
-            const evt = JSON.parse(line);
-            if(evt.event === "message" && evt.message){
-              try{ remote.push(JSON.parse(evt.message)); }catch(_){}
-            }
-          } catch(_){}
-        }
-      }
+      const j = await r.json();
+      if(j && Array.isArray(j.tokens)) remote = j.tokens;
     }
   } catch(e){
-    console.warn("Gallery remote load failed", e);
+    console.warn("Gallery registry load failed", e);
   }
 
   // Seed tokens — always fetched fresh from Printr, guaranteed visible
