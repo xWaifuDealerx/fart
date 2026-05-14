@@ -263,39 +263,46 @@
   .mint-card {
     background: var(--card);
     border-radius: 24px;
-    padding: 26px;
+    padding: 28px;
     width: 100%;
     max-width: 540px;
     box-shadow: var(--shadow-card);
     position: relative;
   }
-  .mint-card::before {
-    content: "▣ FARTNFT · GENESIS";
-    position: absolute;
-    top: -10px;
-    left: 24px;
+  .mint-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .mint-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     background: linear-gradient(135deg, var(--violet), var(--pink));
     color: white;
-    padding: 4px 12px;
-    border-radius: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
     font-weight: 800;
-    letter-spacing: 1.5px;
+    font-size: 18px;
     box-shadow: 0 4px 12px var(--violet-glow);
+    flex-shrink: 0;
   }
   .mint-card h2 {
     font-size: 21px;
     font-weight: 700;
     color: var(--text);
-    margin: 6px 0 4px;
+    margin: 0;
     letter-spacing: -0.3px;
+    line-height: 1.2;
   }
   .mint-card .sub {
     color: var(--text-tertiary);
     font-size: 13px;
     line-height: 1.55;
-    margin-bottom: 18px;
+    margin-bottom: 20px;
   }
   .mint-card .sub strong { color: var(--violet-dark); font-weight: 700; }
 
@@ -692,7 +699,10 @@
 
   <!-- ===== MINT CARD ===== -->
   <div class="mint-card">
-    <h2 style="padding-top:6px;">Mint your FartNFT</h2>
+    <div class="mint-card-header">
+      <div class="mint-card-icon">▣</div>
+      <h2>Mint your FartNFT</h2>
+    </div>
     <div class="sub">
       Drop an image, optionally name it, and burn <strong>10,000 $FARTPRINT</strong> to add it
       to the collection. The image is stored as a thumbnail in the public registry
