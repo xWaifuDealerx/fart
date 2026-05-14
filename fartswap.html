@@ -286,6 +286,8 @@
   .token-logo.sol { background: linear-gradient(135deg, #9945FF 0%, #14F195 100%); color: white; }
   .token-logo.pool { background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); color: white; }
   .token-logo.fartprint { background: linear-gradient(135deg, var(--green), var(--green-bright)); color: white; }
+  .token-logo.fartcoin { background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%); color: white; }
+  .token-logo.farthouse { background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%); color: white; }
 
   .input-footer {
     display: flex;
@@ -503,6 +505,125 @@
   .token-item.sol  .tl-logo { background: linear-gradient(135deg, #9945FF 0%, #14F195 100%); }
   .token-item.pool .tl-logo { background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); }
   .token-item.fartprint .tl-logo { background: linear-gradient(135deg, var(--green), var(--green-bright)); }
+  .token-item.fartcoin .tl-logo { background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%); }
+  .token-item.farthouse .tl-logo { background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%); }
+
+  /* ===== TICKER CAROUSEL ===== */
+  .ticker-carousel {
+    width: 100%;
+    background: var(--card);
+    border-top: 1px solid var(--border-light);
+    border-bottom: 1px solid var(--border-light);
+    margin: 0 0 28px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: var(--shadow-sm);
+  }
+  .ticker-carousel::before,
+  .ticker-carousel::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .ticker-carousel::before {
+    left: 0;
+    background: linear-gradient(90deg, var(--card), transparent);
+  }
+  .ticker-carousel::after {
+    right: 0;
+    background: linear-gradient(-90deg, var(--card), transparent);
+  }
+  .ticker-track {
+    display: flex;
+    gap: 4px;
+    padding: 6px 0;
+    width: max-content;
+    animation: tickerScroll 60s linear infinite;
+  }
+  .ticker-carousel:hover .ticker-track {
+    animation-play-state: paused;
+  }
+  @keyframes tickerScroll {
+    from { transform: translateX(0); }
+    to   { transform: translateX(-50%); }
+  }
+
+  .tc-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 14px 8px 7px;
+    border-radius: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: background 0.15s;
+    border: 0;
+    background: transparent;
+    font-family: inherit;
+  }
+  .tc-item:hover { background: var(--input-bg); }
+  .tc-item:focus { outline: 0; background: var(--input-bg); }
+
+  .tc-logo {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 10px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .tc-logo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tc-logo.sol { background: linear-gradient(135deg, #9945FF 0%, #14F195 100%); }
+  .tc-logo.pool { background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); }
+  .tc-logo.fartprint { background: linear-gradient(135deg, var(--green), var(--green-bright)); }
+  .tc-logo.fartcoin { background: linear-gradient(135deg, #ff9900 0%, #ff5500 100%); }
+  .tc-logo.farthouse { background: linear-gradient(135deg, #8b4513 0%, #d2691e 100%); }
+
+  .tc-sym {
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .tc-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  .tc-change {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 100px;
+    letter-spacing: 0.2px;
+  }
+  .tc-change.up { background: var(--green-soft); color: var(--green-dark); }
+  .tc-change.down { background: #ffe5e3; color: #a01a13; }
+  .tc-change.flat { background: var(--input-bg); color: var(--text-muted); }
+
+  @media (max-width: 540px) {
+    .ticker-carousel { margin-bottom: 18px; }
+    .ticker-carousel::before, .ticker-carousel::after { width: 40px; }
+    .ticker-track { animation-duration: 45s; padding: 5px 0; gap: 2px; }
+    .tc-item { padding: 6px 11px 6px 6px; gap: 7px; }
+    .tc-sym { font-size: 12px; }
+    .tc-price { font-size: 11px; }
+    .tc-change { font-size: 10px; padding: 1px 6px; }
+    .tc-logo { width: 22px; height: 22px; }
+  }
   .token-item .symbol {
     font-size: 15px;
     font-weight: 700;
@@ -885,6 +1006,11 @@
   <a href="index.html" class="return-btn">← Return to Ecosystem</a>
 </nav>
 
+<!-- TICKER CAROUSEL (full-width, auto-scrolling) -->
+<div class="ticker-carousel" id="tickerCarousel" aria-label="Listed tokens — 24h prices">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
 <main class="main">
 
   <div class="lead">
@@ -1117,6 +1243,26 @@ const TOKENS = {
     fallback: "P",
     logoUrl: null,  // fetched at runtime from Printr / DexScreener
   },
+  FARTCOIN: {
+    key: "FARTCOIN",
+    mint: "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+    symbol: "FARTCOIN",
+    name: "Fartcoin",
+    decimals: 6,
+    cls: "fartcoin",
+    fallback: "FC",
+    logoUrl: null,
+  },
+  FARTHOUSE: {
+    key: "FARTHOUSE",
+    mint: "2RA1v8NdkEQcF5N5zHUqLuAHxjnDMQFjwEE8fwKNpump",
+    symbol: "FARTHOUSE",
+    name: "Farthouse",
+    decimals: 6,
+    cls: "farthouse",
+    fallback: "FH",
+    logoUrl: null,
+  },
 };
 
 // Helper to build the inline HTML for a token logo.
@@ -1126,6 +1272,25 @@ function tokenLogoHtml(t){
     return `<img src="${t.logoUrl}" alt="" onerror="this.parentNode.textContent='${t.fallback}';">`;
   }
   return t.fallback;
+}
+
+// Canonical display order:
+//   1. SOL (always first)
+//   2. FARTPRINT (always second)
+//   3. Any token whose symbol starts with FART (alphabetical)
+//   4. Everything else (alphabetical)
+function tokensInOrder(){
+  return Object.values(TOKENS).sort((a, b) => {
+    if(a.key === "SOL") return -1;
+    if(b.key === "SOL") return 1;
+    if(a.key === "FARTPRINT") return -1;
+    if(b.key === "FARTPRINT") return 1;
+    const aFart = a.symbol.startsWith("FART");
+    const bFart = b.symbol.startsWith("FART");
+    if(aFart && !bFart) return -1;
+    if(!aFart && bFart) return 1;
+    return a.symbol.localeCompare(b.symbol);
+  });
 }
 
 // Printr API (auth required). Used to look up the POOL token's imageUrl.
@@ -1150,6 +1315,7 @@ async function fetchTokenLogo(tokenKey){
       if(j?.imageUrl){
         t.logoUrl = j.imageUrl;
         updateUI();
+        renderTickerCarousel();
         return;
       }
     }
@@ -1165,6 +1331,7 @@ async function fetchTokenLogo(tokenKey){
       if(url){
         t.logoUrl = url;
         updateUI();
+        renderTickerCarousel();
         return;
       }
     }
@@ -1181,6 +1348,7 @@ async function fetchTokenLogo(tokenKey){
       if(url){
         t.logoUrl = url;
         updateUI();
+        renderTickerCarousel();
         return;
       }
     }
@@ -1346,12 +1514,13 @@ async function fetchTokenBalance(mint){
 }
 async function refreshAllBalances(){
   if(!State.wallet) return;
-  const [sol, fart, pool] = await Promise.all([
+  const others = Object.values(TOKENS).filter(t => t.key !== "SOL");
+  const [sol, ...balances] = await Promise.all([
     fetchSolBalance(),
-    fetchTokenBalance(TOKENS.FARTPRINT.mint),
-    fetchTokenBalance(TOKENS.POOL.mint),
+    ...others.map(t => fetchTokenBalance(t.mint)),
   ]);
-  State.balances = { SOL: sol, FARTPRINT: fart, POOL: pool };
+  State.balances = { SOL: sol };
+  others.forEach((t, i) => State.balances[t.key] = balances[i]);
   updateUI();
 }
 
@@ -1372,6 +1541,79 @@ async function refreshPrices(){
     }
     updateUsdHints();
   } catch(_){}
+}
+
+// ============================================================
+// Ticker carousel (price + 24h change for each listed token)
+// ============================================================
+function formatPrice(p){
+  if(p == null || isNaN(p)) return "—";
+  const n = Number(p);
+  if(n === 0) return "$0";
+  if(n < 0.000001) return "$" + n.toExponential(2);
+  if(n < 0.01)     return "$" + n.toFixed(7).replace(/0+$/, "").replace(/\.$/, "");
+  if(n < 1)        return "$" + n.toFixed(5);
+  if(n < 1000)     return "$" + n.toFixed(3);
+  if(n < 1e6)      return "$" + n.toLocaleString(undefined, {maximumFractionDigits: 2});
+  return "$" + (n/1e6).toFixed(2) + "M";
+}
+
+async function refreshTickerPrices(){
+  // Use DexScreener for each token — gives price + h24 change
+  await Promise.all(Object.values(TOKENS).map(async (t) => {
+    try{
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${t.mint}`);
+      if(!r.ok) return;
+      const j = await r.json();
+      const pairs = (j?.pairs || []).slice();
+      if(!pairs.length) return;
+      pairs.sort((a,b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
+      const p = pairs[0];
+      const price = parseFloat(p.priceUsd);
+      const ch    = p.priceChange?.h24;
+      if(!isNaN(price)) t.price = price;
+      if(ch != null)    t.change24h = Number(ch);
+    } catch(_){}
+  }));
+  renderTickerCarousel();
+}
+
+function renderTickerCarousel(){
+  const track = $("tickerTrack");
+  if(!track) return;
+  const items = tokensInOrder().map(t => {
+    const ch = t.change24h;
+    const chTxt = ch != null
+      ? (ch >= 0 ? "▲ +" : "▼ ") + Math.abs(ch).toFixed(2) + "%"
+      : "—";
+    const chCls = ch == null ? "flat" : ch >= 0 ? "up" : "down";
+    return `
+      <button type="button" class="tc-item" data-token="${t.key}" title="Click to set as receive token">
+        <span class="tc-logo ${t.cls}">${tokenLogoHtml(t)}</span>
+        <span class="tc-sym">${t.symbol}</span>
+        <span class="tc-price">${formatPrice(t.price)}</span>
+        <span class="tc-change ${chCls}">${chTxt}</span>
+      </button>
+    `;
+  }).join("");
+  // Duplicate the items so the marquee animation loops seamlessly
+  // (when transformX hits -50%, the second set is exactly where the first started)
+  track.innerHTML = items + items;
+  track.querySelectorAll(".tc-item").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.token;
+      if(!key || !TOKENS[key]) return;
+      if(State.from === key){
+        const tmp = State.from;
+        State.from = State.to;
+        State.to = tmp;
+      } else {
+        State.to = key;
+      }
+      updateUI();
+      if(State.amountIn > 0) debouncedQuote();
+    });
+  });
 }
 
 // ============================================================
@@ -1597,7 +1839,7 @@ function openTokenModal(forSide){
   State.pickingFor = forSide;
   const list = $("tokenList");
   list.innerHTML = "";
-  for(const t of Object.values(TOKENS)){
+  for(const t of tokensInOrder()){
     const otherSide = forSide === "from" ? State.to : State.from;
     const isActive = forSide === "from" ? State.from === t.key : State.to === t.key;
     const isDisabled = t.key === otherSide;
@@ -1954,11 +2196,16 @@ $("listingCA").addEventListener("input", (e) => {
 // Initial
 // ============================================================
 updateUI();
+renderTickerCarousel();           // initial empty render
+refreshTickerPrices();             // populate prices + changes
 refreshPrices();
 fetchTokenLogo("FARTPRINT");
 fetchTokenLogo("POOL");
+fetchTokenLogo("FARTCOIN");
+fetchTokenLogo("FARTHOUSE");
 loadListings();
 setInterval(refreshPrices, 30000);
+setInterval(refreshTickerPrices, 30000);
 setInterval(loadListings, 60000);
 tryAutoConnect();
 </script>
