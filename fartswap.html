@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$FARTPRINT // FartSwap</title>
+<meta name="description" content="Swap $FARTPRINT, SOL, and POOL with the best routes on Solana. Powered by Jupiter aggregator.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --bg-2: #fbfbfd;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #424245;
+    --text-tertiary: #6e6e73;
+    --text-muted: #86868b;
+    --border: #d2d2d7;
+    --border-light: #e8e8ed;
+    --input-bg: #f5f5f7;
+    --hover: #f0f0f3;
+    --green: #00a85a;
+    --green-bright: #1ec173;
+    --green-dark: #00773f;
+    --green-soft: #e6f7ee;
+    --green-soft-2: #f0fbf4;
+    --green-glow: rgba(0, 168, 90, 0.20);
+    --blue: #0071e3;
+    --red: #ff3b30;
+    --amber: #ff9500;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-card: 0 16px 48px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0,0,0,0.02);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  body {
+    background:
+      radial-gradient(900px 700px at 85% -10%, rgba(0, 168, 90, 0.10), transparent 60%),
+      radial-gradient(800px 600px at -10% 50%, rgba(30, 193, 115, 0.06), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+
+  /* ===== NAV ===== */
+  .nav {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    object-fit: cover;
+    box-shadow:
+      0 8px 24px rgba(0, 168, 90, 0.25),
+      0 2px 6px rgba(0,0,0,0.10),
+      0 0 0 1px rgba(0, 168, 90, 0.15);
+    transition: transform 0.3s ease;
+    background: linear-gradient(135deg, #0a3a23, #1a5a3a);
+  }
+  .brand-logo:hover { transform: rotate(-4deg) scale(1.04); }
+  .brand-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .brand-name .accent {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .return-btn {
+    color: var(--text-secondary);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 9px 18px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .return-btn:hover {
+    border-color: var(--green);
+    color: var(--green);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ===== MAIN ===== */
+  .main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .lead {
+    text-align: center;
+    margin: 24px 0 36px;
+    max-width: 560px;
+  }
+  .lead h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 4vw, 40px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+  .lead h1 .accent {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lead p {
+    color: var(--text-tertiary);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ===== SWAP CARD ===== */
+  .swap-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 18px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: var(--shadow-card);
+  }
+
+  .swap-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px 14px;
+  }
+  .swap-header h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .header-actions { display: flex; gap: 6px; }
+  .icon-btn {
+    background: transparent;
+    border: 0;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 16px;
+    line-height: 1;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .icon-btn:hover { background: var(--input-bg); color: var(--text); }
+
+  .swap-input {
+    background: var(--input-bg);
+    border-radius: 18px;
+    padding: 16px 18px;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .swap-input:focus-within {
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px var(--green-glow);
+    background: var(--card);
+  }
+  .input-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .input-header .label { color: var(--text-tertiary); font-weight: 500; }
+  .input-header .balance {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .input-header .balance .v { color: var(--text-secondary); font-weight: 500; }
+
+  .input-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .input-row input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    font-family: inherit;
+    font-size: 30px;
+    font-weight: 600;
+    color: var(--text);
+    min-width: 0;
+    letter-spacing: -0.5px;
+    -moz-appearance: textfield;
+  }
+  .input-row input::-webkit-outer-spin-button,
+  .input-row input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .input-row input::placeholder { color: var(--text-muted); }
+  .input-row input:read-only { cursor: default; }
+
+  .token-pick {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    padding: 7px 11px 7px 7px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm);
+    white-space: nowrap;
+  }
+  .token-pick:hover {
+    border-color: var(--border);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .token-pick .caret { color: var(--text-tertiary); font-size: 10px; margin-left: 2px; }
+
+  .token-logo {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+    background: var(--text);
+  }
+  .token-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .token-logo.sol { background: linear-gradient(135deg, #9945FF 0%, #14F195 100%); color: white; }
+  .token-logo.pool { background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); color: white; }
+  .token-logo.fartprint { background: linear-gradient(135deg, var(--green), var(--green-bright)); color: white; }
+
+  .input-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    font-size: 13px;
+  }
+  .input-footer .usd-value {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+  .quick-pcts { display: flex; gap: 4px; }
+  .quick-pcts button {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-tertiary);
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .quick-pcts button:hover {
+    border-color: var(--green);
+    color: var(--green);
+    background: var(--green-soft);
+  }
+
+  .swap-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin: -10px 0;
+    position: relative;
+    z-index: 2;
+  }
+  .swap-toggle {
+    background: var(--card);
+    border: 4px solid var(--card);
+    color: var(--text-tertiary);
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: inherit;
+  }
+  .swap-toggle:hover {
+    color: var(--green);
+    transform: rotate(180deg);
+    box-shadow: var(--shadow-md);
+  }
+  .swap-toggle::before {
+    content: "";
+    position: absolute;
+    background: var(--input-bg);
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    z-index: -1;
+  }
+  .swap-toggle .arrow { font-weight: 700; font-size: 16px; line-height: 1; }
+
+  /* QUOTE INFO */
+  .quote-info {
+    margin-top: 12px;
+    padding: 12px 16px;
+    background: var(--green-soft-2);
+    border: 1px solid rgba(0, 168, 90, 0.10);
+    border-radius: 14px;
+    font-size: 12px;
+  }
+  .qi-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--text-tertiary);
+  }
+  .qi-row .v {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .qi-row .v.warn { color: var(--amber); }
+  .qi-row .v.bad  { color: var(--red); }
+
+  /* SWAP BUTTON */
+  .swap-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);
+    color: white;
+    border: 0;
+    padding: 18px;
+    border-radius: 18px;
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    cursor: pointer;
+    margin-top: 14px;
+    box-shadow: 0 8px 20px rgba(0, 168, 90, 0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.15s;
+  }
+  .swap-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(0, 168, 90, 0.36), inset 0 1px 0 rgba(255,255,255,0.25);
+    filter: brightness(1.05);
+  }
+  .swap-btn:disabled {
+    background: var(--input-bg);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .swap-btn.connect {
+    background: linear-gradient(135deg, #0a3a23, #16573a);
+  }
+
+  .powered-by {
+    margin-top: 14px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+  }
+  .powered-by a {
+    color: var(--text-tertiary);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  .powered-by a:hover { color: var(--green); }
+
+  /* MODAL */
+  .modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 18, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal.show { display: flex; }
+  .modal-card {
+    background: var(--card);
+    border-radius: 22px;
+    width: 100%;
+    max-width: 440px;
+    padding: 22px;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .modal-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .close-btn {
+    background: var(--input-bg);
+    border: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    font-size: 18px;
+    line-height: 1;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .close-btn:hover { background: var(--hover); color: var(--text); }
+
+  .token-list { display: flex; flex-direction: column; gap: 4px; }
+  .token-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .token-item:hover { background: var(--input-bg); }
+  .token-item.active { background: var(--green-soft); }
+  .token-item .tl-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: white;
+    flex-shrink: 0;
+  }
+  .token-item .tl-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .token-item.sol  .tl-logo { background: linear-gradient(135deg, #9945FF 0%, #14F195 100%); }
+  .token-item.pool .tl-logo { background: linear-gradient(135deg, #00B4D8 0%, #0077B6 100%); }
+  .token-item.fartprint .tl-logo { background: linear-gradient(135deg, var(--green), var(--green-bright)); }
+  .token-item .symbol {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .token-item .name {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-top: 1px;
+  }
+  .token-item .bal {
+    margin-left: auto;
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .slippage-options {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .slip-btn {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid transparent;
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 60px;
+  }
+  .slip-btn:hover { background: var(--hover); }
+  .slip-btn.active {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    border-color: var(--green);
+  }
+  .setting-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .setting-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  /* ALERTS */
+  .alert {
+    margin: 16px auto 0;
+    max-width: 460px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    display: none;
+    line-height: 1.5;
+  }
+  .alert.show { display: block; }
+  .alert.success { background: var(--green-soft); border: 1px solid rgba(0, 168, 90, 0.30); color: var(--green-dark); }
+  .alert.error { background: #ffe5e3; border: 1px solid rgba(255, 59, 48, 0.30); color: #a01a13; }
+  .alert.info { background: #e6f0ff; border: 1px solid rgba(0, 113, 227, 0.25); color: #003d80; }
+  .alert a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+  /* WALLET BAR */
+  .wallet-bar {
+    width: 100%;
+    max-width: 460px;
+    margin: 0 0 18px;
+    padding: 10px 14px;
+    background: var(--card);
+    border-radius: 100px;
+    border: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+  }
+  .wallet-bar .info { display: flex; align-items: center; gap: 10px; }
+  .wallet-bar .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .wallet-bar.connected .dot {
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green-glow);
+  }
+  .wallet-bar .addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .wallet-bar .disconnect {
+    color: var(--text-tertiary);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .wallet-bar .disconnect:hover { color: var(--red); background: #ffe5e3; }
+
+  /* FOOTER */
+  footer {
+    max-width: 1180px;
+    margin: 40px auto 0;
+    padding: 24px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+  footer .links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-right: 16px;
+    font-weight: 500;
+  }
+  footer .links a:hover { color: var(--green); }
+  footer .quip { opacity: 0.7; }
+
+  @media (max-width: 480px) {
+    .nav { padding: 16px; }
+    .brand-name { font-size: 22px; }
+    .brand-logo { width: 44px; height: 44px; }
+    .swap-card { padding: 14px; border-radius: 20px; }
+    .input-row input { font-size: 24px; }
+    .lead h1 { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand">
+    <img src="logo.png" alt="" class="brand-logo" onerror="this.style.display='none';">
+    <div class="brand-name">Fart<span class="accent">Swap</span></div>
+  </div>
+  <a href="index.html" class="return-btn">← Return to Ecosystem</a>
+</nav>
+
+<main class="main">
+
+  <div class="lead">
+    <h1>SWAP <span class="accent">$FARTPRINT</span></h1>
+    <p>Trade $FARTPRINT, SOL, and $POOL with the best routes across every Solana DEX. Optimal routing aggregated through Jupiter — Raydium, Meteora, Orca, all of it.</p>
+  </div>
+
+  <div class="alert success" id="alertSuccess"></div>
+  <div class="alert error" id="alertError"></div>
+  <div class="alert info" id="alertInfo"></div>
+
+  <div class="wallet-bar" id="walletBar" style="display:none;">
+    <div class="info">
+      <span class="dot"></span>
+      <span class="addr" id="walletAddr">—</span>
+    </div>
+    <button class="disconnect" id="btnDisconnect">DISCONNECT</button>
+  </div>
+
+  <!-- ===== SWAP CARD ===== -->
+  <div class="swap-card">
+    <div class="swap-header">
+      <h2>Swap</h2>
+      <div class="header-actions">
+        <button class="icon-btn" id="btnRefresh" title="Refresh quote">↻</button>
+        <button class="icon-btn" id="btnSettings" title="Settings">⚙</button>
+      </div>
+    </div>
+
+    <!-- FROM -->
+    <div class="swap-input">
+      <div class="input-header">
+        <span class="label">You pay</span>
+        <span class="balance">Balance: <span class="v" id="fromBal">—</span></span>
+      </div>
+      <div class="input-row">
+        <input type="text" inputmode="decimal" placeholder="0.0" id="amountIn" autocomplete="off"/>
+        <button class="token-pick" id="fromTokenBtn">
+          <span class="token-logo sol" id="fromLogo">S</span>
+          <span class="token-symbol" id="fromSym">SOL</span>
+          <span class="caret">▾</span>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="usd-value" id="fromUsd">—</span>
+        <div class="quick-pcts">
+          <button type="button" data-pct="0.25">25%</button>
+          <button type="button" data-pct="0.5">50%</button>
+          <button type="button" data-pct="1">MAX</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOGGLE -->
+    <div class="swap-toggle-wrap">
+      <button class="swap-toggle" id="swapToggle" title="Reverse direction">
+        <span class="arrow">↓</span>
+      </button>
+    </div>
+
+    <!-- TO -->
+    <div class="swap-input">
+      <div class="input-header">
+        <span class="label">You receive</span>
+        <span class="balance">Balance: <span class="v" id="toBal">—</span></span>
+      </div>
+      <div class="input-row">
+        <input type="text" inputmode="decimal" placeholder="0.0" id="amountOut" readonly/>
+        <button class="token-pick" id="toTokenBtn">
+          <span class="token-logo fartprint" id="toLogo"><img src="logo.png" alt="" onerror="this.parentNode.textContent='$';"></span>
+          <span class="token-symbol" id="toSym">$FARTPRINT</span>
+          <span class="caret">▾</span>
+        </button>
+      </div>
+      <div class="input-footer">
+        <span class="usd-value" id="toUsd">—</span>
+      </div>
+    </div>
+
+    <!-- QUOTE INFO -->
+    <div class="quote-info" id="quoteInfo" style="display:none;">
+      <div class="qi-row"><span>Rate</span><span class="v" id="qiRate">—</span></div>
+      <div class="qi-row"><span>Price impact</span><span class="v" id="qiImpact">—</span></div>
+      <div class="qi-row"><span>Slippage tolerance</span><span class="v" id="qiSlip">0.5%</span></div>
+      <div class="qi-row"><span>Minimum received</span><span class="v" id="qiMin">—</span></div>
+      <div class="qi-row"><span>Route</span><span class="v" id="qiRoute">—</span></div>
+    </div>
+
+    <!-- SWAP BUTTON -->
+    <button class="swap-btn connect" id="swapBtn">CONNECT PHANTOM</button>
+
+    <div class="powered-by">
+      Powered by <a href="https://jup.ag" target="_blank" rel="noopener">Jupiter Aggregator</a> · Solana mainnet
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div>
+    <div>$FARTPRINT Ecosystem · FartSwap v1.0</div>
+    <div class="quip" style="margin-top:4px; font-size:12px;">the printr remains thicc.</div>
+  </div>
+  <div class="links">
+    <a href="index.html">Ecosystem</a>
+    <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Solscan</a>
+    <a href="https://dexscreener.com/solana/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">DexScreener</a>
+    <a href="https://jup.ag" target="_blank" rel="noopener">Jupiter</a>
+  </div>
+</footer>
+
+<!-- ===== TOKEN PICKER MODAL ===== -->
+<div class="modal" id="tokenModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 id="modalTitle">Select a token</h3>
+      <button class="close-btn" id="closeTokenModal">×</button>
+    </div>
+    <div class="token-list" id="tokenList"></div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS MODAL ===== -->
+<div class="modal" id="settingsModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3>Settings</h3>
+      <button class="close-btn" id="closeSettingsModal">×</button>
+    </div>
+    <div class="setting-label">Slippage tolerance</div>
+    <div class="slippage-options" id="slippageOpts">
+      <button type="button" class="slip-btn" data-bps="10">0.1%</button>
+      <button type="button" class="slip-btn active" data-bps="50">0.5%</button>
+      <button type="button" class="slip-btn" data-bps="100">1.0%</button>
+      <button type="button" class="slip-btn" data-bps="300">3.0%</button>
+    </div>
+    <div class="setting-hint">
+      Your transaction will revert if the price changes unfavorably by more than this percentage.
+      Higher slippage helps in volatile markets but increases the risk of unfavorable fills.
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  Connection,
+  PublicKey,
+  VersionedTransaction,
+} from 'https://esm.sh/@solana/web3.js@1.95.3';
+
+// ============================================================
+// Config
+// ============================================================
+const RPC_URLS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+const JUP_BASE = "https://lite-api.jup.ag/swap/v1";
+const JUP_PRICE = "https://lite-api.jup.ag/price/v2";
+
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
+const TOKENS = {
+  SOL: {
+    key: "SOL",
+    mint: SOL_MINT,
+    symbol: "SOL",
+    name: "Solana",
+    decimals: 9,
+    cls: "sol",
+    logoHtml: "S",
+  },
+  FARTPRINT: {
+    key: "FARTPRINT",
+    mint: "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY",
+    symbol: "$FARTPRINT",
+    name: "FartPrint",
+    decimals: 6,
+    cls: "fartprint",
+    logoHtml: `<img src="logo.png" alt="" onerror="this.parentNode.textContent='F';">`,
+  },
+  POOL: {
+    key: "POOL",
+    mint: "BYVmWXkubwRxnZfdM389RtJJajDMh1LULZjXvfonbrrr",
+    symbol: "POOL",
+    name: "Pool",
+    decimals: 6,
+    cls: "pool",
+    logoHtml: "P",
+  },
+};
+
+const State = {
+  wallet: null,
+  from: "SOL",
+  to: "FARTPRINT",
+  amountIn: 0,
+  amountOut: 0,
+  slippageBps: 50,
+  balances: {},
+  prices: {},
+  quote: null,
+  quoting: false,
+  swapping: false,
+  quoteCounter: 0,
+  pickingFor: null,
+};
+
+const $ = (id) => document.getElementById(id);
+
+// ============================================================
+// Utilities
+// ============================================================
+function fmt(n, maxDec = 6){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num === 0) return "0";
+  if(num < 0.000001) return num.toExponential(3);
+  if(num < 1) return num.toFixed(maxDec).replace(/0+$/, "").replace(/\.$/, "");
+  if(num < 1000) return num.toLocaleString(undefined, {maximumFractionDigits: 4});
+  if(num < 1e6)  return num.toLocaleString(undefined, {maximumFractionDigits: 2});
+  if(num < 1e9)  return (num/1e6).toFixed(2) + "M";
+  return (num/1e9).toFixed(2) + "B";
+}
+function fmtUsd(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num < 0.01) return "<$0.01";
+  if(num < 1000) return "$" + num.toFixed(2);
+  if(num < 1e6)  return "$" + num.toLocaleString(undefined, {maximumFractionDigits: 0});
+  if(num < 1e9)  return "$" + (num/1e6).toFixed(2) + "M";
+  return "$" + (num/1e9).toFixed(2) + "B";
+}
+function shortAddr(a, l = 4){
+  if(!a) return "—";
+  return a.length > l*2 + 3 ? a.slice(0,l)+"…"+a.slice(-l) : a;
+}
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+function showAlert(kind, html, sticky = false){
+  ["success","error","info"].forEach(k => $("alert"+cap(k))?.classList.remove("show"));
+  const el = $("alert"+cap(kind));
+  if(!el) return;
+  el.innerHTML = html;
+  el.classList.add("show");
+  if(!sticky) setTimeout(() => el.classList.remove("show"), 10000);
+}
+function cap(s){ return s[0].toUpperCase() + s.slice(1); }
+
+async function rpc(method, params){
+  for(const url of RPC_URLS){
+    try{
+      const r = await fetch(url, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({jsonrpc:"2.0", id:1, method, params}),
+      });
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j.error) continue;
+      return j.result;
+    } catch(_){}
+  }
+  throw new Error("RPC failed");
+}
+
+// ============================================================
+// Phantom
+// ============================================================
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+
+async function connectWallet(){
+  const phantom = getPhantom();
+  if(!phantom){
+    if(confirm("Phantom wallet not detected. Open install page?")){
+      window.open("https://phantom.com/download", "_blank");
+    }
+    return;
+  }
+  try{
+    const resp = await phantom.connect();
+    State.wallet = resp.publicKey.toString();
+    try{ localStorage.setItem("fp_swap_trusted", "1"); }catch(_){}
+    onWalletReady();
+  } catch(e){
+    console.warn("connect rejected", e);
+  }
+}
+
+async function disconnectWallet(){
+  const phantom = getPhantom();
+  try{ await phantom?.disconnect?.(); }catch(_){}
+  State.wallet = null;
+  State.balances = {};
+  try{ localStorage.removeItem("fp_swap_trusted"); }catch(_){}
+  $("walletBar").style.display = "none";
+  $("walletBar").classList.remove("connected");
+  updateUI();
+}
+
+async function tryAutoConnect(){
+  const phantom = getPhantom();
+  if(!phantom) return;
+  let trusted = false;
+  try{ trusted = localStorage.getItem("fp_swap_trusted") === "1"; }catch(_){}
+  if(!trusted) return;
+  try{
+    const resp = await phantom.connect({ onlyIfTrusted: true });
+    State.wallet = resp.publicKey.toString();
+    onWalletReady();
+  } catch(_){}
+}
+
+function onWalletReady(){
+  $("walletBar").style.display = "";
+  $("walletBar").classList.add("connected");
+  $("walletAddr").textContent = shortAddr(State.wallet, 5);
+  refreshAllBalances();
+  updateUI();
+}
+
+// ============================================================
+// Balances
+// ============================================================
+async function fetchSolBalance(){
+  try{
+    const r = await rpc("getBalance", [State.wallet]);
+    return (r?.value || 0) / 1e9;
+  } catch(_){ return 0; }
+}
+async function fetchTokenBalance(mint){
+  try{
+    const r = await rpc("getTokenAccountsByOwner", [
+      State.wallet, { mint }, { encoding: "jsonParsed" }
+    ]);
+    let total = 0;
+    for(const a of (r?.value || [])){
+      total += a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+    }
+    return total;
+  } catch(_){ return 0; }
+}
+async function refreshAllBalances(){
+  if(!State.wallet) return;
+  const [sol, fart, pool] = await Promise.all([
+    fetchSolBalance(),
+    fetchTokenBalance(TOKENS.FARTPRINT.mint),
+    fetchTokenBalance(TOKENS.POOL.mint),
+  ]);
+  State.balances = { SOL: sol, FARTPRINT: fart, POOL: pool };
+  updateUI();
+}
+
+// ============================================================
+// Prices (Jupiter)
+// ============================================================
+async function refreshPrices(){
+  try{
+    const ids = Object.values(TOKENS).map(t => t.mint).join(",");
+    const r = await fetch(`${JUP_PRICE}?ids=${ids}`);
+    if(!r.ok) return;
+    const j = await r.json();
+    const data = j?.data || {};
+    State.prices = {};
+    for(const t of Object.values(TOKENS)){
+      const p = data[t.mint]?.price;
+      if(p != null) State.prices[t.key] = Number(p);
+    }
+    updateUsdHints();
+  } catch(_){}
+}
+
+// ============================================================
+// Quote (Jupiter)
+// ============================================================
+async function getQuote(){
+  const from = TOKENS[State.from];
+  const to   = TOKENS[State.to];
+  const amount = State.amountIn;
+  if(!amount || amount <= 0){
+    State.amountOut = 0;
+    State.quote = null;
+    $("amountOut").value = "";
+    $("quoteInfo").style.display = "none";
+    updateButton();
+    return;
+  }
+
+  const atomic = BigInt(Math.floor(amount * (10 ** from.decimals)));
+  if(atomic <= 0n) return;
+
+  const myCounter = ++State.quoteCounter;
+  State.quoting = true;
+  $("amountOut").placeholder = "Fetching…";
+  updateButton();
+
+  try{
+    const url = `${JUP_BASE}/quote?inputMint=${from.mint}&outputMint=${to.mint}&amount=${atomic.toString()}&slippageBps=${State.slippageBps}&restrictIntermediateTokens=true`;
+    const r = await fetch(url);
+    if(!r.ok){
+      let detail = "";
+      try{ const j = await r.json(); detail = j?.error || j?.errorMessage || ""; }catch(_){}
+      throw new Error(detail || `Quote ${r.status}`);
+    }
+    const j = await r.json();
+    // Stale check
+    if(myCounter !== State.quoteCounter) return;
+    State.quote = j;
+    State.amountOut = Number(j.outAmount) / (10 ** to.decimals);
+    $("amountOut").value = fmt(State.amountOut, 8);
+    renderQuoteInfo(j);
+  } catch(e){
+    if(myCounter !== State.quoteCounter) return;
+    State.quote = null;
+    State.amountOut = 0;
+    $("amountOut").value = "";
+    $("quoteInfo").style.display = "none";
+    console.warn("[quote]", e);
+    showAlert("error", "Quote failed: " + (e.message || e));
+  } finally {
+    State.quoting = false;
+    $("amountOut").placeholder = "0.0";
+    updateButton();
+  }
+}
+
+const debouncedQuote = debounce(getQuote, 350);
+
+function renderQuoteInfo(q){
+  const from = TOKENS[State.from];
+  const to   = TOKENS[State.to];
+  const inAmt  = Number(q.inAmount)  / (10 ** from.decimals);
+  const outAmt = Number(q.outAmount) / (10 ** to.decimals);
+  const rate = outAmt / inAmt;
+  $("qiRate").textContent  = `1 ${from.symbol} = ${fmt(rate, 8)} ${to.symbol}`;
+  const impact = Number(q.priceImpactPct || 0) * 100;
+  const impactEl = $("qiImpact");
+  impactEl.textContent = (impact >= 0.01 ? impact.toFixed(2) : "<0.01") + "%";
+  impactEl.className = "v" + (impact > 5 ? " bad" : impact > 1 ? " warn" : "");
+  $("qiSlip").textContent = (State.slippageBps/100).toFixed(2) + "%";
+  const minOut = Number(q.otherAmountThreshold || 0) / (10 ** to.decimals);
+  $("qiMin").textContent = fmt(minOut, 8) + " " + to.symbol;
+  const route = (q.routePlan || [])
+    .map(p => p?.swapInfo?.label || "?")
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" → ") || "direct";
+  $("qiRoute").textContent = route;
+  $("quoteInfo").style.display = "";
+}
+
+// ============================================================
+// Swap execution
+// ============================================================
+async function executeSwap(){
+  if(State.swapping) return;
+  if(!State.wallet){ connectWallet(); return; }
+  if(!State.quote){ showAlert("info", "Get a quote first."); return; }
+
+  State.swapping = true;
+  updateButton();
+  try{
+    const swapRes = await fetch(`${JUP_BASE}/swap`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quoteResponse: State.quote,
+        userPublicKey: State.wallet,
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        prioritizationFeeLamports: "auto",
+      }),
+    });
+    if(!swapRes.ok){
+      let detail = "";
+      try{ const j = await swapRes.json(); detail = j?.error || ""; }catch(_){}
+      throw new Error(detail || `Swap ${swapRes.status}`);
+    }
+    const { swapTransaction } = await swapRes.json();
+    if(!swapTransaction) throw new Error("No swap transaction returned");
+
+    const buf = Uint8Array.from(atob(swapTransaction), c => c.charCodeAt(0));
+    const tx = VersionedTransaction.deserialize(buf);
+
+    const phantom = getPhantom();
+    const sigRes = await phantom.signAndSendTransaction(tx);
+    const signature = sigRes.signature || sigRes;
+
+    showAlert("info", `Transaction sent. Confirming… <a href="https://solscan.io/tx/${signature}" target="_blank">${signature.slice(0,16)}…</a>`, true);
+
+    const connection = new Connection(RPC_URLS[0], "confirmed");
+    try{
+      await connection.confirmTransaction(signature, "confirmed");
+    } catch(_){}
+
+    showAlert("success", `Swap complete. <a href="https://solscan.io/tx/${signature}" target="_blank">View on Solscan ↗</a>`, true);
+
+    // Reset and refresh
+    $("amountIn").value = "";
+    $("amountOut").value = "";
+    State.amountIn = 0;
+    State.amountOut = 0;
+    State.quote = null;
+    $("quoteInfo").style.display = "none";
+    await refreshAllBalances();
+
+  } catch(e){
+    const msg = e.message || String(e);
+    showAlert("error", "Swap failed: " + msg, true);
+  } finally {
+    State.swapping = false;
+    updateButton();
+  }
+}
+
+// ============================================================
+// UI sync
+// ============================================================
+function updateUI(){
+  const from = TOKENS[State.from];
+  const to   = TOKENS[State.to];
+
+  $("fromSym").textContent = from.symbol;
+  $("toSym").textContent   = to.symbol;
+  $("fromLogo").className  = "token-logo " + from.cls;
+  $("toLogo").className    = "token-logo " + to.cls;
+  $("fromLogo").innerHTML  = from.logoHtml;
+  $("toLogo").innerHTML    = to.logoHtml;
+
+  $("fromBal").textContent = State.wallet
+    ? fmt(State.balances[State.from] || 0)
+    : "—";
+  $("toBal").textContent   = State.wallet
+    ? fmt(State.balances[State.to] || 0)
+    : "—";
+
+  updateUsdHints();
+  updateButton();
+}
+
+function updateUsdHints(){
+  const fp = State.prices[State.from] || 0;
+  const tp = State.prices[State.to] || 0;
+  $("fromUsd").textContent = fp && State.amountIn  ? fmtUsd(fp * State.amountIn) : (fp ? "≈ "+fmtUsd(fp)+" / "+TOKENS[State.from].symbol : "—");
+  $("toUsd").textContent   = tp && State.amountOut ? fmtUsd(tp * State.amountOut) : (tp ? "≈ "+fmtUsd(tp)+" / "+TOKENS[State.to].symbol   : "—");
+}
+
+function updateButton(){
+  const btn = $("swapBtn");
+  btn.classList.remove("connect");
+
+  if(!State.wallet){
+    btn.textContent = "CONNECT PHANTOM";
+    btn.classList.add("connect");
+    btn.disabled = false;
+    return;
+  }
+  if(State.swapping){
+    btn.textContent = "SWAPPING…";
+    btn.disabled = true;
+    return;
+  }
+  if(State.quoting){
+    btn.textContent = "FETCHING QUOTE…";
+    btn.disabled = true;
+    return;
+  }
+  if(!State.amountIn || State.amountIn <= 0){
+    btn.textContent = "ENTER AN AMOUNT";
+    btn.disabled = true;
+    return;
+  }
+  const bal = State.balances[State.from] || 0;
+  if(State.amountIn > bal){
+    btn.textContent = `INSUFFICIENT ${TOKENS[State.from].symbol}`;
+    btn.disabled = true;
+    return;
+  }
+  if(!State.quote){
+    btn.textContent = "NO ROUTE";
+    btn.disabled = true;
+    return;
+  }
+  btn.textContent = `SWAP ${TOKENS[State.from].symbol} → ${TOKENS[State.to].symbol}`;
+  btn.disabled = false;
+}
+
+// ============================================================
+// Token modal
+// ============================================================
+function openTokenModal(forSide){
+  State.pickingFor = forSide;
+  const list = $("tokenList");
+  list.innerHTML = "";
+  for(const t of Object.values(TOKENS)){
+    const otherSide = forSide === "from" ? State.to : State.from;
+    const isActive = forSide === "from" ? State.from === t.key : State.to === t.key;
+    const isDisabled = t.key === otherSide;
+    const item = document.createElement("div");
+    item.className = "token-item " + t.cls + (isActive ? " active" : "");
+    item.style.opacity = isDisabled ? "0.4" : "1";
+    item.style.pointerEvents = isDisabled ? "none" : "";
+    const bal = State.wallet ? fmt(State.balances[t.key] || 0) : "";
+    item.innerHTML = `
+      <div class="tl-logo">${t.logoHtml}</div>
+      <div>
+        <div class="symbol">${t.symbol}</div>
+        <div class="name">${t.name}</div>
+      </div>
+      <div class="bal">${bal}</div>
+    `;
+    item.addEventListener("click", () => {
+      pickToken(forSide, t.key);
+      closeTokenModal();
+    });
+    list.appendChild(item);
+  }
+  $("modalTitle").textContent = forSide === "from" ? "Select token to pay" : "Select token to receive";
+  $("tokenModal").classList.add("show");
+}
+function closeTokenModal(){ $("tokenModal").classList.remove("show"); }
+
+function pickToken(side, key){
+  if(side === "from"){
+    if(State.to === key){
+      // swap them
+      State.to = State.from;
+    }
+    State.from = key;
+  } else {
+    if(State.from === key){
+      State.from = State.to;
+    }
+    State.to = key;
+  }
+  updateUI();
+  debouncedQuote();
+}
+
+function reverseDirection(){
+  const oldFrom = State.from;
+  State.from = State.to;
+  State.to = oldFrom;
+  const amt = State.amountIn;
+  // swap the input numbers if there was a value
+  $("amountIn").value = $("amountOut").value || "";
+  State.amountIn = parseFloat($("amountIn").value) || 0;
+  $("amountOut").value = "";
+  State.amountOut = 0;
+  State.quote = null;
+  $("quoteInfo").style.display = "none";
+  updateUI();
+  debouncedQuote();
+}
+
+// ============================================================
+// Wire up
+// ============================================================
+$("swapBtn").addEventListener("click", () => {
+  if(!State.wallet) connectWallet();
+  else executeSwap();
+});
+
+$("btnDisconnect").addEventListener("click", disconnectWallet);
+
+$("amountIn").addEventListener("input", (e) => {
+  // sanitize
+  const v = e.target.value.replace(/[^0-9.]/g, "").replace(/(\..*)\./g, "$1");
+  if(v !== e.target.value) e.target.value = v;
+  State.amountIn = parseFloat(v) || 0;
+  updateUsdHints();
+  updateButton();
+  debouncedQuote();
+});
+
+document.querySelectorAll(".quick-pcts button").forEach(b => {
+  b.addEventListener("click", () => {
+    if(!State.wallet){ connectWallet(); return; }
+    const pct = parseFloat(b.dataset.pct);
+    let bal = State.balances[State.from] || 0;
+    // leave a tiny SOL buffer for fees if maxing SOL
+    if(State.from === "SOL" && pct === 1) bal = Math.max(0, bal - 0.01);
+    const amt = bal * pct;
+    $("amountIn").value = amt > 0.0001 ? amt.toFixed(6).replace(/0+$/,"").replace(/\.$/,"") : "0";
+    State.amountIn = amt;
+    updateUsdHints();
+    updateButton();
+    debouncedQuote();
+  });
+});
+
+$("fromTokenBtn").addEventListener("click", () => openTokenModal("from"));
+$("toTokenBtn").addEventListener("click", () => openTokenModal("to"));
+$("closeTokenModal").addEventListener("click", closeTokenModal);
+$("tokenModal").addEventListener("click", (e) => { if(e.target.id === "tokenModal") closeTokenModal(); });
+
+$("swapToggle").addEventListener("click", reverseDirection);
+$("btnRefresh").addEventListener("click", () => { getQuote(); refreshAllBalances(); refreshPrices(); });
+
+$("btnSettings").addEventListener("click", () => $("settingsModal").classList.add("show"));
+$("closeSettingsModal").addEventListener("click", () => $("settingsModal").classList.remove("show"));
+$("settingsModal").addEventListener("click", (e) => { if(e.target.id === "settingsModal") $("settingsModal").classList.remove("show"); });
+
+document.querySelectorAll("#slippageOpts .slip-btn").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("#slippageOpts .slip-btn").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    State.slippageBps = parseInt(b.dataset.bps);
+    if(State.amountIn > 0) debouncedQuote();
+  });
+});
+
+// Esc to close modals
+document.addEventListener("keydown", (e) => {
+  if(e.key === "Escape"){
+    closeTokenModal();
+    $("settingsModal").classList.remove("show");
+  }
+});
+
+// ============================================================
+// Initial
+// ============================================================
+updateUI();
+refreshPrices();
+setInterval(refreshPrices, 30000);
+tryAutoConnect();
+</script>
+</body>
+</html>
