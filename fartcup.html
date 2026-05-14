@@ -195,6 +195,46 @@
     font-size: 13px;
   }
 
+  /* ===== BUYBACK & BURN CALLOUT ===== */
+  .buyback {
+    background: var(--pitch-soft);
+    border: 1.5px solid var(--pitch-bright);
+    border-radius: 16px;
+    padding: 18px 22px;
+    margin: 0 0 32px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .buyback .mark {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--pitch) 0%, var(--pitch-bright) 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .buyback .mark svg { width: 20px; height: 20px; }
+  .buyback .body {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--pitch-dark);
+  }
+  .buyback .body strong {
+    color: var(--pitch-dark);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    display: block;
+    margin-bottom: 3px;
+    font-size: 13px;
+  }
+  .buyback .body b { color: #04401d; }
+
   /* ===== STATS ===== */
   .stats {
     display: grid;
@@ -520,6 +560,21 @@
       results — a country winning or losing on the pitch guarantees <b>nothing</b> about its
       coin, and there are <b>zero guaranteed returns</b>. This exists purely for fun. Never
       put in money you can't afford to lose. Seriously: don't take it too seriously.
+    </div>
+  </div>
+
+  <!-- BUYBACK & BURN -->
+  <div class="buyback">
+    <div class="mark">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 23c-4.4 0-8-3.1-8-7 0-2.6 1.3-4.6 2.5-6.2C8 7.7 9 6 9 3.5c0-.4.4-.6.7-.4 2.1 1.3 4.3 4 4.3 7 .8-.6 1.3-1.6 1.4-3 0-.4.5-.6.8-.3C19 9 20 11.5 20 14c0 3.9-3.6 9-8 9z"/>
+      </svg>
+    </div>
+    <div class="body">
+      <strong>It all feeds the $FARTPRINT burn</strong>
+      Every nation coin in the Fart Cup works for the ecosystem: <b>all trading fees from
+      these coins go straight into buying back and burning $FARTPRINT</b>. The more the Cup
+      gets traded, the more $FARTPRINT is taken out of supply — permanently.
     </div>
   </div>
 
