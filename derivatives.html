@@ -1575,6 +1575,7 @@ const SEED_MINTS = [
   "8YWLJnkiggWvuMTViFGtSfMTkRFysUuhvnhz8xJmbrrr",
   "DHxKCdydJaHrgnzFJfJo4vNQv5fN8ooQXGTxfs8gbrrr",
   "3XTQFSvfBkNZZ5k26xD5nHex5CUtAyC9X5ckjMFHbrrr",
+  "8Etxo4Z6ixYpu7kh8xgX67M5chwRkqxXwjXRi5rcbrrr",
 ];
 
 async function loadSeedTokens(){
@@ -1633,14 +1634,18 @@ async function publishMintToGallery(rec){
     let j = null;
     try { j = await r.json(); } catch(_) {}
     if(r.ok && j && j.ok){
-      log(`Mint registered to the FART Family registry (${j.backend || "ok"}).`, "ok");
+      log(`Mint registered to the FART Family registry (${j.backend || "ok"} · ${j.count ?? "?"} total).`, "ok");
     } else if(r.status === 404){
       log("Registry endpoint not found (/api/registry) — add api/registry.js and redeploy.", "err");
+      showAlert("warn", "Heads up: the registry endpoint (/api/registry) is missing — your token is saved locally but won't appear for others until api/registry.js is deployed.");
     } else {
-      log(`Registry publish issue: ${(j && j.message) || ("HTTP " + r.status)} — token saved locally.`, "err");
+      const detail = (j && j.message) || ("HTTP " + r.status);
+      log(`Registry publish issue: ${detail} — token saved locally.`, "err");
+      showAlert("warn", "Registry publish issue: " + detail + " — your token is saved locally but the shared family list wasn't updated.");
     }
   } catch(e){
     log(`Registry publish failed (will retain locally): ${e.message}`, "err");
+    showAlert("warn", "Registry publish failed: " + e.message + " — token saved locally only.");
   }
 }
 
