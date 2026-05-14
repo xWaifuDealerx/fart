@@ -722,6 +722,27 @@
     letter-spacing: 1.2px;
     margin-bottom: 6px;
   }
+  .d-card .mcap {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .d-card .mcap .mcap-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .d-card .mcap .mcap-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .d-card .mcap .mcap-val.loading { color: var(--text-muted); font-weight: 500; }
+  .d-card .mcap .mcap-val.none { color: var(--text-tertiary); font-weight: 500; font-size: 11px; }
   .d-card .desc {
     font-size: 12px;
     color: var(--text-tertiary);
@@ -1670,6 +1691,9 @@ async function loadGallery(){
 
   countEl.textContent = all.length === 1 ? "1 derivative" : (all.length + " derivatives");
   root.innerHTML = `<div class="gallery-grid">${all.map(renderGalleryCard).join("")}</div>`;
+
+  // Fetch + fill in live market caps for every card with a mint address.
+  loadGalleryMarketCaps(all);
 }
 
 function renderGalleryCard(rec){
@@ -1684,6 +1708,10 @@ function renderGalleryCard(rec){
     ? `https://app.printr.money/trade/${rec.ma}`
     : (rec.tid ? `https://app.printr.money/trade/${rec.tid}` : "#");
   const isPending = !rec.ma;
+  // Cards with a mint address get a data-ma so loadGalleryMarketCaps can target them.
+  const mcapEl = rec.ma
+    ? `<span class="mcap-val loading" data-ma="${escapeHtml(rec.ma)}">fetching…</span>`
+    : `<span class="mcap-val none">on bonding curve</span>`;
   return `
     <div class="d-card ${isPending ? 'pending' : ''}" title="${escapeHtml(rec.sym)} · ${ago(rec.ts)}">
       <div class="icon">${imgSrc
@@ -1693,6 +1721,10 @@ function renderGalleryCard(rec){
       <div class="body">
         <div class="name">${escapeHtml(rec.name || 'Unnamed')}</div>
         <div class="symbol">$${escapeHtml(rec.sym || 'FART')}</div>
+        <div class="mcap">
+          <span class="mcap-label">Market Cap</span>
+          ${mcapEl}
+        </div>
         <div class="bottom">
           <span class="creator">by ${shortAddr(rec.by || '', 4)} · ${ago(rec.ts)}</span>
           <a href="${tradeUrl}" target="_blank" rel="noopener" class="trade-btn">TRADE</a>
@@ -1700,6 +1732,58 @@ function renderGalleryCard(rec){
       </div>
     </div>
   `;
+}
+
+// Format a USD market cap compactly.
+function fmtMcap(n){
+  if(n == null || isNaN(n) || n <= 0) return null;
+  const num = Number(n);
+  if(num < 1000) return "$" + num.toFixed(0);
+  if(num < 1e6)  return "$" + (num/1e3).toFixed(1) + "K";
+  if(num < 1e9)  return "$" + (num/1e6).toFixed(2) + "M";
+  return "$" + (num/1e9).toFixed(2) + "B";
+}
+
+// Batch-fetch market caps from DexScreener for every gallery card that has
+// a mint address, then write the values into the cards.
+async function loadGalleryMarketCaps(records){
+  const mints = [...new Set(records.filter(r => r.ma).map(r => r.ma))];
+  if(mints.length === 0) return;
+
+  const caps = {};   // mint -> marketCap number
+
+  // DexScreener accepts up to 30 comma-separated token addresses per call.
+  for(let i = 0; i < mints.length; i += 30){
+    const batch = mints.slice(i, i + 30);
+    try{
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${batch.join(",")}`);
+      if(!r.ok) continue;
+      const j = await r.json();
+      for(const p of (j.pairs || [])){
+        const mint = p?.baseToken?.address;
+        if(!mint) continue;
+        const cap = p.marketCap || p.fdv || 0;
+        // keep the largest reading seen for this mint (deepest pool)
+        if(!caps[mint] || cap > caps[mint]) caps[mint] = cap;
+      }
+    } catch(_){}
+  }
+
+  // Write results into the DOM
+  document.querySelectorAll('.mcap-val[data-ma]').forEach(el => {
+    const mint = el.getAttribute('data-ma');
+    const cap = caps[mint];
+    const formatted = fmtMcap(cap);
+    el.classList.remove('loading');
+    if(formatted){
+      el.classList.remove('none');
+      el.textContent = formatted;
+    } else {
+      // No DexScreener listing yet — token is fresh / still on the curve
+      el.classList.add('none');
+      el.textContent = "on bonding curve";
+    }
+  });
 }
 
 // ============================================================
