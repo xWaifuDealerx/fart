@@ -3,22 +3,15 @@
 // ============================================================
 // The public list of every derivative minted through the app.
 //
-//   GET  /api/registry  → { tokens: [...], backend: "kv" | "ntfy" }
+//   GET  /api/registry  → { tokens: [...], count: N, backend: "kv" | "ntfy" }
 //   POST /api/registry  → body = one token record:
 //                         { tid, sym, name, img, by, tx, ts, ma }
+//                       → { ok: true, backend, count }
 //
 // Storage backend:
 //   • Vercel KV  — used automatically if KV_REST_API_URL + KV_REST_API_TOKEN
 //                  env vars exist. Permanent, reliable, recommended.
-//   • ntfy.sh    — fallback when KV isn't configured. Called server-side
-//                  (no browser CORS issues) but only ~12h retention.
-//
-// ── To enable permanent storage (one-time, ~5 clicks) ──────────
-//   1. Vercel dashboard → your project → "Storage" tab
-//   2. "Create Database" → choose KV (Upstash for Redis)
-//   3. Connect it to this project
-//   4. Redeploy (Vercel auto-injects the env vars)
-// That's it — no code change needed; this file auto-detects KV.
+//   • ntfy.sh    — fallback when KV isn't configured.
 // ============================================================
 
 const KV_URL   = process.env.KV_REST_API_URL;
@@ -30,7 +23,7 @@ const NTFY_BASE  = "https://ntfy.sh";
 
 const hasKV = () => !!(KV_URL && KV_TOKEN);
 
-// Run a Redis command against the Vercel KV REST API.
+// --- Vercel KV / Upstash REST helper ------------------------------------
 async function kv(command) {
   const r = await fetch(KV_URL, {
     method: "POST",
@@ -40,14 +33,40 @@ async function kv(command) {
     },
     body: JSON.stringify(command),
   });
-  if (!r.ok) throw new Error("KV HTTP " + r.status);
-  const j = await r.json();
-  return j.result;
+  let j = null;
+  try { j = await r.json(); } catch (_) {}
+  if (!r.ok) {
+    throw new Error("KV HTTP " + r.status + (j && j.error ? " — " + j.error : ""));
+  }
+  if (j && j.error) {
+    throw new Error("KV error — " + j.error);
+  }
+  return j ? j.result : null;
 }
 
+// --- Robust request-body reader -----------------------------------------
+// Vercel usually pre-parses JSON bodies, but not always (depends on runtime
+// + headers). This handles object, string, and raw-stream cases.
+async function readBody(req) {
+  if (req.body) {
+    if (typeof req.body === "object") return req.body;
+    if (typeof req.body === "string") {
+      try { return JSON.parse(req.body); } catch (_) { return null; }
+    }
+  }
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+// --- Storage operations -------------------------------------------------
 async function getTokens() {
   if (hasKV()) {
-    // Each token stored under its tid in a hash → re-publishing just overwrites.
     const raw = await kv(["HVALS", KV_KEY]);
     return (raw || [])
       .map((s) => { try { return JSON.parse(s); } catch (_) { return null; } })
@@ -73,10 +92,9 @@ async function getTokens() {
 async function putToken(rec) {
   if (hasKV()) {
     // HSET keyed by tid → idempotent; backfills (mint addr / image) overwrite.
-    await kv(["HSET", KV_KEY, rec.tid, JSON.stringify(rec)]);
+    await kv(["HSET", KV_KEY, String(rec.tid), JSON.stringify(rec)]);
     return;
   }
-  // Fallback: publish to ntfy.sh server-side
   await fetch(`${NTFY_BASE}/${NTFY_TOPIC}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -84,6 +102,7 @@ async function putToken(rec) {
   });
 }
 
+// --- Handler ------------------------------------------------------------
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -95,18 +114,28 @@ export default async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const tokens = await getTokens();
-      res.status(200).json({ tokens, backend: hasKV() ? "kv" : "ntfy" });
+      res.status(200).json({ tokens, count: tokens.length, backend: hasKV() ? "kv" : "ntfy" });
       return;
     }
 
     if (req.method === "POST") {
-      const rec = req.body;
-      if (!rec || !rec.tid || !rec.sym) {
-        res.status(400).json({ ok: false, message: "record must include tid and sym" });
+      const rec = await readBody(req);
+      if (!rec || typeof rec !== "object") {
+        res.status(400).json({ ok: false, message: "Could not read JSON body." });
+        return;
+      }
+      if (!rec.tid || !rec.sym) {
+        res.status(400).json({
+          ok: false,
+          message: "Record must include 'tid' and 'sym'.",
+          received: Object.keys(rec),
+        });
         return;
       }
       await putToken(rec);
-      res.status(200).json({ ok: true, backend: hasKV() ? "kv" : "ntfy" });
+      // Read back so the client can confirm the write landed
+      const tokens = await getTokens();
+      res.status(200).json({ ok: true, backend: hasKV() ? "kv" : "ntfy", count: tokens.length });
       return;
     }
 
