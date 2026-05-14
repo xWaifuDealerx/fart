@@ -1447,14 +1447,15 @@ async function mint(){
     }
 
     // Register to the public FART Family gallery immediately after tx confirm.
-    // mint_address will be backfilled below when the deployment goes live.
-    let thumb = null;
-    try { thumb = await makeThumbnail(State.imageBase64, State.imageFile?.type); } catch(_){}
+    // We store the Printr-hosted image URL (a short string) — NOT a base64
+    // blob — so the registry message stays tiny and always publishes.
+    // mint_address + image are backfilled below when the deployment goes live.
+    const imageUrl = await fetchPrintrImageUrl(tokenId);
     const galleryRec = {
       tid: tokenId,
       sym: symbol,
       name: body.name,
-      img: thumb,
+      img: imageUrl,            // Printr-hosted URL string (or null)
       by: State.wallet,
       tx: signature,
       ts: Date.now(),
@@ -1475,8 +1476,11 @@ async function mint(){
             log(`Deployment ${sol.status} ${sol.contract_address ? "@ "+sol.contract_address.slice(0,12)+"…" : ""}`, sol.status === "live" ? "ok" : "info");
             if(sol.status === "live"){
               live = true;
-              // Backfill the mint address into the gallery record
+              // Backfill the mint address + image into the gallery record
               galleryRec.ma = sol.contract_address || null;
+              if(!galleryRec.img){
+                galleryRec.img = await fetchPrintrImageUrl(tokenId);
+              }
               await publishMintToGallery(galleryRec);
               loadGallery();
               showAlert("success", `
@@ -1527,26 +1531,54 @@ function ago(ts){
   return Math.floor(d/86400) + "d ago";
 }
 
-// Shrink the user's uploaded image to a small JPEG thumbnail so it fits in
-// an ntfy message (which has a per-message size cap).
-async function makeThumbnail(b64, mime){
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => {
-      const size = 128;
-      const c = document.createElement("canvas");
-      c.width = size; c.height = size;
-      const ctx = c.getContext("2d");
-      ctx.fillStyle = "#0a1f12";
-      ctx.fillRect(0,0,size,size);
-      const ratio = Math.max(size/img.width, size/img.height);
-      const w = img.width * ratio, h = img.height * ratio;
-      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
-      resolve(c.toDataURL("image/jpeg", 0.55).split(",")[1]);
-    };
-    img.onerror = reject;
-    img.src = `data:${mime || "image/png"};base64,${b64}`;
-  });
+// Ask Printr (via the serverless proxy) for the token's hosted image URL.
+// Returns a short URL string — kept tiny so the registry message never
+// hits ntfy.sh's size limit. Returns null if not available yet.
+async function fetchPrintrImageUrl(tokenId){
+  try{
+    const r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${tokenId}`));
+    if(!r.ok) return null;
+    const j = await r.json();
+    return j?.imageUrl || j?.image_url || null;
+  } catch(_){
+    return null;
+  }
+}
+
+// ===== Seed derivatives =====
+// Mint addresses listed here are ALWAYS shown in the gallery — their full
+// details are fetched fresh from Printr on every page load, independent of
+// the ntfy.sh registry. Use this for the genesis token and anything that
+// needs to be guaranteed-visible. Add new mint addresses to the array.
+const SEED_MINTS = [
+  "2iCTndXvsRc5XS4PgoPffg4uxnaftxp3XmsEXYSSbrrr", // genesis FART derivative
+];
+
+async function loadSeedTokens(){
+  const out = [];
+  await Promise.all(SEED_MINTS.map(async (ma) => {
+    try{
+      const caip = `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:${ma}`;
+      const r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${caip}`));
+      if(!r.ok) return;
+      const j = await r.json();
+      let creator = "";
+      if(Array.isArray(j.creatorAddresses) && j.creatorAddresses[0]){
+        creator = String(j.creatorAddresses[0]).split(":").pop();
+      }
+      out.push({
+        tid: j.id || ma,
+        sym: j.symbol || "FART",
+        name: j.name || "Unnamed",
+        img: j.imageUrl || j.image_url || null,
+        by: creator,
+        tx: ma,
+        ts: j.createdAt ? new Date(j.createdAt).getTime() : 0,
+        ma: ma,
+      });
+    } catch(_){}
+  }));
+  return out;
 }
 
 function readLocalGallery(){
@@ -1570,12 +1602,16 @@ async function publishMintToGallery(rec){
   // Save locally first so the user sees it instantly even if ntfy fails
   saveToLocalGallery(rec);
   try{
-    await fetch(`${GALLERY_BASE}/${GALLERY_TOPIC}`, {
+    const r = await fetch(`${GALLERY_BASE}/${GALLERY_TOPIC}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(rec),
     });
-    log("Mint registered to the FART Family registry.", "ok");
+    if(r.ok){
+      log("Mint registered to the FART Family registry.", "ok");
+    } else {
+      log(`Registry returned HTTP ${r.status} — token saved locally only.`, "err");
+    }
   } catch(e){
     log(`Registry publish failed (will retain locally): ${e.message}`, "err");
   }
@@ -1608,11 +1644,15 @@ async function loadGallery(){
     console.warn("Gallery remote load failed", e);
   }
 
-  // Merge + dedupe by token id (tid)
+  // Seed tokens — always fetched fresh from Printr, guaranteed visible
+  let seedTokens = [];
+  try { seedTokens = await loadSeedTokens(); } catch(_){}
+
+  // Merge + dedupe by token id (tid). Seeds first so their fresh data wins.
   const local = readLocalGallery();
   const all = [];
   const seen = new Set();
-  for(const r of [...remote, ...local]){
+  for(const r of [...seedTokens, ...remote, ...local]){
     if(!r || !r.tid || !r.sym) continue;
     if(seen.has(r.tid)) continue;
     seen.add(r.tid);
@@ -1637,7 +1677,13 @@ async function loadGallery(){
 }
 
 function renderGalleryCard(rec){
-  const imgSrc = rec.img ? `data:image/jpeg;base64,${rec.img}` : null;
+  // rec.img may be a hosted URL (new records) or a base64 string (legacy)
+  let imgSrc = null;
+  if(rec.img){
+    imgSrc = (/^https?:\/\//.test(rec.img) || rec.img.startsWith("data:"))
+      ? rec.img
+      : `data:image/jpeg;base64,${rec.img}`;
+  }
   const tradeUrl = rec.ma
     ? `https://app.printr.money/trade/${rec.ma}`
     : (rec.tid ? `https://app.printr.money/trade/${rec.tid}` : "#");
