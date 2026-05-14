@@ -308,16 +308,18 @@
 
   /* IMAGE UPLOAD */
   .image-drop {
+    display: block;
+    width: 100%;
     border: 2px dashed var(--border);
     border-radius: 16px;
-    padding: 24px;
+    padding: 28px 20px;
     text-align: center;
     cursor: pointer;
     transition: all 0.18s;
     position: relative;
     background: var(--input-bg);
-    overflow: hidden;
     margin-bottom: 16px;
+    box-sizing: border-box;
   }
   .image-drop:hover {
     border-color: var(--violet);
@@ -327,7 +329,20 @@
     border-color: var(--violet);
     background: var(--violet-soft);
   }
-  .image-drop input[type="file"] { display: none; }
+  /* Hide the native file input but keep it accessible */
+  .file-input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
   .image-drop .placeholder {
     color: var(--text-tertiary);
     font-size: 13px;
@@ -369,6 +384,12 @@
     letter-spacing: 1.2px;
     font-weight: 700;
     margin-bottom: 8px;
+  }
+  .field label .optional-tag {
+    font-weight: 500;
+    opacity: 0.6;
+    text-transform: none;
+    letter-spacing: 0;
   }
   .field input {
     width: 100%;
@@ -709,17 +730,17 @@
       alongside the burn proof.
     </div>
 
-    <label class="image-drop" id="imageDrop">
-      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" id="imageInput">
+    <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" id="imageInput" class="file-input-hidden">
+    <div class="image-drop" id="imageDrop" role="button" tabindex="0">
       <div class="placeholder" id="imagePlaceholder">
         <div class="glyph">▣</div>
         <div>Click or drag an image here</div>
         <div class="hint"><strong>PNG / JPEG / GIF / WEBP</strong> · max 500 KB · square recommended</div>
       </div>
-    </label>
+    </div>
 
     <div class="field">
-      <label for="nftName">Name <span style="font-weight: 500; opacity: 0.6; text-transform: none; letter-spacing: 0;">(optional)</span></label>
+      <label for="nftName">Name <span class="optional-tag">(optional)</span></label>
       <input type="text" id="nftName" placeholder="e.g. Fart #69" maxlength="40">
     </div>
 
@@ -1240,14 +1261,24 @@ $("imageInput").addEventListener("change", (e) => {
   if(f) handleImage(f);
 });
 const drop = $("imageDrop");
+// Clicking the drop zone opens the file picker
+drop.addEventListener("click", () => $("imageInput").click());
+drop.addEventListener("keydown", (e) => {
+  if(e.key === "Enter" || e.key === " "){
+    e.preventDefault();
+    $("imageInput").click();
+  }
+});
 ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, (e) => {
   e.preventDefault(); e.stopPropagation();
   drop.classList.add("active");
 }));
-["dragleave","drop"].forEach(ev => drop.addEventListener(ev, (e) => {
+["dragleave"].forEach(ev => drop.addEventListener(ev, (e) => {
   e.preventDefault(); e.stopPropagation();
+  drop.classList.remove("active");
 }));
 drop.addEventListener("drop", (e) => {
+  e.preventDefault(); e.stopPropagation();
   const f = e.dataTransfer?.files?.[0];
   if(f) handleImage(f);
 });
