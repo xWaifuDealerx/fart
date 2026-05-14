@@ -623,6 +623,226 @@
   }
   .wallet-bar .disconnect:hover { color: var(--red); background: #ffe5e3; }
 
+  /* ===== LISTING CARD ===== */
+  .listing-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 26px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: var(--shadow-card);
+    margin-top: 18px;
+    position: relative;
+  }
+  .listing-card::before {
+    content: "▲ BURN-TO-LIST";
+    position: absolute;
+    top: -10px;
+    left: 24px;
+    background: linear-gradient(135deg, #ff5050, #ff8a00);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    box-shadow: 0 4px 12px rgba(255,80,80,0.30);
+  }
+  .listing-header { margin-bottom: 16px; padding-top: 6px; }
+  .listing-header h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+  }
+  .listing-header p {
+    color: var(--text-tertiary);
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .listing-header p strong {
+    color: var(--green-dark);
+    font-weight: 700;
+  }
+
+  .listing-input-wrap {
+    background: var(--input-bg);
+    border: 1px solid transparent;
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    transition: all 0.15s;
+  }
+  .listing-input-wrap:focus-within {
+    border-color: var(--green);
+    background: var(--card);
+    box-shadow: 0 0 0 3px var(--green-glow);
+  }
+  .listing-input-wrap .input-label {
+    color: var(--text-tertiary);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .listing-input-wrap input {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    outline: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    padding: 0;
+  }
+  .listing-input-wrap input::placeholder { color: var(--text-muted); opacity: 0.7; }
+
+  .listing-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #ff5050 0%, #ff8a00 100%);
+    color: white;
+    border: 0;
+    padding: 16px;
+    border-radius: 16px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 80, 80, 0.28), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.15s;
+  }
+  .listing-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 28px rgba(255, 80, 80, 0.40), inset 0 1px 0 rgba(255,255,255,0.25);
+    filter: brightness(1.05);
+  }
+  .listing-btn:disabled {
+    background: var(--input-bg);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .listing-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .listing-meta strong { color: var(--text); font-weight: 600; }
+
+  /* LISTINGS DISPLAY */
+  .listings-section {
+    width: 100%;
+    max-width: 760px;
+    margin: 36px auto 0;
+  }
+  .listings-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+  .listings-section-header h3 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .listings-section-header .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-weight: 600;
+  }
+  .listings-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .listing-row {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 12px 16px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: 14px;
+    font-size: 13px;
+    transition: all 0.15s;
+    box-shadow: var(--shadow-sm);
+  }
+  .listing-row:hover {
+    border-color: var(--border);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  .listing-row .ca-cell {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .listing-row .ca-cell a { color: inherit; text-decoration: none; border-bottom: 1px dotted var(--border); }
+  .listing-row .ca-cell a:hover { color: var(--green); border-bottom-color: var(--green); }
+  .listing-row .submitter {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .listing-row .when {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-align: right;
+  }
+  .listing-row .tx-link {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--green-dark);
+    text-decoration: none;
+    background: var(--green-soft);
+    padding: 4px 9px;
+    border-radius: 100px;
+    font-weight: 600;
+  }
+  .listing-row .tx-link:hover { background: var(--green); color: white; }
+  .listings-empty {
+    text-align: center;
+    color: var(--text-tertiary);
+    padding: 32px 16px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .listings-empty strong { color: var(--text); }
+
+  @media (max-width: 600px) {
+    .listing-row {
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+    .listing-row .when { display: none; }
+  }
+
   /* FOOTER */
   footer {
     max-width: 1180px;
@@ -669,7 +889,7 @@
 
   <div class="lead">
     <h1>SWAP <span class="accent">$FARTPRINT</span></h1>
-    <p>Trade $FARTPRINT, SOL, and $POOL with the best routes across every Solana DEX. Optimal routing aggregated through Jupiter — Raydium, Meteora, Orca, all of it.</p>
+    <p>Trade $FARTPRINT and selected tokens with the best routes across every Solana DEX. Optimal routing aggregated through all decentralized exchanges on Solana.</p>
   </div>
 
   <div class="alert success" id="alertSuccess"></div>
@@ -703,7 +923,7 @@
       <div class="input-row">
         <input type="text" inputmode="decimal" placeholder="0.0" id="amountIn" autocomplete="off"/>
         <button class="token-pick" id="fromTokenBtn">
-          <span class="token-logo sol" id="fromLogo">S</span>
+          <span class="token-logo sol" id="fromLogo"></span>
           <span class="token-symbol" id="fromSym">SOL</span>
           <span class="caret">▾</span>
         </button>
@@ -734,8 +954,8 @@
       <div class="input-row">
         <input type="text" inputmode="decimal" placeholder="0.0" id="amountOut" readonly/>
         <button class="token-pick" id="toTokenBtn">
-          <span class="token-logo fartprint" id="toLogo"><img src="logo.png" alt="" onerror="this.parentNode.textContent='$';"></span>
-          <span class="token-symbol" id="toSym">$FARTPRINT</span>
+          <span class="token-logo fartprint" id="toLogo"></span>
+          <span class="token-symbol" id="toSym">FARTPRINT</span>
           <span class="caret">▾</span>
         </button>
       </div>
@@ -760,6 +980,42 @@
       Powered by <a href="https://jup.ag" target="_blank" rel="noopener">Jupiter Aggregator</a> · Solana mainnet
     </div>
   </div>
+
+  <!-- ===== LISTING CARD ===== -->
+  <div class="listing-card">
+    <div class="listing-header">
+      <h2>List your token on FartSwap</h2>
+      <p>
+        Burn <strong>100,000 FARTPRINT</strong> to nominate any Solana token for listing.
+        Listings are reviewed and manually added to the swap within 24 hours. Every burn is recorded on-chain and shown publicly below.
+      </p>
+    </div>
+
+    <div class="listing-input-wrap">
+      <label class="input-label" for="listingCA">Token contract address</label>
+      <input type="text" id="listingCA" placeholder="Paste the Solana mint address (e.g. AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY)" autocomplete="off" spellcheck="false">
+    </div>
+
+    <button class="listing-btn" id="btnSubmitListing">BURN 100,000 $FARTPRINT TO LIST</button>
+
+    <div class="listing-meta">
+      <span>Cost: <strong>100,000 FARTPRINT</strong></span>
+      <span>Your balance: <strong id="listingBal">—</strong></span>
+    </div>
+  </div>
+
+  <!-- LISTINGS DISPLAY -->
+  <section class="listings-section">
+    <div class="listings-section-header">
+      <h3>Submitted Listings</h3>
+      <span class="count" id="listingsCount">— listings</span>
+    </div>
+    <div class="listings-grid" id="listingsList">
+      <div class="listings-empty">
+        Loading the ledger…
+      </div>
+    </div>
+  </section>
 
 </main>
 
@@ -812,6 +1068,8 @@
 import {
   Connection,
   PublicKey,
+  TransactionInstruction,
+  TransactionMessage,
   VersionedTransaction,
 } from 'https://esm.sh/@solana/web3.js@1.95.3';
 
@@ -836,27 +1094,99 @@ const TOKENS = {
     name: "Solana",
     decimals: 9,
     cls: "sol",
-    logoHtml: "S",
+    fallback: "S",
+    logoUrl: "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
   },
   FARTPRINT: {
     key: "FARTPRINT",
     mint: "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY",
-    symbol: "$FARTPRINT",
-    name: "FartPrint",
+    symbol: "FARTPRINT",
+    name: "FARTPRINT",
     decimals: 6,
     cls: "fartprint",
-    logoHtml: `<img src="logo.png" alt="" onerror="this.parentNode.textContent='F';">`,
+    fallback: "F",
+    logoUrl: "logo.png",  // overwritten at runtime by Printr API imageUrl
   },
   POOL: {
     key: "POOL",
     mint: "BYVmWXkubwRxnZfdM389RtJJajDMh1LULZjXvfonbrrr",
     symbol: "POOL",
-    name: "Pool",
+    name: "POOL PARTY",
     decimals: 6,
     cls: "pool",
-    logoHtml: "P",
+    fallback: "P",
+    logoUrl: null,  // fetched at runtime from Printr / DexScreener
   },
 };
+
+// Helper to build the inline HTML for a token logo.
+// If logoUrl exists, render an <img>; on image error, replace with the letter fallback.
+function tokenLogoHtml(t){
+  if(t.logoUrl){
+    return `<img src="${t.logoUrl}" alt="" onerror="this.parentNode.textContent='${t.fallback}';">`;
+  }
+  return t.fallback;
+}
+
+// Printr API (auth required). Used to look up the POOL token's imageUrl.
+const PRINTR_API  = "https://api-preview.printr.money/v0";
+const PRINTR_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWlseSJ9.Ml8JzU5AedtwjRHAy6qZBZB4FEyc9jy5CkXsLv__nRQ";
+const SOL_CAIP    = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+
+// Try several sources to find a logo URL for a given token key. Each token's
+// logoUrl gets updated if a remote source returns one (overwrites local fallbacks
+// like logo.png with the canonical Printr-hosted image).
+async function fetchTokenLogo(tokenKey){
+  const t = TOKENS[tokenKey];
+  if(!t) return;
+
+  // 1) Printr API — canonical for Printr-deployed tokens
+  try{
+    const r = await fetch(`${PRINTR_API}/tokens/${SOL_CAIP}:${t.mint}`, {
+      headers: { "Authorization": "Bearer " + PRINTR_JWT, "accept": "application/json" },
+    });
+    if(r.ok){
+      const j = await r.json();
+      if(j?.imageUrl){
+        t.logoUrl = j.imageUrl;
+        updateUI();
+        return;
+      }
+    }
+  } catch(_){}
+
+  // 2) DexScreener — permissive CORS
+  try{
+    const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${t.mint}`);
+    if(r.ok){
+      const j = await r.json();
+      const pair = (j?.pairs || [])[0];
+      const url = pair?.info?.imageUrl || pair?.baseToken?.image;
+      if(url){
+        t.logoUrl = url;
+        updateUI();
+        return;
+      }
+    }
+  } catch(_){}
+
+  // 3) Jupiter v2 search
+  try{
+    const r = await fetch(`https://lite-api.jup.ag/tokens/v2/search?query=${t.mint}`);
+    if(r.ok){
+      const j = await r.json();
+      const list = Array.isArray(j) ? j : (j?.tokens || j?.data || []);
+      const hit = list.find(x => (x.id || x.address || x.mint) === t.mint);
+      const url = hit?.logoURI || hit?.icon || hit?.logo;
+      if(url){
+        t.logoUrl = url;
+        updateUI();
+        return;
+      }
+    }
+  } catch(_){}
+  // Fall through — keep the existing logoUrl (logo.png) or letter fallback.
+}
 
 const State = {
   wallet: null,
@@ -1198,8 +1528,8 @@ function updateUI(){
   $("toSym").textContent   = to.symbol;
   $("fromLogo").className  = "token-logo " + from.cls;
   $("toLogo").className    = "token-logo " + to.cls;
-  $("fromLogo").innerHTML  = from.logoHtml;
-  $("toLogo").innerHTML    = to.logoHtml;
+  $("fromLogo").innerHTML  = tokenLogoHtml(from);
+  $("toLogo").innerHTML    = tokenLogoHtml(to);
 
   $("fromBal").textContent = State.wallet
     ? fmt(State.balances[State.from] || 0)
@@ -1210,6 +1540,7 @@ function updateUI(){
 
   updateUsdHints();
   updateButton();
+  refreshListingBalance();
 }
 
 function updateUsdHints(){
@@ -1276,7 +1607,7 @@ function openTokenModal(forSide){
     item.style.pointerEvents = isDisabled ? "none" : "";
     const bal = State.wallet ? fmt(State.balances[t.key] || 0) : "";
     item.innerHTML = `
-      <div class="tl-logo">${t.logoHtml}</div>
+      <div class="tl-logo">${tokenLogoHtml(t)}</div>
       <div>
         <div class="symbol">${t.symbol}</div>
         <div class="name">${t.name}</div>
@@ -1393,11 +1724,242 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ============================================================
+// Burn-to-list (100k FARTPRINT) — public registry via ntfy.sh
+// ============================================================
+const LISTING_BURN_AMOUNT = 100000;
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOC_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const LISTINGS_TOPIC = "fartprint-fartswap-listings-v1-x9k3py";
+const LISTINGS_BASE = "https://ntfy.sh";
+const LISTINGS_LOCAL = "fp_swap_listings_v1";
+
+function isValidSolanaAddress(addr){
+  return typeof addr === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
+}
+
+function getAtaSync(ownerStr, mintStr){
+  const owner = new PublicKey(ownerStr);
+  const mint  = new PublicKey(mintStr);
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOC_TOKEN_PROGRAM_ID
+  );
+  return ata;
+}
+
+function buildBurnInstruction(tokenAccount, mintStr, ownerStr, amountAtomic){
+  const data = new Uint8Array(9);
+  data[0] = 8; // SPL Token: Burn
+  new DataView(data.buffer).setBigUint64(1, BigInt(amountAtomic), true);
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: tokenAccount, isSigner: false, isWritable: true },
+      { pubkey: new PublicKey(mintStr), isSigner: false, isWritable: true },
+      { pubkey: new PublicKey(ownerStr), isSigner: true, isWritable: false },
+    ],
+    data,
+  });
+}
+
+function readLocalListings(){
+  try{ return JSON.parse(localStorage.getItem(LISTINGS_LOCAL) || "[]"); } catch(_){ return []; }
+}
+function writeLocalListings(list){
+  try{ localStorage.setItem(LISTINGS_LOCAL, JSON.stringify(list.slice(0, 200))); } catch(_){}
+}
+function saveLocalListing(rec){
+  const list = readLocalListings();
+  if(!list.some(r => r.tx === rec.tx)){
+    list.unshift(rec);
+    writeLocalListings(list);
+  }
+}
+
+async function publishListing(rec){
+  saveLocalListing(rec);
+  try{
+    await fetch(`${LISTINGS_BASE}/${LISTINGS_TOPIC}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rec),
+    });
+  } catch(_){}
+}
+
+async function loadListings(){
+  let remote = [];
+  try{
+    const r = await fetch(`${LISTINGS_BASE}/${LISTINGS_TOPIC}/json?poll=1&since=all`);
+    if(r.ok){
+      const text = await r.text();
+      if(text.trim()){
+        for(const line of text.trim().split("\n")){
+          try{
+            const evt = JSON.parse(line);
+            if(evt.event === "message" && evt.message){
+              try{ remote.push(JSON.parse(evt.message)); } catch(_){}
+            }
+          } catch(_){}
+        }
+      }
+    }
+  } catch(_){}
+
+  const local = readLocalListings();
+  const all = [];
+  const seen = new Set();
+  for(const r of [...remote, ...local]){
+    if(!r || !r.tx || !r.ca) continue;
+    if(seen.has(r.tx)) continue;
+    seen.add(r.tx);
+    all.push(r);
+  }
+  all.sort((a,b) => (b.ts || 0) - (a.ts || 0));
+  renderListings(all);
+}
+
+function renderListings(list){
+  const root = $("listingsList");
+  const count = $("listingsCount");
+  count.textContent = list.length === 1 ? "1 listing" : `${list.length} listings`;
+  if(list.length === 0){
+    root.innerHTML = `
+      <div class="listings-empty">
+        <strong>No listings yet.</strong><br>
+        Be the first to burn 100,000 FARTPRINT and nominate a token for FartSwap.
+      </div>
+    `;
+    return;
+  }
+  root.innerHTML = list.slice(0, 50).map(r => {
+    const caShort = r.ca.length > 14 ? r.ca.slice(0,6) + "…" + r.ca.slice(-6) : r.ca;
+    const submitter = shortAddr(r.by || "", 4);
+    const when = ago(r.ts);
+    return `
+      <div class="listing-row">
+        <div class="ca-cell" title="${r.ca}">
+          <a href="https://solscan.io/token/${r.ca}" target="_blank" rel="noopener">${caShort}</a>
+        </div>
+        <div class="submitter">by ${submitter}</div>
+        <div class="when">${when}</div>
+        <a class="tx-link" href="https://solscan.io/tx/${r.tx}" target="_blank" rel="noopener" title="View burn tx">BURN ↗</a>
+      </div>
+    `;
+  }).join("");
+}
+
+function ago(ts){
+  if(!ts) return "—";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if(d < 60) return d + "s ago";
+  if(d < 3600) return Math.floor(d/60) + "m ago";
+  if(d < 86400) return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+
+function refreshListingBalance(){
+  const el = $("listingBal");
+  if(!State.wallet){ el.textContent = "—"; return; }
+  const bal = State.balances.FARTPRINT || 0;
+  el.textContent = fmt(bal) + " FARTPRINT";
+  el.style.color = bal >= LISTING_BURN_AMOUNT ? "var(--green-dark)" : "var(--red)";
+}
+
+async function submitListing(){
+  const btn = $("btnSubmitListing");
+  const ca = $("listingCA").value.trim();
+
+  if(!isValidSolanaAddress(ca)){
+    showAlert("error", "Please enter a valid Solana mint address (base58, 32–44 chars).");
+    return;
+  }
+  if(!State.wallet){
+    connectWallet();
+    return;
+  }
+  if((State.balances.FARTPRINT || 0) < LISTING_BURN_AMOUNT){
+    showAlert("error", `You need at least 100,000 FARTPRINT to burn-to-list. Current balance: ${fmt(State.balances.FARTPRINT || 0)}.`);
+    return;
+  }
+  if(!confirm(`Burn 100,000 FARTPRINT to submit ${ca.slice(0,8)}…${ca.slice(-6)} for listing on FartSwap?\n\nThis is permanent and cannot be reversed.`)){
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "PREPARING BURN…";
+  try{
+    const phantom = getPhantom();
+    if(!phantom) throw new Error("Phantom wallet not detected");
+
+    const mint = TOKENS.FARTPRINT.mint;
+    const decimals = TOKENS.FARTPRINT.decimals;
+    const atomic = BigInt(Math.floor(LISTING_BURN_AMOUNT * (10 ** decimals)));
+    const ata = getAtaSync(State.wallet, mint);
+
+    const burnIx = buildBurnInstruction(ata, mint, State.wallet, atomic);
+
+    const connection = new Connection(RPC_URLS[0], "confirmed");
+    btn.textContent = "FETCHING BLOCKHASH…";
+    const bhRes = await connection.getLatestBlockhash("confirmed");
+
+    const message = new TransactionMessage({
+      payerKey: new PublicKey(State.wallet),
+      recentBlockhash: bhRes.blockhash,
+      instructions: [burnIx],
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(message);
+
+    btn.textContent = "AWAITING WALLET SIGNATURE…";
+    const sigRes = await phantom.signAndSendTransaction(tx);
+    const signature = sigRes.signature || sigRes;
+
+    showAlert("info", `Burn submitted. Confirming… <a href="https://solscan.io/tx/${signature}" target="_blank">${signature.slice(0,16)}…</a>`, true);
+    btn.textContent = "CONFIRMING…";
+
+    try{
+      await connection.confirmTransaction({
+        signature,
+        blockhash: bhRes.blockhash,
+        lastValidBlockHeight: bhRes.lastValidBlockHeight,
+      }, "confirmed");
+    } catch(_){}
+
+    const rec = { ca, by: State.wallet, tx: signature, ts: Date.now() };
+    await publishListing(rec);
+
+    showAlert("success", `▲ Listing submitted! ${ca.slice(0,8)}…${ca.slice(-6)} is now in the queue. <a href="https://solscan.io/tx/${signature}" target="_blank">View burn ↗</a>`, true);
+
+    $("listingCA").value = "";
+    await refreshAllBalances();
+    refreshListingBalance();
+    loadListings();
+
+  } catch(e){
+    const msg = e.message || String(e);
+    showAlert("error", "Listing failed: " + msg, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "BURN 100,000 $FARTPRINT TO LIST";
+  }
+}
+
+$("btnSubmitListing").addEventListener("click", submitListing);
+$("listingCA").addEventListener("input", (e) => {
+  // Light input cleanup — strip whitespace
+  e.target.value = e.target.value.trim();
+});
+
+// ============================================================
 // Initial
 // ============================================================
 updateUI();
 refreshPrices();
+fetchTokenLogo("FARTPRINT");
+fetchTokenLogo("POOL");
+loadListings();
 setInterval(refreshPrices, 30000);
+setInterval(loadListings, 60000);
 tryAutoConnect();
 </script>
 </body>

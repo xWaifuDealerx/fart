@@ -178,6 +178,40 @@
   @media (max-width: 920px) {
     .layout { grid-template-columns: 1fr; }
   }
+  @media (max-width: 600px) {
+    .wrap { padding: 24px 16px 60px; }
+    .nav { margin-bottom: 24px; }
+    .nav .links a { margin-left: 12px; }
+    .hero { margin-bottom: 20px; }
+    .hero h1 { font-size: 32px; letter-spacing: -0.3px; }
+    .wallet-bar {
+      padding: 14px 18px;
+      border-radius: 16px;
+    }
+    .wallet-bar .info { gap: 8px; }
+    .wallet-bar .btn { padding: 9px 16px; font-size: 12px; }
+    .wallet-bar > div:last-child { width: 100%; }
+    .wallet-bar > div:last-child .btn { width: 100%; }
+    .card { padding: 22px 20px; border-radius: 18px; }
+    .card-title { font-size: 17px; }
+    .field { margin-bottom: 16px; }
+    .preview-card { position: static; }
+    .featured-actions { width: 100%; align-items: stretch; }
+    .alert { font-size: 12px; padding: 10px 14px; }
+    .gallery-section { margin-top: 40px; }
+    .gallery-grid { grid-template-columns: 1fr; gap: 12px; }
+    footer { padding-top: 20px; }
+  }
+  @media (max-width: 420px) {
+    .wrap { padding: 18px 14px 60px; }
+    .hero h1 { font-size: 26px; }
+    .hero .breadcrumb { font-size: 10px; }
+    .ticker-row .prefix { font-size: 14px; padding: 12px 12px; letter-spacing: 1px; }
+    .ticker-row input { font-size: 14px; padding: 12px 10px; }
+    .input, .textarea, .select { font-size: 13px; padding: 9px 12px; }
+    .preview-token { padding: 20px; }
+    .preview-token .icon { width: 68px; height: 68px; font-size: 24px; border-radius: 16px; }
+  }
 
   /* ===== CARD ===== */
   .card {
