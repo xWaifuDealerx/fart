@@ -636,6 +636,19 @@
     font-weight: 700;
     letter-spacing: 0.5px;
   }
+  .gallery-header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .gallery-sort {
+    background: var(--card-bg);
+  }
+  .gallery-sort .seg {
+    flex: 0 0 auto;
+    padding: 6px 14px;
+  }
   .gallery-empty, .gallery-loading {
     text-align: center;
     padding: 56px 24px;
@@ -1002,7 +1015,13 @@
   <section class="gallery-section" id="gallerySection">
     <div class="gallery-header">
       <h2>The FART Family</h2>
-      <span class="count" id="galleryCount">— derivatives</span>
+      <div class="gallery-header-right">
+        <div class="segmented gallery-sort" id="gallerySort">
+          <button class="seg active" data-sort="recent">Last Minted</button>
+          <button class="seg" data-sort="mcap">Market Cap</button>
+        </div>
+        <span class="count" id="galleryCount">— derivatives</span>
+      </div>
     </div>
     <div id="galleryRoot">
       <div class="gallery-loading">Loading recent mints…</div>
@@ -1649,9 +1668,12 @@ async function publishMintToGallery(rec){
   }
 }
 
+// Gallery state — holds the merged token list + the active sort mode so the
+// sort toggle can re-render instantly without re-fetching anything.
+const GALLERY = { tokens: [], sortMode: "recent" };
+
 async function loadGallery(){
   const root = $("galleryRoot");
-  const countEl = $("galleryCount");
   if(!root) return;
 
   // Pull all minted derivatives from the registry endpoint, merge with
@@ -1681,10 +1703,27 @@ async function loadGallery(){
     seen.add(r.tid);
     all.push(r);
   }
-  all.sort((a,b) => (b.ts || 0) - (a.ts || 0));
+
+  GALLERY.tokens = all;
+  renderGallery();
+
+  // Fetch live market caps, attach them to each record, then re-render so a
+  // Market Cap sort has real numbers to work with.
+  await attachMarketCaps(all);
+  renderGallery();
+}
+
+// Sort + paint the gallery from the current GALLERY state. Pure render — no
+// fetching — so the sort toggle can call it instantly.
+function renderGallery(){
+  const root = $("galleryRoot");
+  const countEl = $("galleryCount");
+  if(!root) return;
+
+  const all = GALLERY.tokens.slice();
 
   if(all.length === 0){
-    countEl.textContent = "0 derivatives";
+    if(countEl) countEl.textContent = "0 derivatives";
     root.innerHTML = `
       <div class="gallery-empty">
         <div class="glyph">⌐</div>
@@ -1695,11 +1734,16 @@ async function loadGallery(){
     return;
   }
 
-  countEl.textContent = all.length === 1 ? "1 derivative" : (all.length + " derivatives");
-  root.innerHTML = `<div class="gallery-grid">${all.map(renderGalleryCard).join("")}</div>`;
+  if(GALLERY.sortMode === "mcap"){
+    // Highest market cap first; fall back to recency for ties / unpriced tokens.
+    all.sort((a,b) => (b._mcap || 0) - (a._mcap || 0) || (b.ts || 0) - (a.ts || 0));
+  } else {
+    // Most recently minted first.
+    all.sort((a,b) => (b.ts || 0) - (a.ts || 0));
+  }
 
-  // Fetch + fill in live market caps for every card with a mint address.
-  loadGalleryMarketCaps(all);
+  if(countEl) countEl.textContent = all.length === 1 ? "1 derivative" : (all.length + " derivatives");
+  root.innerHTML = `<div class="gallery-grid">${all.map(renderGalleryCard).join("")}</div>`;
 }
 
 function renderGalleryCard(rec){
@@ -1714,10 +1758,18 @@ function renderGalleryCard(rec){
     ? `https://app.printr.money/trade/${rec.ma}`
     : (rec.tid ? `https://app.printr.money/trade/${rec.tid}` : "#");
   const isPending = !rec.ma;
-  // Cards with a mint address get a data-ma so loadGalleryMarketCaps can target them.
-  const mcapEl = rec.ma
-    ? `<span class="mcap-val loading" data-ma="${escapeHtml(rec.ma)}">fetching…</span>`
-    : `<span class="mcap-val none">on bonding curve</span>`;
+  // Market cap cell — values are attached to the record by attachMarketCaps().
+  let mcapEl;
+  if(!rec.ma){
+    mcapEl = `<span class="mcap-val none">on bonding curve</span>`;
+  } else if(!rec._mcapLoaded){
+    mcapEl = `<span class="mcap-val loading">fetching…</span>`;
+  } else {
+    const formatted = fmtMcap(rec._mcap);
+    mcapEl = formatted
+      ? `<span class="mcap-val">${formatted}</span>`
+      : `<span class="mcap-val none">on bonding curve</span>`;
+  }
   return `
     <div class="d-card ${isPending ? 'pending' : ''}" title="${escapeHtml(rec.sym)} · ${ago(rec.ts)}">
       <div class="icon">${imgSrc
@@ -1749,12 +1801,14 @@ function fmtMcap(n){
   return "$" + (num/1e9).toFixed(2) + "B";
 }
 
-// Batch-fetch market caps from DexScreener for every gallery card that has
-// a mint address, then write the values into the cards.
-async function loadGalleryMarketCaps(records){
-  const mints = [...new Set(records.filter(r => r.ma).map(r => r.ma))];
-  if(mints.length === 0) return;
+// Batch-fetch market caps from DexScreener and attach them to each record as
+// rec._mcap (number) + rec._mcapLoaded (bool). renderGallery() reads these,
+// so they drive both the displayed value and the Market Cap sort.
+async function attachMarketCaps(records){
+  const withMa = records.filter(r => r.ma);
+  if(withMa.length === 0) return;
 
+  const mints = [...new Set(withMa.map(r => r.ma))];
   const caps = {};   // mint -> marketCap number
 
   // DexScreener accepts up to 30 comma-separated token addresses per call.
@@ -1774,21 +1828,11 @@ async function loadGalleryMarketCaps(records){
     } catch(_){}
   }
 
-  // Write results into the DOM
-  document.querySelectorAll('.mcap-val[data-ma]').forEach(el => {
-    const mint = el.getAttribute('data-ma');
-    const cap = caps[mint];
-    const formatted = fmtMcap(cap);
-    el.classList.remove('loading');
-    if(formatted){
-      el.classList.remove('none');
-      el.textContent = formatted;
-    } else {
-      // No DexScreener listing yet — token is fresh / still on the curve
-      el.classList.add('none');
-      el.textContent = "on bonding curve";
-    }
-  });
+  // Attach the values onto the records themselves.
+  for(const r of withMa){
+    r._mcap = caps[r.ma] || 0;
+    r._mcapLoaded = true;
+  }
 }
 
 // ============================================================
@@ -1845,6 +1889,16 @@ $("advToggle").addEventListener("click", () => {
 
 $("btnQuote").addEventListener("click", getQuote);
 $("btnMint").addEventListener("click", mint);
+
+// Gallery sort toggle — re-renders instantly from cached state, no re-fetch.
+document.querySelectorAll("#gallerySort .seg").forEach(seg => {
+  seg.addEventListener("click", () => {
+    document.querySelectorAll("#gallerySort .seg").forEach(s => s.classList.remove("active"));
+    seg.classList.add("active");
+    GALLERY.sortMode = seg.dataset.sort;
+    renderGallery();
+  });
+});
 
 // Initial sync
 syncPreview();
