@@ -4,6 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>$FARTPRINT // TERMINAL</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
@@ -446,6 +448,31 @@
   }
   .copy-btn:hover { color: var(--green); border-color: var(--green); }
 
+  /* Return-to-ecosystem button */
+  .return-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--green);
+    background: rgba(0, 255, 102, 0.05);
+    border: 1px solid var(--green-dim);
+    padding: 6px 14px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-decoration: none;
+    text-transform: uppercase;
+    text-shadow: 0 0 4px var(--green-glow);
+    transition: all 0.15s ease;
+  }
+  .return-btn:hover {
+    border-color: var(--green);
+    background: rgba(0, 255, 102, 0.12);
+    box-shadow: 0 0 12px var(--green-glow);
+    text-shadow: 0 0 6px var(--green);
+  }
+
   .small { font-size: 11px; color: var(--green-dim); }
 
   /* ===== Chat ===== */
@@ -638,6 +665,7 @@
   </div>
   <div class="right">
     <span class="item"><span class="label">LAST SYNC:</span><span class="val" id="lastSync">--:--:--</span></span>
+    <a href="index.html" class="return-btn">← RETURN TO ECOSYSTEM</a>
   </div>
 </div>
 
