@@ -1,0 +1,1252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$FARTPRINT // FartNFT</title>
+<meta name="description" content="Mint your own NFT in the FartNFT collection. Burn 10,000 $FARTPRINT, drop an image, earn your spot in the family album.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf7ff;
+    --bg-2: #fbfbfd;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --text-secondary: #424245;
+    --text-tertiary: #6e6e73;
+    --text-muted: #86868b;
+    --border: #d2d2d7;
+    --border-light: #e8e8ed;
+    --input-bg: #f5f3f9;
+    --hover: #f0eaf7;
+    --violet: #9333ea;
+    --violet-bright: #c084fc;
+    --violet-dark: #6b21a8;
+    --violet-soft: #f3e8ff;
+    --violet-glow: rgba(147, 51, 234, 0.22);
+    --pink: #e879f9;
+    --pink-glow: rgba(232, 121, 249, 0.30);
+    --green: #00a85a;
+    --red: #ff3b30;
+    --amber: #ff9500;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+    --shadow-card: 0 16px 48px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.02);
+    --shadow-violet: 0 12px 40px rgba(147, 51, 234, 0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  body {
+    background:
+      radial-gradient(900px 700px at 85% -10%, rgba(232, 121, 249, 0.14), transparent 60%),
+      radial-gradient(800px 600px at -10% 50%, rgba(147, 51, 234, 0.10), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+  }
+
+  /* ===== NAV ===== */
+  .nav {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-logo {
+    width: 52px;
+    height: 52px;
+    border-radius: 14px;
+    object-fit: cover;
+    box-shadow:
+      0 8px 24px rgba(147, 51, 234, 0.30),
+      0 2px 6px rgba(0,0,0,0.08),
+      0 0 0 1px rgba(147, 51, 234, 0.20);
+    transition: transform 0.3s ease;
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+  }
+  .brand-logo:hover { transform: rotate(-4deg) scale(1.04); }
+  .brand-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .brand-name .accent {
+    background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .return-btn {
+    color: var(--text-secondary);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 9px 18px;
+    border-radius: 100px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s;
+  }
+  .return-btn:hover {
+    border-color: var(--violet);
+    color: var(--violet);
+    box-shadow: var(--shadow-md);
+  }
+
+  /* ===== MAIN ===== */
+  .main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .lead {
+    text-align: center;
+    margin: 24px 0 32px;
+    max-width: 600px;
+  }
+  .lead h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(30px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: var(--text);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+  .lead h1 .accent {
+    background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .lead p {
+    color: var(--text-tertiary);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .lead p strong {
+    color: var(--violet-dark);
+    font-weight: 700;
+  }
+
+  /* ===== STATS BAR ===== */
+  .stats-bar {
+    width: 100%;
+    max-width: 540px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    padding: 4px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 28px;
+  }
+  .stats-bar .stat {
+    padding: 14px 10px;
+    text-align: center;
+    border-right: 1px solid var(--border-light);
+  }
+  .stats-bar .stat:last-child { border-right: 0; }
+  .stats-bar .stat .k {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .stats-bar .stat .v {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: -0.3px;
+  }
+  .stats-bar .stat.v-violet .v {
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  /* ===== WALLET BAR ===== */
+  .wallet-bar {
+    width: 100%;
+    max-width: 540px;
+    margin-bottom: 18px;
+    padding: 12px 16px;
+    background: var(--card);
+    border-radius: 100px;
+    border: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 13px;
+    box-shadow: var(--shadow-sm);
+  }
+  .wallet-bar .info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .wallet-bar .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .wallet-bar.connected .dot {
+    background: var(--violet);
+    box-shadow: 0 0 8px var(--violet-glow);
+  }
+  .wallet-bar .label {
+    color: var(--text-muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .wallet-bar .addr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .wallet-bar .bal {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  .wallet-bar .disconnect {
+    color: var(--text-tertiary);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .wallet-bar .disconnect:hover { color: var(--red); background: #ffe5e3; }
+
+  /* ===== MINT CARD ===== */
+  .mint-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 26px;
+    width: 100%;
+    max-width: 540px;
+    box-shadow: var(--shadow-card);
+    position: relative;
+  }
+  .mint-card::before {
+    content: "▣ FARTNFT · GENESIS";
+    position: absolute;
+    top: -10px;
+    left: 24px;
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    color: white;
+    padding: 4px 12px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    box-shadow: 0 4px 12px var(--violet-glow);
+  }
+  .mint-card h2 {
+    font-size: 21px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 6px 0 4px;
+    letter-spacing: -0.3px;
+  }
+  .mint-card .sub {
+    color: var(--text-tertiary);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .mint-card .sub strong { color: var(--violet-dark); font-weight: 700; }
+
+  /* IMAGE UPLOAD */
+  .image-drop {
+    border: 2px dashed var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s;
+    position: relative;
+    background: var(--input-bg);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .image-drop:hover {
+    border-color: var(--violet);
+    background: var(--violet-soft);
+  }
+  .image-drop.active {
+    border-color: var(--violet);
+    background: var(--violet-soft);
+  }
+  .image-drop input[type="file"] { display: none; }
+  .image-drop .placeholder {
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+  .image-drop .placeholder .glyph {
+    font-size: 36px;
+    color: var(--violet);
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+  .image-drop .placeholder strong { color: var(--violet-dark); font-weight: 700; }
+  .image-drop .hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 8px;
+  }
+  .image-drop .preview-img {
+    max-width: 100%;
+    max-height: 280px;
+    border-radius: 12px;
+    object-fit: contain;
+    box-shadow: var(--shadow-md);
+  }
+  .image-drop .meta {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--input-bg);
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    outline: 0;
+    transition: all 0.15s;
+  }
+  .field input:focus {
+    border-color: var(--violet);
+    background: var(--card);
+    box-shadow: 0 0 0 3px var(--violet-glow);
+  }
+  .field input::placeholder { color: var(--text-muted); }
+
+  /* MINT BUTTON */
+  .mint-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--violet) 0%, var(--pink) 100%);
+    color: white;
+    border: 0;
+    padding: 17px;
+    border-radius: 16px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(147, 51, 234, 0.30), inset 0 1px 0 rgba(255,255,255,0.2);
+    transition: all 0.15s;
+    margin-top: 10px;
+  }
+  .mint-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 32px rgba(147, 51, 234, 0.42), inset 0 1px 0 rgba(255,255,255,0.25);
+    filter: brightness(1.06);
+  }
+  .mint-btn:disabled {
+    background: var(--input-bg);
+    color: var(--text-muted);
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+  .mint-btn.connect {
+    background: linear-gradient(135deg, #2e1065, #4c1d95);
+  }
+
+  .mint-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .mint-meta strong { color: var(--text); font-weight: 600; }
+  .mint-meta .bad { color: var(--red); }
+
+  /* ALERTS */
+  .alert {
+    margin: 16px auto 0;
+    width: 100%;
+    max-width: 540px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    display: none;
+    line-height: 1.55;
+  }
+  .alert.show { display: block; }
+  .alert.success { background: #e8fff0; border: 1px solid rgba(0, 168, 90, 0.30); color: #00633a; }
+  .alert.error { background: #ffe5e3; border: 1px solid rgba(255, 59, 48, 0.30); color: #a01a13; }
+  .alert.info { background: var(--violet-soft); border: 1px solid rgba(147, 51, 234, 0.25); color: var(--violet-dark); }
+  .alert a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+  /* ===== COLLECTION ===== */
+  .collection-section {
+    width: 100%;
+    max-width: 1180px;
+    margin: 60px auto 0;
+  }
+  .collection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 22px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-light);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .collection-header h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(22px, 3vw, 28px);
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .collection-header h3 .accent {
+    background: linear-gradient(135deg, var(--violet), var(--pink));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .collection-header .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--violet-dark);
+    background: var(--violet-soft);
+    border: 1px solid rgba(147, 51, 234, 0.20);
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-weight: 700;
+    letter-spacing: 0.6px;
+  }
+  .nft-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .nft-card {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+  }
+  .nft-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--violet);
+  }
+  .nft-card .art {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(135deg, var(--violet-soft), var(--input-bg));
+    overflow: hidden;
+    position: relative;
+  }
+  .nft-card .art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .nft-card .serial {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--violet-dark);
+    padding: 3px 9px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+  }
+  .nft-card .body {
+    padding: 14px 16px;
+  }
+  .nft-card .name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .nft-card .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    margin-top: 8px;
+  }
+  .nft-card .owner {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-secondary);
+  }
+  .nft-card .when {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .nft-card .tx-link {
+    display: block;
+    margin-top: 8px;
+    color: var(--violet-dark);
+    background: var(--violet-soft);
+    padding: 5px 10px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-decoration: none;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .nft-card .tx-link:hover {
+    background: var(--violet);
+    color: white;
+  }
+  .nft-empty {
+    text-align: center;
+    padding: 60px 30px;
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: 18px;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+  }
+  .nft-empty .glyph {
+    font-size: 42px;
+    color: var(--violet);
+    margin-bottom: 12px;
+    opacity: 0.6;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .nft-empty .title {
+    color: var(--text);
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .nft-empty .sub {
+    font-size: 13px;
+    max-width: 360px;
+    margin: 0 auto;
+  }
+
+  /* FOOTER */
+  footer {
+    max-width: 1180px;
+    margin: 60px auto 0;
+    padding: 24px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+    color: var(--text-tertiary);
+    font-size: 13px;
+  }
+  footer .links a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-right: 16px;
+    font-weight: 500;
+  }
+  footer .links a:hover { color: var(--violet); }
+
+  @media (max-width: 540px) {
+    .nav { padding: 16px; }
+    .brand-name { font-size: 22px; }
+    .brand-logo { width: 44px; height: 44px; }
+    .main { padding: 16px; }
+    .mint-card { padding: 22px 20px; border-radius: 20px; }
+    .stats-bar { grid-template-columns: 1fr 1fr 1fr; }
+    .stats-bar .stat .v { font-size: 18px; }
+    .nft-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+  }
+  @media (max-width: 420px) {
+    .nft-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand">
+    <img src="logo.png" alt="" class="brand-logo" onerror="this.style.display='none';">
+    <div class="brand-name">Fart<span class="accent">NFT</span></div>
+  </div>
+  <a href="index.html" class="return-btn">← Return to Ecosystem</a>
+</nav>
+
+<main class="main">
+
+  <div class="lead">
+    <h1>The <span class="accent">FartNFT</span> Collection</h1>
+    <p>Burn <strong>10,000 $FARTPRINT</strong>, upload an image, and claim your spot in the family album. Every mint is permanent — your art and the burn tx land in the public collection forever.</p>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat v-violet">
+      <div class="k">Minted</div>
+      <div class="v" id="statMinted">—</div>
+    </div>
+    <div class="stat v-violet">
+      <div class="k">Burned</div>
+      <div class="v" id="statBurned">—</div>
+    </div>
+    <div class="stat v-violet">
+      <div class="k">Holders</div>
+      <div class="v" id="statHolders">—</div>
+    </div>
+  </div>
+
+  <div class="wallet-bar" id="walletBar">
+    <div class="info">
+      <span class="dot"></span>
+      <span class="label">Wallet</span>
+      <span class="addr" id="walletAddr">Not connected</span>
+      <span class="bal" id="walletBal"></span>
+    </div>
+    <button class="disconnect" id="btnDisconnect" style="display:none;">DISCONNECT</button>
+  </div>
+
+  <!-- ALERTS -->
+  <div class="alert success" id="alertSuccess"></div>
+  <div class="alert error" id="alertError"></div>
+  <div class="alert info" id="alertInfo"></div>
+
+  <!-- ===== MINT CARD ===== -->
+  <div class="mint-card">
+    <h2 style="padding-top:6px;">Mint your FartNFT</h2>
+    <div class="sub">
+      Drop an image, optionally name it, and burn <strong>10,000 $FARTPRINT</strong> to add it
+      to the collection. The image is stored as a thumbnail in the public registry
+      alongside the burn proof.
+    </div>
+
+    <label class="image-drop" id="imageDrop">
+      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" id="imageInput">
+      <div class="placeholder" id="imagePlaceholder">
+        <div class="glyph">▣</div>
+        <div>Click or drag an image here</div>
+        <div class="hint"><strong>PNG / JPEG / GIF / WEBP</strong> · max 500 KB · square recommended</div>
+      </div>
+    </label>
+
+    <div class="field">
+      <label for="nftName">Name <span style="font-weight: 500; opacity: 0.6; text-transform: none; letter-spacing: 0;">(optional)</span></label>
+      <input type="text" id="nftName" placeholder="e.g. Fart #69" maxlength="40">
+    </div>
+
+    <button class="mint-btn connect" id="btnMint">CONNECT PHANTOM</button>
+
+    <div class="mint-meta">
+      <span>Cost: <strong>10,000 $FARTPRINT</strong></span>
+      <span>Balance: <strong id="mintBal">—</strong></span>
+    </div>
+  </div>
+
+  <!-- ===== COLLECTION ===== -->
+  <section class="collection-section">
+    <div class="collection-header">
+      <h3>The <span class="accent">Family Album</span></h3>
+      <span class="count" id="collectionCount">— NFTs</span>
+    </div>
+    <div class="nft-grid" id="nftGrid">
+      <div class="nft-empty">
+        <div class="glyph">▣</div>
+        <div class="title">Loading the album…</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div>
+    <div>$FARTPRINT Ecosystem · FartNFT v1.0</div>
+    <div style="opacity:0.7; font-size:12px; margin-top:4px;">burn it · mint it · keep it</div>
+  </div>
+  <div class="links">
+    <a href="index.html">Ecosystem</a>
+    <a href="terminal.html">Terminal</a>
+    <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Solscan</a>
+  </div>
+</footer>
+
+<script type="module">
+import {
+  Connection,
+  PublicKey,
+  TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from 'https://esm.sh/@solana/web3.js@1.95.3';
+
+// ============================================================
+// Config
+// ============================================================
+const FARTPRINT_MINT = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const FARTPRINT_DECIMALS = 6;
+const BURN_AMOUNT = 10000;
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOC_TOKEN_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+
+const RPC_URLS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+const NFT_TOPIC = "fartprint-fartnft-collection-v1-p7q3x";
+const NFT_BASE  = "https://ntfy.sh";
+const NFT_LOCAL = "fp_nft_collection_v1";
+
+const State = {
+  wallet: null,
+  balance: 0,
+  imageFile: null,
+  imageBase64: null,
+  thumbnail: null,
+  minting: false,
+  nfts: [],
+};
+
+const $ = (id) => document.getElementById(id);
+
+// ============================================================
+// Utilities
+// ============================================================
+function fmt(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num === 0) return "0";
+  if(num < 1) return num.toFixed(4);
+  if(num < 1000) return num.toLocaleString(undefined, {maximumFractionDigits: 2});
+  if(num < 1e6)  return num.toLocaleString(undefined, {maximumFractionDigits: 0});
+  if(num < 1e9)  return (num/1e6).toFixed(2) + "M";
+  return (num/1e9).toFixed(2) + "B";
+}
+function shortAddr(a, l = 4){
+  if(!a) return "—";
+  return a.length > l*2 + 3 ? a.slice(0,l)+"…"+a.slice(-l) : a;
+}
+function ago(ts){
+  if(!ts) return "—";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if(d < 60)    return d + "s ago";
+  if(d < 3600)  return Math.floor(d/60) + "m ago";
+  if(d < 86400) return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+function escapeHtml(s){
+  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+function showAlert(kind, html, sticky = false){
+  ["success","error","info"].forEach(k => $("alert" + cap(k))?.classList.remove("show"));
+  const el = $("alert" + cap(kind));
+  if(!el) return;
+  el.innerHTML = html;
+  el.classList.add("show");
+  if(!sticky) setTimeout(() => el.classList.remove("show"), 10000);
+}
+function cap(s){ return s[0].toUpperCase() + s.slice(1); }
+
+async function rpc(method, params){
+  for(const url of RPC_URLS){
+    try{
+      const r = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({jsonrpc: "2.0", id: 1, method, params}),
+      });
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j.error) continue;
+      return j.result;
+    } catch(_){}
+  }
+  throw new Error("All RPCs failed");
+}
+
+// ============================================================
+// Phantom
+// ============================================================
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+
+async function connectWallet(){
+  const phantom = getPhantom();
+  if(!phantom){
+    if(confirm("Phantom wallet not detected. Open install page?")){
+      window.open("https://phantom.com/download", "_blank");
+    }
+    return;
+  }
+  try{
+    const resp = await phantom.connect();
+    State.wallet = resp.publicKey.toString();
+    try{ localStorage.setItem("fp_nft_trusted", "1"); }catch(_){}
+    onWalletReady();
+  } catch(_){}
+}
+async function disconnectWallet(){
+  const phantom = getPhantom();
+  try{ await phantom?.disconnect?.(); }catch(_){}
+  State.wallet = null;
+  State.balance = 0;
+  try{ localStorage.removeItem("fp_nft_trusted"); }catch(_){}
+  $("walletBar").classList.remove("connected");
+  $("walletAddr").textContent = "Not connected";
+  $("walletBal").textContent = "";
+  $("btnDisconnect").style.display = "none";
+  updateMintButton();
+}
+async function tryAutoConnect(){
+  const phantom = getPhantom();
+  if(!phantom) return;
+  let trusted = false;
+  try{ trusted = localStorage.getItem("fp_nft_trusted") === "1"; }catch(_){}
+  if(!trusted) return;
+  try{
+    const r = await phantom.connect({ onlyIfTrusted: true });
+    State.wallet = r.publicKey.toString();
+    onWalletReady();
+  } catch(_){}
+}
+function onWalletReady(){
+  $("walletBar").classList.add("connected");
+  $("walletAddr").textContent = shortAddr(State.wallet, 5);
+  $("btnDisconnect").style.display = "";
+  refreshBalance();
+}
+
+// ============================================================
+// Balance
+// ============================================================
+async function refreshBalance(){
+  if(!State.wallet) return;
+  try{
+    const r = await rpc("getTokenAccountsByOwner", [
+      State.wallet, { mint: FARTPRINT_MINT }, { encoding: "jsonParsed" }
+    ]);
+    let total = 0;
+    for(const a of (r?.value || [])){
+      total += a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+    }
+    State.balance = total;
+    $("walletBal").textContent = "· " + fmt(total) + " $FARTPRINT";
+    $("mintBal").textContent = fmt(total) + " $FARTPRINT";
+    $("mintBal").className = total >= BURN_AMOUNT ? "" : "bad";
+    updateMintButton();
+  } catch(e){
+    $("walletBal").textContent = "· rpc error";
+  }
+}
+
+// ============================================================
+// Image handling
+// ============================================================
+function fileToBase64(file){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(String(r.result).split(",")[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+async function makeThumbnail(b64, mime){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 256;
+      const c = document.createElement("canvas");
+      c.width = size; c.height = size;
+      const ctx = c.getContext("2d");
+      ctx.fillStyle = "#f3e8ff";
+      ctx.fillRect(0,0,size,size);
+      const ratio = Math.max(size/img.width, size/img.height);
+      const w = img.width * ratio, h = img.height * ratio;
+      ctx.drawImage(img, (size-w)/2, (size-h)/2, w, h);
+      resolve(c.toDataURL("image/jpeg", 0.62).split(",")[1]);
+    };
+    img.onerror = reject;
+    img.src = `data:${mime || "image/png"};base64,${b64}`;
+  });
+}
+
+async function handleImage(file){
+  if(!file) return;
+  if(file.size > 500*1024){
+    showAlert("error", `Image is ${(file.size/1024).toFixed(0)} KB — must be under 500 KB.`);
+    return;
+  }
+  State.imageFile = file;
+  State.imageBase64 = await fileToBase64(file);
+  try{
+    State.thumbnail = await makeThumbnail(State.imageBase64, file.type);
+  } catch(_){
+    State.thumbnail = State.imageBase64;
+  }
+
+  const drop = $("imageDrop");
+  const ph = $("imagePlaceholder");
+  ph.innerHTML = `
+    <img class="preview-img" src="data:${file.type};base64,${State.imageBase64}" alt="">
+    <div class="meta">${escapeHtml(file.name)} · ${(file.size/1024).toFixed(0)} KB · click to replace</div>
+  `;
+  drop.classList.add("active");
+  updateMintButton();
+}
+
+// ============================================================
+// Burn instruction (SPL Token program · Burn discriminator = 8)
+// ============================================================
+function getAtaSync(ownerStr, mintStr){
+  const owner = new PublicKey(ownerStr);
+  const mint = new PublicKey(mintStr);
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), mint.toBuffer()],
+    ASSOC_TOKEN_PROGRAM_ID
+  );
+  return ata;
+}
+function buildBurnInstruction(tokenAccount, mintStr, ownerStr, amountAtomic){
+  const data = new Uint8Array(9);
+  data[0] = 8;
+  new DataView(data.buffer).setBigUint64(1, BigInt(amountAtomic), true);
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM_ID,
+    keys: [
+      { pubkey: tokenAccount, isSigner: false, isWritable: true },
+      { pubkey: new PublicKey(mintStr), isSigner: false, isWritable: true },
+      { pubkey: new PublicKey(ownerStr), isSigner: true, isWritable: false },
+    ],
+    data,
+  });
+}
+
+function updateMintButton(){
+  const btn = $("btnMint");
+  btn.classList.remove("connect");
+  if(!State.wallet){
+    btn.textContent = "CONNECT PHANTOM";
+    btn.classList.add("connect");
+    btn.disabled = false;
+    return;
+  }
+  if(State.minting){
+    btn.textContent = "MINTING…";
+    btn.disabled = true;
+    return;
+  }
+  if(!State.imageBase64){
+    btn.textContent = "ADD AN IMAGE";
+    btn.disabled = true;
+    return;
+  }
+  if(State.balance < BURN_AMOUNT){
+    btn.textContent = "INSUFFICIENT $FARTPRINT";
+    btn.disabled = true;
+    return;
+  }
+  btn.textContent = "BURN 10,000 $FARTPRINT & MINT";
+  btn.disabled = false;
+}
+
+// ============================================================
+// Mint flow
+// ============================================================
+async function executeMint(){
+  if(!State.wallet) return connectWallet();
+  if(!State.imageBase64){ showAlert("error", "Upload an image first."); return; }
+  if(State.balance < BURN_AMOUNT){ showAlert("error", "You need 10,000 $FARTPRINT to mint."); return; }
+  if(!confirm(`Burn 10,000 $FARTPRINT and mint this NFT into the FartNFT collection?\n\nThe burn is permanent.`)) return;
+
+  State.minting = true;
+  updateMintButton();
+  try{
+    const phantom = getPhantom();
+    if(!phantom) throw new Error("Phantom wallet not detected");
+
+    const ata = getAtaSync(State.wallet, FARTPRINT_MINT);
+    const atomic = BigInt(Math.floor(BURN_AMOUNT * (10 ** FARTPRINT_DECIMALS)));
+    const burnIx = buildBurnInstruction(ata, FARTPRINT_MINT, State.wallet, atomic);
+
+    const connection = new Connection(RPC_URLS[0], "confirmed");
+    const bhRes = await connection.getLatestBlockhash("confirmed");
+    const message = new TransactionMessage({
+      payerKey: new PublicKey(State.wallet),
+      recentBlockhash: bhRes.blockhash,
+      instructions: [burnIx],
+    }).compileToV0Message();
+    const tx = new VersionedTransaction(message);
+
+    const sigRes = await phantom.signAndSendTransaction(tx);
+    const signature = sigRes.signature || sigRes;
+
+    showAlert("info", `Burn submitted. Confirming… <a href="https://solscan.io/tx/${signature}" target="_blank">${signature.slice(0,16)}…</a>`, true);
+
+    try{
+      await connection.confirmTransaction({
+        signature,
+        blockhash: bhRes.blockhash,
+        lastValidBlockHeight: bhRes.lastValidBlockHeight,
+      }, "confirmed");
+    } catch(_){}
+
+    const rec = {
+      img: State.thumbnail,
+      name: ($("nftName").value || "").trim() || `Fart #${(State.nfts.length + 1)}`,
+      by: State.wallet,
+      tx: signature,
+      ts: Date.now(),
+    };
+    await publishNft(rec);
+
+    showAlert("success", `▣ Minted! Your NFT is now in the FartNFT collection. <a href="https://solscan.io/tx/${signature}" target="_blank">View burn ↗</a>`, true);
+
+    // Reset form
+    State.imageFile = null;
+    State.imageBase64 = null;
+    State.thumbnail = null;
+    $("nftName").value = "";
+    $("imageInput").value = "";
+    $("imageDrop").classList.remove("active");
+    $("imagePlaceholder").innerHTML = `
+      <div class="glyph">▣</div>
+      <div>Click or drag an image here</div>
+      <div class="hint"><strong>PNG / JPEG / GIF / WEBP</strong> · max 500 KB · square recommended</div>
+    `;
+    await refreshBalance();
+    await loadCollection();
+
+  } catch(e){
+    showAlert("error", "Mint failed: " + (e.message || e), true);
+  } finally {
+    State.minting = false;
+    updateMintButton();
+  }
+}
+
+// ============================================================
+// Collection registry (ntfy.sh)
+// ============================================================
+function readLocal(){
+  try{ return JSON.parse(localStorage.getItem(NFT_LOCAL) || "[]"); } catch(_){ return []; }
+}
+function writeLocal(list){
+  try{ localStorage.setItem(NFT_LOCAL, JSON.stringify(list.slice(0, 200))); } catch(_){}
+}
+function saveLocal(rec){
+  const list = readLocal();
+  if(!list.some(r => r.tx === rec.tx)){
+    list.unshift(rec);
+    writeLocal(list);
+  }
+}
+async function publishNft(rec){
+  saveLocal(rec);
+  try{
+    await fetch(`${NFT_BASE}/${NFT_TOPIC}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(rec),
+    });
+  } catch(_){}
+}
+
+async function loadCollection(){
+  let remote = [];
+  try{
+    const r = await fetch(`${NFT_BASE}/${NFT_TOPIC}/json?poll=1&since=all`);
+    if(r.ok){
+      const text = await r.text();
+      if(text.trim()){
+        for(const line of text.trim().split("\n")){
+          try{
+            const evt = JSON.parse(line);
+            if(evt.event === "message" && evt.message){
+              try{ remote.push(JSON.parse(evt.message)); } catch(_){}
+            }
+          } catch(_){}
+        }
+      }
+    }
+  } catch(_){}
+
+  const local = readLocal();
+  const all = [];
+  const seen = new Set();
+  for(const r of [...remote, ...local]){
+    if(!r || !r.tx) continue;
+    if(seen.has(r.tx)) continue;
+    seen.add(r.tx);
+    all.push(r);
+  }
+  all.sort((a,b) => (a.ts || 0) - (b.ts || 0));
+  // Assign serial numbers based on chronological order
+  all.forEach((r, i) => r._serial = i + 1);
+  // Display newest first
+  State.nfts = all.slice().reverse();
+
+  renderStats();
+  renderCollection();
+}
+
+function renderStats(){
+  const total = State.nfts.length;
+  const totalBurned = total * BURN_AMOUNT;
+  const holders = new Set(State.nfts.map(n => n.by)).size;
+  $("statMinted").textContent = total;
+  $("statBurned").textContent = fmt(totalBurned);
+  $("statHolders").textContent = holders;
+  $("collectionCount").textContent = total === 1 ? "1 NFT" : `${total} NFTs`;
+}
+
+function renderCollection(){
+  const root = $("nftGrid");
+  if(State.nfts.length === 0){
+    root.innerHTML = `
+      <div class="nft-empty" style="grid-column: 1 / -1;">
+        <div class="glyph">▣</div>
+        <div class="title">No NFTs yet</div>
+        <div class="sub">Be the first to burn 10,000 $FARTPRINT and mint a piece of the family album.</div>
+      </div>
+    `;
+    return;
+  }
+  root.innerHTML = State.nfts.map(n => {
+    const imgSrc = n.img ? `data:image/jpeg;base64,${n.img}` : null;
+    return `
+      <div class="nft-card">
+        <div class="art">
+          ${imgSrc ? `<img src="${imgSrc}" alt="">` : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--violet);font-family:'JetBrains Mono',monospace;font-size:32px;">▣</div>`}
+          <div class="serial">#${String(n._serial).padStart(3, "0")}</div>
+        </div>
+        <div class="body">
+          <div class="name">${escapeHtml(n.name || `Fart #${n._serial}`)}</div>
+          <div class="meta">
+            <span class="owner">by ${shortAddr(n.by || "", 4)}</span>
+            <span class="when">${ago(n.ts)}</span>
+          </div>
+          <a class="tx-link" href="https://solscan.io/tx/${n.tx}" target="_blank" rel="noopener">VIEW BURN ↗</a>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ============================================================
+// Wire it up
+// ============================================================
+$("btnMint").addEventListener("click", () => {
+  if(!State.wallet) return connectWallet();
+  executeMint();
+});
+$("btnDisconnect").addEventListener("click", disconnectWallet);
+$("imageInput").addEventListener("change", (e) => {
+  const f = e.target.files?.[0];
+  if(f) handleImage(f);
+});
+const drop = $("imageDrop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, (e) => {
+  e.preventDefault(); e.stopPropagation();
+  drop.classList.add("active");
+}));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, (e) => {
+  e.preventDefault(); e.stopPropagation();
+}));
+drop.addEventListener("drop", (e) => {
+  const f = e.dataTransfer?.files?.[0];
+  if(f) handleImage(f);
+});
+
+// Initial load
+updateMintButton();
+loadCollection();
+tryAutoConnect();
+setInterval(loadCollection, 60000);
+</script>
+</body>
+</html>
