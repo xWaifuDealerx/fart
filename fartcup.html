@@ -488,21 +488,38 @@
     animation: pulse 2s infinite;
   }
   @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
-  .cc-trade {
+  .cc-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: var(--input-bg);
-    color: var(--pitch-dark);
+    border: 0;
     border-radius: 100px;
+    font-family: inherit;
     font-size: 11px;
     font-weight: 700;
-    padding: 5px 12px;
-    text-decoration: none;
+    padding: 4px 5px 4px 12px;
+    cursor: pointer;
     letter-spacing: 0.5px;
     transition: all 0.15s;
   }
-  .cc-trade:hover {
-    background: var(--pitch);
-    color: white;
+  .cc-copy:hover { background: var(--pitch-soft); }
+  .cc-copy .ca {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0;
+    color: var(--text-secondary);
   }
+  .cc-copy .copy-lbl {
+    background: var(--pitch);
+    color: #fff;
+    border-radius: 100px;
+    padding: 3px 9px;
+    font-size: 10px;
+    transition: background 0.15s;
+  }
+  .cc-copy:hover .copy-lbl,
+  .cc-copy.copied .copy-lbl { background: var(--pitch-dark); }
 
   .no-results {
     grid-column: 1 / -1;
@@ -770,6 +787,30 @@ function flagUrl(code){
   return `https://flagcdn.com/w160/${code}.png`;
 }
 
+// Truncate a Solana contract address for display: 4kamBp…rbpump
+function shortCA(addr){
+  if(!addr) return "";
+  return addr.length > 13 ? addr.slice(0, 6) + "…" + addr.slice(-5) : addr;
+}
+
+// Copy a country coin's contract address to the clipboard, with button feedback.
+function copyCA(e, contract){
+  e?.preventDefault?.();
+  e?.stopPropagation?.();
+  if(!contract) return;
+  navigator.clipboard?.writeText(contract);
+  const btn = e?.currentTarget;
+  if(!btn) return;
+  const lbl = btn.querySelector(".copy-lbl");
+  const orig = lbl ? lbl.textContent : null;
+  btn.classList.add("copied");
+  if(lbl) lbl.textContent = "COPIED";
+  setTimeout(() => {
+    btn.classList.remove("copied");
+    if(lbl && orig != null) lbl.textContent = orig;
+  }, 1200);
+}
+
 // Sort: nations with a known market cap first (desc), then the rest
 // (alphabetical by country). Before any contracts go live, everything
 // falls into the "rest" bucket and shows in seed order.
@@ -800,9 +841,10 @@ function renderGrid(){
   grid.innerHTML = filtered.map((c, i) => {
     const rank = i + 1;
     const rankCls = (!query && rank <= 3 && c.mcap != null) ? "rank top" : "rank";
-    const live = c.contract && c.mcap != null;
-    const bottom = live
-      ? `<a class="cc-trade" href="https://dexscreener.com/solana/${c.contract}" target="_blank" rel="noopener">TRADE ↗</a>`
+    const hasCA = !!c.contract;
+    const live = hasCA && c.mcap != null;
+    const bottom = hasCA
+      ? `<button class="cc-copy" type="button" onclick="copyCA(event, '${c.contract}')" title="Copy ${c.ticker} contract address"><span class="ca">${shortCA(c.contract)}</span><span class="copy-lbl">COPY</span></button>`
       : `<span class="cc-soon"><span class="dot"></span>CONTRACT COMING SOON</span>`;
     const mcapVal = live
       ? `<span class="mcap">${fmtUsd(c.mcap)}</span>`
