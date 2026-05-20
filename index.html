@@ -1606,20 +1606,26 @@ async function loadTicker(){
     const r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + TOKEN);
     if(!r.ok) return;
     const j = await r.json();
-    const pairs = j.pairs || [];
+    const pairs = (j.pairs || []).slice().sort((a,b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
     if(!pairs.length) return;
-    pairs.sort((a,b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
     const m = pairs[0];
     const price = parseFloat(m.priceUsd);
     const mcap  = m.marketCap || m.fdv;
-    const ch    = m.priceChange?.h24;
+    // 24h change: prefer the deepest pool, but fall back to any pool that
+    // actually reports a 24h figure (the top pool sometimes leaves it blank).
+    let ch = m.priceChange?.h24;
+    if(ch == null){
+      const alt = pairs.find(p => p.priceChange?.h24 != null);
+      if(alt) ch = alt.priceChange.h24;
+    }
     document.getElementById("t-price").textContent = fmtUsd(price);
     document.getElementById("t-mcap").textContent  = fmtUsd(mcap);
     const el = document.getElementById("t-ch24");
     if(ch != null){
-      const sign = ch >= 0 ? "+" : "";
-      el.textContent = sign + ch.toFixed(2) + "%";
-      el.className = "v " + (ch >= 0 ? "up" : "down");
+      const n = Number(ch);
+      const sign = n >= 0 ? "+" : "";
+      el.textContent = sign + n.toFixed(2) + "%";
+      el.className = "v " + (n >= 0 ? "up" : "down");
     }
   } catch(e){
     console.warn("ticker fetch failed", e);
