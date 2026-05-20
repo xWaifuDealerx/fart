@@ -237,7 +237,7 @@
     padding: 4px;
     box-shadow: var(--shadow-md);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     overflow: hidden;
   }
   .ticker .item {
@@ -938,7 +938,7 @@
     .ticker { grid-template-columns: repeat(2, 1fr); }
     .ticker .item { border-right: 0; border-bottom: 1px solid var(--border-light); }
     .ticker .item:nth-child(odd) { border-right: 1px solid var(--border-light); }
-    .ticker .item:nth-last-child(-n+2) { border-bottom: 0; }
+    .ticker .item:last-child { grid-column: 1 / -1; border-bottom: 0; border-right: 0; }
     .featured-card {
       grid-template-columns: 1fr;
       text-align: center;
@@ -1095,6 +1095,10 @@
       <span class="v" id="t-ch24">—</span>
     </div>
     <div class="item">
+      <span class="k">$FARTPRINT Staked</span>
+      <span class="v" id="t-staked">—</span>
+    </div>
+    <div class="item">
       <span class="k">Contract</span>
       <span class="v ca small mono">
         <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener" id="t-ca">AA1GFB…LMEaY</a>
@@ -1106,7 +1110,6 @@
   <!-- MANIFESTO -->
   <p class="manifesto">
     A constellation of crypto apps orbiting one fat-ass printr.
-    <strong>Open by default.</strong> <strong>Agent-friendly.</strong>
     Funded by trading fees and powered by the conviction of degens.
   </p>
 
@@ -1212,6 +1215,18 @@
       <div class="row-bottom">
         <span class="status-tag live" style="background: #ffe0e0; color: #8a0000;"><span class="dot" style="background: #e23838;"></span>Live</span>
         <a href="burner.html" class="app-btn" style="color: #8a0000;">LAUNCH</a>
+      </div>
+    </div>
+
+    <!-- FARTWHEEL -->
+    <div class="app-card live" data-status="live" style="--green: #ff5a1f; --green-bright: #ff8a3d; --green-dark: #b83a10; --green-soft: #fff0e6;">
+      <div class="app-icon" style="background: linear-gradient(135deg, #ff5a1f 0%, #ffb020 100%); box-shadow: 0 4px 14px rgba(255, 90, 31, 0.30);">◉</div>
+      <h4>Fartwheel</h4>
+      <div class="cat">Burns · Deflation · Dashboard</div>
+      <p>The ecosystem burn dashboard. See how much $FARTPRINT each app has incinerated — FartBurner, FartSwap, and Fart Cup — all on one spinning wheel.</p>
+      <div class="row-bottom">
+        <span class="status-tag live" style="background: #fff0e6; color: #b83a10;"><span class="dot" style="background: #ff5a1f;"></span>Live</span>
+        <a href="fartwheel.html" class="app-btn" style="color: #b83a10;">LAUNCH</a>
       </div>
     </div>
 
@@ -1496,6 +1511,82 @@ async function loadTicker(){
   }
 }
 
+// ===== $FARTPRINT staked tracker =====
+// Reads the on-chain $FARTPRINT balance of the Printr staking vault account
+// directly from Solana RPC and shows it in the live ticker.
+const STAKE_ACCOUNT = "5xW8jyUjtpGjV7NQL5z8HmPsgG2HPnBUNA1zbdsZvMZZ";
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana"
+];
+
+async function rpc(method, params){
+  let lastErr;
+  for(const url of RPCS){
+    try{
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
+      });
+      if(!r.ok){ lastErr = new Error("HTTP " + r.status); continue; }
+      const j = await r.json();
+      if(j.error){ lastErr = new Error(j.error.message); continue; }
+      return j.result;
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("All RPCs failed");
+}
+
+function fmtAmount(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num < 1000)  return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if(num < 1e6)   return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if(num < 1e9)   return (num / 1e6).toFixed(2) + "M";
+  if(num < 1e12)  return (num / 1e9).toFixed(2) + "B";
+  return (num / 1e12).toFixed(2) + "T";
+}
+
+async function loadStaked(){
+  const el = document.getElementById("t-staked");
+  if(!el) return;
+  try{
+    let uiAmount = null;
+
+    // Case A: the tracked account is itself an SPL token account. Verify it
+    // actually holds $FARTPRINT before trusting the balance.
+    try{
+      const info = await rpc("getAccountInfo", [STAKE_ACCOUNT, { encoding: "jsonParsed" }]);
+      const parsed = info?.value?.data?.parsed;
+      if(parsed?.type === "account" && parsed?.info?.mint === TOKEN){
+        uiAmount = parsed.info.tokenAmount?.uiAmount ?? null;
+      }
+    } catch(_){}
+
+    // Case B: it's a wallet / PDA that owns token accounts — sum every
+    // $FARTPRINT token account it holds.
+    if(uiAmount == null){
+      const owned = await rpc("getTokenAccountsByOwner", [
+        STAKE_ACCOUNT,
+        { mint: TOKEN },
+        { encoding: "jsonParsed" }
+      ]);
+      let sum = 0;
+      for(const a of ((owned && owned.value) || [])){
+        const amt = a?.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
+        if(amt != null) sum += amt;
+      }
+      uiAmount = sum;
+    }
+
+    el.textContent = fmtAmount(uiAmount);
+  } catch(e){
+    console.warn("staked balance fetch failed", e);
+  }
+}
+
 function copyCA(e){
   e?.preventDefault?.();
   e?.stopPropagation?.();
@@ -1532,7 +1623,9 @@ document.querySelectorAll('.app-btn.disabled, .app-btn.classified').forEach(btn 
 });
 
 loadTicker();
+loadStaked();
 setInterval(loadTicker, 30000);
+setInterval(loadStaked, 30000);
 </script>
 </body>
 </html>

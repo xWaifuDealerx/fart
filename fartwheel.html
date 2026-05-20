@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>$FARTPRINT // Fartwheel</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="description" content="Fartwheel — the burn dashboard for the $FARTPRINT ecosystem. See how much $FARTPRINT each app has incinerated: FartBurner, FartSwap, and Fart Cup.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e0b09;
+    --bg-2: #171210;
+    --card: #1c1613;
+    --card-2: #241b16;
+    --text: #fbf1ea;
+    --text-2: #d9c6ba;
+    --text-3: #a8917f;
+    --muted: #82705f;
+    --border: #342620;
+    --border-light: #281d18;
+    --fire: #ff5a1f;
+    --fire-bright: #ff8a3d;
+    --fire-dark: #b83a10;
+    --fire-soft: rgba(255, 90, 31, 0.12);
+    --amber: #ffb020;
+    --green: #22e06b;
+    --green-dim: #19b357;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md: 0 8px 22px rgba(0,0,0,0.45);
+    --shadow-lg: 0 18px 48px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+  body {
+    background:
+      radial-gradient(900px 520px at 50% -10%, rgba(255, 90, 31, 0.16), transparent 60%),
+      radial-gradient(700px 480px at 88% 8%, rgba(255, 176, 32, 0.10), transparent 60%),
+      radial-gradient(800px 560px at 8% 30%, rgba(255, 90, 31, 0.07), transparent 60%),
+      linear-gradient(180deg, #14100d 0%, #0e0b09 60%, #080605 100%);
+    background-attachment: fixed;
+  }
+  .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 24px 24px 60px; }
+
+  /* ===== NAV ===== */
+  .nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 8px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .hub {
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--fire) 0%, var(--amber) 100%);
+    color: #1a0d06;
+    font-size: 24px; font-weight: 900;
+    box-shadow: 0 4px 14px rgba(255, 90, 31, 0.35);
+  }
+  .brand-name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 24px;
+    letter-spacing: -0.3px; text-transform: uppercase;
+  }
+  .brand-name .accent {
+    background: linear-gradient(135deg, var(--fire) 0%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .return-btn {
+    color: var(--text-2);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 9px 18px; border-radius: 100px;
+    font-family: inherit; font-size: 13px; font-weight: 600;
+    text-decoration: none; transition: all 0.15s;
+  }
+  .return-btn:hover { border-color: var(--fire); color: var(--fire-bright); box-shadow: var(--shadow-md); }
+
+  /* ===== HERO ===== */
+  .hero { text-align: center; padding: 26px 0 18px; }
+  .hero h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(38px, 7.5vw, 72px);
+    font-weight: 900; letter-spacing: -1px; line-height: 0.96;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .hero h1 .accent {
+    background: linear-gradient(135deg, var(--fire) 0%, var(--fire-bright) 50%, var(--amber) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .hero .tagline { font-size: 16px; color: var(--text-2); font-weight: 600; }
+  .hero .sub { font-size: 13.5px; color: var(--text-3); max-width: 560px; margin: 8px auto 0; line-height: 1.6; }
+
+  /* ===== WHEEL ===== */
+  .wheel-zone {
+    display: flex; align-items: center; justify-content: center;
+    gap: 40px; flex-wrap: wrap;
+    margin: 26px 0 34px;
+  }
+  .wheel-holder { position: relative; width: 300px; height: 300px; flex-shrink: 0; }
+  .wheel-rim {
+    position: absolute; inset: -8px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 138, 61, 0.35);
+    animation: spinrim 30s linear infinite;
+  }
+  @keyframes spinrim { to { transform: rotate(360deg); } }
+  .wheel {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--border) 0deg 360deg);
+    box-shadow: 0 0 50px rgba(255, 90, 31, 0.25), inset 0 0 40px rgba(0,0,0,0.5);
+    transition: background 0.5s ease;
+  }
+  .wheel-hole {
+    position: absolute; inset: 26%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #211812, #0e0b09);
+    border: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+  }
+  .wheel-hole .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); font-weight: 700; }
+  .wheel-hole .big {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(26px, 7vw, 38px); font-weight: 900; line-height: 1.05;
+    background: linear-gradient(135deg, var(--fire-bright), var(--amber));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .wheel-hole .unit { font-size: 11px; color: var(--text-3); margin-top: 2px; letter-spacing: 0.5px; }
+
+  .wheel-legend { display: flex; flex-direction: column; gap: 12px; min-width: 230px; }
+  .leg {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card); border: 1px solid var(--border-light);
+    border-radius: 12px; padding: 11px 14px;
+  }
+  .leg .swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .leg .leg-name { font-weight: 700; font-size: 14px; }
+  .leg .leg-sub { font-size: 11px; color: var(--muted); }
+  .leg .leg-right { margin-left: auto; text-align: right; }
+  .leg .leg-amt { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; }
+  .leg .leg-pct { font-size: 11px; color: var(--text-3); }
+
+  /* ===== APP BURN CARDS ===== */
+  .section-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: -0.3px; margin: 8px 0 16px;
+  }
+  .burn-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 760px) { .burn-cards { grid-template-columns: 1fr; } }
+  .bcard {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 18px; padding: 20px;
+    text-decoration: none; color: inherit;
+    display: block; position: relative; overflow: hidden;
+    transition: all 0.18s ease;
+  }
+  .bcard:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--accent, var(--fire)); }
+  .bcard .top { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .bcard .ico {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; font-weight: 900; color: #160c06;
+    flex-shrink: 0;
+  }
+  .bcard .ico svg { width: 30px; height: 30px; }
+  .bcard .nm { font-weight: 800; font-size: 17px; }
+  .bcard .ds { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+  .bcard .amt {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: 30px; line-height: 1; letter-spacing: -0.5px;
+  }
+  .bcard .amt .tok { font-size: 13px; color: var(--text-3); font-family: 'Inter', sans-serif; font-weight: 600; margin-left: 4px; }
+  .bcard .meta { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; font-size: 12px; color: var(--text-3); }
+  .bcard .bar { height: 7px; border-radius: 100px; background: var(--bg-2); margin-top: 12px; overflow: hidden; }
+  .bcard .bar > i { display: block; height: 100%; border-radius: 100px; width: 0; transition: width 0.6s ease; }
+  .bcard .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px;
+    padding: 3px 9px; border-radius: 100px;
+  }
+  .bcard .pill .dot { width: 5px; height: 5px; border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  /* ===== NOTE ===== */
+  .note {
+    margin-top: 26px;
+    background: var(--fire-soft);
+    border: 1px solid rgba(255,90,31,0.28);
+    border-radius: 14px; padding: 14px 18px;
+    font-size: 12.5px; color: var(--text-2); line-height: 1.6;
+  }
+  .note b { color: var(--fire-bright); }
+
+  /* ===== FOOTER ===== */
+  footer {
+    margin-top: 44px; padding-top: 22px;
+    border-top: 1px solid var(--border-light);
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    font-size: 13px; color: var(--text-3);
+  }
+  footer .links a { color: var(--text-2); text-decoration: none; margin-right: 16px; font-weight: 500; }
+  footer .links a:hover { color: var(--fire-bright); }
+  .sync { font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- NAV -->
+  <nav class="nav">
+    <div class="brand">
+      <span class="hub">◉</span>
+      <div class="brand-name">Fart<span class="accent">wheel</span></div>
+    </div>
+    <a href="index.html" class="return-btn">← Return to Ecosystem</a>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero">
+    <h1>FART<span class="accent">WHEEL</span></h1>
+    <div class="tagline">Where $FARTPRINT goes to die.</div>
+    <div class="sub">
+      Every app in the ecosystem that burns $FARTPRINT, on one wheel. Watch the supply
+      go up in gas — tracked live, app by app.
+    </div>
+  </header>
+
+  <!-- WHEEL -->
+  <div class="wheel-zone">
+    <div class="wheel-holder">
+      <div class="wheel-rim"></div>
+      <div class="wheel" id="wheel"></div>
+      <div class="wheel-hole">
+        <div class="lbl">Total Burned</div>
+        <div class="big" id="totalBurned">—</div>
+        <div class="unit">$FARTPRINT</div>
+      </div>
+    </div>
+    <div class="wheel-legend" id="legend"></div>
+  </div>
+
+  <!-- APP BURN CARDS -->
+  <div class="section-title">Burning Apps</div>
+  <div class="burn-cards" id="burnCards"></div>
+
+  <div class="note">
+    <b>How this is counted:</b> FartBurner totals are summed from its on-chain burn ledger;
+    FartSwap counts every burn-to-list (100,000 $FARTPRINT each). Fart Cup burns happen
+    automatically — trading fees from every nation coin buy back &amp; burn $FARTPRINT on-chain —
+    so its figure accrues continuously. Numbers merge the public feed with locally-recorded burns
+    and refresh every 30 seconds.
+  </div>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="left">
+      <div>$FARTPRINT Ecosystem · Fartwheel v1.0</div>
+      <div class="sync" id="sync">syncing…</div>
+    </div>
+    <div class="links">
+      <a href="index.html">Ecosystem</a>
+      <a href="burner.html">FartBurner</a>
+      <a href="fartswap.html">FartSwap</a>
+      <a href="fartcup.html">Fart Cup</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ── Ball icon for Fart Cup (matches the rest of the ecosystem) ──
+const BALL_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#ffffff" stroke="#111" stroke-width="3"/><path d="M32 17 L44 26 L39.5 40 L24.5 40 L20 26 Z" fill="#111"/><path d="M32 17 L32 6" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M44 26 L55 22" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M39.5 40 L47 51" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M24.5 40 L17 51" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M20 26 L9 22" stroke="#111" stroke-width="3" stroke-linecap="round"/></svg>`;
+
+// ── The burning apps ──
+const APPS = [
+  {
+    key: "burner", name: "FartBurner", href: "burner.html",
+    color: "#ff5a1f", icon: "▲", iconGrad: "linear-gradient(135deg,#ff5a1f,#ff2d00)",
+    desc: "Manual incineration",
+    source: "ntfy", topic: "fartprint-burns-v1-bk2yw9", local: "fp_burns_v1",
+    mode: "sum",       // sum record.a
+  },
+  {
+    key: "swap", name: "FartSwap", href: "fartswap.html",
+    color: "#ffb020", icon: "⇄", iconGrad: "linear-gradient(135deg,#ffb020,#ff7a18)",
+    desc: "Burn-to-list · 100K each",
+    source: "ntfy", topic: "fartprint-fartswap-listings-v1-x9k3py", local: "fp_swap_listings_v1",
+    mode: "count", per: 100000,
+  },
+  {
+    key: "cup", name: "Fart Cup", href: "fartcup.html",
+    color: "#22e06b", iconSvg: BALL_SVG, iconGrad: "#ffffff",
+    desc: "Auto buyback & burn via fees",
+    source: "fees", mode: "accruing",
+  },
+];
+
+function fmt(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num === 0) return "0";
+  if(num < 1000) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if(num < 1e6)  return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if(num < 1e9)  return (num / 1e6).toFixed(2) + "M";
+  if(num < 1e12) return (num / 1e9).toFixed(2) + "B";
+  return (num / 1e12).toFixed(2) + "T";
+}
+
+// Read an app's burn records from ntfy (all devices, recent) + localStorage
+// (this device, persistent), de-duped by transaction signature.
+async function loadRecords(app){
+  const out = [];
+  const seen = new Set();
+  const add = (r) => {
+    if(!r || !r.tx || seen.has(r.tx)) return;
+    seen.add(r.tx); out.push(r);
+  };
+  // ntfy public feed
+  try{
+    const r = await fetch(`https://ntfy.sh/${app.topic}/json?poll=1&since=all`);
+    if(r.ok){
+      const text = await r.text();
+      if(text.trim()){
+        for(const line of text.trim().split("\n")){
+          try{
+            const evt = JSON.parse(line);
+            if(evt.event === "message" && evt.message){
+              try{ add(JSON.parse(evt.message)); } catch(_){}
+            }
+          } catch(_){}
+        }
+      }
+    }
+  } catch(_){}
+  // shared same-origin localStorage
+  try{
+    const local = JSON.parse(localStorage.getItem(app.local) || "[]");
+    for(const r of local) add(r);
+  } catch(_){}
+  return out;
+}
+
+async function computeApp(app){
+  if(app.mode === "accruing") return { burned: null, count: null, accruing: true };
+  const recs = await loadRecords(app);
+  if(app.mode === "sum"){
+    const burned = recs.reduce((s, r) => s + (Number(r.a) || 0), 0);
+    return { burned, count: recs.length, accruing: false };
+  }
+  // count mode
+  const count = recs.length;
+  return { burned: count * (app.per || 0), count, accruing: false };
+}
+
+async function refresh(){
+  const results = await Promise.all(APPS.map(computeApp));
+  APPS.forEach((a, i) => { a._r = results[i]; });
+
+  const total = APPS.reduce((s, a) => s + (a._r.burned || 0), 0);
+  $("totalBurned").textContent = fmt(total);
+
+  // ── Wheel (conic gradient by share) ──
+  const wheel = $("wheel");
+  const segs = APPS.filter(a => (a._r.burned || 0) > 0);
+  if(segs.length && total > 0){
+    let acc = 0;
+    const stops = segs.map(a => {
+      const start = (acc / total) * 360;
+      acc += a._r.burned;
+      const end = (acc / total) * 360;
+      return `${a.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
+    });
+    wheel.style.background = `conic-gradient(${stops.join(", ")})`;
+  } else {
+    wheel.style.background = "conic-gradient(var(--border) 0deg 360deg)";
+  }
+
+  // ── Legend ──
+  $("legend").innerHTML = APPS.map(a => {
+    const pct = (total > 0 && a._r.burned) ? ((a._r.burned / total) * 100).toFixed(1) + "%" : (a._r.accruing ? "via fees" : "0%");
+    const amt = a._r.accruing ? "accruing" : fmt(a._r.burned || 0);
+    return `<div class="leg">
+      <span class="swatch" style="background:${a.color}"></span>
+      <div><div class="leg-name">${a.name}</div><div class="leg-sub">${a.desc}</div></div>
+      <div class="leg-right"><div class="leg-amt">${amt}</div><div class="leg-pct">${pct}</div></div>
+    </div>`;
+  }).join("");
+
+  // ── App burn cards ──
+  $("burnCards").innerHTML = APPS.map(a => {
+    const r = a._r;
+    const pct = (total > 0 && r.burned) ? (r.burned / total) * 100 : 0;
+    const iconInner = a.iconSvg ? a.iconSvg : a.icon;
+    const amtHtml = r.accruing
+      ? `<div class="amt" style="font-size:22px; color:var(--text-2);">Accruing<span class="tok">on-chain</span></div>`
+      : `<div class="amt" style="color:${a.color};">${fmt(r.burned || 0)}<span class="tok">$FARTPRINT</span></div>`;
+    const metaLeft = r.accruing
+      ? `<span>via trading fees</span>`
+      : `<span>${(r.count || 0).toLocaleString()} burn${(r.count === 1) ? "" : "s"}</span>`;
+    const metaRight = r.accruing ? "" : `<span>${pct.toFixed(1)}% of wheel</span>`;
+    return `<a class="bcard" href="${a.href}" style="--accent:${a.color};">
+      <div class="top">
+        <div class="ico" style="background:${a.iconGrad};">${iconInner}</div>
+        <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
+      </div>
+      ${amtHtml}
+      <div class="bar"><i style="width:${r.accruing ? 100 : pct.toFixed(1)}%; background:${a.color}; ${r.accruing ? "opacity:0.25;" : ""}"></i></div>
+      <div class="meta">
+        ${metaLeft}
+        <span class="pill" style="background:${a.color}22; color:${a.color};"><span class="dot" style="background:${a.color};"></span>${r.accruing ? "AUTO" : "LIVE"}</span>
+      </div>
+    </a>`;
+  }).join("");
+
+  $("sync").textContent = "last synced " + new Date().toTimeString().slice(0, 8);
+}
+
+refresh();
+setInterval(refresh, 30000);
+</script>
+</body>
+</html>
