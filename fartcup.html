@@ -11,31 +11,31 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f3f6f3;
-    --bg-2: #fbfdfb;
-    --card: #ffffff;
-    --text: #16241a;
-    --text-secondary: #3a4a3f;
-    --text-tertiary: #5e6e63;
-    --text-muted: #8a9a8f;
-    --border: #d0dbd2;
-    --border-light: #e4ece5;
-    --input-bg: #eef3ef;
-    --pitch: #0a7d3a;
-    --pitch-bright: #16a34a;
-    --pitch-dark: #065f2b;
-    --pitch-soft: #e3f5e8;
-    --pitch-soft-2: #f0faf2;
-    --pitch-glow: rgba(10, 125, 58, 0.20);
-    --gold: #e0991a;
-    --gold-soft: #fdf2d8;
-    --amber: #b45309;
-    --amber-soft: #fef0cd;
-    --amber-border: #f0c674;
-    --red: #dc2626;
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
-    --shadow-lg: 0 12px 36px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
+    --bg: #081226;
+    --bg-2: #0c1a36;
+    --card: #112242;
+    --text: #eaf2ff;
+    --text-secondary: #b9c8e4;
+    --text-tertiary: #8497ba;
+    --text-muted: #5d6f93;
+    --border: #213a63;
+    --border-light: #1a3057;
+    --input-bg: #0d1e3d;
+    --pitch: #16a34a;
+    --pitch-bright: #2ee06b;
+    --pitch-dark: #5cf08c;
+    --pitch-soft: rgba(46, 224, 107, 0.13);
+    --pitch-soft-2: rgba(46, 224, 107, 0.06);
+    --pitch-glow: rgba(46, 224, 107, 0.30);
+    --gold: #f5c542;
+    --gold-soft: rgba(245, 197, 66, 0.13);
+    --amber: #f59e0b;
+    --amber-soft: rgba(245, 158, 11, 0.12);
+    --amber-border: rgba(245, 158, 11, 0.38);
+    --red: #ff5a5a;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.35), 0 1px 2px rgba(0,0,0,0.30);
+    --shadow-md: 0 6px 18px rgba(0,0,0,0.42), 0 2px 6px rgba(0,0,0,0.30);
+    --shadow-lg: 0 16px 44px rgba(0,0,0,0.50), 0 6px 16px rgba(0,0,0,0.40);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,10 +50,33 @@
   }
   body {
     background:
-      radial-gradient(900px 600px at 85% -8%, rgba(10, 125, 58, 0.10), transparent 60%),
-      radial-gradient(700px 500px at -8% 40%, rgba(224, 153, 26, 0.08), transparent 60%),
-      var(--bg);
+      radial-gradient(1000px 520px at 50% -12%, rgba(120, 170, 255, 0.12), transparent 62%),
+      radial-gradient(820px 560px at 88% -6%, rgba(46, 224, 107, 0.10), transparent 60%),
+      radial-gradient(720px 520px at -8% 16%, rgba(245, 197, 66, 0.08), transparent 60%),
+      radial-gradient(1100px 640px at 50% 116%, rgba(22, 163, 74, 0.20), transparent 62%),
+      linear-gradient(180deg, #0a1530 0%, #081226 55%, #060e1f 100%);
     background-attachment: fixed;
+    position: relative;
+  }
+
+  /* drifting gas-cloud background — extra fart vibes */
+  .fart-bg {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .fart-bg .puff {
+    position: absolute;
+    opacity: 0.07;
+    filter: blur(1px);
+    animation: drift 24s ease-in-out infinite;
+  }
+  @keyframes drift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    50%  { transform: translate(22px, -30px) rotate(8deg); }
+    100% { transform: translate(0, 0) rotate(0deg); }
   }
   .mono { font-family: 'JetBrains Mono', 'SF Mono', monospace; }
 
@@ -194,6 +217,84 @@
     line-height: 1.6;
   }
 
+  /* ===== COUNTDOWN ===== */
+  .countdown {
+    position: relative;
+    background: linear-gradient(135deg, rgba(18,34,66,0.92), rgba(12,26,54,0.92));
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 22px 22px 22px;
+    margin: 4px 0 30px;
+    text-align: center;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+  }
+  .countdown::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(620px 220px at 50% -50%, rgba(46,224,107,0.20), transparent 70%);
+    pointer-events: none;
+  }
+  .countdown .cd-label {
+    position: relative;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    font-weight: 700;
+    margin-bottom: 5px;
+  }
+  .countdown .cd-title {
+    position: relative;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(15px, 3.4vw, 21px);
+    font-weight: 800;
+    color: var(--text);
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .countdown .cd-clock {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .cd-unit {
+    min-width: 78px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    padding: 12px 8px;
+  }
+  .cd-unit .num {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(26px, 6vw, 38px);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(135deg, var(--pitch-bright), var(--gold));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .cd-unit .lbl {
+    margin-top: 7px;
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .countdown .cd-foot {
+    position: relative;
+    margin-top: 14px;
+    font-size: 12px;
+    color: var(--text-tertiary);
+  }
+  .countdown.live .cd-clock { display: none; }
+
   /* ===== DISCLAIMER ===== */
   .disclaimer {
     background: var(--amber-soft);
@@ -222,10 +323,10 @@
   .disclaimer .body {
     font-size: 13.5px;
     line-height: 1.6;
-    color: #6b3d05;
+    color: #f4d6a3;
   }
   .disclaimer .body strong {
-    color: #5a3204;
+    color: #ffe6bd;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.3px;
@@ -272,7 +373,7 @@
     margin-bottom: 3px;
     font-size: 13px;
   }
-  .buyback .body b { color: #04401d; }
+  .buyback .body b { color: #b6ffce; }
 
   /* ===== STATS ===== */
   .stats {
@@ -519,7 +620,7 @@
     transition: background 0.15s;
   }
   .cc-copy:hover .copy-lbl,
-  .cc-copy.copied .copy-lbl { background: var(--pitch-dark); }
+  .cc-copy.copied .copy-lbl { background: var(--pitch-bright); color: #06281a; }
 
   .no-results {
     grid-column: 1 / -1;
@@ -568,6 +669,8 @@
 </head>
 <body>
 
+<div class="fart-bg" id="fartBg" aria-hidden="true"></div>
+
 <div class="wrap">
 
   <!-- NAV -->
@@ -611,6 +714,19 @@
       FART coin — pick your country, hold the bag, talk trash. Don't take it too seriously.
     </div>
   </header>
+
+  <!-- COUNTDOWN -->
+  <div class="countdown" id="countdown">
+    <div class="cd-label">Kickoff Countdown</div>
+    <div class="cd-title">FIFA World Cup 2026 kicks off in</div>
+    <div class="cd-clock" id="cdClock">
+      <div class="cd-unit"><div class="num" id="cdD">––</div><div class="lbl">Days</div></div>
+      <div class="cd-unit"><div class="num" id="cdH">––</div><div class="lbl">Hours</div></div>
+      <div class="cd-unit"><div class="num" id="cdM">––</div><div class="lbl">Mins</div></div>
+      <div class="cd-unit"><div class="num" id="cdS">––</div><div class="lbl">Secs</div></div>
+    </div>
+    <div class="cd-foot" id="cdFoot">June 11, 2026 · let the gas build. may the loudest nation win.</div>
+  </div>
 
   <!-- DISCLAIMER -->
   <div class="disclaimer">
@@ -706,10 +822,10 @@ const COUNTRIES = [
   { ticker: "FARTIRQ", name: "FartIraq",          country: "Iraq",           code: "iq",     contract: "8aPK6Pzrz1UwX24izCocdrnKt9uujXeYBaprh4iwpump" },
   { ticker: "FARTJPN", name: "FartJapan",         country: "Japan",          code: "jp",     contract: "F92RKZcmMP1K5Nm4hRMCiHDC6E4QQH3oHrioLyxkpump" },
   { ticker: "FARTJOR", name: "FartJordan",        country: "Jordan",         code: "jo",     contract: "3JNa1mH6KvsQSe3XrMYrhPwXFmhSexywT8Yqs6TCpump" },
-  { ticker: "FARTQAT", name: "FartQatar",         country: "Qatar",          code: "qa",     contract: null },
-  { ticker: "FARTKSA", name: "FartSaudiArabia",   country: "Saudi Arabia",   code: "sa",     contract: null },
-  { ticker: "FARTKOR", name: "FartSouthKorea",    country: "South Korea",    code: "kr",     contract: null },
-  { ticker: "FARTUZB", name: "FartUzbekistan",    country: "Uzbekistan",     code: "uz",     contract: null },
+  { ticker: "FARTQAT", name: "FartQatar",         country: "Qatar",          code: "qa",     contract: "9484kbWatciZtAEGQWF4na3ZbgGhCBn3yEFCwqqCpump" },
+  { ticker: "FARTKSA", name: "FartSaudiArabia",   country: "Saudi Arabia",   code: "sa",     contract: "8tQ5cuDRBm8QrHAwJ1n61jTV6Qix65QebPkTfZ7Epump" },
+  { ticker: "FARTKOR", name: "FartSouthKorea",    country: "South Korea",    code: "kr",     contract: "9MJ9HwX9oH5uTKN9AVfiMLS4G3rp89E7fvjMAdJBpump" },
+  { ticker: "FARTUZB", name: "FartUzbekistan",    country: "Uzbekistan",     code: "uz",     contract: "Aqo71vtBSoEh7q3vpRi6KFVgWt6o2yPL1kBdbavXpump" },
   // CAF — Africa
   { ticker: "FARTALG", name: "FartAlgeria",       country: "Algeria",        code: "dz",     contract: null },
   { ticker: "FARTCPV", name: "FartCapeVerde",     country: "Cape Verde",     code: "cv",     contract: null },
@@ -745,7 +861,7 @@ const COUNTRIES = [
   { ticker: "FARTCZE", name: "FartCzechia",       country: "Czechia",        code: "cz",     contract: null },
   { ticker: "FARTENG", name: "FartEngland",       country: "England",        code: "gb-eng", contract: null },
   { ticker: "FARTFRA", name: "FartFrance",        country: "France",         code: "fr",     contract: null },
-  { ticker: "FARTGER", name: "FartGermany",       country: "Germany",        code: "de",     contract: null },
+  { ticker: "FARTGER", name: "FartGermany",       country: "Germany",        code: "de",     contract: "3sPgkRsx5eDDPksajReBL1RS3PQdGBjj2WDh2EYopump" },
   { ticker: "FARTNED", name: "FartNetherlands",   country: "Netherlands",    code: "nl",     contract: null },
   { ticker: "FARTNOR", name: "FartNorway",        country: "Norway",         code: "no",     contract: null },
   { ticker: "FARTPOR", name: "FartPortugal",      country: "Portugal",       code: "pt",     contract: null },
@@ -966,6 +1082,51 @@ refreshMarketCaps();
 setInterval(refreshMarketCaps, 60000);
 loadFpPrice();
 setInterval(loadFpPrice, 60000);
+
+// ===== World Cup kickoff countdown =====
+// FIFA World Cup 2026 opening match — June 11, 2026, Estadio Azteca (Mexico City).
+const WC_START = new Date("2026-06-11T19:00:00-05:00");
+
+function tickCountdown(){
+  const cd = $("countdown");
+  if(!cd) return;
+  let diff = Math.floor((WC_START.getTime() - Date.now()) / 1000);
+  if(diff <= 0){
+    cd.classList.add("live");
+    const title = cd.querySelector(".cd-title");
+    if(title) title.textContent = "The Cup is LIVE — let the gas flow";
+    const foot = $("cdFoot");
+    if(foot) foot.textContent = "Kickoff has happened. May the loudest nation win.";
+    return;
+  }
+  const d = Math.floor(diff / 86400); diff -= d * 86400;
+  const h = Math.floor(diff / 3600);  diff -= h * 3600;
+  const m = Math.floor(diff / 60);    diff -= m * 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  $("cdD").textContent = d;
+  $("cdH").textContent = pad(h);
+  $("cdM").textContent = pad(m);
+  $("cdS").textContent = pad(diff);
+}
+tickCountdown();
+setInterval(tickCountdown, 1000);
+
+// ===== Drifting gas clouds (background fart vibes) =====
+(function spawnPuffs(){
+  const bg = $("fartBg");
+  if(!bg) return;
+  const PUFF_SVG = `<svg viewBox="0 0 28 28" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g fill="#7dd957"><circle cx="9" cy="17" r="6"/><circle cx="16" cy="13" r="7"/><circle cx="20" cy="19" r="5.5"/><circle cx="13" cy="20" r="6"/></g></svg>`;
+  let html = "";
+  for(let i = 0; i < 9; i++){
+    const size  = 60 + Math.random() * 130;
+    const top   = Math.random() * 100;
+    const left  = Math.random() * 100;
+    const delay = -Math.random() * 24;
+    const dur   = 20 + Math.random() * 16;
+    html += `<div class="puff" style="top:${top}%; left:${left}%; width:${size}px; height:${size}px; animation-duration:${dur}s; animation-delay:${delay}s;">${PUFF_SVG}</div>`;
+  }
+  bg.innerHTML = html;
+})();
 </script>
 </body>
 </html>
