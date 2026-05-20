@@ -893,14 +893,35 @@ async function refreshMarketCaps(){
   const withContract = COUNTRIES.filter(c => c.contract);
   if(withContract.length === 0) return;
   await Promise.all(withContract.map(async (c) => {
+    let cap = null;
+
+    // 1) DexScreener — works once a token has a tradeable pair (post-graduation).
     try{
       const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${c.contract}`);
-      if(!r.ok) return;
-      const j = await r.json();
-      const pairs = (j?.pairs || []).slice().sort((a,b) => (b.liquidity?.usd||0) - (a.liquidity?.usd||0));
-      const p = pairs[0];
-      if(p) c.mcap = p.marketCap || p.fdv || null;
+      if(r.ok){
+        const j = await r.json();
+        const pairs = (j?.pairs || []).slice().sort((a,b) => (b.liquidity?.usd||0) - (a.liquidity?.usd||0));
+        const p = pairs[0];
+        if(p) cap = p.marketCap || p.fdv || null;
+      }
     } catch(_){}
+
+    // 2) pump.fun (via our same-origin proxy) — covers coins still on the
+    //    bonding curve, which DexScreener doesn't index yet. All Fart Cup
+    //    contracts are pump.fun mints (…pump), so this is the main source
+    //    until they graduate.
+    if(cap == null){
+      try{
+        const r = await fetch(`/api/pumpfun?mint=${c.contract}`);
+        if(r.ok){
+          const j = await r.json();
+          const v = j?.usd_market_cap ?? j?.usdMarketCap ?? null;
+          if(v != null && !isNaN(v) && Number(v) > 0) cap = Number(v);
+        }
+      } catch(_){}
+    }
+
+    if(cap != null) c.mcap = cap;
   }));
   renderStats();
   renderGrid();
