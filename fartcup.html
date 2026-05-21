@@ -513,6 +513,71 @@
   }
 
   /* ===== COUNTRY GRID ===== */
+  /* ===== LAYOUT + SIDEBAR ===== */
+  .fc-layout {
+    display: grid;
+    grid-template-columns: 1fr 330px;
+    gap: 22px;
+    align-items: start;
+  }
+  @media (max-width: 920px) { .fc-layout { grid-template-columns: 1fr; } }
+  .fc-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    position: sticky;
+    top: 16px;
+  }
+  @media (max-width: 920px) { .fc-side { position: static; } }
+  .side-panel {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow: var(--shadow-sm);
+  }
+  .side-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text);
+    margin-bottom: 13px;
+  }
+  .side-head .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pitch-bright); box-shadow: 0 0 8px var(--pitch-bright); animation: pulse 1.8s infinite; }
+  .side-loading, .side-empty { font-size: 12.5px; color: var(--text-tertiary); padding: 8px 2px; line-height: 1.5; }
+
+  .match-scroll { max-height: 420px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+  .match-date { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); font-weight: 700; margin: 12px 0 7px; }
+  .match-date:first-child { margin-top: 0; }
+  .match {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    padding: 9px 11px; border-radius: 11px; border: 1px solid var(--border-light);
+    margin-bottom: 7px; background: var(--bg-2); transition: background 0.6s ease;
+  }
+  .match .teams { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .match .team { display: flex; align-items: center; gap: 7px; min-width: 0; }
+  .match .team img { width: 18px; height: 18px; object-fit: contain; flex-shrink: 0; }
+  .match .team .nm { font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .match .right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .match .score { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 15px; color: var(--text); line-height: 1.05; text-align: right; }
+  .match .score.live { color: var(--pitch-bright); }
+  .match .kickoff { font-size: 11px; color: var(--text-tertiary); font-family: 'JetBrains Mono', monospace; }
+  .match .badge { font-size: 9px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase; padding: 2px 6px; border-radius: 100px; }
+  .match .badge.live { background: rgba(255,90,90,0.16); color: var(--red); }
+  .match .badge.ft { background: rgba(255,255,255,0.08); color: var(--text-tertiary); }
+  .match.flash { background: rgba(46,224,107,0.22); }
+
+  .news-item { display: block; padding: 10px 0; border-bottom: 1px solid var(--border-light); text-decoration: none; }
+  .news-item:last-child { border-bottom: 0; }
+  .news-item .nt { font-size: 13px; color: var(--text); line-height: 1.4; font-weight: 500; }
+  .news-item:hover .nt { color: var(--pitch-bright); }
+  .news-item .nm { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
   .country-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
@@ -772,19 +837,6 @@
     <div class="cd-foot" id="cdFoot">June 11, 2026 · let the gas build. may the loudest nation win.</div>
   </div>
 
-  <!-- DISCLAIMER -->
-  <div class="disclaimer">
-    <div class="mark">!</div>
-    <div class="body">
-      <strong>This is a parody — read this</strong>
-      Fart Cup is a community-made <b>joke project</b>. It is <b>not affiliated with FIFA</b>,
-      the World Cup, or any football organization. These coins do <b>not</b> track real match
-      results — a country winning or losing on the pitch guarantees <b>nothing</b> about its
-      coin, and there are <b>zero guaranteed returns</b>. This exists purely for fun. Never
-      put in money you can't afford to lose. Seriously: don't take it too seriously.
-    </div>
-  </div>
-
   <!-- BUYBACK & BURN -->
   <div class="buyback">
     <div class="mark">
@@ -800,36 +852,66 @@
     </div>
   </div>
 
-  <!-- STATS -->
-  <div class="stats">
-    <div class="stat">
-      <div class="k">Nations</div>
-      <div class="v accent" id="statNations">—</div>
+  <!-- MAIN + SIDEBAR -->
+  <div class="fc-layout">
+    <div class="fc-main">
+      <!-- STATS -->
+      <div class="stats">
+        <div class="stat">
+          <div class="k">Nations</div>
+          <div class="v accent" id="statNations">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Contracts Live</div>
+          <div class="v" id="statLive">—</div>
+        </div>
+        <div class="stat">
+          <div class="k">Total Market Cap</div>
+          <div class="v" id="statMcap">TBA</div>
+        </div>
+      </div>
+
+      <!-- CONTROLS -->
+      <div class="controls">
+        <h2>The Nations</h2>
+        <div class="search-box">
+          <span class="icon">⌕</span>
+          <input type="text" id="search" placeholder="Search a country or ticker…" autocomplete="off">
+        </div>
+      </div>
+      <div class="controls" style="margin-top:-12px; margin-bottom:18px;">
+        <div class="meta" id="sortMeta">Ranked by market cap · contracts coming soon, showing seed order</div>
+      </div>
+
+      <!-- COUNTRY GRID -->
+      <div class="country-grid" id="countryGrid"></div>
     </div>
-    <div class="stat">
-      <div class="k">Contracts Live</div>
-      <div class="v" id="statLive">—</div>
-    </div>
-    <div class="stat">
-      <div class="k">Total Market Cap</div>
-      <div class="v" id="statMcap">TBA</div>
-    </div>
+
+    <!-- SIDEBAR -->
+    <aside class="fc-side">
+      <div class="side-panel">
+        <div class="side-head"><span class="live-dot"></span>World Cup Matches</div>
+        <div id="matchList"><div class="side-loading">Loading fixtures…</div></div>
+      </div>
+      <div class="side-panel">
+        <div class="side-head">World Cup News</div>
+        <div id="newsList"><div class="side-loading">Loading headlines…</div></div>
+      </div>
+    </aside>
   </div>
 
-  <!-- CONTROLS -->
-  <div class="controls">
-    <h2>The Nations</h2>
-    <div class="search-box">
-      <span class="icon">⌕</span>
-      <input type="text" id="search" placeholder="Search a country or ticker…" autocomplete="off">
+  <!-- DISCLAIMER (parody) -->
+  <div class="disclaimer" style="margin-top:36px;">
+    <div class="mark">!</div>
+    <div class="body">
+      <strong>This is a parody — read this</strong>
+      Fart Cup is a community-made <b>joke project</b>. It is <b>not affiliated with FIFA</b>,
+      the World Cup, or any football organization. These coins do <b>not</b> track real match
+      results — a country winning or losing on the pitch guarantees <b>nothing</b> about its
+      coin, and there are <b>zero guaranteed returns</b>. This exists purely for fun. Never
+      put in money you can't afford to lose. Seriously: don't take it too seriously.
     </div>
   </div>
-  <div class="controls" style="margin-top:-12px; margin-bottom:18px;">
-    <div class="meta" id="sortMeta">Ranked by market cap · contracts coming soon, showing seed order</div>
-  </div>
-
-  <!-- COUNTRY GRID -->
-  <div class="country-grid" id="countryGrid"></div>
 
   <!-- FOOTER -->
   <footer>
@@ -876,9 +958,9 @@ const COUNTRIES = [
   { ticker: "FARTCOD", name: "FartDRCongo",       country: "DR Congo",       code: "cd",     contract: "6q8wZk4ttRPNPjX2AH88pUd5oVYXv9vuz2MzeEHvpump" },
   { ticker: "FARTEGY", name: "FartEgypt",         country: "Egypt",          code: "eg",     contract: "Ae8CqTevg8A7ourVQ3L5B9wJ8ofW7rb3jsT83i2Xpump" },
   { ticker: "FARTGHA", name: "FartGhana",         country: "Ghana",          code: "gh",     contract: "668etZ2VZyV8okF74B5t7XdpyhQ3Rz3GHVvF1tyXpump" },
-  { ticker: "FARTCIV", name: "FartIvoryCoast",    country: "Ivory Coast",    code: "ci",     contract: null },
-  { ticker: "FARTMAR", name: "FartMorocco",       country: "Morocco",        code: "ma",     contract: null },
-  { ticker: "FARTSEN", name: "FartSenegal",       country: "Senegal",        code: "sn",     contract: null },
+  { ticker: "FARTCIV", name: "FartIvoryCoast",    country: "Ivory Coast",    code: "ci",     contract: "6pQJ1yzhjp2cx2eWDN5wkP5RHRZh6gm7u5wJehcVpump" },
+  { ticker: "FARTMAR", name: "FartMorocco",       country: "Morocco",        code: "ma",     contract: "DvNooNwGGBXSEKSo8SMrj9rSJKDDWegqsM5vGVNFpump" },
+  { ticker: "FARTSEN", name: "FartSenegal",       country: "Senegal",        code: "sn",     contract: "75eo5xF4yz8xyCEGaW5Vg6475rM3degUVLgXNpzdpump" },
   { ticker: "FARTRSA", name: "FartSouthAfrica",   country: "South Africa",   code: "za",     contract: null },
   { ticker: "FARTTUN", name: "FartTunisia",       country: "Tunisia",        code: "tn",     contract: null },
   // CONCACAF — North/Central America & Caribbean
@@ -890,7 +972,7 @@ const COUNTRIES = [
   { ticker: "FARTUSA", name: "FartUnitedStates",  country: "United States",  code: "us",     contract: null },
   // CONMEBOL — South America
   { ticker: "FARTARG", name: "FartArgentina",     country: "Argentina",      code: "ar",     contract: null },
-  { ticker: "FARTBRA", name: "FartBrazil",        country: "Brazil",         code: "br",     contract: null },
+  { ticker: "FARTBRA", name: "FartBrazil",        country: "Brazil",         code: "br",     contract: "GLpukFRRvJggzhPxPapTy7wraPZaE8VkYCb3RkAbpump" },
   { ticker: "FARTCOL", name: "FartColombia",      country: "Colombia",       code: "co",     contract: null },
   { ticker: "FARTECU", name: "FartEcuador",       country: "Ecuador",        code: "ec",     contract: null },
   { ticker: "FARTPAR", name: "FartParaguay",      country: "Paraguay",       code: "py",     contract: null },
@@ -904,13 +986,13 @@ const COUNTRIES = [
   { ticker: "FARTCRO", name: "FartCroatia",       country: "Croatia",        code: "hr",     contract: null },
   { ticker: "FARTCZE", name: "FartCzechia",       country: "Czechia",        code: "cz",     contract: null },
   { ticker: "FARTENG", name: "FartEngland",       country: "England",        code: "gb-eng", contract: null },
-  { ticker: "FARTFRA", name: "FartFrance",        country: "France",         code: "fr",     contract: null },
+  { ticker: "FARTFRA", name: "FartFrance",        country: "France",         code: "fr",     contract: "HgyngmReZJZPd4gHDjEx54rnQZWMMNYwb5RrRvsppump" },
   { ticker: "FARTGER", name: "FartGermany",       country: "Germany",        code: "de",     contract: "3sPgkRsx5eDDPksajReBL1RS3PQdGBjj2WDh2EYopump" },
   { ticker: "FARTNED", name: "FartNetherlands",   country: "Netherlands",    code: "nl",     contract: null },
-  { ticker: "FARTNOR", name: "FartNorway",        country: "Norway",         code: "no",     contract: null },
+  { ticker: "FARTNOR", name: "FartNorway",        country: "Norway",         code: "no",     contract: "6g3oW3K8PvNVTh6R2sHudBEwq4Xrr2a8zM3gueXUpump" },
   { ticker: "FARTPOR", name: "FartPortugal",      country: "Portugal",       code: "pt",     contract: null },
   { ticker: "FARTSCO", name: "FartScotland",      country: "Scotland",       code: "gb-sct", contract: null },
-  { ticker: "FARTESP", name: "FartSpain",         country: "Spain",          code: "es",     contract: null },
+  { ticker: "FARTESP", name: "FartSpain",         country: "Spain",          code: "es",     contract: "6k8VvWQPYwiL4Pnbkr53KmfJDC2J4E5mtN8qMPPMpump" },
   { ticker: "FARTSWE", name: "FartSweden",        country: "Sweden",         code: "se",     contract: null },
   { ticker: "FARTSUI", name: "FartSwitzerland",   country: "Switzerland",    code: "ch",     contract: null },
   { ticker: "FARTTUR", name: "FartTurkey",        country: "Turkey",         code: "tr",     contract: null },
@@ -1126,6 +1208,77 @@ refreshMarketCaps();
 setInterval(refreshMarketCaps, 60000);
 loadFpPrice();
 setInterval(loadFpPrice, 60000);
+
+// ===== Sidebar: World Cup news + live matches =====
+function escFC(s){ return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function newsAgo(d){ if(!d) return ""; const t = new Date(d).getTime(); if(isNaN(t)) return ""; const s = Math.floor((Date.now()-t)/1000); if(s<3600) return Math.floor(s/60)+"m ago"; if(s<86400) return Math.floor(s/3600)+"h ago"; return Math.floor(s/86400)+"d ago"; }
+function fmtKickoff(utc){ const d = new Date(utc); if(isNaN(d)) return ""; return d.toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }); }
+function fmtDateHead(iso){ const d = new Date(iso + "T12:00:00"); if(isNaN(d)) return iso; return d.toLocaleDateString([], { weekday:"short", month:"short", day:"numeric" }); }
+
+async function loadNews(){
+  const el = $("newsList"); if(!el) return;
+  try{
+    const r = await fetch("/api/news?t=" + Date.now());
+    if(!r.ok){ el.innerHTML = `<div class="side-empty">News feed unavailable.</div>`; return; }
+    const j = await r.json();
+    const items = (j.items || []).slice(0, 10);
+    if(!items.length){ el.innerHTML = `<div class="side-empty">No headlines right now.</div>`; return; }
+    el.innerHTML = items.map(it => `
+      <a class="news-item" href="${escFC(it.link)}" target="_blank" rel="noopener">
+        <div class="nt">${escFC(it.title)}</div>
+        <div class="nm">${escFC(it.source || "")}${(it.source && it.pubDate) ? " · " : ""}${newsAgo(it.pubDate)}</div>
+      </a>`).join("");
+  }catch(_){ el.innerHTML = `<div class="side-empty">News feed unavailable.</div>`; }
+}
+
+let _lastScores = {};
+async function loadMatches(){
+  const el = $("matchList"); if(!el) return;
+  let data;
+  try{ const r = await fetch("/api/matches?t=" + Date.now()); data = await r.json(); }
+  catch(_){ el.innerHTML = `<div class="side-empty">Matches unavailable.</div>`; return; }
+  const matches = (data && data.matches) || [];
+  if(!matches.length){
+    el.innerHTML = `<div class="side-empty">${escFC(data && data.note ? data.note : "No World Cup matches scheduled yet.")}</div>`;
+    return;
+  }
+  matches.sort((a,b) => new Date(a.utcDate) - new Date(b.utcDate));
+  const groups = {};
+  for(const m of matches){
+    const key = new Date(m.utcDate).toISOString().slice(0,10);
+    (groups[key] = groups[key] || []).push(m);
+  }
+  let html = `<div class="match-scroll">`;
+  for(const dk of Object.keys(groups).sort()){
+    html += `<div class="match-date">${escFC(fmtDateHead(dk))}</div>`;
+    for(const m of groups[dk]){
+      const live = /IN_PLAY|PAUSED|LIVE/i.test(m.status);
+      const ft = /FINISHED/i.test(m.status);
+      const hasScore = (m.hs != null && m.as != null) && (live || ft);
+      const right = hasScore
+        ? `<div class="score${live ? ' live' : ''}">${m.hs}–${m.as}</div>${live ? '<span class="badge live">Live</span>' : (ft ? '<span class="badge ft">FT</span>' : '')}`
+        : `<div class="kickoff">${escFC(fmtKickoff(m.utcDate))}</div>`;
+      const cur = hasScore ? (m.hs + "-" + m.as) : null;
+      const flash = (cur && _lastScores[m.id] != null && _lastScores[m.id] !== cur) ? " flash" : "";
+      if(cur != null) _lastScores[m.id] = cur;
+      html += `
+        <div class="match${flash}" data-mid="${m.id}">
+          <div class="teams">
+            <div class="team">${m.homeCrest ? `<img src="${escFC(m.homeCrest)}" alt="" onerror="this.style.display='none'">` : ""}<span class="nm">${escFC(m.homeName)}</span></div>
+            <div class="team">${m.awayCrest ? `<img src="${escFC(m.awayCrest)}" alt="" onerror="this.style.display='none'">` : ""}<span class="nm">${escFC(m.awayName)}</span></div>
+          </div>
+          <div class="right">${right}</div>
+        </div>`;
+    }
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+}
+
+loadNews();
+setInterval(loadNews, 300000);
+loadMatches();
+setInterval(loadMatches, 30000);
 
 // ===== World Cup kickoff countdown =====
 // FIFA World Cup 2026 opening match — June 11, 2026, Estadio Azteca (Mexico City).
