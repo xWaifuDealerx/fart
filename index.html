@@ -2471,15 +2471,35 @@ function renderTop3(elId, rows, emptyMsg){
     </div>`).join("") + `</div>`;
 }
 
+const _fcImg = {};   // mint -> pump.fun image_uri cache
 async function loadTop3FartCup(){
   const caps = await dexMcaps(FARTCUP_COINS.map(c => c.ca));
-  // pump.fun fallback for any coin still on the bonding curve
+  // pump.fun fallback for coins still on the bonding curve — also grabs the token image
   await Promise.all(FARTCUP_COINS.filter(c => !caps[c.ca]).map(async (c) => {
-    try{ const r = await fetch(`/api/pumpfun?mint=${c.ca}`); if(r.ok){ const j = await r.json(); const v = Number(j?.usd_market_cap); if(v > 0) caps[c.ca] = v; } }catch(_){}
+    try{
+      const r = await fetch(`/api/pumpfun?mint=${c.ca}`);
+      if(r.ok){
+        const j = await r.json();
+        const v = Number(j?.usd_market_cap); if(v > 0) caps[c.ca] = v;
+        const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img;
+      }
+    }catch(_){}
   }));
-  const rows = FARTCUP_COINS
-    .map(c => ({ sym: c.sym, img: `https://flagcdn.com/w80/${c.code}.png`, mcap: caps[c.ca] || 0 }))
+  const ranked = FARTCUP_COINS
+    .map(c => ({ ...c, mcap: caps[c.ca] || 0 }))
     .filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3);
+  // make sure the top 3 have their pump.fun image (fetch any we haven't yet)
+  await Promise.all(ranked.filter(c => !_fcImg[c.ca]).map(async (c) => {
+    try{
+      const r = await fetch(`/api/pumpfun?mint=${c.ca}`);
+      if(r.ok){ const j = await r.json(); const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img; }
+    }catch(_){}
+  }));
+  const rows = ranked.map(c => ({
+    sym: c.sym,
+    img: _fcImg[c.ca] || `https://flagcdn.com/w80/${c.code}.png`,
+    mcap: c.mcap,
+  }));
   renderTop3("top3-fartcup", rows, "Nation coins warming up — check back soon.");
 }
 

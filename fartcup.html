@@ -676,6 +676,20 @@
     color: var(--text);
     font-size: 14px;
   }
+  /* ===== PURCHASE CELEBRATION ===== */
+  .fart-glow {
+    position: fixed; inset: 0; z-index: 2000; pointer-events: none; opacity: 0;
+    background: radial-gradient(circle at 50% 42%, rgba(46,224,107,0.5), rgba(46,224,107,0.18) 40%, transparent 66%);
+  }
+  .fart-glow.show { animation: fartGlow 1.7s ease forwards; }
+  @keyframes fartGlow { 0% { opacity: 0; } 16% { opacity: 1; } 100% { opacity: 0; } }
+  .confetti-layer { position: fixed; inset: 0; z-index: 2001; pointer-events: none; overflow: hidden; }
+  .confetti-piece { position: absolute; top: -6vh; will-change: transform, opacity; }
+  @keyframes confettiFall {
+    0%   { transform: translateY(-8vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(112vh) rotate(680deg); opacity: 0.85; }
+  }
+
   /* ===== WALLET (nav) ===== */
   .wallet-btn {
     background: linear-gradient(135deg, var(--pitch) 0%, var(--pitch-bright) 100%);
@@ -1418,6 +1432,31 @@ function openTrade(mint, ticker, code){
 }
 function closeTrade(){ $("tradeOverlay").classList.remove("open"); }
 
+// Green fart glow + confetti burst after a successful buy
+function celebrate(){
+  let glow = document.querySelector(".fart-glow");
+  if(!glow){ glow = document.createElement("div"); glow.className = "fart-glow"; document.body.appendChild(glow); }
+  glow.classList.remove("show"); void glow.offsetWidth; glow.classList.add("show");
+
+  const layer = document.createElement("div");
+  layer.className = "confetti-layer";
+  document.body.appendChild(layer);
+  const colors = ["#2ee06b", "#7dd957", "#16a34a", "#f5c542", "#ffffff", "#bdf7c8"];
+  for(let i = 0; i < 80; i++){
+    const p = document.createElement("div");
+    p.className = "confetti-piece";
+    p.style.left = (Math.random() * 100) + "vw";
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    const w = 6 + Math.random() * 7;
+    p.style.width = w + "px";
+    p.style.height = (w + 4) + "px";
+    p.style.borderRadius = Math.random() < 0.5 ? "50%" : "2px";
+    p.style.animation = `confettiFall ${1.7 + Math.random() * 1.7}s cubic-bezier(.25,.6,.5,1) ${Math.random() * 0.45}s forwards`;
+    layer.appendChild(p);
+  }
+  setTimeout(() => layer.remove(), 4500);
+}
+
 async function executeTrade(){
   if(FC.busy) return;
   const msg = $("tradeMsg");
@@ -1454,6 +1493,7 @@ async function executeTrade(){
     }
     msg.innerHTML = `Done! <a href="https://solscan.io/tx/${signature}" target="_blank" rel="noopener" style="color:var(--pitch-bright);font-weight:700;">view transaction ↗</a>`;
     msg.className = "trade-msg ok";
+    if(FC.side === "buy") celebrate();
     setTimeout(() => { try{ refreshMarketCaps(); }catch(_){} }, 5000);
   } catch(e){
     msg.textContent = (FC.side === "buy" ? "Buy" : "Sell") + " failed: " + (e.message || e);
