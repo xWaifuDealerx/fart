@@ -1307,8 +1307,12 @@
     .apps-grid { grid-template-columns: 1fr; }
     .wrap { padding: 36px 18px 60px; }
     .ticker { grid-template-columns: 1fr; }
-    .ticker .item { border-right: 0; }
+    .ticker .item { border-right: 0; border-bottom: 1px solid var(--border-light); }
     .ticker .item:nth-child(odd) { border-right: 0; }
+    .ticker .item:nth-last-child(-n+2) { border-bottom: 1px solid var(--border-light); }
+    .ticker .item:last-child { border-bottom: 0; }
+    .manifesto { font-size: 16px; margin-top: 40px; padding: 0 4px; line-height: 1.55; }
+    .manifesto br { display: none; }
   }
 </style>
 </head>
