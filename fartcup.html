@@ -677,6 +677,33 @@
     color: var(--text);
     font-size: 14px;
   }
+  /* ===== BURN TOTAL BOX ===== */
+  .burn-box {
+    background: linear-gradient(135deg, rgba(46,224,107,0.10), rgba(245,197,66,0.08));
+    border: 1px solid rgba(46,224,107,0.28);
+    border-radius: 18px; padding: 20px 22px; margin: 0 0 26px; text-align: center;
+  }
+  .burn-box-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--pitch-bright); font-weight: 700; margin-bottom: 10px; }
+  .burn-box-row { display: flex; align-items: baseline; justify-content: center; gap: 10px; }
+  .burn-box .burn-amt {
+    font-family: 'Orbitron', sans-serif; font-size: clamp(30px, 7vw, 44px); font-weight: 900; line-height: 1;
+    background: linear-gradient(135deg, var(--pitch-bright), var(--gold));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .burn-box .burn-tok { font-size: 14px; color: var(--text-tertiary); font-weight: 700; }
+  .burn-box .burn-usd { font-size: 13px; color: var(--text-secondary); margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+
+  /* ===== TOKENS RECEIVED POPUP ===== */
+  .recv-pop { position: fixed; inset: 0; z-index: 2100; background: rgba(5,10,20,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 20px; }
+  .recv-pop.open { display: flex; }
+  .recv-card { background: var(--card); border: 1px solid var(--pitch); border-radius: 22px; padding: 28px 26px; text-align: center; max-width: 320px; width: 100%; box-shadow: 0 0 50px rgba(46,224,107,0.4); animation: recvPop 0.3s ease; }
+  @keyframes recvPop { from { transform: scale(0.9); opacity: 0; } to { transform: none; opacity: 1; } }
+  .recv-flag { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--pitch); margin-bottom: 12px; }
+  .recv-amt { font-family: 'Orbitron', sans-serif; font-size: 34px; font-weight: 900; color: var(--pitch-bright); line-height: 1; }
+  .recv-sub { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+  .recv-close { margin-top: 18px; background: linear-gradient(135deg, var(--pitch), var(--pitch-bright)); color: #06281a; border: 0; border-radius: 100px; padding: 11px 28px; font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .recv-close:hover { filter: brightness(1.08); }
+
   /* ===== PURCHASE CELEBRATION ===== */
   .fart-glow {
     position: fixed; inset: 0; z-index: 2000; pointer-events: none; opacity: 0;
@@ -953,6 +980,16 @@
     </div>
   </div>
 
+  <!-- BURN TOTAL -->
+  <div class="burn-box">
+    <div class="burn-box-label">$FARTPRINT bought back &amp; burned by Fart Cup</div>
+    <div class="burn-box-row">
+      <div class="burn-amt" id="burnAmt">0</div>
+      <div class="burn-tok">$FARTPRINT</div>
+    </div>
+    <div class="burn-usd" id="burnUsd">$0 · updating soon</div>
+  </div>
+
   <!-- MAIN + SIDEBAR -->
   <div class="fc-layout">
     <div class="fc-main">
@@ -1065,6 +1102,16 @@
     <input type="number" class="trade-input" id="tradeSlip" value="10" min="1" max="50">
     <button class="trade-go" id="tradeGo">Connect Wallet</button>
     <div class="trade-msg" id="tradeMsg">Powered by PumpPortal — you sign in your own wallet.</div>
+  </div>
+</div>
+
+<!-- TOKENS RECEIVED POPUP -->
+<div class="recv-pop" id="recvPop">
+  <div class="recv-card">
+    <img class="recv-flag" id="recvFlag" alt="">
+    <div class="recv-amt" id="recvAmt">+0</div>
+    <div class="recv-sub" id="recvSub">received</div>
+    <button class="recv-close" id="recvClose" type="button">Let's go</button>
   </div>
 </div>
 
@@ -1340,6 +1387,17 @@ function fmtPrice(n){
   return "$" + num.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+// ===== Fart Cup buyback-and-burn total =====
+const BURNED_FARTPRINT = 0;   // total $FARTPRINT Fart Cup has bought back & burned — bump this as it grows
+let FP_PRICE = null;
+function renderBurn(){
+  const amtEl = $("burnAmt"), usdEl = $("burnUsd");
+  if(amtEl) amtEl.textContent = BURNED_FARTPRINT > 0 ? Number(BURNED_FARTPRINT).toLocaleString() : "0";
+  if(usdEl) usdEl.textContent = (BURNED_FARTPRINT > 0 && FP_PRICE)
+    ? "≈ " + fmtUsd(BURNED_FARTPRINT * FP_PRICE) + " burned"
+    : "$0 · updating soon";
+}
+
 async function loadFpPrice(){
   const el = $("fpPriceVal");
   if(!el) return;
@@ -1351,6 +1409,7 @@ async function loadFpPrice(){
     const p = pairs[0];
     if(!p) return;
     el.textContent = fmtPrice(parseFloat(p.priceUsd));
+    FP_PRICE = parseFloat(p.priceUsd); renderBurn();
     const ch = p.priceChange?.h24;
     el.className = "val" + (ch != null ? (ch >= 0 ? " up" : " down") : "");
   } catch(_){}
@@ -1471,7 +1530,7 @@ async function disconnectWallet(){
 }
 
 function openTrade(mint, ticker, code){
-  FC.mint = mint; FC.ticker = ticker; FC.side = "buy"; FC.sellPct = 100;
+  FC.mint = mint; FC.ticker = ticker; FC.code = code; FC.side = "buy"; FC.sellPct = 100;
   $("tradeTk").textContent = "$" + ticker;
   $("tradeFlag").src = flagUrl(code);
   document.querySelectorAll("#tradeSeg button").forEach(b => b.classList.toggle("active", b.dataset.side === "buy"));
@@ -1508,6 +1567,33 @@ function celebrate(){
   setTimeout(() => layer.remove(), 4500);
 }
 
+// Read a wallet's balance of a specific token mint
+async function getTokenBalance(wallet, mint){
+  try{
+    const conn = new window.solanaWeb3.Connection(FC_RPC, "confirmed");
+    const res = await conn.getParsedTokenAccountsByOwner(new window.solanaWeb3.PublicKey(wallet), { mint: new window.solanaWeb3.PublicKey(mint) });
+    let sum = 0;
+    for(const a of (res.value || [])){ sum += a.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0; }
+    return sum;
+  }catch(_){ return 0; }
+}
+
+// Poll for the delta after a buy, then show how many tokens were received
+async function showReceived(mint, ticker, code, before){
+  let received = 0;
+  for(let i = 0; i < 8; i++){
+    await new Promise(r => setTimeout(r, 2500));
+    const now = await getTokenBalance(FC.wallet, mint);
+    if(now > before + 1e-9){ received = now - before; break; }
+  }
+  const flag = $("recvFlag");
+  flag.src = code ? `https://flagcdn.com/w160/${code}.png` : "";
+  flag.style.display = code ? "" : "none";
+  $("recvAmt").textContent = received > 0 ? "+" + Math.round(received).toLocaleString() : "Bought!";
+  $("recvSub").textContent = "$" + ticker + (received > 0 ? " received" : " purchased");
+  $("recvPop").classList.add("open");
+}
+
 async function executeTrade(){
   if(FC.busy) return;
   const msg = $("tradeMsg");
@@ -1516,11 +1602,12 @@ async function executeTrade(){
   if(!phantom){ msg.textContent = "Phantom wallet not found."; msg.className = "trade-msg err"; return; }
   if(!window.solanaWeb3){ msg.textContent = "Wallet library still loading — try again in a second."; msg.className = "trade-msg err"; return; }
   const slippage = Math.max(1, Math.min(50, parseFloat($("tradeSlip").value) || 10));
-  let denominatedInSol, amount;
+  let denominatedInSol, amount, beforeBal = 0;
   if(FC.side === "buy"){
     const sol = parseFloat($("buyAmt").value) || 0;
     if(sol <= 0){ msg.textContent = "Enter a SOL amount."; msg.className = "trade-msg err"; return; }
     denominatedInSol = "true"; amount = sol;
+    beforeBal = await getTokenBalance(FC.wallet, FC.mint);
   } else {
     denominatedInSol = "false"; amount = FC.sellPct + "%";
   }
@@ -1544,7 +1631,7 @@ async function executeTrade(){
     }
     msg.innerHTML = `Done! <a href="https://solscan.io/tx/${signature}" target="_blank" rel="noopener" style="color:var(--pitch-bright);font-weight:700;">view transaction ↗</a>`;
     msg.className = "trade-msg ok";
-    if(FC.side === "buy") celebrate();
+    if(FC.side === "buy"){ celebrate(); showReceived(FC.mint, FC.ticker, FC.code, beforeBal); }
     setTimeout(() => { try{ refreshMarketCaps(); }catch(_){} }, 5000);
   } catch(e){
     msg.textContent = (FC.side === "buy" ? "Buy" : "Sell") + " failed: " + (e.message || e);
@@ -1560,6 +1647,8 @@ $("tradeClose")?.addEventListener("click", closeTrade);
 $("tradeOverlay")?.addEventListener("click", (e) => { if(e.target === $("tradeOverlay")) closeTrade(); });
 document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeTrade(); });
 $("tradeGo")?.addEventListener("click", executeTrade);
+$("recvClose")?.addEventListener("click", () => $("recvPop").classList.remove("open"));
+$("recvPop")?.addEventListener("click", (e) => { if(e.target === $("recvPop")) $("recvPop").classList.remove("open"); });
 document.querySelectorAll("#tradeSeg button").forEach(b => {
   b.addEventListener("click", () => {
     FC.side = b.dataset.side;
