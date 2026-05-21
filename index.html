@@ -732,6 +732,105 @@
     .stake-callout { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
   }
 
+  /* ===== CINEMATIC BG + SMOOTH SCROLL ===== */
+  #bg-canvas {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    z-index: -1; pointer-events: none; display: block;
+  }
+  html.lenis, html.lenis body { height: auto; }
+  .lenis.lenis-smooth { scroll-behavior: auto !important; }
+  .lenis.lenis-smooth [data-lenis-prevent] { overscroll-behavior: contain; }
+  .lenis.lenis-stopped { overflow: hidden; }
+  .lenis.lenis-smooth iframe { pointer-events: none; }
+
+  /* ===== WALLET (nav) ===== */
+  .wallet-btn {
+    margin-left: 22px;
+    background: var(--green); color: #fff; border: 0;
+    font-family: inherit; font-size: 12px; font-weight: 700;
+    padding: 7px 16px; border-radius: 100px; cursor: pointer;
+    transition: all 0.15s; vertical-align: middle;
+  }
+  .wallet-btn:hover { background: var(--green-dark); }
+  .wallet-pill {
+    margin-left: 22px; display: inline-flex; align-items: center; gap: 8px;
+    background: var(--green-soft); border: 1px solid rgba(0,168,90,0.25);
+    border-radius: 100px; padding: 4px 4px 4px 12px; vertical-align: middle;
+  }
+  .wallet-pill .addr { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--green-dark); }
+  .wallet-dc {
+    border: 0; background: var(--green); color: #fff;
+    width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    font-size: 11px; line-height: 1; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .wallet-dc:hover { background: var(--red); }
+
+  /* ===== APP PREVIEW MODAL ===== */
+  .app-card { cursor: pointer; }
+  .preview-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(15, 20, 25, 0.55); backdrop-filter: blur(4px);
+    display: none; align-items: flex-start; justify-content: center;
+    padding: 40px 16px; overflow-y: auto;
+  }
+  .preview-overlay.open { display: flex; }
+  .preview-modal {
+    background: var(--card-bg); border-radius: 24px; width: 100%; max-width: 560px;
+    box-shadow: var(--shadow-lg); padding: 28px; position: relative; animation: pvIn 0.18s ease;
+  }
+  @keyframes pvIn { from { transform: translateY(12px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .preview-close {
+    position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%;
+    border: 0; background: var(--bg); color: var(--text-tertiary); font-size: 20px; line-height: 1; cursor: pointer;
+  }
+  .preview-close:hover { background: var(--border-light); color: var(--text); }
+  .preview-head { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; padding-right: 28px; }
+  .preview-head .app-icon { width: 60px; height: 60px; font-size: 26px; border-radius: 16px; flex-shrink: 0; }
+  .preview-name { font-size: 24px; font-weight: 700; letter-spacing: -0.4px; }
+  .preview-cat { font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; margin-top: 2px; }
+  .preview-blurb { font-size: 15px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 18px; }
+  .preview-continue {
+    display: block; text-align: center; background: var(--green); color: #fff;
+    padding: 13px; border-radius: 100px; font-weight: 700; font-size: 15px; text-decoration: none; transition: all 0.15s;
+  }
+  .preview-continue:hover { background: var(--green-dark); }
+  .preview-continue.disabled { background: var(--grey-soft); color: var(--text-muted); pointer-events: none; }
+
+  .pv-reviews { margin-top: 24px; border-top: 1px solid var(--border-light); padding-top: 18px; }
+  .pv-rev-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .pv-avg { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 800; line-height: 1; }
+  .pv-count { font-size: 12px; color: var(--text-tertiary); }
+  .stars { display: inline-flex; gap: 2px; }
+  .stars .s { color: var(--border); font-size: 16px; line-height: 1; }
+  .stars .s.on { color: var(--amber); }
+
+  .pv-write { background: var(--bg); border: 1px solid var(--border-light); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+  .pv-write .star-pick { margin-bottom: 8px; }
+  .pv-write .star-pick .s { cursor: pointer; font-size: 26px; transition: transform 0.1s; }
+  .pv-write .star-pick .s:hover { transform: scale(1.15); }
+  .pv-field {
+    width: 100%; background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 12px; font-family: inherit; font-size: 13.5px; color: var(--text); resize: vertical; min-height: 64px; outline: 0;
+  }
+  .pv-field:focus { border-color: var(--green); box-shadow: 0 0 0 3px var(--green-glow); }
+  .pv-submit {
+    width: 100%; margin-top: 10px; background: var(--green); color: #fff; border: 0; border-radius: 100px;
+    padding: 10px; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; transition: all 0.15s;
+  }
+  .pv-submit:hover:not(:disabled) { background: var(--green-dark); }
+  .pv-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pv-msg { font-size: 12px; margin-top: 8px; line-height: 1.5; color: var(--text-tertiary); }
+  .pv-msg.err { color: var(--red); }
+  .pv-msg.ok { color: var(--green-dark); }
+  .pv-list { display: grid; gap: 10px; max-height: 280px; overflow-y: auto; }
+  .pv-item { border: 1px solid var(--border-light); border-radius: 12px; padding: 12px 14px; background: var(--bg-2); }
+  .pv-item .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; gap: 8px; }
+  .pv-item .who { font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-secondary); }
+  .pv-item .who .v { color: var(--green); margin-left: 5px; font-family: 'Inter', sans-serif; font-size: 10.5px; }
+  .pv-item .when { font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+  .pv-item .body { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-top: 4px; }
+  .pv-empty { font-size: 13px; color: var(--text-tertiary); text-align: center; padding: 16px; }
+
   .builders {
     margin-top: 72px;
     padding: 56px 40px;
@@ -1045,6 +1144,8 @@
 </head>
 <body>
 
+<canvas id="bg-canvas"></canvas>
+
 <div class="wrap">
 
   <!-- NAV -->
@@ -1056,6 +1157,11 @@
       <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X</a>
       <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a>
       <a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Trade</a>
+      <button class="wallet-btn" id="navConnect">Connect Phantom</button>
+      <span class="wallet-pill" id="navWallet" style="display:none;">
+        <span class="addr" id="navAddr"></span>
+        <button class="wallet-dc" id="navDisconnect" title="Disconnect">⏻</button>
+      </span>
     </div>
   </nav>
 
@@ -1611,6 +1717,41 @@
 
 </div>
 
+<!-- APP PREVIEW MODAL -->
+<div class="preview-overlay" id="previewOverlay" aria-hidden="true" data-lenis-prevent>
+  <div class="preview-modal" role="dialog" aria-modal="true">
+    <button class="preview-close" id="previewClose" aria-label="Close">×</button>
+    <div class="preview-head">
+      <div id="pvIcon"></div>
+      <div>
+        <div class="preview-name" id="pvName">App</div>
+        <div class="preview-cat" id="pvCat"></div>
+      </div>
+    </div>
+    <p class="preview-blurb" id="pvBlurb"></p>
+    <a class="preview-continue" id="pvContinue" href="#">Continue →</a>
+
+    <div class="pv-reviews">
+      <div class="pv-rev-head">
+        <span class="pv-avg" id="pvAvg">—</span>
+        <span class="stars" id="pvAvgStars"></span>
+        <span class="pv-count" id="pvCount"></span>
+      </div>
+
+      <div class="pv-write">
+        <div class="star-pick stars" id="pvStarPick">
+          <span class="s" data-v="1">★</span><span class="s" data-v="2">★</span><span class="s" data-v="3">★</span><span class="s" data-v="4">★</span><span class="s" data-v="5">★</span>
+        </div>
+        <textarea class="pv-field" id="pvComment" maxlength="500" placeholder="Leave a comment (max 500 chars)…"></textarea>
+        <button class="pv-submit" id="pvSubmit">Sign &amp; post review</button>
+        <div class="pv-msg" id="pvMsg">Connect Phantom (top right) to leave a review.</div>
+      </div>
+
+      <div class="pv-list" id="pvList"></div>
+    </div>
+  </div>
+</div>
+
 <script>
 const TOKEN = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
 
@@ -1754,6 +1895,367 @@ loadTicker();
 loadStaked();
 setInterval(loadTicker, 30000);
 setInterval(loadStaked, 30000);
+
+// ============================================================
+// Global Phantom wallet + per-app preview modals with reviews
+// ============================================================
+const REVIEWS_API = "/api/reviews";
+const $id = (id) => document.getElementById(id);
+const Wallet = { addr: null, phantom: null };
+
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+function shortAddr(a){ return a ? a.slice(0, 4) + "…" + a.slice(-4) : ""; }
+
+function paintWallet(){
+  const c = $id("navConnect"), p = $id("navWallet");
+  if(Wallet.addr){
+    if(c) c.style.display = "none";
+    if(p) p.style.display = "";
+    $id("navAddr").textContent = shortAddr(Wallet.addr);
+  } else {
+    if(c) c.style.display = "";
+    if(p) p.style.display = "none";
+  }
+  updatePvWriteState();
+}
+
+async function connectWallet(){
+  const phantom = getPhantom();
+  if(!phantom){ window.open("https://phantom.app/", "_blank"); return; }
+  try{
+    const res = await phantom.connect();
+    Wallet.phantom = phantom;
+    Wallet.addr = res.publicKey.toString();
+    try{ localStorage.setItem("fp_wallet_trusted", "1"); }catch(_){}
+    paintWallet();
+  } catch(e){ console.warn("connect failed", e); }
+}
+async function disconnectWallet(){
+  try{ await (Wallet.phantom || getPhantom())?.disconnect?.(); }catch(_){}
+  Wallet.addr = null; Wallet.phantom = null;
+  try{ localStorage.removeItem("fp_wallet_trusted"); }catch(_){}
+  paintWallet();
+}
+
+// ---- reviews ----
+let REVIEWS = [];
+async function fetchReviews(){
+  try{
+    const r = await fetch(REVIEWS_API + "?t=" + Date.now());
+    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.reviews)) REVIEWS = j.reviews; }
+  } catch(_){}
+}
+function slugApp(name){ return String(name).toLowerCase().replace(/[^a-z0-9]+/g, ""); }
+function escHtml(s){ return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function ago(ts){ if(!ts) return ""; const d = Math.floor((Date.now()-ts)/1000); if(d<60) return d+"s ago"; if(d<3600) return Math.floor(d/60)+"m ago"; if(d<86400) return Math.floor(d/3600)+"h ago"; return Math.floor(d/86400)+"d ago"; }
+function starsHtml(n){ let h=""; for(let i=1;i<=5;i++) h += `<span class="s${i<=n?" on":""}">★</span>`; return h; }
+
+// ---- preview ----
+const PV = { app: null, name: null, stars: 0, busy: false };
+
+function updatePvWriteState(){
+  const msg = $id("pvMsg");
+  if(!msg) return;
+  msg.className = "pv-msg";
+  msg.textContent = Wallet.addr
+    ? "Signed in as " + shortAddr(Wallet.addr) + " · pick stars, write a comment, then sign."
+    : "Connect Phantom (top right) to leave a review.";
+}
+
+function paintPvStars(){ document.querySelectorAll("#pvStarPick .s").forEach(s => s.classList.toggle("on", Number(s.dataset.v) <= PV.stars)); }
+
+function renderPvReviews(){
+  const list = REVIEWS.filter(r => r.app === PV.app).sort((a,b) => (b.ts||0) - (a.ts||0));
+  const avg = list.length ? list.reduce((s,r) => s + (Number(r.s)||0), 0) / list.length : 0;
+  $id("pvAvg").textContent = list.length ? avg.toFixed(1) : "—";
+  $id("pvAvgStars").innerHTML = starsHtml(Math.round(avg));
+  $id("pvCount").textContent = list.length ? `${list.length} review${list.length===1?"":"s"} · /5` : "No reviews yet";
+  $id("pvList").innerHTML = list.length ? list.map(r => `
+    <div class="pv-item">
+      <div class="top"><span class="who">${shortAddr(r.w)}<span class="v">✓ signed</span></span><span class="when">${ago(r.ts)}</span></div>
+      <span class="stars">${starsHtml(Number(r.s)||0)}</span>
+      ${r.c ? `<div class="body">${escHtml(r.c)}</div>` : ""}
+    </div>`).join("") : `<div class="pv-empty">No reviews yet — be the first to rate ${escHtml(PV.name)}.</div>`;
+}
+
+function openPreview(card){
+  const name  = (card.querySelector("h4")?.textContent || "App").trim();
+  const cat   = (card.querySelector(".cat")?.textContent || "").trim();
+  const blurb = (card.querySelector("p")?.textContent || "").trim();
+  const iconEl = card.querySelector(".app-icon");
+  const launch = card.querySelector("a.app-btn");
+  const isLive = card.classList.contains("live");
+
+  PV.app = slugApp(name); PV.name = name; PV.stars = 0;
+  $id("pvName").textContent = name;
+  $id("pvCat").textContent = cat;
+  $id("pvBlurb").textContent = blurb;
+  $id("pvIcon").innerHTML = iconEl ? iconEl.outerHTML : "";
+  $id("pvComment").value = "";
+  paintPvStars();
+
+  const cont = $id("pvContinue");
+  if(isLive && launch && launch.getAttribute("href")){
+    cont.classList.remove("disabled");
+    cont.textContent = "Continue to " + name + " →";
+    cont.href = launch.getAttribute("href");
+    if(launch.target === "_blank"){ cont.target = "_blank"; cont.rel = "noopener"; } else { cont.removeAttribute("target"); }
+  } else {
+    cont.classList.add("disabled");
+    cont.textContent = "In development — coming soon";
+    cont.removeAttribute("href");
+  }
+
+  updatePvWriteState();
+  renderPvReviews();
+  $id("previewOverlay").classList.add("open");
+  fetchReviews().then(renderPvReviews);
+}
+function closePreview(){ $id("previewOverlay").classList.remove("open"); }
+
+function findCardByName(name){
+  for(const c of document.querySelectorAll(".app-card")){
+    if((c.querySelector("h4")?.textContent || "").trim() === name) return c;
+  }
+  return null;
+}
+
+async function submitPvReview(){
+  if(PV.busy) return;
+  const m = $id("pvMsg");
+  if(!Wallet.addr){ await connectWallet(); if(!Wallet.addr){ m.textContent = "Connect Phantom to post a review."; m.className = "pv-msg err"; return; } }
+  if(!(PV.stars >= 1 && PV.stars <= 5)){ m.textContent = "Pick a star rating first."; m.className = "pv-msg err"; return; }
+  const phantom = Wallet.phantom || getPhantom();
+  if(!phantom) return;
+  const comment = ($id("pvComment").value || "").trim().slice(0, 500);
+  PV.busy = true; $id("pvSubmit").disabled = true;
+  try{
+    const ts = Date.now();
+    const msg = `$FARTPRINT app review\nApp: ${PV.name}\nRating: ${PV.stars}/5\nComment: ${comment}\nWallet: ${Wallet.addr}\nTime: ${new Date(ts).toISOString()}`;
+    m.textContent = "Awaiting wallet signature…"; m.className = "pv-msg";
+    const signed = await phantom.signMessage(new TextEncoder().encode(msg), "utf8");
+    const sigBytes = signed.signature || signed;
+    const sig = btoa(String.fromCharCode.apply(null, Array.from(sigBytes))).slice(0, 180);
+    const rec = { app: PV.app, w: Wallet.addr, s: PV.stars, c: comment, sig, msg, ts };
+    m.textContent = "Posting…";
+    const r = await fetch(REVIEWS_API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec) });
+    const j = await r.json().catch(() => null);
+    if(r.ok && j && j.ok){
+      REVIEWS = REVIEWS.filter(x => !(x.app === rec.app && x.w === rec.w));
+      REVIEWS.push(rec);
+      PV.stars = 0; paintPvStars(); $id("pvComment").value = "";
+      renderPvReviews();
+      m.textContent = "Thanks! Your signed review is live."; m.className = "pv-msg ok";
+      fetchReviews().then(renderPvReviews);
+    } else {
+      m.textContent = "Couldn't save: " + ((j && j.message) || ("HTTP " + r.status)); m.className = "pv-msg err";
+    }
+  } catch(e){
+    m.textContent = "Review failed: " + (e.message || e); m.className = "pv-msg err";
+  } finally {
+    PV.busy = false; $id("pvSubmit").disabled = false;
+  }
+}
+
+(function initWalletAndPreview(){
+  $id("navConnect")?.addEventListener("click", connectWallet);
+  $id("navDisconnect")?.addEventListener("click", disconnectWallet);
+
+  document.querySelectorAll("#pvStarPick .s").forEach(s => {
+    s.addEventListener("click", () => { PV.stars = Number(s.dataset.v); paintPvStars(); });
+  });
+  $id("pvSubmit")?.addEventListener("click", submitPvReview);
+  $id("previewClose")?.addEventListener("click", closePreview);
+  $id("previewOverlay")?.addEventListener("click", (e) => { if(e.target === $id("previewOverlay")) closePreview(); });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape") closePreview(); });
+
+  // Intercept every app card → open its preview first (capture stops the inner link/button).
+  document.querySelectorAll(".app-card").forEach(card => {
+    card.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); openPreview(card); }, true);
+  });
+  // Featured cards (Fart Cup / Derivatives) route to the same per-app preview.
+  document.querySelectorAll(".featured-link").forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const name = (link.querySelector(".featured-meta h3")?.textContent || "").trim();
+      const card = findCardByName(name);
+      if(card) openPreview(card);
+    }, true);
+  });
+
+  fetchReviews();
+
+  // Silent reconnect if the wallet was previously trusted.
+  (async () => {
+    const phantom = getPhantom();
+    if(!phantom) return;
+    try{
+      const res = await phantom.connect({ onlyIfTrusted: true });
+      Wallet.phantom = phantom; Wallet.addr = res.publicKey.toString();
+      paintWallet();
+    } catch(_){}
+  })();
+})();
+</script>
+
+<!-- ===== Premium layer: Three.js (reactive painted bg) · GSAP ScrollTrigger (cinematic reveals) · Lenis (smooth scroll) ===== -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1/dist/lenis.min.js"></script>
+<script>
+(function(){
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- Lenis: buttery smooth scroll ----------
+  let lenis = null;
+  try{
+    if(window.Lenis && !reduce){
+      lenis = new Lenis({ lerp: 0.1, smoothWheel: true });
+      window.__lenis = lenis;
+      document.querySelectorAll('a[href^="#"]').forEach(a => {
+        a.addEventListener("click", (e) => {
+          const id = a.getAttribute("href");
+          if(id && id.length > 1){
+            const t = document.querySelector(id);
+            if(t){ e.preventDefault(); lenis.scrollTo(t, { offset: -10 }); }
+          }
+        });
+      });
+    }
+  }catch(_){}
+
+  // ---------- GSAP ScrollTrigger: each section animates in as a scene ----------
+  let hasGsap = false;
+  try{
+    if(window.gsap && window.ScrollTrigger && !reduce){
+      hasGsap = true;
+      gsap.registerPlugin(ScrollTrigger);
+
+      if(lenis){
+        lenis.on("scroll", ScrollTrigger.update);
+        gsap.ticker.add((t) => lenis.raf(t * 1000));
+        gsap.ticker.lagSmoothing(0);
+      }
+
+      // Hero — cinematic entrance on load
+      gsap.from(".hero .pre-title, .hero .brand, .hero .tagline, .hero .slogan", {
+        opacity: 0, y: 42, duration: 1.0, ease: "power3.out", stagger: 0.12, clearProps: "transform,opacity"
+      });
+      gsap.from(".ticker .item", {
+        opacity: 0, y: 26, duration: 0.7, ease: "power3.out", stagger: 0.07, delay: 0.45, clearProps: "transform,opacity"
+      });
+
+      const reveal = (sel, vars) => {
+        document.querySelectorAll(sel).forEach(el => {
+          gsap.from(el, Object.assign({
+            opacity: 0, y: 54, duration: 1.0, ease: "power3.out", clearProps: "transform,opacity",
+            scrollTrigger: { trigger: el, start: "top 85%" }
+          }, vars || {}));
+        });
+      };
+
+      reveal(".manifesto");
+      reveal(".section-header");
+      reveal(".featured-link", { y: 64, duration: 1.1 });
+      reveal(".stake-callout", { scale: 0.98 });
+      reveal(".builders", { scale: 0.98 });
+      reveal(".lore-section .lore-header");
+      reveal(".lore-section .message", { y: 38, duration: 0.8 });
+      reveal("footer");
+
+      if(document.querySelector(".apps-grid")){
+        gsap.from(".apps-grid .app-card", {
+          opacity: 0, y: 46, scale: 0.97, duration: 0.7, ease: "power3.out", stagger: 0.06, clearProps: "transform,opacity",
+          scrollTrigger: { trigger: ".apps-grid", start: "top 80%" }
+        });
+      }
+
+      window.addEventListener("load", () => ScrollTrigger.refresh());
+    }
+  }catch(_){}
+
+  // Fallback RAF for Lenis if GSAP's ticker isn't driving it
+  if(lenis && !hasGsap){
+    (function raf(t){ lenis.raf(t); requestAnimationFrame(raf); })();
+  }
+
+  // ---------- Three.js: painted, cursor-reactive background ----------
+  try{
+    const canvas = document.getElementById("bg-canvas");
+    if(window.THREE && canvas){
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, powerPreference: "low-power" });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+      const uniforms = {
+        u_time:  { value: 0 },
+        u_res:   { value: new THREE.Vector2(1, 1) },
+        u_mouse: { value: new THREE.Vector2(0.5, 0.5) },
+      };
+      const vert = "varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position, 1.0); }";
+      const frag = [
+        "precision highp float;",
+        "varying vec2 vUv;",
+        "uniform float u_time; uniform vec2 u_res; uniform vec2 u_mouse;",
+        "float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453123); }",
+        "float noise(vec2 p){ vec2 i=floor(p), f=fract(p); vec2 u=f*f*(3.0-2.0*f);",
+        "  return mix(mix(hash(i),hash(i+vec2(1.,0.)),u.x), mix(hash(i+vec2(0.,1.)),hash(i+vec2(1.,1.)),u.x), u.y); }",
+        "float fbm(vec2 p){ float v=0.0,a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.0; a*=0.5; } return v; }",
+        "void main(){",
+        "  vec2 uv = vUv;",
+        "  float asp = u_res.x / max(u_res.y, 1.0);",
+        "  vec2 auv = vec2(uv.x*asp, uv.y);",
+        "  vec2 am = vec2(u_mouse.x*asp, u_mouse.y);",
+        "  float t = u_time*0.045;",
+        "  vec2 q = vec2(fbm(auv*3.0 + t), fbm(auv*3.0 - t + 5.2));",
+        "  float md = distance(auv, am);",
+        "  vec2 warp = auv*3.0 + q*1.4 + (am-auv)*0.7*exp(-md*3.0);",
+        "  float n = fbm(warp + t);",
+        "  float n2 = fbm(warp*1.3 - t*1.2);",
+        "  vec3 base  = vec3(0.965, 0.968, 0.974);",
+        "  vec3 mint  = vec3(0.74, 0.95, 0.82);",
+        "  vec3 green = vec3(0.10, 0.70, 0.41);",
+        "  vec3 gold  = vec3(0.96, 0.78, 0.32);",
+        "  vec3 col = base;",
+        "  col = mix(col, mint,  smoothstep(0.38, 0.78, n) * 0.55);",
+        "  col = mix(col, green, smoothstep(0.58, 0.92, n) * 0.22);",
+        "  col = mix(col, gold,  smoothstep(0.60, 0.88, n2) * 0.16);",
+        "  col += green * 0.12 * exp(-md*4.0);",
+        "  col = mix(col, base, smoothstep(0.2, 1.1, distance(uv, vec2(0.5))) * 0.22);",
+        "  gl_FragColor = vec4(col, 1.0);",
+        "}"
+      ].join("\n");
+      const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag }));
+      scene.add(mesh);
+      function resize(){
+        const w = window.innerWidth, h = window.innerHeight;
+        renderer.setSize(w, h, false);
+        uniforms.u_res.value.set(w, h);
+      }
+      resize();
+      window.addEventListener("resize", resize);
+      let tmx = 0.5, tmy = 0.5;
+      window.addEventListener("pointermove", (e) => {
+        tmx = e.clientX / window.innerWidth;
+        tmy = 1.0 - e.clientY / window.innerHeight;
+      }, { passive: true });
+      const speed = reduce ? 0.0 : 1.0;
+      function loop(ms){
+        uniforms.u_time.value = (ms || 0) * 0.001 * speed;
+        uniforms.u_mouse.value.x += (tmx - uniforms.u_mouse.value.x) * 0.05;
+        uniforms.u_mouse.value.y += (tmy - uniforms.u_mouse.value.y) * 0.05;
+        renderer.render(scene, camera);
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
+    }
+  }catch(_){}
+})();
 </script>
 </body>
 </html>
