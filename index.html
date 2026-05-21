@@ -265,13 +265,12 @@
   }
   .ticker .v.up { color: var(--green); }
   .ticker .v.down { color: var(--red); }
-  /* ===== CONTRACT + STAKE BAR ===== */
-  .token-bar {
+  /* ===== CONTRACT BOX ===== */
+  .ca-box {
     margin-top: 12px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 14px;
+    gap: 10px;
     flex-wrap: wrap;
     background: var(--card-bg);
     border: 1px solid var(--border-light);
@@ -279,43 +278,100 @@
     padding: 12px 18px;
     box-shadow: var(--shadow-sm);
   }
-  .token-bar .ca-line {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-    min-width: 0;
-  }
-  .token-bar .ca-label {
+  .ca-box .ca-label {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--text-muted);
     font-weight: 700;
   }
-  .token-bar .ca-addr {
+  .ca-box .ca-addr {
+    flex: 1;
+    min-width: 0;
     font-family: 'JetBrains Mono', monospace;
     font-size: 13px;
     color: var(--text);
     text-decoration: none;
     word-break: break-all;
   }
-  .token-bar .ca-addr:hover { color: var(--green); }
-  .token-bar .stake-btn {
-    background: var(--green);
-    color: #fff;
-    border: 0;
-    font-family: inherit;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    padding: 9px 22px;
-    border-radius: 100px;
-    text-decoration: none;
-    white-space: nowrap;
-    transition: all 0.15s;
+  .ca-box .ca-addr:hover { color: var(--green); }
+
+  /* ===== TOKEN ACTION BUTTONS ===== */
+  .token-actions {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
   }
-  .token-bar .stake-btn:hover { background: var(--green-dark); }
+  .tk-btn {
+    flex: 1 1 auto;
+    min-width: 170px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 13px 18px;
+    border-radius: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    text-decoration: none;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition: all 0.18s ease;
+  }
+  .tk-btn:hover { transform: translateY(-2px); }
+  .tk-btn img { height: 17px; width: auto; display: block; }
+  /* Printr — monochrome (owl logo) */
+  .btn-printr { background: #111111; color: #ffffff; box-shadow: 0 0 16px rgba(255,255,255,0.10), 0 4px 14px rgba(0,0,0,0.25); }
+  .btn-printr:hover { background: #000000; box-shadow: 0 0 24px rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.30); }
+  /* DexScreener — dark navy + rainbow accent (sunglasses) */
+  .btn-dexs { background: #141a2e; color: #ffffff; border-color: #2a3556; box-shadow: 0 0 16px rgba(126,107,255,0.28); }
+  .btn-dexs:hover { background: #1b2440; box-shadow: 0 0 26px rgba(126,107,255,0.50); }
+  .ds-ico {
+    width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+    background: conic-gradient(from 210deg, #ff5c8a, #ffb74d, #4dd0e1, #7e6bff, #ff5c8a);
+    box-shadow: 0 0 8px rgba(126,107,255,0.6);
+  }
+  /* DexTools — teal */
+  .btn-dext { background: #0c1c1e; color: #3fe0c5; border-color: #17413f; box-shadow: 0 0 16px rgba(63,224,197,0.25); }
+  .btn-dext:hover { background: #0f2528; box-shadow: 0 0 26px rgba(63,224,197,0.50); }
+
+  /* ===== FEATURED "TOP 3 TOKENS" (gamified) ===== */
+  .top3 { position: relative; z-index: 1; }
+  .top3-head {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; font-weight: 800; letter-spacing: 1.6px; text-transform: uppercase;
+    color: #bbf7d0; margin-bottom: 11px;
+  }
+  .top3-head .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #1ec173; box-shadow: 0 0 8px #1ec173; animation: pulse 1.8s infinite; }
+  .top3-list { display: flex; flex-direction: column; gap: 7px; }
+  .t3-row {
+    display: flex; align-items: center; gap: 11px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; padding: 8px 12px;
+    transition: all 0.16s ease;
+    animation: t3pop 0.4s ease both;
+  }
+  .t3-row:hover { background: rgba(30,193,115,0.16); border-color: rgba(30,193,115,0.45); transform: translateX(3px); }
+  @keyframes t3pop { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+  .t3-rank { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13px; width: 26px; flex-shrink: 0; }
+  .t3-rank.r1 { color: #ffd64d; text-shadow: 0 0 10px rgba(255,214,77,0.6); }
+  .t3-rank.r2 { color: #e3eaf5; }
+  .t3-rank.r3 { color: #ff9d6b; }
+  .t3-av {
+    width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: #0a2a18; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #bbf7d0;
+    box-shadow: 0 0 0 1.5px rgba(30,193,115,0.4);
+  }
+  .t3-av img { width: 100%; height: 100%; object-fit: cover; }
+  .t3-sym { font-weight: 800; font-size: 14px; color: #fff; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.2px; }
+  .t3-mcap { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; color: #5ff0a0; text-shadow: 0 0 12px rgba(46,224,107,0.55); white-space: nowrap; }
+  .t3-empty { font-size: 12px; color: rgba(255,255,255,0.55); padding: 6px 0; }
   .ticker .v.small {
     font-size: 13px;
     font-weight: 500;
@@ -1360,14 +1416,18 @@
     </div>
   </div>
 
-  <!-- CONTRACT + STAKE BAR -->
-  <div class="token-bar">
-    <div class="ca-line">
-      <span class="ca-label">Contract</span>
-      <a class="ca-addr" id="t-ca" href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</a>
-      <button class="copy-btn" onclick="copyCA(event)">COPY</button>
-    </div>
-    <a class="stake-btn" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">STAKE HERE</a>
+  <!-- CONTRACT BOX -->
+  <div class="ca-box">
+    <span class="ca-label">Contract</span>
+    <a class="ca-addr" id="t-ca" href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</a>
+    <button class="copy-btn" onclick="copyCA(event)">COPY</button>
+  </div>
+
+  <!-- TOKEN ACTIONS -->
+  <div class="token-actions">
+    <a class="tk-btn btn-printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Stake on Printr</a>
+    <a class="tk-btn btn-dexs" href="https://dexscreener.com/solana/cptjblrg4zxwstvnmrjv3bfgufcyt94x7rcimccgdryo" target="_blank" rel="noopener"><span class="ds-ico"></span>View on DexScreener</a>
+    <a class="tk-btn btn-dext" href="https://www.dextools.io/app/solana/pair-explorer/CPTJbLrG4ZxWStVNMrJv3bfgUfCYt94x7RciMCCGdRYo" target="_blank" rel="noopener"><img src="https://www.dextools.io/app/assets/img/logos/dextools_logo_isotype.svg" alt="" onerror="this.style.display='none'">View on DexTools</a>
   </div>
 
   <!-- MANIFESTO -->
@@ -1405,11 +1465,9 @@
         <strong style="color:#bbf7d0;">every trade buys back and burns $FARTPRINT</strong>.
         Pure fun, zero guarantees — don't take it too seriously.
       </p>
-      <div class="featured-badges">
-        <span class="feat-badge">Every nation a coin</span>
-        <span class="feat-badge">World Cup parody</span>
-        <span class="feat-badge">Buyback &amp; burn</span>
-        <span class="feat-badge">Not affiliated with FIFA</span>
+      <div class="top3" id="top3-fartcup">
+        <div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>
+        <div class="t3-empty">Loading the hottest nations…</div>
       </div>
     </div>
     <div class="featured-actions">
@@ -1432,11 +1490,9 @@
         instantly in the public family gallery. The fastest way to add your own brap to the
         ecosystem.
       </p>
-      <div class="featured-badges">
-        <span class="feat-badge">Mint to Solana</span>
-        <span class="feat-badge">FART-prefixed only</span>
-        <span class="feat-badge">Live Family Gallery</span>
-        <span class="feat-badge">Powered by Printr</span>
+      <div class="top3" id="top3-derivatives">
+        <div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>
+        <div class="t3-empty">Loading the family leaderboard…</div>
       </div>
     </div>
     <div class="featured-actions">
@@ -2291,6 +2347,85 @@ async function submitPvReview(){
     } catch(_){}
   })();
 })();
+
+// ===== Featured "Top 3 Tokens" leaderboards (live, gamified) =====
+const FARTCUP_COINS = [
+  { sym:"FARTAUS", code:"au", ca:"4kamBpKBuWaotT4W22x99CuFWi1b5CBS4KpY3Nrbpump" },
+  { sym:"FARTIRN", code:"ir", ca:"8DHDgVf3Z5Qj7HTgvaoyxcnFENvDoC367EkSeaYFpump" },
+  { sym:"FARTIRQ", code:"iq", ca:"8aPK6Pzrz1UwX24izCocdrnKt9uujXeYBaprh4iwpump" },
+  { sym:"FARTJPN", code:"jp", ca:"F92RKZcmMP1K5Nm4hRMCiHDC6E4QQH3oHrioLyxkpump" },
+  { sym:"FARTJOR", code:"jo", ca:"3JNa1mH6KvsQSe3XrMYrhPwXFmhSexywT8Yqs6TCpump" },
+  { sym:"FARTQAT", code:"qa", ca:"9484kbWatciZtAEGQWF4na3ZbgGhCBn3yEFCwqqCpump" },
+  { sym:"FARTUZB", code:"uz", ca:"Aqo71vtBSoEh7q3vpRi6KFVgWt6o2yPL1kBdbavXpump" },
+  { sym:"FARTGER", code:"de", ca:"3sPgkRsx5eDDPksajReBL1RS3PQdGBjj2WDh2EYopump" },
+  { sym:"FARTKSA", code:"sa", ca:"8tQ5cuDRBm8QrHAwJ1n61jTV6Qix65QebPkTfZ7Epump" },
+  { sym:"FARTKOR", code:"kr", ca:"9MJ9HwX9oH5uTKN9AVfiMLS4G3rp89E7fvjMAdJBpump" },
+  { sym:"FARTALG", code:"dz", ca:"3KBCdDjAFBdeGDZ7F7nZ9Ag1R1NVd25gRzrTc3pfpump" },
+  { sym:"FARTCPV", code:"cv", ca:"DaHFTkxkeXkShAX8qvUr2goD1PrRSa3fBc3emLpApump" },
+  { sym:"FARTCOD", code:"cd", ca:"6q8wZk4ttRPNPjX2AH88pUd5oVYXv9vuz2MzeEHvpump" },
+  { sym:"FARTEGY", code:"eg", ca:"Ae8CqTevg8A7ourVQ3L5B9wJ8ofW7rb3jsT83i2Xpump" },
+  { sym:"FARTGHA", code:"gh", ca:"668etZ2VZyV8okF74B5t7XdpyhQ3Rz3GHVvF1tyXpump" },
+];
+
+async function dexMcaps(addrs){
+  const caps = {};
+  const uniq = [...new Set(addrs.filter(Boolean))];
+  for(let i = 0; i < uniq.length; i += 30){
+    const batch = uniq.slice(i, i + 30);
+    try{
+      const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${batch.join(",")}`);
+      if(!r.ok) continue;
+      const j = await r.json();
+      for(const p of (j.pairs || [])){
+        const m = p?.baseToken?.address; if(!m) continue;
+        const c = p.marketCap || p.fdv || 0;
+        if(!caps[m] || c > caps[m]) caps[m] = c;
+      }
+    }catch(_){}
+  }
+  return caps;
+}
+
+function renderTop3(elId, rows, emptyMsg){
+  const el = $id(elId); if(!el) return;
+  const head = `<div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>`;
+  if(!rows.length){ el.innerHTML = head + `<div class="t3-empty">${emptyMsg}</div>`; return; }
+  el.innerHTML = head + `<div class="top3-list">` + rows.map((t, i) => `
+    <div class="t3-row" style="animation-delay:${(i*0.06).toFixed(2)}s">
+      <span class="t3-rank r${i+1}">#${i+1}</span>
+      <span class="t3-av">${t.img ? `<img src="${t.img}" alt="" onerror="this.parentNode.textContent='${escHtml((t.sym||'').slice(0,2))}';this.remove();">` : escHtml((t.sym||'?').slice(0,2))}</span>
+      <span class="t3-sym">$${escHtml(t.sym || '')}</span>
+      <span class="t3-mcap">${fmtUsd(t.mcap)}</span>
+    </div>`).join("") + `</div>`;
+}
+
+async function loadTop3FartCup(){
+  const caps = await dexMcaps(FARTCUP_COINS.map(c => c.ca));
+  // pump.fun fallback for any coin still on the bonding curve
+  await Promise.all(FARTCUP_COINS.filter(c => !caps[c.ca]).map(async (c) => {
+    try{ const r = await fetch(`/api/pumpfun?mint=${c.ca}`); if(r.ok){ const j = await r.json(); const v = Number(j?.usd_market_cap); if(v > 0) caps[c.ca] = v; } }catch(_){}
+  }));
+  const rows = FARTCUP_COINS
+    .map(c => ({ sym: c.sym, img: `https://flagcdn.com/w80/${c.code}.png`, mcap: caps[c.ca] || 0 }))
+    .filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3);
+  renderTop3("top3-fartcup", rows, "Nation coins warming up — check back soon.");
+}
+
+async function loadTop3Derivatives(){
+  let toks = [];
+  try{ const r = await fetch("/api/registry?t=" + Date.now()); if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.tokens)) toks = j.tokens; } }catch(_){}
+  const withMa = toks.filter(t => t.ma);
+  const caps = await dexMcaps(withMa.map(t => t.ma));
+  const imgOf = (t) => t.img ? ((/^https?:\/\//.test(t.img) || String(t.img).startsWith("data:")) ? t.img : ("data:image/jpeg;base64," + t.img)) : null;
+  const rows = withMa
+    .map(t => ({ sym: t.sym, img: imgOf(t), mcap: caps[t.ma] || 0 }))
+    .filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3);
+  renderTop3("top3-derivatives", rows, "Freshly minted — leaderboard fills as they trade.");
+}
+
+loadTop3FartCup();
+loadTop3Derivatives();
+setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); }, 60000);
 </script>
 
 <!-- ===== Premium layer: Three.js (reactive painted bg) · GSAP ScrollTrigger (cinematic reveals) · Lenis (smooth scroll) ===== -->
