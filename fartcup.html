@@ -676,6 +676,54 @@
     color: var(--text);
     font-size: 14px;
   }
+  /* ===== WALLET (nav) ===== */
+  .wallet-btn {
+    background: linear-gradient(135deg, var(--pitch) 0%, var(--pitch-bright) 100%);
+    color: #06281a; border: 0; font-family: inherit; font-size: 13px; font-weight: 700;
+    padding: 9px 18px; border-radius: 100px; cursor: pointer; transition: all 0.15s;
+  }
+  .wallet-btn:hover { filter: brightness(1.08); box-shadow: var(--shadow-md); }
+  .wallet-pill { display: inline-flex; align-items: center; gap: 8px; background: var(--card); border: 1px solid var(--border); border-radius: 100px; padding: 5px 5px 5px 14px; }
+  .wallet-pill .addr { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--pitch-bright); }
+  .wallet-dc { border: 0; background: var(--pitch); color: #06281a; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 11px; line-height: 1; }
+  .wallet-dc:hover { background: var(--red); color: #fff; }
+
+  /* ===== CARD TRADE ACTIONS ===== */
+  .cc-actions { display: flex; gap: 7px; width: 100%; align-items: center; }
+  .cc-trade {
+    flex: 1; background: linear-gradient(135deg, var(--pitch) 0%, var(--pitch-bright) 100%);
+    color: #06281a; border: 0; border-radius: 100px; font-family: inherit; font-size: 11px;
+    font-weight: 800; letter-spacing: 0.5px; padding: 8px 12px; cursor: pointer; transition: all 0.15s;
+  }
+  .cc-trade:hover { filter: brightness(1.08); box-shadow: 0 4px 14px rgba(46,224,107,0.35); }
+
+  /* ===== TRADE MODAL ===== */
+  .trade-overlay { position: fixed; inset: 0; z-index: 1000; background: rgba(5,10,20,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 20px; }
+  .trade-overlay.open { display: flex; }
+  .trade-modal { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 22px; box-shadow: var(--shadow-lg); position: relative; }
+  .trade-close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--bg-2); color: var(--text-tertiary); font-size: 18px; cursor: pointer; }
+  .trade-close:hover { color: var(--text); }
+  .trade-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .trade-flag { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }
+  .trade-tk { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 20px; color: var(--text); }
+  .trade-sub { font-size: 11px; color: var(--text-tertiary); }
+  .trade-seg { display: flex; background: var(--bg); border: 1px solid var(--border-light); border-radius: 12px; padding: 3px; gap: 3px; margin-bottom: 8px; }
+  .trade-seg button { flex: 1; border: 0; background: transparent; color: var(--text-tertiary); font-family: inherit; font-size: 13px; font-weight: 700; padding: 8px; border-radius: 9px; cursor: pointer; transition: all 0.12s; }
+  .trade-seg button.active[data-side="buy"] { background: var(--pitch); color: #06281a; }
+  .trade-seg button.active[data-side="sell"] { background: var(--red); color: #fff; }
+  .trade-label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); font-weight: 700; margin: 12px 0 6px; }
+  .trade-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--text); outline: 0; }
+  .trade-input:focus { border-color: var(--pitch); }
+  .trade-presets { display: flex; gap: 7px; margin-top: 8px; }
+  .trade-presets button { flex: 1; background: var(--bg-2); border: 1px solid var(--border-light); color: var(--text-secondary); border-radius: 10px; padding: 7px; font-family: inherit; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.12s; }
+  .trade-presets button.active, .trade-presets button:hover { border-color: var(--pitch); color: var(--pitch-bright); }
+  .trade-go { width: 100%; margin-top: 16px; background: linear-gradient(135deg, var(--pitch), var(--pitch-bright)); color: #06281a; border: 0; border-radius: 100px; padding: 13px; font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.15s; }
+  .trade-go:hover:not(:disabled) { filter: brightness(1.08); }
+  .trade-go:disabled { opacity: 0.5; cursor: not-allowed; }
+  .trade-msg { font-size: 12px; color: var(--text-tertiary); margin-top: 11px; text-align: center; line-height: 1.5; }
+  .trade-msg.err { color: var(--red); }
+  .trade-msg.ok { color: var(--pitch-bright); }
+
   .cc-soon {
     display: inline-flex;
     align-items: center;
@@ -798,6 +846,11 @@
         <span class="lbl">$FARTPRINT</span>
         <span class="val" id="fpPriceVal">$—</span>
       </a>
+      <button class="wallet-btn" id="fcConnect">Connect Wallet</button>
+      <span class="wallet-pill" id="fcWallet" style="display:none;">
+        <span class="addr" id="fcAddr"></span>
+        <button class="wallet-dc" id="fcDisc" title="Disconnect">⏻</button>
+      </span>
       <a href="index.html" class="return-btn">← Return to Ecosystem</a>
     </div>
   </nav>
@@ -927,6 +980,47 @@
 
 </div>
 
+<!-- TRADE MODAL -->
+<div class="trade-overlay" id="tradeOverlay" data-lenis-prevent>
+  <div class="trade-modal">
+    <button class="trade-close" id="tradeClose" aria-label="Close">×</button>
+    <div class="trade-head">
+      <img class="trade-flag" id="tradeFlag" alt="">
+      <div>
+        <div class="trade-tk" id="tradeTk">$FART</div>
+        <div class="trade-sub">Trade on pump.fun</div>
+      </div>
+    </div>
+    <div class="trade-seg" id="tradeSeg">
+      <button type="button" class="active" data-side="buy">Buy</button>
+      <button type="button" data-side="sell">Sell</button>
+    </div>
+    <div id="buyPane">
+      <label class="trade-label">Amount to spend (SOL)</label>
+      <input type="number" class="trade-input" id="buyAmt" value="0.1" min="0" step="0.01">
+      <div class="trade-presets" id="buyPresets">
+        <button type="button" data-sol="0.05">0.05</button>
+        <button type="button" data-sol="0.1">0.1</button>
+        <button type="button" data-sol="0.5">0.5</button>
+        <button type="button" data-sol="1">1</button>
+      </div>
+    </div>
+    <div id="sellPane" style="display:none;">
+      <label class="trade-label">Sell amount</label>
+      <div class="trade-presets" id="sellPresets">
+        <button type="button" data-pct="25">25%</button>
+        <button type="button" data-pct="50">50%</button>
+        <button type="button" data-pct="100" class="active">100%</button>
+      </div>
+    </div>
+    <label class="trade-label">Slippage tolerance (%)</label>
+    <input type="number" class="trade-input" id="tradeSlip" value="10" min="1" max="50">
+    <button class="trade-go" id="tradeGo">Connect Wallet</button>
+    <div class="trade-msg" id="tradeMsg">Powered by PumpPortal — you sign in your own wallet.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
 <script>
 // ============================================================
 // Fart Cup — World Cup parody coin directory
@@ -1082,7 +1176,10 @@ function renderGrid(){
     const hasCA = !!c.contract;
     const live = hasCA && c.mcap != null;
     const bottom = hasCA
-      ? `<button class="cc-copy" type="button" onclick="copyCA(event, '${c.contract}')" title="Copy ${c.ticker} contract address"><span class="ca">${shortCA(c.contract)}</span><span class="copy-lbl">COPY</span></button>`
+      ? `<div class="cc-actions">
+           <button class="cc-trade" type="button" onclick="openTrade('${c.contract}','${c.ticker}','${c.code}')">TRADE</button>
+           <button class="cc-copy" type="button" onclick="copyCA(event, '${c.contract}')" title="Copy ${c.ticker} contract"><span class="copy-lbl">COPY</span></button>
+         </div>`
       : `<span class="cc-soon"><span class="dot"></span>CONTRACT COMING SOON</span>`;
     const mcapVal = live
       ? `<span class="mcap">${fmtUsd(c.mcap)}</span>`
@@ -1273,6 +1370,126 @@ async function loadMatches(){
 
 loadNews();
 setInterval(loadNews, 300000);
+
+// ============================================================
+// Buy / Sell nation tokens directly (PumpPortal + Phantom)
+// ============================================================
+const FC = { wallet: null, mint: null, ticker: null, side: "buy", sellPct: 100, busy: false };
+const FC_RPC = "https://api.mainnet-beta.solana.com";
+
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+function fcShort(a){ return a ? a.slice(0,4) + "…" + a.slice(-4) : ""; }
+function updateTradeGo(){
+  const go = $("tradeGo"); if(!go) return;
+  go.textContent = !FC.wallet ? "Connect Wallet" : (FC.side === "buy" ? "Buy " : "Sell ") + (FC.ticker ? "$" + FC.ticker : "");
+}
+function fcPaintWallet(){
+  const c = $("fcConnect"), p = $("fcWallet");
+  if(FC.wallet){ if(c) c.style.display = "none"; if(p){ p.style.display = ""; $("fcAddr").textContent = fcShort(FC.wallet); } }
+  else { if(c) c.style.display = ""; if(p) p.style.display = "none"; }
+  updateTradeGo();
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if(!ph){ window.open("https://phantom.app/", "_blank"); return; }
+  try{ const r = await ph.connect(); FC.wallet = r.publicKey.toString(); try{ localStorage.setItem("fc_wallet","1"); }catch(_){} fcPaintWallet(); }
+  catch(_){}
+}
+async function disconnectWallet(){
+  try{ await getPhantom()?.disconnect?.(); }catch(_){}
+  FC.wallet = null; try{ localStorage.removeItem("fc_wallet"); }catch(_){}
+  fcPaintWallet();
+}
+
+function openTrade(mint, ticker, code){
+  FC.mint = mint; FC.ticker = ticker; FC.side = "buy"; FC.sellPct = 100;
+  $("tradeTk").textContent = "$" + ticker;
+  $("tradeFlag").src = flagUrl(code);
+  document.querySelectorAll("#tradeSeg button").forEach(b => b.classList.toggle("active", b.dataset.side === "buy"));
+  $("buyPane").style.display = ""; $("sellPane").style.display = "none";
+  document.querySelectorAll("#sellPresets button").forEach(b => b.classList.toggle("active", b.dataset.pct === "100"));
+  $("tradeMsg").textContent = "Powered by PumpPortal — you sign in your own wallet."; $("tradeMsg").className = "trade-msg";
+  updateTradeGo();
+  $("tradeOverlay").classList.add("open");
+}
+function closeTrade(){ $("tradeOverlay").classList.remove("open"); }
+
+async function executeTrade(){
+  if(FC.busy) return;
+  const msg = $("tradeMsg");
+  if(!FC.wallet){ await connectWallet(); if(!FC.wallet) return; }
+  const phantom = getPhantom();
+  if(!phantom){ msg.textContent = "Phantom wallet not found."; msg.className = "trade-msg err"; return; }
+  if(!window.solanaWeb3){ msg.textContent = "Wallet library still loading — try again in a second."; msg.className = "trade-msg err"; return; }
+  const slippage = Math.max(1, Math.min(50, parseFloat($("tradeSlip").value) || 10));
+  let denominatedInSol, amount;
+  if(FC.side === "buy"){
+    const sol = parseFloat($("buyAmt").value) || 0;
+    if(sol <= 0){ msg.textContent = "Enter a SOL amount."; msg.className = "trade-msg err"; return; }
+    denominatedInSol = "true"; amount = sol;
+  } else {
+    denominatedInSol = "false"; amount = FC.sellPct + "%";
+  }
+  FC.busy = true; $("tradeGo").disabled = true;
+  try{
+    msg.textContent = "Building transaction…"; msg.className = "trade-msg";
+    const res = await fetch("https://pumpportal.fun/api/trade-local", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ publicKey: FC.wallet, action: FC.side, mint: FC.mint, denominatedInSol, amount, slippage, priorityFee: 0.00005, pool: "auto" }),
+    });
+    if(!res.ok){ const t = await res.text().catch(() => ""); throw new Error("PumpPortal HTTP " + res.status + (t ? " — " + t.slice(0,140) : "")); }
+    const txBytes = new Uint8Array(await res.arrayBuffer());
+    const tx = window.solanaWeb3.VersionedTransaction.deserialize(txBytes);
+    msg.textContent = "Awaiting wallet signature…";
+    let signature;
+    try{ const r = await phantom.signAndSendTransaction(tx); signature = r.signature || r; }
+    catch(e){
+      const conn = new window.solanaWeb3.Connection(FC_RPC, "confirmed");
+      const signed = await phantom.signTransaction(tx);
+      signature = await conn.sendRawTransaction(signed.serialize());
+    }
+    msg.innerHTML = `Done! <a href="https://solscan.io/tx/${signature}" target="_blank" rel="noopener" style="color:var(--pitch-bright);font-weight:700;">view transaction ↗</a>`;
+    msg.className = "trade-msg ok";
+    setTimeout(() => { try{ refreshMarketCaps(); }catch(_){} }, 5000);
+  } catch(e){
+    msg.textContent = (FC.side === "buy" ? "Buy" : "Sell") + " failed: " + (e.message || e);
+    msg.className = "trade-msg err";
+  } finally {
+    FC.busy = false; $("tradeGo").disabled = false;
+  }
+}
+
+$("fcConnect")?.addEventListener("click", connectWallet);
+$("fcDisc")?.addEventListener("click", disconnectWallet);
+$("tradeClose")?.addEventListener("click", closeTrade);
+$("tradeOverlay")?.addEventListener("click", (e) => { if(e.target === $("tradeOverlay")) closeTrade(); });
+document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeTrade(); });
+$("tradeGo")?.addEventListener("click", executeTrade);
+document.querySelectorAll("#tradeSeg button").forEach(b => {
+  b.addEventListener("click", () => {
+    FC.side = b.dataset.side;
+    document.querySelectorAll("#tradeSeg button").forEach(x => x.classList.toggle("active", x === b));
+    $("buyPane").style.display = FC.side === "buy" ? "" : "none";
+    $("sellPane").style.display = FC.side === "sell" ? "" : "none";
+    updateTradeGo();
+  });
+});
+document.querySelectorAll("#buyPresets button").forEach(b => b.addEventListener("click", () => { $("buyAmt").value = b.dataset.sol; }));
+document.querySelectorAll("#sellPresets button").forEach(b => b.addEventListener("click", () => {
+  FC.sellPct = parseInt(b.dataset.pct);
+  document.querySelectorAll("#sellPresets button").forEach(x => x.classList.toggle("active", x === b));
+}));
+
+// silent reconnect if previously trusted
+(async () => {
+  const ph = getPhantom();
+  if(!ph) return;
+  try{ const r = await ph.connect({ onlyIfTrusted: true }); FC.wallet = r.publicKey.toString(); fcPaintWallet(); }catch(_){}
+})();
 
 // ===== World Cup kickoff countdown =====
 // FIFA World Cup 2026 opening match — June 11, 2026, Estadio Azteca (Mexico City).
