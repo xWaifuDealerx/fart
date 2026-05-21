@@ -245,10 +245,11 @@
     -webkit-text-fill-color: transparent;
   }
   .hero .tagline {
-    font-size: 17px;
+    font-size: clamp(12px, 3.7vw, 17px);
     color: var(--text-secondary);
     font-weight: 600;
     margin-bottom: 6px;
+    white-space: nowrap;
   }
   .hero .sub {
     font-size: 14px;
@@ -738,6 +739,51 @@
   .trade-msg.err { color: var(--red); }
   .trade-msg.ok { color: var(--pitch-bright); }
 
+  /* ===== TALK TRASH CHAT ===== */
+  .trash-fab {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1500;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--pitch) 0%, var(--pitch-bright) 100%);
+    color: #06281a; border: 0; border-radius: 100px; padding: 13px 22px;
+    font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 0.6px;
+    cursor: pointer; box-shadow: 0 8px 24px rgba(46,224,107,0.4); transition: all 0.15s;
+  }
+  .trash-fab:hover { transform: translateY(-2px); }
+  .trash-fab svg { width: 16px; height: 16px; }
+  .trash-chat {
+    position: fixed; bottom: 78px; right: 20px; z-index: 1500;
+    width: 340px; max-width: calc(100vw - 32px); height: 440px; max-height: calc(100vh - 120px);
+    background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+    box-shadow: var(--shadow-lg); display: none; flex-direction: column; overflow: hidden;
+  }
+  .trash-chat.open { display: flex; }
+  .trash-head { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--border-light); }
+  .trash-head .tt { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: var(--text); letter-spacing: 0.3px; }
+  .trash-head .x { background: none; border: 0; color: var(--text-tertiary); font-size: 22px; line-height: 1; cursor: pointer; }
+  .trash-head .x:hover { color: var(--text); }
+  .trash-msgs { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 9px; }
+  .tm { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; line-height: 1.45; }
+  .tm-av {
+    width: 24px; height: 24px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+    background: var(--bg-2); border: 1px solid var(--border-light);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; color: var(--text-tertiary);
+  }
+  .tm-av img { width: 100%; height: 100%; object-fit: cover; }
+  .tm-body { min-width: 0; }
+  .tm .who { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--pitch-bright); font-weight: 700; margin-right: 6px; }
+  .tm .txt { color: var(--text); word-break: break-word; }
+  .trash-empty { color: var(--text-tertiary); font-size: 13px; text-align: center; padding: 24px 12px; line-height: 1.5; }
+  .trash-input { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border-light); }
+  .trash-input input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--border); border-radius: 100px; padding: 9px 14px; font-family: inherit; font-size: 13px; color: var(--text); outline: 0; }
+  .trash-input input:focus { border-color: var(--pitch); }
+  .trash-input button { background: var(--pitch); color: #06281a; border: 0; border-radius: 100px; padding: 9px 16px; font-family: inherit; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .trash-input button:hover { filter: brightness(1.08); }
+  @media (max-width: 480px) {
+    .trash-chat { width: calc(100vw - 24px); right: 12px; height: 62vh; bottom: 70px; }
+    .trash-fab { right: 12px; bottom: 14px; }
+  }
+
   .cc-soon {
     display: inline-flex;
     align-items: center;
@@ -1019,6 +1065,23 @@
     <input type="number" class="trade-input" id="tradeSlip" value="10" min="1" max="50">
     <button class="trade-go" id="tradeGo">Connect Wallet</button>
     <div class="trade-msg" id="tradeMsg">Powered by PumpPortal — you sign in your own wallet.</div>
+  </div>
+</div>
+
+<!-- TALK TRASH CHAT -->
+<button class="trash-fab" id="trashFab" type="button">
+  <svg viewBox="0 0 24 24" fill="none" stroke="#06281a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-4.3A8.38 8.38 0 0 1 12 3.5a8.38 8.38 0 0 1 9 8z"/></svg>
+  TALK TRASH
+</button>
+<div class="trash-chat" id="trashChat">
+  <div class="trash-head">
+    <span class="tt">Talk Trash</span>
+    <button class="x" id="trashClose" aria-label="Close">×</button>
+  </div>
+  <div class="trash-msgs" id="trashMsgs"><div class="trash-empty">No trash talk yet — connect your wallet and start it.</div></div>
+  <div class="trash-input">
+    <input type="text" id="trashText" maxlength="180" placeholder="Talk trash…" autocomplete="off">
+    <button id="trashSend" type="button">Send</button>
   </div>
 </div>
 
@@ -1518,6 +1581,92 @@ document.querySelectorAll("#sellPresets button").forEach(b => b.addEventListener
   if(!ph) return;
   try{ const r = await ph.connect({ onlyIfTrusted: true }); FC.wallet = r.publicKey.toString(); fcPaintWallet(); }catch(_){}
 })();
+
+// ============================================================
+// Talk Trash — wallet-gated chat (ntfy.sh)
+// ============================================================
+const TRASH_TOPIC = "fartprint-fartcup-trashtalk-v1-9x2k";
+const TRASH_BASE = "https://ntfy.sh";
+const SPL_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+let trashPoll = null;
+
+// Show just the tail of the wallet address
+function walletEnd(w){ return w ? "…" + w.slice(-4) : "anon"; }
+
+// Find the nation coin this wallet holds the most of → returns its country code (or null)
+async function topNationHolding(wallet){
+  if(!window.solanaWeb3) return null;
+  try{
+    const mintToCode = {};
+    COUNTRIES.forEach(c => { if(c.contract) mintToCode[c.contract] = c.code; });
+    const conn = new window.solanaWeb3.Connection(FC_RPC, "confirmed");
+    const res = await conn.getParsedTokenAccountsByOwner(
+      new window.solanaWeb3.PublicKey(wallet),
+      { programId: new window.solanaWeb3.PublicKey(SPL_TOKEN_PROGRAM) }
+    );
+    let best = null, bestAmt = 0;
+    for(const acc of (res.value || [])){
+      const info = acc.account?.data?.parsed?.info;
+      const code = info && mintToCode[info.mint];
+      const amt = info?.tokenAmount?.uiAmount || 0;
+      if(code && amt > bestAmt){ bestAmt = amt; best = code; }
+    }
+    return best;
+  }catch(_){ return null; }
+}
+
+async function loadTrash(){
+  const el = $("trashMsgs"); if(!el) return;
+  try{
+    const r = await fetch(`${TRASH_BASE}/${TRASH_TOPIC}/json?poll=1&since=all`);
+    if(!r.ok) return;
+    const text = await r.text();
+    const msgs = [];
+    if(text.trim()){
+      for(const line of text.trim().split("\n")){
+        try{ const evt = JSON.parse(line); if(evt.event === "message" && evt.message){ try{ msgs.push(JSON.parse(evt.message)); }catch(_){} } }catch(_){}
+      }
+    }
+    if(!msgs.length){ el.innerHTML = `<div class="trash-empty">No trash talk yet — connect your wallet and start it.</div>`; return; }
+    msgs.sort((a,b) => (a.ts||0) - (b.ts||0));
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    el.innerHTML = msgs.slice(-120).map(m => {
+      const init = escFC((m.w || "??").slice(-2));
+      const av = m.c
+        ? `<img src="https://flagcdn.com/w40/${m.c}.png" alt="" onerror="this.parentNode.textContent='${init}';this.remove();">`
+        : init;
+      return `<div class="tm"><span class="tm-av">${av}</span><span class="tm-body"><span class="who">${escFC(walletEnd(m.w||""))}</span><span class="txt">${escFC(m.t||"")}</span></span></div>`;
+    }).join("");
+    if(nearBottom) el.scrollTop = el.scrollHeight;
+  }catch(_){}
+}
+
+async function sendTrash(){
+  if(!FC.wallet){ await connectWallet(); if(!FC.wallet) return; }
+  const inp = $("trashText");
+  const t = (inp.value || "").trim().slice(0, 180);
+  if(!t) return;
+  inp.value = "";
+  const c = await topNationHolding(FC.wallet);   // their biggest nation bag → avatar flag
+  const rec = { w: FC.wallet, t, ts: Date.now() };
+  if(c) rec.c = c;
+  try{ await fetch(`${TRASH_BASE}/${TRASH_TOPIC}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rec) }); }catch(_){}
+  setTimeout(loadTrash, 400);
+}
+
+$("trashFab")?.addEventListener("click", () => {
+  const chat = $("trashChat");
+  const opening = !chat.classList.contains("open");
+  chat.classList.toggle("open");
+  if(opening){
+    loadTrash();
+    if(!trashPoll) trashPoll = setInterval(loadTrash, 8000);
+    setTimeout(() => $("trashText")?.focus(), 50);
+  }
+});
+$("trashClose")?.addEventListener("click", () => $("trashChat").classList.remove("open"));
+$("trashSend")?.addEventListener("click", sendTrash);
+$("trashText")?.addEventListener("keydown", (e) => { if(e.key === "Enter"){ e.preventDefault(); sendTrash(); } });
 
 // ===== World Cup kickoff countdown =====
 // FIFA World Cup 2026 opening match — June 11, 2026, Estadio Azteca (Mexico City).
