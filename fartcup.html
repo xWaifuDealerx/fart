@@ -610,6 +610,30 @@
   .country-card .rank.top {
     color: var(--gold);
   }
+
+  /* ===== MEDAL RINGS (top 3) ===== */
+  .country-card.medal-1, .country-card.medal-2, .country-card.medal-3 { border-width: 1.5px; }
+  .country-card.medal-1 { border-color: #ffd24d; animation: glowGold 2.2s ease-in-out infinite; }
+  .country-card.medal-2 { border-color: #d4dbe8; animation: glowSilver 2.5s ease-in-out infinite; }
+  .country-card.medal-3 { border-color: #e79a5c; animation: glowBronze 2.8s ease-in-out infinite; }
+  .country-card.medal-1:hover, .country-card.medal-2:hover, .country-card.medal-3:hover { transform: translateY(-3px); }
+  @keyframes glowGold {
+    0%,100% { box-shadow: 0 0 0 1px rgba(255,210,77,0.6), 0 0 16px rgba(255,210,77,0.4); }
+    50%     { box-shadow: 0 0 0 2px rgba(255,224,122,0.9), 0 0 38px rgba(255,210,77,0.85), 0 0 70px rgba(255,210,77,0.35); }
+  }
+  @keyframes glowSilver {
+    0%,100% { box-shadow: 0 0 0 1px rgba(212,219,232,0.55), 0 0 14px rgba(212,219,232,0.35); }
+    50%     { box-shadow: 0 0 0 2px rgba(232,237,247,0.9), 0 0 34px rgba(212,219,232,0.75), 0 0 60px rgba(212,219,232,0.3); }
+  }
+  @keyframes glowBronze {
+    0%,100% { box-shadow: 0 0 0 1px rgba(231,154,92,0.55), 0 0 14px rgba(231,154,92,0.35); }
+    50%     { box-shadow: 0 0 0 2px rgba(245,178,120,0.9), 0 0 34px rgba(231,154,92,0.75), 0 0 60px rgba(231,154,92,0.3); }
+  }
+  /* rank number takes the medal colour + glow */
+  .country-card.medal-1 .rank { color: #ffd24d; font-size: 13px; text-shadow: 0 0 10px rgba(255,210,77,0.8); }
+  .country-card.medal-2 .rank { color: #e6ecf7; font-size: 13px; text-shadow: 0 0 10px rgba(212,219,232,0.8); }
+  .country-card.medal-3 .rank { color: #f0a868; font-size: 13px; text-shadow: 0 0 10px rgba(231,154,92,0.8); }
+
   .cc-head {
     display: flex;
     align-items: center;
@@ -1284,7 +1308,9 @@ function renderGrid(){
 
   grid.innerHTML = filtered.map((c, i) => {
     const rank = i + 1;
-    const rankCls = (!query && rank <= 3 && c.mcap != null) ? "rank top" : "rank";
+    const isMedal = (!query && rank <= 3 && c.mcap != null);
+    const rankCls = isMedal ? "rank top" : "rank";
+    const medalCls = isMedal ? ` medal-${rank}` : "";
     const hasCA = !!c.contract;
     const live = hasCA && c.mcap != null;
     const bottom = hasCA
@@ -1297,7 +1323,7 @@ function renderGrid(){
       ? `<span class="mcap">${fmtUsd(c.mcap)}</span>`
       : `<span class="mcap" style="color:var(--text-muted);">TBA</span>`;
     return `
-      <div class="country-card">
+      <div class="country-card${medalCls}">
         <span class="${rankCls}">#${rank}</span>
         <div class="cc-head">
           <div class="flag-wrap">
