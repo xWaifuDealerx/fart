@@ -477,7 +477,7 @@
   }
   .close-btn:hover { background: var(--hover); color: var(--text); }
 
-  .token-list { display: flex; flex-direction: column; gap: 4px; }
+  .token-list { display: flex; flex-direction: column; gap: 4px; max-height: 58vh; overflow-y: auto; overscroll-behavior: contain; margin-right: -6px; padding-right: 6px; }
   .token-item {
     display: flex;
     align-items: center;
@@ -2221,6 +2221,19 @@ $("listingCA").addEventListener("input", (e) => {
 // ============================================================
 // Initial
 // ============================================================
+// Pull the pump.fun token image for each nation coin (fart-twisted flag art),
+// replacing the plain flag fallback. Uses the /api/pumpfun proxy.
+async function fetchNationLogos(){
+  const nations = Object.values(TOKENS).filter(t => t.logoUrl && t.logoUrl.indexOf("flagcdn.com") !== -1);
+  await Promise.all(nations.map(async (t) => {
+    try{
+      const r = await fetch(`/api/pumpfun?mint=${t.mint}`);
+      if(r.ok){ const j = await r.json(); const img = j?.image_uri || j?.image || j?.imageUrl; if(img) t.logoUrl = img; }
+    }catch(_){}
+  }));
+  if(typeof renderTickerCarousel === "function") renderTickerCarousel();
+}
+
 updateUI();
 renderTickerCarousel();           // initial empty render
 refreshTickerPrices();             // populate prices + changes
@@ -2229,6 +2242,7 @@ fetchTokenLogo("FARTPRINT");
 fetchTokenLogo("POOL");
 fetchTokenLogo("FARTCOIN");
 fetchTokenLogo("FARTHOUSE");
+fetchNationLogos();               // swap flags → pump.fun token art (the fart-twisted nations)
 loadListings();
 setInterval(refreshPrices, 30000);
 setInterval(refreshTickerPrices, 30000);
