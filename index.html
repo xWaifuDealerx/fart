@@ -288,8 +288,10 @@
   .ca-box .ca-addr {
     flex: 1;
     min-width: 0;
+    text-align: center;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 13px;
+    font-size: clamp(13px, 1.7vw, 16px);
+    letter-spacing: 0.6px;
     color: var(--text);
     text-decoration: none;
     word-break: break-all;
@@ -322,7 +324,7 @@
     transition: all 0.18s ease;
   }
   .tk-btn:hover { transform: translateY(-2px); }
-  .tk-btn img { height: 17px; width: auto; display: block; }
+  .tk-btn img { height: 20px; width: 20px; object-fit: cover; display: block; border-radius: 50%; }
   /* Printr — monochrome (owl logo) */
   .btn-printr { background: #111111; color: #ffffff; box-shadow: 0 0 16px rgba(255,255,255,0.10), 0 4px 14px rgba(0,0,0,0.25); }
   .btn-printr:hover { background: #000000; box-shadow: 0 0 24px rgba(255,255,255,0.22), 0 6px 18px rgba(0,0,0,0.30); }
@@ -923,6 +925,47 @@
   .pv-item .body { font-size: 13.5px; color: var(--text); line-height: 1.5; margin-top: 4px; }
   .pv-empty { font-size: 13px; color: var(--text-tertiary); text-align: center; padding: 16px; }
 
+  /* live apps first, in-dev apps last */
+  .apps-grid .app-card { order: 0; }
+  .apps-grid .app-card.indev { order: 2; }
+
+  /* ===== BUY $FARTPRINT ===== */
+  .buy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(218px, 1fr));
+    gap: 16px;
+  }
+  .buy-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 20px;
+    border-radius: 18px;
+    text-decoration: none;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: var(--shadow-md);
+    transition: all 0.18s ease;
+  }
+  .buy-card:hover { transform: translateY(-3px); }
+  .buy-card .buy-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .buy-card img {
+    width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+    background: rgba(255,255,255,0.18);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .buy-card .buy-name { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 18px; letter-spacing: 0.2px; }
+  .buy-card .buy-go { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; white-space: nowrap; }
+  .buy-card.pumpswap { background: linear-gradient(135deg, #2bd17a 0%, #11924f 100%); }
+  .buy-card.pumpswap:hover { box-shadow: 0 14px 40px rgba(43,209,122,0.40); }
+  .buy-card.orca { background: linear-gradient(135deg, #46d6cb 0%, #1f8fb0 100%); }
+  .buy-card.orca:hover { box-shadow: 0 14px 40px rgba(70,214,203,0.40); }
+  .buy-card.raydium { background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%); }
+  .buy-card.raydium:hover { box-shadow: 0 14px 40px rgba(123,97,255,0.40); }
+  .buy-card.printr { background: linear-gradient(135deg, #2b2b2b 0%, #0a0a0a 100%); }
+  .buy-card.printr:hover { box-shadow: 0 14px 40px rgba(0,0,0,0.45); }
+
   .builders {
     margin-top: 72px;
     padding: 56px 40px;
@@ -1425,8 +1468,8 @@
 
   <!-- TOKEN ACTIONS -->
   <div class="token-actions">
-    <a class="tk-btn btn-printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Stake on Printr</a>
-    <a class="tk-btn btn-dexs" href="https://dexscreener.com/solana/cptjblrg4zxwstvnmrjv3bfgufcyt94x7rcimccgdryo" target="_blank" rel="noopener"><span class="ds-ico"></span>View on DexScreener</a>
+    <a class="tk-btn btn-printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener"><img src="https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg" alt="" onerror="this.style.display='none'">Stake on Printr</a>
+    <a class="tk-btn btn-dexs" href="https://dexscreener.com/solana/cptjblrg4zxwstvnmrjv3bfgufcyt94x7rcimccgdryo" target="_blank" rel="noopener"><img src="https://avatars.githubusercontent.com/u/106754627?v=4" alt="" onerror="this.style.display='none'">View on DexScreener</a>
     <a class="tk-btn btn-dext" href="https://www.dextools.io/app/solana/pair-explorer/CPTJbLrG4ZxWStVNMrJv3bfgUfCYt94x7RciMCCGdRYo" target="_blank" rel="noopener"><img src="https://www.dextools.io/app/assets/img/logos/dextools_logo_isotype.svg" alt="" onerror="this.style.display='none'">View on DexTools</a>
   </div>
 
@@ -1444,15 +1487,13 @@
 
   <a href="fartcup.html" class="featured-link">
   <div class="featured-card glow">
-    <div class="featured-icon" style="background:#ffffff; padding:18px; box-shadow:0 12px 36px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.25) inset;">
-      <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">
-        <circle cx="32" cy="32" r="29" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-        <path d="M32 17 L44 26 L39.5 40 L24.5 40 L20 26 Z" fill="#111111"/>
-        <path d="M32 17 L32 6" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-        <path d="M44 26 L55 22" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-        <path d="M39.5 40 L47 51" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-        <path d="M24.5 40 L17 51" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-        <path d="M20 26 L9 22" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+    <div class="featured-icon" style="background: linear-gradient(135deg, #0a7d3a 0%, #f5c542 100%); box-shadow: 0 12px 36px rgba(10,125,58,0.40);">
+      <svg viewBox="0 0 64 64" width="58%" height="58%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">
+        <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+          <circle cx="32" cy="32" r="22"/>
+          <polygon points="32,20 42,27.5 38.2,39.5 25.8,39.5 22,27.5" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
+          <path d="M32 20 V10 M42 27.5 L51 24 M38.2 39.5 L44 49 M25.8 39.5 L20 49 M22 27.5 L13 24"/>
+        </g>
       </svg>
     </div>
     <div class="featured-meta">
@@ -1520,7 +1561,7 @@
       <div class="cat">Hub · Data · Chat</div>
       <p>Matrix-vibes on-chain dashboard. Live price, pools, transactions, bonding curve, and a chat gated for holders of 100,000+ $FARTPRINT. The cockpit.</p>
       <div class="row-bottom">
-        <span class="status-tag live"><span class="dot"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="terminal.html" class="app-btn">LAUNCH</a>
       </div>
     </div>
@@ -1532,7 +1573,7 @@
       <div class="cat">Burn · Deflationary</div>
       <p>Permanently destroy $FARTPRINT tokens. Reduce supply. Increase scarcity. Climb the burn leaderboard and watch the printr's bag get tighter.</p>
       <div class="row-bottom">
-        <span class="status-tag live" style="background: #ffe0e0; color: #8a0000;"><span class="dot" style="background: #e23838;"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="burner.html" class="app-btn" style="color: #8a0000;">LAUNCH</a>
       </div>
     </div>
@@ -1544,7 +1585,7 @@
       <div class="cat">Burns · Deflation · Dashboard</div>
       <p>The ecosystem burn dashboard. See how much $FARTPRINT each app has incinerated — FartBurner, FartSwap, and Fart Cup — all on one spinning wheel.</p>
       <div class="row-bottom">
-        <span class="status-tag live" style="background: #fff0e6; color: #b83a10;"><span class="dot" style="background: #ff5a1f;"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="fartwheel.html" class="app-btn" style="color: #b83a10;">LAUNCH</a>
       </div>
     </div>
@@ -1556,7 +1597,7 @@
       <div class="cat">Mint · Fork · Derivative</div>
       <p>Spawn your own FART-prefixed derivative on Printr. Pick a suffix, upload an image, mint to Solana. Every derivative inherits the $FARTPRINT bloodline.</p>
       <div class="row-bottom">
-        <span class="status-tag live"><span class="dot"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="derivatives.html" class="app-btn">LAUNCH</a>
       </div>
     </div>
@@ -1568,29 +1609,27 @@
       <div class="cat">Swap · Trade · AMM</div>
       <p>Trade $FARTPRINT and selected tokens with the best routes across every Solana DEX. Optimal routing aggregated through all decentralized exchanges on Solana.</p>
       <div class="row-bottom">
-        <span class="status-tag live"><span class="dot"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="fartswap.html" class="app-btn">LAUNCH</a>
       </div>
     </div>
 
     <!-- FART CUP -->
     <div class="app-card live" data-status="live" style="--green: #0a7d3a; --green-bright: #16a34a; --green-dark: #065f2b; --green-soft: #e3f5e8;">
-      <div class="app-icon" style="background: #ffffff; box-shadow: 0 4px 14px rgba(10, 125, 58, 0.25); padding: 0; overflow: hidden;">
-        <svg viewBox="0 0 64 64" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">
-          <circle cx="32" cy="32" r="29" fill="#ffffff" stroke="#111111" stroke-width="3"/>
-          <path d="M32 17 L44 26 L39.5 40 L24.5 40 L20 26 Z" fill="#111111"/>
-          <path d="M32 17 L32 6" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-          <path d="M44 26 L55 22" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-          <path d="M39.5 40 L47 51" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-          <path d="M24.5 40 L17 51" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
-          <path d="M20 26 L9 22" stroke="#111111" stroke-width="3" stroke-linecap="round"/>
+      <div class="app-icon" style="background: linear-gradient(135deg, #0a7d3a 0%, #f5c542 100%); box-shadow: 0 4px 14px rgba(10, 125, 58, 0.30);">
+        <svg viewBox="0 0 64 64" width="60%" height="60%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">
+          <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
+            <circle cx="32" cy="32" r="22"/>
+            <polygon points="32,20 42,27.5 38.2,39.5 25.8,39.5 22,27.5" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
+            <path d="M32 20 V10 M42 27.5 L51 24 M38.2 39.5 L44 49 M25.8 39.5 L20 49 M22 27.5 L13 24"/>
+          </g>
         </svg>
       </div>
       <h4>Fart Cup</h4>
       <div class="cat">Parody · World Cup · Fun</div>
       <p>An alternative way to "bet" on the World Cup. A community parody — every nation gets its own FART coin. Pure fun, zero guarantees, don't take it seriously.</p>
       <div class="row-bottom">
-        <span class="status-tag live" style="background: #e3f5e8; color: #065f2b;"><span class="dot" style="background: #0a7d3a;"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="fartcup.html" class="app-btn" style="color: #065f2b;">LAUNCH</a>
       </div>
     </div>
@@ -1614,7 +1653,7 @@
       <div class="cat">Stake · Yield · POB</div>
       <p>Stake $FARTPRINT via Printr's interface and earn your share of fees from every single trade made from the seed pool.</p>
       <div class="row-bottom">
-        <span class="status-tag live"><span class="dot"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener" class="app-btn">OPEN ↗</a>
       </div>
     </div>
@@ -1638,7 +1677,7 @@
       <div class="cat">Perps · Leverage · Buyback</div>
       <p>Perpetual exchange benefiting $FARTPRINT through buybacks and burns from its liquidity pool.</p>
       <div class="row-bottom">
-        <span class="status-tag live" style="background: #e8f0ff; color: #1b4fb0;"><span class="dot" style="background: #2f7bff;"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="https://ai69x.io/" target="_blank" rel="noopener" class="app-btn" style="color: #1b4fb0;">OPEN ↗</a>
       </div>
     </div>
@@ -1650,7 +1689,7 @@
       <div class="cat">Liquidity · Aggregator · Yield</div>
       <p>Experimental liquidity aggregator on Printr, creating additional trading revenue for $FARTPRINT stakers.</p>
       <div class="row-bottom">
-        <span class="status-tag live" style="background: #e0fafe; color: #0c7d8a;"><span class="dot" style="background: #06b6c4;"></span>Live</span>
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
         <a href="https://www.printrpoolparty.xyz/" target="_blank" rel="noopener" class="app-btn" style="color: #0c7d8a;">OPEN ↗</a>
       </div>
     </div>
@@ -1687,6 +1726,30 @@
       </div>
     </div>
   </section>
+
+  <!-- BUY $FARTPRINT -->
+  <div class="section-header" id="buy">
+    <h2>Buy $FARTPRINT</h2>
+    <span class="meta">live on Solana DEXs</span>
+  </div>
+  <div class="buy-grid">
+    <a class="buy-card pumpswap" href="https://swap.pump.fun/?input=So11111111111111111111111111111111111111112&output=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
+      <span class="buy-left"><img src="https://hamzabenjeddi.com/wp-content/uploads/2025/06/pump.webp" alt="" onerror="this.style.display='none'"><span class="buy-name">PumpSwap</span></span>
+      <span class="buy-go">Trade ↗</span>
+    </a>
+    <a class="buy-card orca" href="https://www.orca.so/pools?outputCurrency=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
+      <span class="buy-left"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRZpu5WTN_GjrmYhhkZ9y_XG7DAU-tGYriTmQ&s" alt="" onerror="this.style.display='none'"><span class="buy-name">Orca</span></span>
+      <span class="buy-go">Trade ↗</span>
+    </a>
+    <a class="buy-card raydium" href="https://raydium.io/swap/?inputMint=sol&outputMint=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
+      <span class="buy-left"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK13dMUOeFWHak82jvWdezUipq5ZPOw4pVlw&s" alt="" onerror="this.style.display='none'"><span class="buy-name">Raydium</span></span>
+      <span class="buy-go">Trade ↗</span>
+    </a>
+    <a class="buy-card printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
+      <span class="buy-left"><img src="https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg" alt="" onerror="this.style.display='none'"><span class="buy-name">Printr</span></span>
+      <span class="buy-go">Trade ↗</span>
+    </a>
+  </div>
 
   <!-- BUILDERS -->
   <div class="builders" id="builders">
@@ -2388,8 +2451,10 @@ async function dexMcaps(addrs){
 
 function renderTop3(elId, rows, emptyMsg){
   const el = $id(elId); if(!el) return;
+  // No live tokens to rank → hide the whole widget rather than show an empty header.
+  if(!rows.length){ el.style.display = "none"; return; }
+  el.style.display = "";
   const head = `<div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>`;
-  if(!rows.length){ el.innerHTML = head + `<div class="t3-empty">${emptyMsg}</div>`; return; }
   el.innerHTML = head + `<div class="top3-list">` + rows.map((t, i) => `
     <div class="t3-row" style="animation-delay:${(i*0.06).toFixed(2)}s">
       <span class="t3-rank r${i+1}">#${i+1}</span>
