@@ -396,6 +396,31 @@
     box-shadow: var(--shadow-sm);
   }
 
+  /* per-coin launchpad tag */
+  .d-card { position: relative; }
+  .lp-tag {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px 3px 4px;
+    border-radius: 100px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.6px;
+    font-family: 'JetBrains Mono', monospace;
+    background: #ffffff;
+    border: 1px solid #e3e8e4;
+    color: #3a4a3f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    z-index: 2;
+  }
+  .lp-tag img { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+  .lp-tag.lp-pump { color: #15a34a; border-color: #bfe6cc; }
+  .lp-tag.lp-printr { color: #1a1a1a; border-color: #dadada; }
+
   .collapse-toggle {
     background: transparent;
     border: 0;
@@ -902,6 +927,16 @@
         <div class="hint">The display name shown on Printr, Solscan, DexScreener, etc.</div>
       </div>
 
+      <!-- LAUNCHPAD -->
+      <div class="field">
+        <label>Launchpad<span class="req">*</span></label>
+        <div class="segmented" id="lpSeg">
+          <button type="button" class="seg active" data-lp="printr">Printr</button>
+          <button type="button" class="seg" data-lp="pump">pump.fun</button>
+        </div>
+        <div class="hint" id="lpHint">Minting on <strong>Printr</strong> — the $FARTPRINT launchpad with native staking &amp; fee routing.</div>
+      </div>
+
       <!-- INITIAL BUY -->
       <div class="field">
         <label>Initial Buy<span class="req">*</span></label>
@@ -1051,7 +1086,8 @@ import {
   TransactionInstruction,
   TransactionMessage,
   VersionedTransaction,
-  AddressLookupTableAccount
+  AddressLookupTableAccount,
+  Keypair
 } from 'https://esm.sh/@solana/web3.js@1.95.3';
 
 // ============================================================
@@ -1093,8 +1129,15 @@ const State = {
   imageBase64: null,
   imageFile: null,
   buyMode: "spend_usd",
+  launchpad: "printr",
   quote: null,
   minting: false,
+};
+
+// pump.fun / Printr launchpad logos used for the per-coin tags
+const LP_LOGOS = {
+  printr: "https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg",
+  pump:   "https://hamzabenjeddi.com/wp-content/uploads/2025/06/pump.webp",
 };
 
 // ============================================================
@@ -1399,8 +1442,108 @@ function b64ToU8(b64){
   return u8;
 }
 
+// ===== pump.fun mint path (PumpPortal local transaction) =====
+async function mintPump(){
+  if(State.minting) return;
+  State.minting = true;
+  updateMintButton();
+  $("statusLog").classList.add("show");
+  $("statusLog").innerHTML = "";
+  try{
+    log("Validating form…");
+    if(!State.wallet) throw new Error("Wallet not connected");
+    if(!State.imageBase64) throw new Error("Image missing");
+    const symbol = fullSymbol();
+    if(symbol.length <= 4) throw new Error("Ticker suffix required");
+    const name = ($("name").value || "").trim();
+    if(!name) throw new Error("Token name required");
+    const description = "Toxic spawn of $FARTPRINT. Inherits the bloodline, none of the manners.";
+
+    // Initial dev buy in SOL — only when the SOL buy-mode is selected, else 0.
+    let devSol = 0;
+    const amt = parseFloat($("buyAmount").value) || 0;
+    if(State.buyMode === "spend_native") devSol = Math.max(0, amt);
+
+    log("Pinning metadata to pump.fun IPFS (via proxy)…");
+    const metaRes = await fetch("/api/pump-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name, symbol, description,
+        imageBase64: State.imageBase64,
+        twitter: $("linkX").value || "",
+        telegram: $("linkTelegram").value || "",
+        website: $("linkWebsite").value || "",
+      }),
+    });
+    if(!metaRes.ok) throw new Error("Metadata upload failed (HTTP " + metaRes.status + "). Make sure api/pump-create.js is deployed.");
+    const meta = await metaRes.json();
+    if(!meta.metadataUri) throw new Error("pump.fun returned no metadata URI" + (meta.message ? " — " + meta.message : ""));
+    log("Metadata pinned.", "ok");
+
+    const mintKp = Keypair.generate();
+    const ma = mintKp.publicKey.toBase58();
+    log(`New pump.fun mint: ${ma.slice(0,12)}…`);
+
+    log("Requesting create transaction from PumpPortal…");
+    const ppRes = await fetch("https://pumpportal.fun/api/trade-local", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        publicKey: State.wallet,
+        action: "create",
+        tokenMetadata: { name, symbol, uri: meta.metadataUri },
+        mint: ma,
+        denominatedInSol: "true",
+        amount: devSol,
+        slippage: 10,
+        priorityFee: 0.0005,
+        pool: "pump",
+      }),
+    });
+    if(!ppRes.ok){
+      const t = await ppRes.text().catch(() => "");
+      throw new Error("PumpPortal error (HTTP " + ppRes.status + ")" + (t ? " — " + t.slice(0,160) : ""));
+    }
+    const txBytes = new Uint8Array(await ppRes.arrayBuffer());
+    const tx = VersionedTransaction.deserialize(txBytes);
+    tx.sign([mintKp]);
+
+    const phantom = getPhantom();
+    const connection = new Connection(RPC_URLS[0], "confirmed");
+    log("Awaiting wallet signature…");
+    let signature;
+    try{
+      const r = await phantom.signAndSendTransaction(tx);
+      signature = r.signature || r;
+    } catch(e){
+      const signed = await phantom.signTransaction(tx);
+      signature = await connection.sendRawTransaction(signed.serialize());
+    }
+    log(`Tx submitted: <a href="https://solscan.io/tx/${signature}" target="_blank">${signature.slice(0,16)}…</a>`, "ok");
+
+    const galleryRec = {
+      tid: ma, sym: symbol, name, img: null,
+      by: State.wallet, tx: signature, ts: Date.now(), ma, lp: "pump",
+    };
+    await publishMintToGallery(galleryRec);
+    loadGallery();
+    showAlert("success", `
+      <strong>${symbol} launched on pump.fun!</strong><br>
+      Mint: <a href="https://pump.fun/${ma}" target="_blank" rel="noopener" style="color:var(--green-dark);font-weight:600;">${ma}</a>
+    `, true);
+  } catch(e){
+    log(`pump.fun mint failed: ${e.message || e}`, "err");
+    showAlert("error", "pump.fun mint failed: " + escapeHtml(e.message || String(e)), true);
+  } finally {
+    State.minting = false;
+    updateMintButton();
+  }
+}
+
 async function mint(){
   if(State.minting) return;
+  if(State.launchpad === "pump"){ return mintPump(); }
   State.minting = true;
   updateMintButton();
   $("statusLog").classList.add("show");
@@ -1501,6 +1644,7 @@ async function mint(){
       tx: signature,
       ts: Date.now(),
       ma: null,
+      lp: "printr",
     };
     await publishMintToGallery(galleryRec);
     loadGallery();
@@ -1621,6 +1765,7 @@ async function loadSeedTokens(){
         tx: ma,
         ts: j.createdAt ? new Date(j.createdAt).getTime() : 0,
         ma: ma,
+        lp: "printr",
       });
     } catch(_){}
   }));
@@ -1769,12 +1914,19 @@ function renderGalleryCard(rec){
     mcapEl = `<span class="mcap-val loading">fetching…</span>`;
   } else {
     const formatted = fmtMcap(rec._mcap);
-    mcapEl = formatted
-      ? `<span class="mcap-val">${formatted}</span>`
-      : `<span class="mcap-val none">on bonding curve</span>`;
+    if(formatted){
+      mcapEl = `<span class="mcap-val">${formatted}</span>`;
+    } else if(rec._grad != null){
+      mcapEl = `<span class="mcap-val none">${rec._grad.toFixed(0)}% to graduation</span>`;
+    } else {
+      mcapEl = `<span class="mcap-val none">on bonding curve</span>`;
+    }
   }
+  const lp = rec.lp === "pump" ? "pump" : "printr";
+  const lpTag = `<span class="lp-tag lp-${lp}"><img src="${LP_LOGOS[lp]}" alt="" onerror="this.style.display='none'">${lp === "pump" ? "PUMP" : "PRINTR"}</span>`;
   return `
     <div class="d-card ${isPending ? 'pending' : ''}" title="${escapeHtml(rec.sym)} · ${ago(rec.ts)}">
+      ${lpTag}
       <div class="icon">${imgSrc
         ? `<img src="${imgSrc}" alt="" onerror="this.parentNode.textContent='${escapeHtml((rec.sym || 'FART').slice(0,4))}'; this.remove();">`
         : escapeHtml((rec.sym || 'FART').slice(0,4))
@@ -1836,6 +1988,25 @@ async function attachMarketCaps(records){
     r._mcap = caps[r.ma] || 0;
     r._mcapLoaded = true;
   }
+
+  // Printr does NOT expose a live price / market cap — only bonding-curve
+  // parameters and a graduation percentage. So for tokens with no DEX market
+  // cap yet (still on the curve), pull their graduation progress from Printr
+  // and show that instead.
+  const onCurve = withMa.filter(r => !(r._mcap > 0) && r.tid);
+  await Promise.all(onCurve.map(async (r) => {
+    try{
+      const resp = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${r.tid}/deployments`));
+      if(!resp.ok) return;
+      const j = await resp.json();
+      let g = null;
+      for(const d of (j.deployments || [])){
+        const p = d.graduation_completion_percent;
+        if(typeof p === "number" && (g == null || p > g)) g = p;
+      }
+      if(g != null) r._grad = g <= 1 ? g * 100 : g;
+    } catch(_){}
+  }));
 }
 
 // ============================================================
@@ -1865,6 +2036,20 @@ document.querySelectorAll("#buyModeSeg .seg").forEach(seg => {
     if(State.buyMode === "supply_percent" && (!amt.value || parseFloat(amt.value) > 69)) amt.value = 1;
     updateBuyHint();
     updateMintButton();
+  });
+});
+
+// Launchpad selector — Printr vs pump.fun
+document.querySelectorAll("#lpSeg .seg").forEach(seg => {
+  seg.addEventListener("click", () => {
+    document.querySelectorAll("#lpSeg .seg").forEach(s => s.classList.remove("active"));
+    seg.classList.add("active");
+    State.launchpad = seg.dataset.lp;
+    const isPump = State.launchpad === "pump";
+    $("lpHint").innerHTML = isPump
+      ? `Minting on <strong>pump.fun</strong> — classic bonding curve. The Fee Sink &amp; Graduation options below are Printr-only and are ignored here.`
+      : `Minting on <strong>Printr</strong> — the $FARTPRINT launchpad with native staking &amp; fee routing.`;
+    $("btnMint").textContent = isPump ? "MINT ON PUMP.FUN" : "MINT DERIVATIVE";
   });
 });
 
