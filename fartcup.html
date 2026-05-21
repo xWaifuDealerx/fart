@@ -890,11 +890,7 @@
     <!-- SIDEBAR -->
     <aside class="fc-side">
       <div class="side-panel">
-        <div class="side-head"><span class="live-dot"></span>World Cup Matches</div>
-        <div id="matchList"><div class="side-loading">Loading fixtures…</div></div>
-      </div>
-      <div class="side-panel">
-        <div class="side-head">World Cup News</div>
+        <div class="side-head"><span class="live-dot"></span>World Cup News</div>
         <div id="newsList"><div class="side-loading">Loading headlines…</div></div>
       </div>
     </aside>
@@ -1277,8 +1273,6 @@ async function loadMatches(){
 
 loadNews();
 setInterval(loadNews, 300000);
-loadMatches();
-setInterval(loadMatches, 30000);
 
 // ===== World Cup kickoff countdown =====
 // FIFA World Cup 2026 opening match — June 11, 2026, Estadio Azteca (Mexico City).
