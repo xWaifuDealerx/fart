@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fart&Poop500 // the methane index</title>
+<link rel="icon" type="image/png" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="description" content="Fart&Poop500 — the methane-powered stock index of the $FARTPRINT ecosystem. Live FART coin bubbles sized by liquidity, hyper-strategic Meteora pools you can zap into, and every fee routed back to buying & burning $FARTPRINT.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Orbitron:wght@700;800;900&family=JetBrains+Mono:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05080f;
+    --bg-2:#0a1018;
+    --card:#0e1622;
+    --card-2:#12202f;
+    --text:#eaf2ff;
+    --text-2:#9fb2d4;
+    --text-3:#62748f;
+    --border:#1d2a3d;
+    --green:#0ecb81;     /* binance-green */
+    --green-br:#2ee06b;
+    --red:#f6465d;       /* binance-red */
+    --red-br:#ff7a88;
+    --purple:#9b5cff;
+    --gold:#f0b90b;      /* finance gold */
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    background:
+      radial-gradient(1000px 540px at 16% -8%, rgba(155,92,255,0.13), transparent 60%),
+      radial-gradient(900px 520px at 88% 2%, rgba(14,203,129,0.12), transparent 62%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+  }
+  a{color:inherit;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ===== ticker tape ===== */
+  .tape{
+    position:sticky;top:0;z-index:60;width:100%;
+    background:linear-gradient(180deg,#0a121d,#070c14);
+    border-bottom:1px solid var(--border);
+    overflow:hidden;white-space:nowrap;
+  }
+  .tape-inner{display:inline-flex;align-items:center;padding:9px 0;animation:tape 42s linear infinite;}
+  .tape:hover .tape-inner{animation-play-state:paused;}
+  @keyframes tape{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+  .tk{display:inline-flex;align-items:center;gap:8px;padding:0 22px;font-family:'JetBrains Mono',monospace;font-size:13px;border-right:1px solid var(--border);}
+  .tk .tsym{font-weight:800;color:var(--text);letter-spacing:.3px;}
+  .tk .tprice{color:var(--text-2);}
+  .tk .tchg{font-weight:700;}
+  .tk .tchg.up{color:var(--green-br);} .tk .tchg.down{color:var(--red-br);} .tk .tchg.flat{color:var(--text-3);}
+
+  /* drifting gas clouds */
+  .gas{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+  .gas span{position:absolute;border-radius:50%;filter:blur(42px);opacity:0.15;background:radial-gradient(circle,#0ecb81,transparent 70%);animation:drift linear infinite;}
+  @keyframes drift{0%{transform:translate(0,0) scale(1);}50%{transform:translate(40px,-30px) scale(1.15);}100%{transform:translate(0,0) scale(1);}}
+
+  .wrap{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 20px 60px;}
+
+  /* nav */
+  .nav{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;padding:18px 0;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .hub{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#6a2cf5 0%,#0ecb81 100%);box-shadow:0 6px 20px rgba(106,44,245,0.4);}
+  .brand-name{font-family:'Orbitron',sans-serif;font-weight:900;font-size:21px;letter-spacing:-0.5px;text-transform:uppercase;}
+  .brand-name .a{background:linear-gradient(135deg,var(--green-br),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .nav-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .mkt{display:inline-flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--green-br);background:rgba(14,203,129,0.1);border:1px solid rgba(14,203,129,0.3);padding:8px 13px;border-radius:100px;}
+  .mkt .d{width:7px;height:7px;border-radius:50%;background:var(--green-br);box-shadow:0 0 9px var(--green-br);animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .pill{color:var(--text-2);background:var(--card);border:1px solid var(--border);padding:9px 16px;border-radius:100px;font-size:13px;font-weight:600;text-decoration:none;transition:.15s;}
+  .pill:hover{border-color:var(--green-br);color:var(--green-br);}
+  .pill.solid{background:linear-gradient(135deg,var(--green),var(--green-br));color:#053024;border:0;font-weight:800;}
+
+  /* hero */
+  .hero{text-align:center;padding:24px 0 12px;}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;font-weight:700;color:#cdbcff;background:rgba(155,92,255,0.12);border:1px solid rgba(155,92,255,0.32);padding:6px 14px;border-radius:100px;margin-bottom:18px;}
+  .eyebrow .blip{width:7px;height:7px;border-radius:50%;background:var(--green-br);box-shadow:0 0 10px var(--green-br);animation:pulse 1.6s infinite;}
+  h1.title{font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(34px,7vw,68px);line-height:.98;letter-spacing:-1.5px;}
+  h1.title .amp{color:var(--gold);}
+  h1.title .n{background:linear-gradient(135deg,var(--green-br),var(--purple));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .subtitle{color:var(--text-2);font-size:clamp(14px,2.4vw,17px);margin:16px auto 0;max-width:640px;line-height:1.6;}
+  .subtitle .hl{color:#bbf7d0;font-weight:600;}
+
+  /* index value board */
+  .board{
+    margin:26px auto 0;max-width:520px;background:linear-gradient(180deg,var(--card-2),var(--card));
+    border:1px solid var(--border);border-radius:20px;padding:22px 26px;text-align:center;
+    box-shadow:0 18px 50px rgba(0,0,0,.4);
+  }
+  .board .lbl{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
+  .board .val{font-family:'Orbitron',sans-serif;font-size:clamp(34px,7vw,52px);font-weight:900;line-height:1;margin:8px 0 6px;}
+  .board .delta{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;}
+  .board .delta.up{color:var(--green-br);} .board .delta.down{color:var(--red-br);}
+
+  /* index strip */
+  .index-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:18px;overflow:hidden;margin:18px 0 8px;}
+  .ix{background:var(--card);padding:16px 14px;text-align:center;}
+  .ix .k{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
+  .ix .v{font-family:'Orbitron',sans-serif;font-weight:800;font-size:clamp(17px,2.6vw,25px);margin-top:5px;}
+  .ix .v.green{color:var(--green-br);} .ix .v.purple{color:#bfa3ff;} .ix .v.red{color:var(--red-br);}
+  @media(max-width:640px){.index-strip{grid-template-columns:repeat(2,1fr);}}
+
+  /* section heads */
+  .sec-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:34px 0 14px;}
+  .sec-title{font-family:'Orbitron',sans-serif;font-weight:800;font-size:19px;text-transform:uppercase;letter-spacing:-.3px;display:flex;align-items:center;gap:10px;}
+  .sec-title .tag{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--gold);background:rgba(240,185,11,.12);border:1px solid rgba(240,185,11,.3);padding:3px 9px;border-radius:100px;letter-spacing:.5px;text-transform:none;}
+  .sec-hint{color:var(--text-3);font-size:12px;}
+
+  /* arena */
+  .arena{position:relative;width:100%;height:clamp(420px,64vh,640px);border:1px solid var(--border);border-radius:24px;overflow:hidden;background:radial-gradient(700px 380px at 70% 110%,rgba(155,92,255,0.10),transparent 60%),linear-gradient(180deg,#08111c 0%,#0a1726 100%);touch-action:none;cursor:grab;}
+  .arena.loading::after{content:"Inflating the bubbles…";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-3);font-size:14px;}
+  .bubble{position:absolute;top:0;left:0;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;cursor:grab;user-select:none;border:1.5px solid rgba(255,255,255,0.18);will-change:transform;transition:box-shadow .2s;backdrop-filter:blur(2px);}
+  .bubble:active{cursor:grabbing;}
+  .bubble.up{background:radial-gradient(circle at 35% 30%,rgba(14,203,129,0.55),rgba(8,80,55,0.55));box-shadow:0 0 22px rgba(14,203,129,0.30),inset 0 0 18px rgba(255,255,255,0.10);}
+  .bubble.down{background:radial-gradient(circle at 35% 30%,rgba(246,70,93,0.55),rgba(110,20,32,0.55));box-shadow:0 0 22px rgba(246,70,93,0.28),inset 0 0 18px rgba(255,255,255,0.10);}
+  .bubble.flat{background:radial-gradient(circle at 35% 30%,rgba(120,140,180,0.5),rgba(40,55,85,0.55));box-shadow:0 0 18px rgba(120,140,180,0.22),inset 0 0 18px rgba(255,255,255,0.08);}
+  .bubble:hover{box-shadow:0 0 30px rgba(255,255,255,0.30),inset 0 0 18px rgba(255,255,255,0.16);z-index:50;}
+  .bubble .ic{width:52%;max-width:72px;height:auto;border-radius:50%;aspect-ratio:1;object-fit:cover;margin-bottom:4px;border:2.5px solid var(--green-br);box-shadow:0 0 12px rgba(46,224,107,.75),0 0 24px rgba(46,224,107,.35),inset 0 0 6px rgba(0,0,0,.4);}
+  .bubble .sym{font-weight:800;line-height:1;letter-spacing:-.3px;text-shadow:0 1px 3px rgba(0,0,0,.5);}
+  .bubble .chg{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1;margin-top:3px;opacity:.95;text-shadow:0 1px 2px rgba(0,0,0,.5);}
+  .puff{position:absolute;font-size:18px;pointer-events:none;animation:puff 1.1s ease-out forwards;z-index:60;}
+  @keyframes puff{0%{opacity:.9;transform:translate(0,0) scale(.6) rotate(0);}100%{opacity:0;transform:translate(18px,-46px) scale(1.5) rotate(25deg);}}
+
+  /* pools desk */
+  .pools{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+  .pool{
+    background:linear-gradient(180deg,var(--card-2),var(--card));border:1px solid var(--border);
+    border-radius:18px;padding:20px;position:relative;overflow:hidden;transition:.18s;
+  }
+  .pool:hover{transform:translateY(-3px);border-color:rgba(14,203,129,.45);box-shadow:0 16px 40px rgba(0,0,0,.4);}
+  .pool::after{content:"";position:absolute;right:-40px;top:-40px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(14,203,129,.12),transparent 70%);pointer-events:none;}
+  .pool .ph{display:flex;align-items:center;gap:11px;margin-bottom:14px;position:relative;z-index:1;}
+  .pool .pic{width:42px;height:42px;border-radius:12px;object-fit:cover;border:1px solid var(--border);background:#0a1420;}
+  .pool .pic.emoji{display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#6a2cf5,#0ecb81);}
+  .pool .pn{font-family:'Orbitron',sans-serif;font-weight:800;font-size:17px;}
+  .pool .pmeta{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:2px;letter-spacing:.3px;}
+  .pool .pstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;position:relative;z-index:1;}
+  .pool .ps{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:11px;padding:10px 11px;}
+  .pool .ps .pk{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
+  .pool .ps .pv{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;margin-top:3px;}
+  .pool .ps .pv.up{color:var(--green-br);} .pool .ps .pv.down{color:var(--red-br);}
+  .pool .pacts{display:flex;gap:8px;position:relative;z-index:1;}
+  .pool .zap{flex:1;text-align:center;background:linear-gradient(135deg,var(--green),var(--green-br));color:#053024;font-weight:800;padding:11px;border-radius:100px;text-decoration:none;font-size:13.5px;transition:.16s;}
+  .pool .zap:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(14,203,129,.4);}
+  .pool .buy{flex:0 0 auto;text-align:center;background:var(--card);border:1px solid var(--border);color:var(--text-2);font-weight:700;padding:11px 16px;border-radius:100px;text-decoration:none;font-size:13.5px;transition:.16s;}
+  .pool .buy:hover{border-color:var(--purple);color:#cdbcff;}
+
+  /* popover */
+  .pop-overlay{position:fixed;inset:0;z-index:400;display:none;align-items:center;justify-content:center;padding:22px;background:rgba(3,6,12,.8);backdrop-filter:blur(7px);}
+  .pop-overlay.open{display:flex;}
+  .pop{width:min(420px,94vw);background:linear-gradient(180deg,var(--card-2),var(--card));border:1px solid var(--border);border-radius:22px;padding:24px;position:relative;box-shadow:0 30px 80px rgba(0,0,0,.55);}
+  .pop-close{position:absolute;top:14px;right:16px;background:none;border:0;color:var(--text-3);font-size:26px;cursor:pointer;line-height:1;}
+  .pop-close:hover{color:#fff;}
+  .pop-head{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+  .pop-head .pflag{width:52px;height:52px;border-radius:14px;object-fit:cover;border:1px solid var(--border);}
+  .pop-head .ph-emoji{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;background:linear-gradient(135deg,#6a2cf5,#0ecb81);}
+  .pop-head .nm{font-family:'Orbitron',sans-serif;font-weight:800;font-size:20px;}
+  .pop-head .tk{font-family:'JetBrains Mono',monospace;color:var(--text-3);font-size:12px;font-weight:600;margin-top:3px;}
+  .pop-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
+  .pop-stat{background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:14px;padding:13px 14px;}
+  .pop-stat .pk{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
+  .pop-stat .pv{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:17px;margin-top:4px;}
+  .pop-stat .pv.up{color:var(--green-br);} .pop-stat .pv.down{color:var(--red-br);}
+  .pop-acts{display:flex;gap:9px;}
+  .pop-trade{flex:1;text-align:center;background:linear-gradient(135deg,var(--green),var(--green-br));color:#053024;font-weight:800;padding:13px;border-radius:100px;text-decoration:none;font-size:14.5px;transition:.18s;}
+  .pop-trade:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(14,203,129,.4);}
+  .pop-trade.alt{background:var(--card);border:1px solid var(--border);color:var(--text-2);}
+  .pop-trade.alt:hover{border-color:var(--purple);color:#cdbcff;box-shadow:none;}
+
+  /* burn callout */
+  .burn-call{margin-top:32px;padding:30px;border-radius:24px;display:flex;align-items:center;gap:22px;flex-wrap:wrap;background:linear-gradient(135deg,#2a0707 0%,#4d0f0f 55%,#7a1a14 100%);box-shadow:0 18px 50px rgba(180,30,20,.28);position:relative;overflow:hidden;}
+  .burn-call::before{content:"";position:absolute;top:-100px;right:-80px;width:340px;height:340px;background:radial-gradient(circle,rgba(255,90,60,.3),transparent 65%);pointer-events:none;animation:drift 5s ease-in-out infinite;}
+  .burn-call .bc-emoji{font-size:46px;position:relative;z-index:1;}
+  .burn-call .bc-body{position:relative;z-index:1;flex:1 1 320px;}
+  .burn-call h3{font-family:'Orbitron',sans-serif;font-weight:800;font-size:clamp(19px,2.6vw,24px);margin-bottom:8px;}
+  .burn-call h3 .a{color:#ff8a6a;}
+  .burn-call p{color:rgba(255,255,255,.82);font-size:14.5px;line-height:1.6;}
+  .burn-call .bc-cta{display:inline-block;margin-top:14px;background:#ff5a3c;color:#2a0707;font-weight:800;padding:10px 22px;border-radius:100px;text-decoration:none;font-size:13.5px;}
+  .burn-call .bc-cta:hover{background:#fff;}
+
+  footer{margin-top:40px;padding-top:22px;border-top:1px solid var(--border);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;color:var(--text-3);font-size:13px;}
+  footer a{color:var(--text-2);text-decoration:none;margin-left:16px;}
+  footer a:hover{color:var(--green-br);}
+  .disclaimer{margin-top:20px;color:var(--text-3);font-size:11.5px;line-height:1.6;text-align:center;max-width:780px;margin:20px auto 0;}
+</style>
+</head>
+<body>
+
+<!-- LIVE TICKER TAPE -->
+<div class="tape"><div class="tape-inner" id="tape"></div></div>
+
+<div class="gas" id="gas"></div>
+
+<div class="wrap">
+
+  <nav class="nav">
+    <div class="brand">
+      <span class="hub">💩</span>
+      <div class="brand-name">Fart<span class="a">&amp;Poop</span>500</div>
+    </div>
+    <div class="nav-actions">
+      <span class="mkt"><span class="d"></span>MARKET OPEN</span>
+      <a class="pill solid" href="fartwheel.html">🔥 The Burn</a>
+      <a class="pill" href="index.html">← Ecosystem</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <span class="eyebrow"><span class="blip"></span>The Methane Index · Live on Solana</span>
+    <h1 class="title">FART<span class="amp">&amp;</span>POOP<span class="n">500</span></h1>
+    <p class="subtitle">
+      Wall Street wishes it was this liquid. The premier blue chip methane index on Solana, where every FART coin
+      floats as a bubble sized by its book. Zap into the <span class="hl">hyper strategic fart pools</span>,
+      stack LP fees, and watch every basis point route straight back into buying and burning
+      <span class="hl">$FARTPRINT</span>. Diamond hands only.&nbsp;<span style="white-space:nowrap;">💎🙌💨</span>
+    </p>
+  </header>
+
+  <div class="board">
+    <div class="lbl">FP500 Index · Total Book Value</div>
+    <div class="val mono" id="boardVal">$—</div>
+    <div class="delta" id="boardDelta">— 24h</div>
+  </div>
+
+  <div class="index-strip">
+    <div class="ix"><div class="k">Index Liquidity</div><div class="v green" id="ixLiq">$—</div></div>
+    <div class="ix"><div class="k">Constituents</div><div class="v purple" id="ixCount">—</div></div>
+    <div class="ix"><div class="k">Avg 24h Move</div><div class="v" id="ixMove">—</div></div>
+    <div class="ix"><div class="k">Top Mover</div><div class="v" id="ixTop">—</div></div>
+  </div>
+
+  <div class="sec-head">
+    <div class="sec-title">The Trading Floor</div>
+    <div class="sec-hint">drag the bubbles · tap to trade · size = liquidity</div>
+  </div>
+  <div class="arena loading" id="arena"></div>
+
+  <div class="sec-head">
+    <div class="sec-title">Strategic Fart Pools <span class="tag">Meteora · DAMM v2</span></div>
+    <div class="sec-hint">zap in · provide liquidity · earn fees</div>
+  </div>
+  <p style="color:var(--text-2);font-size:14px;line-height:1.65;margin:-4px 0 18px;max-width:780px;">
+    These aren't your average degen pools. They're <strong style="color:#bbf7d0;">hyper strategic liquidity engines</strong>
+    built to superpower the $FARTPRINT ecosystem. Zap in on Meteora, become the house, and collect trading fees while
+    the protocol routes value back to the burn. Deeper pools mean bigger bubbles and more methane.
+  </p>
+  <div class="pools" id="pools"></div>
+
+  <div class="burn-call">
+    <div class="bc-emoji">💨🔥</div>
+    <div class="bc-body">
+      <h3>Every fee <span class="a">buys back &amp; burns</span> $FARTPRINT</h3>
+      <p>
+        Trading fees from <em>every</em> coin and pool in the Fart&amp;Poop500 are pooled and used to buy back and
+        permanently incinerate $FARTPRINT. The whole index is one giant deflationary fart machine. The more the
+        floor trades, the more supply goes up in gas.
+      </p>
+      <a class="bc-cta" href="fartwheel.html">Watch it burn on the FartWheel ↗</a>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    Fart&amp;Poop500 is a community parody — a meme, not a financial product, index fund, security, or investment
+    advice. "Zap In" links open the official Meteora pool interface; providing liquidity carries risk including
+    impermanent loss, and FART coins are highly volatile and mostly worthless by design. Ape responsibly and never
+    trade more methane than you can afford to lose.
+  </p>
+
+  <footer>
+    <div>$FARTPRINT Ecosystem · Fart&amp;Poop500 v1.1</div>
+    <div>
+      <a href="index.html">Ecosystem</a>
+      <a href="derivatives.html">Derivatives</a>
+      <a href="fartswap.html">FartSwap</a>
+      <a href="fartwheel.html">FartWheel</a>
+    </div>
+  </footer>
+</div>
+
+<!-- TOKEN POPOVER -->
+<div class="pop-overlay" id="popOverlay">
+  <div class="pop">
+    <button class="pop-close" id="popClose" aria-label="Close">×</button>
+    <div class="pop-head" id="popHead"></div>
+    <div class="pop-grid" id="popGrid"></div>
+    <div class="pop-acts" id="popActs"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Fart&Poop500 constituents — $FARTPRINT + the strategic Meteora pools.
+// ============================================================
+const PRINTR_PROXY = "/api/printr";
+const SOL_CHAIN = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+const TOKENS = [
+  { sym:"FARTYD",   ca:"CnJk3UfUsHy5aSx6JBhoogLxmrcFhpsLP6xaUiGJbrrr", pool:"https://www.meteora.ag/dammv2/5xyWsWbcLYMrtznLSnkEqNv6g9bHUSbwsBx7v5X1JYKp" },
+  { sym:"FARTSUNG", ca:"BCwvw9XJCzA8WixpMH2tjQxePZRq92vu2PAyo78obrrr", pool:"https://www.meteora.ag/dammv2/9zLh2Bnw7r3ELF5n3raNRvYBjFgFTXvm56gXyHGMmxjw" },
+  { sym:"FARTMART", ca:"4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr", pool:"https://www.meteora.ag/dammv2/CiH9Abhmi9mNjcokq3zcPjYg6pYNVrNNZp85CnsCE9ZV" },
+  { sym:"FARTX",    ca:"ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr", pool:"https://www.meteora.ag/dammv2/EYdRr8gnBEqBpLrCpMzgKzjyX3hDreVEL2dPL8STMK6V" },
+  { sym:"FARTSFT",  ca:"4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr", pool:"https://www.meteora.ag/dammv2/AbU19bH6vQ7aYWo47a8a7XrKuu21xRVxi9p8uKyS6Y9A" },
+  { sym:null,       ca:"CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr", pool:"https://www.meteora.ag/dammv2/EUUoqygw4K4R6xN6nm9eC7TqG8DikE77jPT32K9ttEG1" },
+];
+
+const $ = (id) => document.getElementById(id);
+const arena = $("arena");
+
+// gas clouds
+(function(){
+  const g=$("gas");
+  for(let i=0;i<6;i++){
+    const s=document.createElement("span");
+    const size=180+Math.random()*260;
+    s.style.width=s.style.height=size+"px";
+    s.style.left=(Math.random()*100)+"%"; s.style.top=(Math.random()*100)+"%";
+    s.style.animationDuration=(14+Math.random()*16)+"s"; s.style.animationDelay=(-Math.random()*12)+"s";
+    if(i%2) s.style.background="radial-gradient(circle,#9b5cff,transparent 70%)";
+    g.appendChild(s);
+  }
+})();
+
+// formatting
+function fmtUsd(n){
+  if(n==null||isNaN(n)||n<=0) return "$0";
+  const v=Number(n);
+  if(v<1000) return "$"+v.toFixed(0);
+  if(v<1e6)  return "$"+(v/1e3).toFixed(1)+"K";
+  if(v<1e9)  return "$"+(v/1e6).toFixed(2)+"M";
+  return "$"+(v/1e9).toFixed(2)+"B";
+}
+function fmtPrice(n){
+  if(n==null||isNaN(n)||n<=0) return "$—";
+  const v=Number(n);
+  if(v<0.000001) return "$"+v.toExponential(2);
+  if(v<1) return "$"+v.toPrecision(3);
+  return "$"+v.toLocaleString(undefined,{maximumFractionDigits:4});
+}
+function shortLabel(sym){ return sym==="FARTPRINT" ? "$FP" : sym.replace(/^FART/,"FART "); }
+function imgFor(t){ return _img[t.ca] || null; }
+const _img = {};   // mint -> pump.fun/printr image
+
+// ---- live data ----
+async function fetchData(){
+  const map={}; const mints=TOKENS.map(t=>t.ca);
+  for(let i=0;i<mints.length;i+=30){
+    const batch=mints.slice(i,i+30);
+    try{
+      const r=await fetch("https://api.dexscreener.com/latest/dex/tokens/"+batch.join(","));
+      if(!r.ok) continue;
+      const j=await r.json();
+      for(const p of (j.pairs||[])){
+        const mint=p?.baseToken?.address; if(!mint) continue;
+        const liq=p.liquidity?.usd||0; const cur=map[mint];
+        if(!cur||liq>cur.liq){
+          map[mint]={ liq, price:parseFloat(p.priceUsd)||0,
+            chg:(p.priceChange&&p.priceChange.h24!=null)?Number(p.priceChange.h24):null,
+            mcap:p.marketCap||p.fdv||0 };
+        }
+        if(p.info && p.info.imageUrl && !_img[mint]) _img[mint]=p.info.imageUrl;
+      }
+    }catch(_){}
+  }
+  // pump.fun fallback for market cap + image where DexScreener has nothing
+  await Promise.all(TOKENS.filter(t=>!map[t.ca]||!(map[t.ca].liq>0)).map(async(t)=>{
+    try{
+      const r=await fetch("/api/pumpfun?mint="+t.ca); if(!r.ok) return;
+      const j=await r.json();
+      const mc=Number(j&&j.usd_market_cap);
+      if(!_img[t.ca] && j && j.image_uri) _img[t.ca]=j.image_uri;
+      if(mc>0){ map[t.ca]=Object.assign({liq:0,price:0,chg:null,mcap:mc},map[t.ca]||{}); map[t.ca].mcap=mc; }
+    }catch(_){}
+  }));
+  return map;
+}
+
+let DATA={};
+
+// ---- ticker tape ----
+function renderTape(){
+  const items = TOKENS.map(t=>{
+    const d=DATA[t.ca]||{};
+    const chg=d.chg; const cls=chg==null?"flat":(chg>=0?"up":"down");
+    const arrow=chg==null?"":(chg>=0?"▲":"▼");
+    const chgTxt=chg==null?"·":arrow+" "+Math.abs(chg).toFixed(2)+"%";
+    return `<span class="tk"><span class="tsym">${t.sym}</span><span class="tprice">${fmtPrice(d.price)}</span><span class="tchg ${cls}">${chgTxt}</span></span>`;
+  }).join("");
+  // duplicate for seamless marquee loop
+  $("tape").innerHTML = items + items;
+}
+
+// ============================================================
+// Bubble constellation
+// ============================================================
+const BUBBLES=[];
+function sizeOf(d){ return (d&&d.liq>0)?d.liq:(d&&d.mcap>0?d.mcap*0.15:0); }
+
+function buildBubbles(){
+  arena.querySelectorAll(".bubble").forEach(e=>e.remove());
+  BUBBLES.length=0;
+  const W=arena.clientWidth,H=arena.clientHeight;
+  const mobile=W<600;
+  const n=Math.max(1,TOKENS.length);
+  // Adaptive sizing: with only a few coins, blow the bubbles up to fill the floor.
+  const eqR=Math.sqrt((W*H*0.34)/(n*Math.PI));        // equal-radius fill estimate
+  let maxR=Math.min(eqR*1.45, Math.min(W,H)*0.46);
+  let minR=Math.max(eqR*0.62, mobile?40:54);
+  if(minR>maxR) minR=maxR*0.7;
+  const weights=TOKENS.map(t=>sizeOf(DATA[t.ca]));
+  const maxW=Math.max(1,...weights);
+
+  TOKENS.forEach((t)=>{
+    const d=DATA[t.ca]||{liq:0,price:0,chg:null,mcap:0};
+    const w=sizeOf(d);
+    let r=w>0?(minR+(maxR-minR)*Math.sqrt(w/maxW)):minR;
+    const el=document.createElement("div");
+    const dir=d.chg==null?"flat":(d.chg>=0?"up":"down");
+    el.className="bubble "+dir;
+    el.style.width=el.style.height=(r*2)+"px";
+    const sym=t.sym;
+    // font that keeps the full FART name inside the bubble
+    const fMain=Math.max(9,Math.min(r*0.30,(r*2.5)/sym.length,20));
+    const fChg=Math.max(8,Math.min(r*0.20,13));
+    const img=imgFor(t);
+    el.innerHTML =
+      (img?`<img class="ic" src="${img}" alt="" onerror="this.remove();">`:"")+
+      `<div class="sym" style="font-size:${fMain}px;">${sym}</div>`+
+      `<div class="chg" style="font-size:${fChg}px;">${d.chg==null?"·":(d.chg>=0?"+":"")+d.chg.toFixed(1)+"%"}</div>`;
+    el.addEventListener("click",()=>{ if(!el._dragged) openToken(t); });
+    arena.appendChild(el);
+    const b={ t, el, r,
+      x:r+Math.random()*Math.max(1,W-2*r), y:r+Math.random()*Math.max(1,H-2*r),
+      vx:(Math.random()-0.5)*0.5, vy:(Math.random()-0.5)*0.5 };
+    BUBBLES.push(b); attachDrag(b);
+  });
+  arena.classList.remove("loading");
+  positionAll();
+}
+function positionAll(){ for(const b of BUBBLES) b.el.style.transform=`translate(${b.x-b.r}px,${b.y-b.r}px)`; }
+
+let last=performance.now();
+function tick(now){
+  const dt=Math.min(2,(now-last)/16.67); last=now;
+  const W=arena.clientWidth,H=arena.clientHeight;
+  for(const b of BUBBLES){
+    if(b.dragging) continue;
+    b.x+=b.vx*dt; b.y+=b.vy*dt;
+    b.vx+=(Math.random()-0.5)*0.02; b.vy+=(Math.random()-0.5)*0.02;
+    b.vx*=0.992; b.vy*=0.992;
+    const sp=Math.hypot(b.vx,b.vy),max=1.1; if(sp>max){b.vx=b.vx/sp*max;b.vy=b.vy/sp*max;}
+    if(b.x<b.r){b.x=b.r;b.vx=Math.abs(b.vx);} if(b.x>W-b.r){b.x=W-b.r;b.vx=-Math.abs(b.vx);}
+    if(b.y<b.r){b.y=b.r;b.vy=Math.abs(b.vy);} if(b.y>H-b.r){b.y=H-b.r;b.vy=-Math.abs(b.vy);}
+  }
+  for(let i=0;i<BUBBLES.length;i++) for(let j=i+1;j<BUBBLES.length;j++){
+    const a=BUBBLES[i],c=BUBBLES[j]; let dx=c.x-a.x,dy=c.y-a.y,d=Math.hypot(dx,dy); const min=a.r+c.r+3;
+    if(d>0&&d<min){ const push=(min-d)/d*0.5,ox=dx*push,oy=dy*push;
+      if(!a.dragging){a.x-=ox;a.y-=oy;} if(!c.dragging){c.x+=ox;c.y+=oy;}
+      if(!a.dragging&&!c.dragging){const nx=dx/d,ny=dy/d;a.vx-=nx*0.05;a.vy-=ny*0.05;c.vx+=nx*0.05;c.vy+=ny*0.05;}
+    }
+  }
+  positionAll(); requestAnimationFrame(tick);
+}
+
+function attachDrag(b){
+  const el=b.el; let lastX,lastY,lastT,moved;
+  function point(e){ const r=arena.getBoundingClientRect(); const cx=e.touches?e.touches[0].clientX:e.clientX,cy=e.touches?e.touches[0].clientY:e.clientY; return {x:cx-r.left,y:cy-r.top}; }
+  el.addEventListener("pointerdown",(e)=>{ e.preventDefault(); b.dragging=true; el._dragged=false; moved=0; el.style.zIndex=100; el.setPointerCapture?.(e.pointerId); const p=point(e); lastX=p.x;lastY=p.y;lastT=performance.now(); b._offx=p.x-b.x; b._offy=p.y-b.y; });
+  el.addEventListener("pointermove",(e)=>{ if(!b.dragging) return; const p=point(e); b.x=p.x-b._offx;b.y=p.y-b._offy; moved+=Math.hypot(p.x-lastX,p.y-lastY); const nt=performance.now(),dtt=Math.max(1,nt-lastT); b.vx=(p.x-lastX)/dtt*8;b.vy=(p.y-lastY)/dtt*8; lastX=p.x;lastY=p.y;lastT=nt; positionAll(); });
+  function up(){ if(!b.dragging) return; b.dragging=false; el.style.zIndex=""; if(moved>6){el._dragged=true;setTimeout(()=>el._dragged=false,50);puff(b);} const sp=Math.hypot(b.vx,b.vy),max=2.4; if(sp>max){b.vx=b.vx/sp*max;b.vy=b.vy/sp*max;} }
+  el.addEventListener("pointerup",up); el.addEventListener("pointercancel",up);
+}
+function puff(b){ const p=document.createElement("div"); p.className="puff"; p.textContent="💨"; p.style.left=b.x+"px"; p.style.top=(b.y-b.r)+"px"; arena.appendChild(p); setTimeout(()=>p.remove(),1100); }
+
+// ---- popover ----
+function openToken(t){
+  const d=DATA[t.ca]||{}; const img=imgFor(t);
+  $("popHead").innerHTML =
+    (t.hero?`<div class="ph-emoji">💩</div>`:(img?`<img class="pflag" src="${img}" alt="" onerror="this.outerHTML='<div class=\\'ph-emoji\\'>💨</div>'">`:`<div class="ph-emoji">💨</div>`))+
+    `<div><div class="nm">${t.hero?"$FARTPRINT":t.sym}</div><div class="tk">${t.ca.slice(0,4)}…${t.ca.slice(-4)}</div></div>`;
+  const chg=d.chg, chgCls=chg==null?"":(chg>=0?"up":"down"), chgTxt=chg==null?"—":(chg>=0?"+":"")+chg.toFixed(2)+"%";
+  $("popGrid").innerHTML=`
+    <div class="pop-stat"><div class="pk">Liquidity</div><div class="pv">${fmtUsd(d.liq)}</div></div>
+    <div class="pop-stat"><div class="pk">Market Cap</div><div class="pv">${fmtUsd(d.mcap)}</div></div>
+    <div class="pop-stat"><div class="pk">Price</div><div class="pv">${fmtPrice(d.price)}</div></div>
+    <div class="pop-stat"><div class="pk">24h</div><div class="pv ${chgCls}">${chgTxt}</div></div>`;
+  const tradeUrl=t.hero?t.trade:("https://pump.fun/coin/"+t.ca);
+  let acts=`<a class="pop-trade${t.pool?" alt":""}" href="${tradeUrl}" target="_blank" rel="noopener">Trade ↗</a>`;
+  if(t.pool) acts=`<a class="pop-trade" href="${t.pool}" target="_blank" rel="noopener">⚡ Zap In</a>`+acts;
+  $("popActs").innerHTML=acts;
+  $("popOverlay").classList.add("open");
+}
+function closePop(){ $("popOverlay").classList.remove("open"); }
+$("popClose").addEventListener("click",closePop);
+$("popOverlay").addEventListener("click",(e)=>{ if(e.target===$("popOverlay")) closePop(); });
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closePop(); });
+
+// ---- pools desk ----
+function renderPools(){
+  const pools=TOKENS.filter(t=>t.pool);
+  $("pools").innerHTML=pools.map(t=>{
+    const d=DATA[t.ca]||{}; const img=imgFor(t);
+    const chg=d.chg, chgCls=chg==null?"":(chg>=0?"up":"down"), chgTxt=chg==null?"—":(chg>=0?"+":"")+chg.toFixed(2)+"%";
+    const pic=img?`<img class="pic" src="${img}" alt="" onerror="this.outerHTML='<div class=\\'pic emoji\\'>💨</div>'">`:`<div class="pic emoji">💨</div>`;
+    return `<div class="pool">
+      <div class="ph">${pic}<div><div class="pn">${t.sym}</div><div class="pmeta">${t.ca.slice(0,4)}…${t.ca.slice(-4)} · ${"FART"}/SOL</div></div></div>
+      <div class="pstats">
+        <div class="ps"><div class="pk">TVL / Liquidity</div><div class="pv">${fmtUsd(d.liq)}</div></div>
+        <div class="ps"><div class="pk">Market Cap</div><div class="pv">${fmtUsd(d.mcap)}</div></div>
+        <div class="ps"><div class="pk">Price</div><div class="pv">${fmtPrice(d.price)}</div></div>
+        <div class="ps"><div class="pk">24h</div><div class="pv ${chgCls}">${chgTxt}</div></div>
+      </div>
+      <div class="pacts">
+        <a class="zap" href="${t.pool}" target="_blank" rel="noopener">⚡ Zap In</a>
+        <a class="buy" href="https://pump.fun/coin/${t.ca}" target="_blank" rel="noopener">Buy</a>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ---- index stats / board ----
+function renderStats(){
+  let totalLiq=0,totalMcap=0,moves=[],top=null;
+  for(const t of TOKENS){
+    const d=DATA[t.ca]; if(!d) continue;
+    totalLiq+=d.liq||0; totalMcap+=d.mcap||0;
+    if(d.chg!=null) moves.push(d.chg);
+    const w=sizeOf(d); if(w>0&&(!top||w>top.w)) top={sym:t.sym,w};
+  }
+  $("ixLiq").textContent=fmtUsd(totalLiq);
+  $("ixCount").textContent=TOKENS.length;
+  const avg=moves.length?moves.reduce((a,b)=>a+b,0)/moves.length:null;
+  const mv=$("ixMove"); mv.textContent=avg==null?"—":(avg>=0?"+":"")+avg.toFixed(2)+"%"; mv.className="v "+(avg==null?"":(avg>=0?"green":"red"));
+  $("ixTop").textContent=top?(top.sym==="FARTPRINT"?"$FP":top.sym):"—";
+  // index board: total book value of the constellation
+  $("boardVal").textContent=fmtUsd(totalLiq+totalMcap);
+  const bd=$("boardDelta");
+  if(avg==null){ bd.textContent="— 24h"; bd.className="delta"; }
+  else { bd.textContent=(avg>=0?"▲ +":"▼ ")+avg.toFixed(2)+"% · 24h"; bd.className="delta "+(avg>=0?"up":"down"); }
+}
+
+// ---- coin art + ticker from Printr (source of truth for the derivatives) ----
+async function fetchPrintrImages(){
+  await Promise.all(TOKENS.map(async (t)=>{
+    try{
+      const r=await fetch(PRINTR_PROXY+"?path="+encodeURIComponent(`/tokens/${SOL_CHAIN}:${t.ca}`));
+      if(!r.ok) return;
+      const j=await r.json();
+      const img=j.imageUrl||j.image_url||j.imageUri||j.image||(j.metadata&&j.metadata.image);
+      if(img) _img[t.ca]=img;   // Printr wins over any DEX/pump.fun art
+      if(!t.sym){
+        const s=j.symbol||j.ticker||(j.metadata&&j.metadata.symbol);
+        if(s) t.sym=String(s).toUpperCase();
+      }
+    }catch(_){}
+  }));
+  TOKENS.forEach(t=>{ if(!t.sym) t.sym="FART"; });   // fallback if Printr is unreachable
+}
+
+// ---- boot ----
+async function load(){
+  DATA=await fetchData();
+  await fetchPrintrImages();
+  renderTape(); renderStats(); renderPools(); buildBubbles();
+}
+load();
+requestAnimationFrame(tick);
+setInterval(async ()=>{
+  DATA=await fetchData();
+  renderTape(); renderStats(); renderPools();
+  for(const b of BUBBLES){
+    const d=DATA[b.t.ca]; if(!d) continue;
+    const dir=d.chg==null?"flat":(d.chg>=0?"up":"down");
+    b.el.className="bubble "+dir;
+    const c=b.el.querySelector(".chg"); if(c) c.textContent=d.chg==null?"·":(d.chg>=0?"+":"")+d.chg.toFixed(1)+"%";
+  }
+}, 45000);
+
+window.addEventListener("resize",()=>{ const W=arena.clientWidth,H=arena.clientHeight; for(const b of BUBBLES){ b.x=Math.min(Math.max(b.r,b.x),W-b.r); b.y=Math.min(Math.max(b.r,b.y),H-b.r); } });
+</script>
+</body>
+</html>
