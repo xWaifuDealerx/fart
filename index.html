@@ -93,7 +93,7 @@
   /* ===== NAV ===== */
   .nav {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 40px;
     font-size: 13px;
@@ -149,6 +149,14 @@
     vertical-align: middle;
     animation: pulse 2s infinite;
   }
+  .hero .pre-title .sol-logo {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    margin-right: 7px;
+    vertical-align: -2px;
+  }
+  .hero .pre-title .sol-logo svg { width: 100%; height: 100%; display: block; }
   .hero .brand {
     font-family: 'Orbitron', 'JetBrains Mono', 'Space Grotesk', sans-serif;
     font-size: clamp(44px, 8vw, 88px);
@@ -802,6 +810,9 @@
     letter-spacing: -0.6px; margin-bottom: 14px; color: white;
   }
   .stake-callout h2 .accent { color: #1ec173; }
+  /* mobile-only forced line break inside callout headlines */
+  .m-br { display: none; }
+  @media (max-width: 760px) { .m-br { display: inline; } }
   .stake-callout p {
     color: rgba(255,255,255,0.72); font-size: 15px; line-height: 1.7; max-width: 520px;
   }
@@ -1421,7 +1432,6 @@
 
   <!-- NAV -->
   <nav class="nav">
-    <div class="brand-mark"><span class="dot"></span>FARTPRINT</div>
     <div class="links">
       <a href="#apps">Apps</a>
       <a href="#lore">Lore</a>
@@ -1438,7 +1448,7 @@
 
   <!-- HERO -->
   <header class="hero">
-    <div class="pre-title"><span class="dot"></span>LIVE ON SOLANA</div>
+    <div class="pre-title"><span class="sol-logo" aria-hidden="true"><svg viewBox="0 0 397.7 311.7" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="solGrad" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#00ffa3"/><stop offset="1" stop-color="#dc1fff"/></linearGradient></defs><path fill="url(#solGrad)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGrad)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGrad)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1z"/></svg></span>LIVE ON SOLANA</div>
     <h1 class="brand">
       <span class="brand-logo" aria-label="$FARTPRINT logo">
         <!-- Drop logo.png into outputs to override; this SVG renders as fallback. -->
@@ -1534,7 +1544,7 @@
         </svg>
         <span class="gloss"></span>
       </span>
-      <span class="brand-text">FART<span class="accent">PRINT</span></span>
+      <span class="brand-text">$FART<span class="accent">PRINT</span></span>
     </h1>
     <div class="tagline">The Ecosystem</div>
     <div class="slogan">the printr has a fat ass. take a whiff.</div>
@@ -1819,7 +1829,7 @@
   <section class="stake-callout" id="staking">
     <div class="stake-info">
       <span class="stake-eyebrow">Proof-of-Burn Staking · Printr</span>
-      <h2>Stake $FARTPRINT, <span class="accent">earn the fees</span></h2>
+      <h2>Stake $FARTPRINT, <br class="m-br"><span class="accent">earn the fees</span></h2>
       <p>
         Every trade across the ecosystem pays a fee — and 100% of it flows to stakers. Lock your
         $FARTPRINT on Printr and you earn your share of trading fees from the whole $FARTPRINT
@@ -1850,7 +1860,7 @@
   <section class="burn-callout" id="burning">
     <div class="burn-info">
       <span class="burn-eyebrow">Proof-of-Burn · Deflationary</span>
-      <h2>$FARTPRINT gets <span class="accent">burned</span> forever</h2>
+      <h2>$FARTPRINT gets <br class="m-br"><span class="accent">burned</span> forever</h2>
       <p>
         Every app in the ecosystem buys back and incinerates $FARTPRINT. Each burn is permanent,
         on-chain, and irreversible — supply only goes down. The counter below reads the live
