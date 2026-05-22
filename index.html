@@ -2279,7 +2279,9 @@ function renderBurn(){
   if(BURNED != null){
     if(tot) tot.textContent = fmtAmount(BURNED);
     if(pct) pct.textContent = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
-    if(usd) usd.textContent = (FP_PRICE != null) ? fmtUsd(BURNED * FP_PRICE) : "$—";
+    if(usd) usd.textContent = (FP_PRICE != null)
+      ? "$" + Math.round(BURNED * FP_PRICE).toLocaleString(undefined, { maximumFractionDigits: 0 })
+      : "$—";
   }
 }
 
