@@ -716,6 +716,31 @@
   }
   .burn-box .burn-tok { font-size: 14px; color: var(--text-tertiary); font-weight: 700; }
   .burn-box .burn-usd { font-size: 13px; color: var(--text-secondary); margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+  .burn-log { margin-top: 18px; border-top: 1px solid rgba(46,224,107,0.18); padding-top: 16px; text-align: left; }
+  .burn-log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .burn-log-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.1px; color: var(--text-tertiary); font-weight: 700; }
+  .burn-log-toggle {
+    background: rgba(46,224,107,0.12); border: 1px solid rgba(46,224,107,0.30); color: var(--pitch-bright);
+    font-size: 11px; font-weight: 700; padding: 5px 12px; border-radius: 100px; cursor: pointer;
+    transition: all 0.18s; font-family: inherit;
+  }
+  .burn-log-toggle:hover { background: rgba(46,224,107,0.24); color: #fff; }
+  .burn-log-rows { display: grid; gap: 7px; }
+  .burn-row {
+    display: flex; align-items: center; gap: 11px; text-decoration: none;
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 11px; padding: 10px 13px; transition: all 0.18s;
+  }
+  .burn-row:hover { background: rgba(46,224,107,0.08); border-color: rgba(46,224,107,0.28); }
+  .burn-row .br-flame { font-size: 15px; flex: 0 0 auto; }
+  .burn-row .br-mid { flex: 1 1 auto; min-width: 0; }
+  .burn-row .br-app { font-weight: 700; color: var(--text); font-size: 13px; }
+  .burn-row .br-date { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+  .burn-row .br-amt { font-family: 'Orbitron', sans-serif; font-weight: 800; color: var(--pitch-bright); font-size: 14px; text-align: right; flex: 0 0 auto; white-space: nowrap; }
+  .burn-row .br-amt small { display: block; font-size: 10px; color: var(--text-tertiary); font-family: 'Inter',sans-serif; font-weight: 600; }
+  .burn-row .br-go { color: var(--text-tertiary); font-size: 12px; flex: 0 0 auto; }
+  .burn-row.hidden { display: none; }
+  .burn-empty { color: var(--text-tertiary); font-size: 12px; padding: 4px 2px; }
 
   /* ===== TOKENS RECEIVED POPUP ===== */
   .recv-pop { position: fixed; inset: 0; z-index: 2100; background: rgba(5,10,20,0.6); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; padding: 20px; }
@@ -931,6 +956,7 @@
     .disclaimer { padding: 14px 16px; gap: 12px; }
   }
 </style>
+<script src="burns.js"></script>
 </head>
 <body>
 
@@ -1012,6 +1038,15 @@
       <div class="burn-tok">$FARTPRINT</div>
     </div>
     <div class="burn-usd" id="burnUsd">$0 · updating soon</div>
+    <div class="burn-log">
+      <div class="burn-log-head">
+        <span class="burn-log-title">Burn transactions</span>
+        <button class="burn-log-toggle" id="burnLogToggle" style="display:none;">View all</button>
+      </div>
+      <div class="burn-log-rows" id="burnLogRows">
+        <div class="burn-empty">Loading burns…</div>
+      </div>
+    </div>
   </div>
 
   <!-- MAIN + SIDEBAR -->
@@ -1413,16 +1448,78 @@ function fmtPrice(n){
   return "$" + num.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-// ===== Fart Cup buyback-and-burn total =====
-const BURNED_FARTPRINT = 0;   // total $FARTPRINT Fart Cup has bought back & burned — bump this as it grows
+// ===== Fart Cup buyback-and-burn total (live, per-transaction) =====
+// Reads the shared burn ledger (burns.js). Each burn amount is pulled
+// straight off the chain, so this stays exact as new burns are logged.
 let FP_PRICE = null;
+let BURNED_FARTPRINT = 0;
+let CUP_BURNS = [];
+let BURN_EXPANDED = false;
+
+function fmtTok(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num < 1e6) return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if(num < 1e9) return (num / 1e6).toFixed(2) + "M";
+  return (num / 1e9).toFixed(2) + "B";
+}
+function burnDate(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  if(isNaN(d)) return ts;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
 function renderBurn(){
   const amtEl = $("burnAmt"), usdEl = $("burnUsd");
-  if(amtEl) amtEl.textContent = BURNED_FARTPRINT > 0 ? Number(BURNED_FARTPRINT).toLocaleString() : "0";
+  if(amtEl) amtEl.textContent = BURNED_FARTPRINT > 0 ? fmtTok(BURNED_FARTPRINT) : "0";
   if(usdEl) usdEl.textContent = (BURNED_FARTPRINT > 0 && FP_PRICE)
     ? "≈ " + fmtUsd(BURNED_FARTPRINT * FP_PRICE) + " burned"
-    : "$0 · updating soon";
+    : (BURNED_FARTPRINT > 0 ? "burned on-chain" : "$0 · updating soon");
 }
+
+function renderBurnLog(){
+  const rows = $("burnLogRows"), toggle = $("burnLogToggle");
+  if(!rows) return;
+  if(!CUP_BURNS.length){
+    rows.innerHTML = '<div class="burn-empty">No burns recorded yet.</div>';
+    if(toggle) toggle.style.display = "none";
+    return;
+  }
+  const VISIBLE = 3;
+  rows.innerHTML = CUP_BURNS.map((r, i) => {
+    const hide = (!BURN_EXPANDED && i >= VISIBLE) ? " hidden" : "";
+    const amt = (r.amount != null) ? fmtTok(r.amount) : "—";
+    return `<a class="burn-row${hide}" href="${r.url}" target="_blank" rel="noopener">
+      <span class="br-flame">🔥</span>
+      <span class="br-mid"><div class="br-app">${escFC(r.app)}</div><div class="br-date">${burnDate(r.ts)}</div></span>
+      <span class="br-amt">${amt}<small>$FARTPRINT</small></span>
+      <span class="br-go">↗</span>
+    </a>`;
+  }).join("");
+  if(toggle){
+    if(CUP_BURNS.length > VISIBLE){
+      toggle.style.display = "";
+      toggle.textContent = BURN_EXPANDED ? "Show less" : ("View all " + CUP_BURNS.length);
+    } else { toggle.style.display = "none"; }
+  }
+}
+
+async function loadBurns(){
+  let recs = [];
+  try{ recs = await FartBurns.load(); } catch(_){}
+  CUP_BURNS = recs.filter(r => r.appKey === "cup" || r.app === "Fart Cup");
+  BURNED_FARTPRINT = CUP_BURNS.reduce((s, r) => s + (r.amount || 0), 0);
+  renderBurn();
+  renderBurnLog();
+}
+
+document.addEventListener("click", (e) => {
+  if(e.target && e.target.id === "burnLogToggle"){
+    BURN_EXPANDED = !BURN_EXPANDED;
+    renderBurnLog();
+  }
+});
 
 async function loadFpPrice(){
   const el = $("fpPriceVal");
@@ -1451,6 +1548,8 @@ refreshMarketCaps();
 setInterval(refreshMarketCaps, 60000);
 loadFpPrice();
 setInterval(loadFpPrice, 60000);
+loadBurns();
+setInterval(loadBurns, 60000);
 
 // ===== Sidebar: World Cup news + live matches =====
 function escFC(s){ return String(s||"").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
