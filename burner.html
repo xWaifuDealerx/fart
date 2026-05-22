@@ -615,6 +615,7 @@
   }
   @keyframes blink { to { visibility: hidden; } }
 </style>
+<script src="burns.js"></script>
 </head>
 <body>
 <canvas id="matrix"></canvas>
@@ -1157,9 +1158,11 @@ async function loadBurns(){
   } catch(e){ console.warn("burn registry load failed", e); }
 
   const local = readLocalBurns();
+  // Seeded FartBurner burns from the shared ledger (burns.js)
+  const seeds = (window.FartBurns && FartBurns.burnerRecords) ? FartBurns.burnerRecords() : [];
   const all = [];
   const seen = new Set();
-  for(const r of [...remote, ...local]){
+  for(const r of [...remote, ...local, ...seeds]){
     if(!r || !r.tx || !r.a) continue;
     if(seen.has(r.tx)) continue;
     seen.add(r.tx);
@@ -1237,15 +1240,21 @@ function renderRecentBurns(){
     root.innerHTML = `<div class="empty">No burns yet. <br><span style="color:var(--orange); font-style:normal; font-weight:700;">Be the first to throw $FARTPRINT into the fire.</span></div>`;
     return;
   }
-  const rows = burns.map((b, i) => `
+  const rows = burns.map((b, i) => {
+    const isSeed = b.seed || (typeof b.tx === "string" && b.tx.indexOf("seed-") === 0);
+    const txCell = isSeed
+      ? `<span style="color:var(--red-dim);">on-chain</span>`
+      : `<a href="https://solscan.io/tx/${b.tx}" target="_blank" rel="noopener">${shortAddr(b.tx, 5)}</a>`;
+    return `
     <tr>
       <td class="rank">${String(i+1).padStart(2,"0")}</td>
       <td class="addr"><a href="https://solscan.io/account/${b.w}" target="_blank" rel="noopener">${shortAddr(b.w, 5)}</a></td>
       <td>${fmt(b.a)}</td>
       <td>${ago(b.ts)}</td>
-      <td class="addr"><a href="https://solscan.io/tx/${b.tx}" target="_blank" rel="noopener">${shortAddr(b.tx, 5)}</a></td>
+      <td class="addr">${txCell}</td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 
   root.innerHTML = `
     <table class="t">

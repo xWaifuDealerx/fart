@@ -2336,8 +2336,10 @@ function renderBurn(){
   }
 }
 
-// Per-transaction burn ledger (shared burns.js). Each row's amount is read
-// live from the chain. Total burned = sum of every logged burn.
+// Ecosystem burn log (shared burns.js). The headline total is the full
+// on-chain deflation (1B launch supply − current supply). The list itemises
+// the burns we can attribute — Fart Cup buybacks, FartBurner wallet burns —
+// plus an "Incineration Burn" row for everything torched at launch.
 let BURN_EXPANDED = false;
 let BURN_RECORDS = [];
 
@@ -2347,6 +2349,7 @@ function burnDate(ts){
   if(isNaN(d)) return ts;
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
+function shortW(a){ return a ? a.slice(0,4) + "…" + a.slice(-4) : ""; }
 
 function renderBurnLog(){
   const rows = document.getElementById("burnLogRows");
@@ -2357,15 +2360,16 @@ function renderBurnLog(){
     if(toggle) toggle.style.display = "none";
     return;
   }
-  const VISIBLE = 3;
+  const VISIBLE = 4;
   rows.innerHTML = BURN_RECORDS.map((r, i) => {
     const hide = (!BURN_EXPANDED && i >= VISIBLE) ? " hidden" : "";
     const amt = (r.amount != null) ? fmtBurn(r.amount) : "—";
+    const sub = r.sub ? (r.ts ? `${r.sub} · ${burnDate(r.ts)}` : r.sub) : burnDate(r.ts);
     return `<a class="burn-row${hide}" href="${r.url}" target="_blank" rel="noopener">
       <span class="br-flame">🔥</span>
       <span class="br-mid">
         <div class="br-app">${r.app}</div>
-        <div class="br-date">${burnDate(r.ts)}</div>
+        <div class="br-date">${sub}</div>
       </span>
       <span class="br-amt">${amt}<small>$FARTPRINT</small></span>
       <span class="br-go">↗</span>
@@ -2382,10 +2386,28 @@ function renderBurnLog(){
 }
 
 async function loadBurned(){
-  try{
-    BURN_RECORDS = await FartBurns.load();
-  } catch(_){ BURN_RECORDS = []; }
-  BURNED = BURN_RECORDS.reduce((s, r) => s + (r.amount || 0), 0);
+  let cup = [];
+  try{ cup = await FartBurns.load(); } catch(_){}
+  const burner = (window.FartBurns && FartBurns.burnerRecords) ? FartBurns.burnerRecords() : [];
+  const tracked = cup.reduce((s, r) => s + (r.amount || 0), 0)
+                + burner.reduce((s, r) => s + (r.a || 0), 0);
+
+  // Full deflation from the chain: 1B launch supply − current supply.
+  let supply = null;
+  try{ supply = await FartBurns.getSupply(); } catch(_){}
+  const missing = (supply != null) ? Math.max(0, INITIAL_SUPPLY - supply) : null;
+  const incineration = (missing != null) ? Math.max(0, missing - tracked) : null;
+  BURNED = (missing != null) ? missing : tracked;
+
+  const list = [];
+  cup.forEach(r => list.push({ app: r.app, ts: r.ts, amount: r.amount, url: r.url, sub: null }));
+  burner.forEach(s => list.push({ app: "FartBurner", ts: s.tsISO, amount: s.a, url: s.url, sub: shortW(s.w) }));
+  list.sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
+  if(incineration != null && incineration > 0){
+    list.push({ app: "Incineration Burn", ts: null, amount: incineration, sub: "Burned at launch",
+                url: "https://solscan.io/token/" + TOKEN });
+  }
+  BURN_RECORDS = list;
   renderBurn();
   renderBurnLog();
 }

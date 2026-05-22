@@ -17,13 +17,15 @@
 (function () {
   const MINT = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
   const DECIMALS = 6;
+  const INITIAL_SUPPLY = 1e9;   // 1,000,000,000 — the mint's launch supply
   const RPCS = [
     "https://api.mainnet-beta.solana.com",
     "https://solana-rpc.publicnode.com",
     "https://rpc.ankr.com/solana",
   ];
 
-  // ── The ledger. Newest or oldest order doesn't matter; load() sorts. ──
+  // ── Transaction-style burns (Fart Cup buyback & burn, etc.) ──
+  // Newest or oldest order doesn't matter; load() sorts.
   const BURNS = [
     {
       sig: "Jn6DBfcEgXmRWzNmD2KZnUJaqtPtGxfEXeVJhW2ENkjXhJ3oreeJnLPvtTPDw6W71HugFmDj3FemUfEQKFiKcqT",
@@ -32,6 +34,17 @@
       ts: "2026-05-22",
       amount: 704111.28,   // exact burned amount (pinned; authoritative)
     },
+  ];
+
+  // ── FartBurner burns, recorded by the wallet that burned. These don't
+  // come with tx signatures, so they're seeded here and merged into the
+  // FartBurner leaderboard (burner.html) and the FartWheel totals. ──
+  const BURNER_SEEDS = [
+    { w: "6QFGLogbnL3e2JzCdwwqSRyNsiuF1bjibJNysXVjX3Sd", a: 5295,  ts: "2026-04-29" },
+    { w: "AGxQ89MaCn4rYcPdxpLXYZamXReVsoJjpZxuHXQggn7g", a: 53420, ts: "2026-04-29" },
+    { w: "AcVYYQ2E4SRHuZbvRTAjfs27fR8o83Mqqt4c2vrrykwC", a: 63911, ts: "2026-04-29" },
+    { w: "HikiUM8x7KUGS8x3B2v6a6pmGd8QtANCZdE8GLsSR2Am", a: 51899, ts: "2026-04-29" },
+    { w: "3KcPSJ8ouE7H1feoWHmhDwXhLnXhpxP6R6713uytFmBM", a: 1335,  ts: "2026-05-15" },
   ];
 
   async function rpc(method, params) {
@@ -149,5 +162,37 @@
     return r.reduce((s, x) => s + (x.amount || 0), 0);
   }
 
-  window.FartBurns = { MINT, DECIMALS, BURNS, load, total, getBurnAmount };
+  // Current circulating supply (uiAmount) from the chain.
+  async function getSupply() {
+    try {
+      const r = await rpc("getTokenSupply", [MINT]);
+      const v = r && r.value ? r.value.uiAmount : null;
+      return (v != null && isFinite(v)) ? Number(v) : null;
+    } catch (_) { return null; }
+  }
+
+  // FartBurner seed burns, normalised to the burner.html record shape
+  // ({ w, a, ts(ms), tx, seed }) plus a couple of display helpers.
+  function burnerRecords() {
+    return BURNER_SEEDS.map((s, i) => ({
+      w: s.w,
+      a: Number(s.a),
+      ts: Date.parse(s.ts),
+      tsISO: s.ts,
+      tx: "seed-burner-" + i,
+      seed: true,
+      app: "FartBurner",
+      appKey: "burner",
+      url: "https://solscan.io/account/" + s.w,
+    }));
+  }
+
+  function burnerTotal() {
+    return BURNER_SEEDS.reduce((s, x) => s + Number(x.a || 0), 0);
+  }
+
+  window.FartBurns = {
+    MINT, DECIMALS, INITIAL_SUPPLY, BURNS, BURNER_SEEDS,
+    load, total, getBurnAmount, getSupply, burnerRecords, burnerTotal,
+  };
 })();
