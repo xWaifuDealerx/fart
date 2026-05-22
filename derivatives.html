@@ -1915,7 +1915,7 @@ function renderGalleryCard(rec){
   } else {
     const formatted = fmtMcap(rec._mcap);
     if(formatted){
-      mcapEl = `<span class="mcap-val">${formatted}</span>`;
+      mcapEl = `<span class="mcap-val">${rec._mcapEstimated ? "≈ " : ""}${formatted}</span>`;
     } else if(rec._grad != null){
       mcapEl = `<span class="mcap-val none">${rec._grad.toFixed(0)}% to graduation</span>`;
     } else {
@@ -1989,22 +1989,56 @@ async function attachMarketCaps(records){
     r._mcapLoaded = true;
   }
 
-  // Printr does NOT expose a live price / market cap — only bonding-curve
-  // parameters and a graduation percentage. So for tokens with no DEX market
-  // cap yet (still on the curve), pull their graduation progress from Printr
-  // and show that instead.
-  const onCurve = withMa.filter(r => !(r._mcap > 0) && r.tid);
+  // Tokens with no DEX market cap yet are still on the bonding curve, so pull
+  // a market cap straight from the launchpad instead.
+  const num = (v) => {
+    if(typeof v === "number" && isFinite(v)) return v;
+    if(typeof v === "string" && v.trim() !== "" && !isNaN(+v)) return +v;
+    return null;
+  };
+  const pick = (o, keys) => { if(!o) return null; for(const k of keys){ const v = num(o[k]); if(v != null) return v; } return null; };
+
+  const onCurve = withMa.filter(r => !(r._mcap > 0));
   await Promise.all(onCurve.map(async (r) => {
+    // pump.fun derivatives expose a live USD market cap on the curve.
+    if(r.lp === "pump" && r.ma){
+      try{
+        const resp = await fetch(`/api/pumpfun?mint=${r.ma}`);
+        if(resp.ok){
+          const j = await resp.json();
+          const v = num(j && j.usd_market_cap);
+          if(v != null && v > 0){ r._mcap = v; return; }
+        }
+      } catch(_){}
+    }
+
+    // Printr derivatives: use a reported market cap if present, otherwise
+    // derive one from bonding-curve progress (graduation completion × the
+    // graduation threshold, which is the target market cap in USD).
+    if(!r.tid) return;
     try{
       const resp = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${r.tid}/deployments`));
       if(!resp.ok) return;
       const j = await resp.json();
-      let g = null;
-      for(const d of (j.deployments || [])){
-        const p = d.graduation_completion_percent;
-        if(typeof p === "number" && (g == null || p > g)) g = p;
+      const deps = Array.isArray(j) ? j : (j.deployments || []);
+      let mc = null, g = null, thr = null;
+      for(const d of deps){
+        const m = pick(d, ["market_cap_usd","marketCapUsd","current_market_cap_usd","currentMarketCapUsd","market_cap","marketCap","mcap_usd","mcap"])
+               ?? pick(d && d.stats, ["market_cap_usd","marketCapUsd","market_cap","marketCap"]);
+        if(m != null && (mc == null || m > mc)) mc = m;
+        const p = pick(d, ["graduation_completion_percent","graduationCompletionPercent"]);
+        if(p != null && (g == null || p > g)) g = p;
+        const t = pick(d, ["graduation_threshold_per_chain_usd","graduation_threshold_usd","graduationThresholdUsd","graduation_threshold"]);
+        if(t != null && (thr == null || t > thr)) thr = t;
       }
-      if(g != null) r._grad = g <= 1 ? g * 100 : g;
+      if(mc != null && mc > 0){
+        r._mcap = mc;
+      } else if(g != null){
+        r._grad = g <= 1 ? g * 100 : g;          // 0..100 for the label
+        const frac = g <= 1 ? g : g / 100;        // 0..1
+        const est = frac * (thr || 69000);        // target market cap in USD
+        if(est > 0){ r._mcap = est; r._mcapEstimated = true; }
+      }
     } catch(_){}
   }));
 }
