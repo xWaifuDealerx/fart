@@ -1742,14 +1742,28 @@ const SEED_MINTS = [
   "3XTQFSvfBkNZZ5k26xD5nHex5CUtAyC9X5ckjMFHbrrr",
   "8Etxo4Z6ixYpu7kh8xgX67M5chwRkqxXwjXRi5rcbrrr",
   "12519nzTv29udANTwk1RthGWcjpHaKyYunuPetmqbrrr",
+  // Newly minted derivatives
+  "EoBaF6Kj8jSQQYzE2psw151VTkoEsmtstUQ1xZMtbrrr",
+  "CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr",
+  "4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr",
+  "ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr",
+  "2mDz9haqq51iFTQnHeVnABGcUCpwdVuivWEdR1SMbrrr",
+  "3bRN6aEr82qw95P7vVwwyFBPnN5Z3eDu9HMrtk99brrr",
+  "BCwvw9XJCzA8WixpMH2tjQxePZRq92vu2PAyo78obrrr",
+  "4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr",
+  "0xa8a31cf9c7754ea3a7de3dc9ccf65cc919d3064eccb6046627061f7f85bd3df6",
+  "0xd1f813e670765bf55d92f981a4f1cee55c82d1a6751eb6209bac191f8337a0b4",
 ];
 
 async function loadSeedTokens(){
   const out = [];
   await Promise.all(SEED_MINTS.map(async (ma) => {
     try{
-      const caip = `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:${ma}`;
-      const r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${caip}`));
+      // Solana mints get wrapped in a CAIP id; Printr token ids (0x…) are used as-is.
+      const idPath = /^0x[0-9a-fA-F]+$/.test(ma)
+        ? ma
+        : `solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:${ma}`;
+      const r = await fetch(PRINTR_PROXY + "?path=" + encodeURIComponent(`/tokens/${idPath}`));
       if(!r.ok) return;
       const j = await r.json();
       let creator = "";
