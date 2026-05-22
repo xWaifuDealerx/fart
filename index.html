@@ -826,6 +826,69 @@
     .stake-callout { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
   }
 
+  /* ===== BURN CALLOUT (red, deflationary) ===== */
+  .burn-callout {
+    margin-top: 28px;
+    padding: 44px;
+    background: linear-gradient(135deg, #2a0707 0%, #4d0f0f 50%, #7a1a14 100%);
+    border-radius: 28px;
+    color: white;
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 40px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(180,30,20,0.30);
+  }
+  .burn-callout::before {
+    content: "";
+    position: absolute;
+    top: -120px; right: -100px;
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(255,90,60,0.30), transparent 65%);
+    pointer-events: none;
+    animation: burnPulse 4s ease-in-out infinite;
+  }
+  @keyframes burnPulse { 0%,100% { opacity: 0.7; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+  .burn-info { position: relative; z-index: 1; }
+  .burn-eyebrow {
+    display: inline-block;
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #ffb199; font-weight: 700; margin-bottom: 12px;
+    background: rgba(255,90,60,0.12); border: 1px solid rgba(255,90,60,0.32);
+    padding: 4px 10px; border-radius: 100px;
+  }
+  .burn-callout h2 {
+    font-size: clamp(26px, 3vw, 34px); font-weight: 700;
+    letter-spacing: -0.6px; margin-bottom: 14px; color: white;
+  }
+  .burn-callout h2 .accent { color: #ff6a4d; }
+  .burn-callout p {
+    color: rgba(255,255,255,0.74); font-size: 15px; line-height: 1.7; max-width: 520px;
+  }
+  .burn-cta {
+    display: inline-block; margin-top: 22px;
+    background: #ff5a3c; color: #2a0707; font-weight: 700;
+    padding: 11px 26px; border-radius: 100px; text-decoration: none;
+    font-size: 14px; letter-spacing: 0.3px; transition: all 0.2s;
+    box-shadow: 0 4px 14px rgba(255,90,60,0.42);
+  }
+  .burn-cta:hover { background: white; transform: translateY(-1px); }
+  .burn-stats { display: grid; gap: 12px; position: relative; z-index: 1; }
+  .burn-stat {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px; padding: 16px 18px;
+  }
+  .burn-stat .sk { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.55); font-weight: 600; }
+  .burn-stat .sv { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 800; color: white; line-height: 1.1; margin-top: 4px; }
+  .burn-stat .sv.accent { color: #ff6a4d; }
+  .burn-stat .sk2 { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  @media (max-width: 760px) {
+    .burn-callout { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
+  }
+
   /* ===== CINEMATIC BG + SMOOTH SCROLL ===== */
   #bg-canvas {
     position: fixed; inset: 0; width: 100%; height: 100%;
@@ -1745,6 +1808,37 @@
     </div>
   </section>
 
+  <!-- BURN CALLOUT -->
+  <section class="burn-callout" id="burning">
+    <div class="burn-info">
+      <span class="burn-eyebrow">Proof-of-Burn · Deflationary</span>
+      <h2>$FARTPRINT gets <span class="accent">burned</span> forever</h2>
+      <p>
+        Every app in the ecosystem buys back and incinerates $FARTPRINT. Each burn is permanent,
+        on-chain, and irreversible — supply only goes down. The counter below reads the live
+        on-chain supply, so the burned total updates the moment tokens hit the fire.
+      </p>
+      <a class="burn-cta" href="fartwheel.html">See the FartWheel ↗</a>
+    </div>
+    <div class="burn-stats">
+      <div class="burn-stat">
+        <div class="sk">Total Burned</div>
+        <div class="sv accent" id="burnTotalBig">—</div>
+        <div class="sk2">$FARTPRINT incinerated</div>
+      </div>
+      <div class="burn-stat">
+        <div class="sk">Value Burned</div>
+        <div class="sv" id="burnUsdBig">—</div>
+        <div class="sk2">at current price</div>
+      </div>
+      <div class="burn-stat">
+        <div class="sk">Supply Burned</div>
+        <div class="sv" id="burnPctBig">—</div>
+        <div class="sk2">of initial 1B supply</div>
+      </div>
+    </div>
+  </section>
+
   <!-- BUY $FARTPRINT -->
   <div class="section-header" id="buy">
     <h2>Buy $FARTPRINT</h2>
@@ -2088,6 +2182,7 @@ async function loadTicker(){
     if(!pairs.length) return;
     const m = pairs[0];
     const price = parseFloat(m.priceUsd);
+    if(price && isFinite(price)){ FP_PRICE = price; renderBurn(); }
     const mcap  = m.marketCap || m.fdv;
     // 24h change: prefer the deepest pool, but fall back to any pool that
     // actually reports a 24h figure (the top pool sometimes leaves it blank).
@@ -2169,6 +2264,37 @@ async function loadStaked(){
   const ab = document.getElementById("stakeAmtBig");  if(ab) ab.textContent = (staked != null ? fmtAmount(staked) : "—");
 }
 
+// ===== Burn stats (live from Solana RPC) =====
+// $FARTPRINT launched with a fixed 1B supply. Anything missing from the
+// live on-chain supply has been permanently burned, so:
+//   burned = INITIAL_SUPPLY − current supply.
+const INITIAL_SUPPLY = 1_000_000_000;
+let FP_PRICE = null;     // set by loadTicker
+let BURNED   = null;     // set by loadBurned
+
+function renderBurn(){
+  const tot = document.getElementById("burnTotalBig");
+  const usd = document.getElementById("burnUsdBig");
+  const pct = document.getElementById("burnPctBig");
+  if(BURNED != null){
+    if(tot) tot.textContent = fmtAmount(BURNED);
+    if(pct) pct.textContent = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
+    if(usd) usd.textContent = (FP_PRICE != null) ? fmtUsd(BURNED * FP_PRICE) : "$—";
+  }
+}
+
+async function loadBurned(){
+  let supply = null;
+  try{
+    const sup = await rpc("getTokenSupply", [TOKEN]);
+    supply = sup?.value?.uiAmount ?? null;
+  } catch(_){}
+  if(supply != null && isFinite(supply)){
+    BURNED = Math.max(0, INITIAL_SUPPLY - supply);
+  }
+  renderBurn();
+}
+
 function copyCA(e){
   e?.preventDefault?.();
   e?.stopPropagation?.();
@@ -2206,8 +2332,10 @@ document.querySelectorAll('.app-btn.disabled, .app-btn.classified').forEach(btn 
 
 loadTicker();
 loadStaked();
+loadBurned();
 setInterval(loadTicker, 30000);
 setInterval(loadStaked, 30000);
+setInterval(loadBurned, 30000);
 
 // ============================================================
 // Global Phantom wallet + per-app preview modals with reviews
@@ -2466,6 +2594,9 @@ const FARTCUP_COINS = [
   { sym:"FARTAUT", code:"at", ca:"5HMB6RG4P3ur2wBmoF9ti5ZsQvaV9BvG3DUQFK3Ppump" },
   { sym:"FARTNZL", code:"nz", ca:"95FU117dd6s8QRJHqDCdfonxWSi2SZpQ4kaMYn57pump" },
   { sym:"FARTURU", code:"uy", ca:"6W9CUECPQeQh9jNVUY54UZDPzApW57X33PZd83fhpump" },
+  { sym:"FARTCOL", code:"co", ca:"7ws9Rts7o8qWzn9r13C8XFo9GWPBDahdFjXoA74gpump" },
+  { sym:"FARTUSA", code:"us", ca:"BKSpHNaYuiKePyDHGcvzSzA31sSjoLxYWo2e7A5Npump" },
+  { sym:"FARTECU", code:"ec", ca:"FVsKgTaSsZkHQhryfmXiT2GD6FQueVD5ktDb5wTopump" },
 ];
 
 async function dexMcaps(addrs){
@@ -2612,6 +2743,7 @@ setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); }, 60000);
       reveal(".section-header");
       reveal(".featured-link", { y: 64, duration: 1.1 });
       reveal(".stake-callout", { scale: 0.98 });
+      reveal(".burn-callout", { scale: 0.98 });
       reveal(".builders", { scale: 0.98 });
       reveal(".lore-section .lore-header");
       document.querySelectorAll(".lore-section .message").forEach(el => {
