@@ -454,6 +454,17 @@
     font-size: 14px;
     font-weight: 500;
   }
+  .apps-more { display: flex; justify-content: center; margin-top: 24px; }
+  .apps-toggle {
+    background: var(--card-bg);
+    border: 1px solid var(--border-light);
+    color: var(--text);
+    font-size: 14px; font-weight: 600;
+    padding: 12px 28px; border-radius: 100px; cursor: pointer;
+    box-shadow: var(--shadow-md); transition: all 0.18s ease;
+    font-family: inherit;
+  }
+  .apps-toggle:hover { border-color: var(--green); color: var(--green); transform: translateY(-1px); box-shadow: var(--shadow-lg); }
 
   /* ===== FEATURED ===== */
   .featured-link { display: block; text-decoration: none; color: inherit; }
@@ -1125,6 +1136,46 @@
     vertical-align: middle;
   }
 
+  /* ===== MEME VAULT ===== */
+  .meme-grid {
+    columns: 3;
+    column-gap: 16px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 900px) { .meme-grid { columns: 2; } }
+  @media (max-width: 560px) { .meme-grid { columns: 1; } }
+  .meme-card {
+    display: block;
+    width: 100%;
+    break-inside: avoid;
+    margin: 0 0 16px;
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--border-light);
+    background: var(--card-bg);
+    box-shadow: var(--shadow-md);
+    cursor: zoom-in;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    -webkit-column-break-inside: avoid;
+  }
+  .meme-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+  .meme-card img { width: 100%; display: block; }
+  .meme-lb {
+    position: fixed; inset: 0; z-index: 5000;
+    display: none; align-items: center; justify-content: center;
+    padding: 24px;
+    background: rgba(6, 10, 18, 0.9);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .meme-lb.open { display: flex; }
+  .meme-lb img { max-width: 92vw; max-height: 88vh; border-radius: 14px; box-shadow: 0 24px 70px rgba(0,0,0,0.6); }
+  .meme-lb .meme-close {
+    position: absolute; top: 16px; right: 22px;
+    font-size: 34px; line-height: 1; color: #fff;
+    background: none; border: 0; cursor: pointer; opacity: 0.85;
+  }
+  .meme-lb .meme-close:hover { opacity: 1; }
+
   /* ===== LORE / GENESIS TRANSMISSION ===== */
   .lore-section {
     margin-top: 80px;
@@ -1775,6 +1826,20 @@
       </div>
     </div>
 
+    <!-- FARTROOM -->
+    <div class="app-card indev" data-status="indev" style="--green: #0891b2; --green-bright: #22d3ee; --green-dark: #0e6378; --green-soft: #e0f7fc;">
+      <div class="app-icon" style="background: linear-gradient(135deg, #0891b2 0%, #22d3ee 100%); box-shadow: 0 4px 14px rgba(8, 145, 178, 0.30);">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+      </div>
+      <h4>FartRoom</h4>
+      <div class="cat">Social · Agents · Live Room</div>
+      <p>A live room where your AI agents can fart with — and at — other agents and humans. Drop your agent in, let it mingle, and watch the methane diplomacy unfold in real time.</p>
+      <div class="row-bottom">
+        <span class="status-tag indev">In Dev</span>
+        <button class="app-btn disabled" data-app="FartRoom">NOTIFY</button>
+      </div>
+    </div>
+
     <!-- STAKING -->
     <div class="app-card live" data-status="live">
       <div class="app-icon">$</div>
@@ -1823,6 +1888,10 @@
       </div>
     </div>
 
+  </div>
+
+  <div class="apps-more">
+    <button class="apps-toggle" id="appsToggle">Show all apps</button>
   </div>
 
   <!-- STAKING CALLOUT -->
@@ -2164,6 +2233,29 @@
     </div>
   </section>
 
+  <!-- MEME VAULT -->
+  <div class="section-header" id="memes">
+    <h2>Meme Vault</h2>
+    <span class="meta">straight from the timeline</span>
+  </div>
+  <div class="meme-grid" id="memeGrid">
+    <a class="meme-card" href="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+  </div>
+
+  <!-- MEME LIGHTBOX -->
+  <div class="meme-lb" id="memeLb">
+    <button class="meme-close" id="memeClose" aria-label="Close">×</button>
+    <img id="memeLbImg" src="" alt="$FARTPRINT meme">
+  </div>
+
   <!-- FOOTER -->
   <footer>
     <div class="left">
@@ -2436,6 +2528,25 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// ===== Meme Vault lightbox =====
+(function(){
+  const lb = document.getElementById("memeLb");
+  const lbImg = document.getElementById("memeLbImg");
+  const grid = document.getElementById("memeGrid");
+  if(!lb || !lbImg || !grid) return;
+  function open(src){ lbImg.src = src; lb.classList.add("open"); document.body.style.overflow = "hidden"; }
+  function close(){ lb.classList.remove("open"); lbImg.src = ""; document.body.style.overflow = ""; }
+  grid.addEventListener("click", (e) => {
+    const card = e.target.closest(".meme-card");
+    if(!card) return;
+    e.preventDefault();
+    open(card.getAttribute("href"));
+  });
+  document.getElementById("memeClose")?.addEventListener("click", close);
+  lb.addEventListener("click", (e) => { if(e.target === lb) close(); });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape" && lb.classList.contains("open")) close(); });
+})();
+
 function copyCA(e){
   e?.preventDefault?.();
   e?.stopPropagation?.();
@@ -2446,17 +2557,51 @@ function copyCA(e){
   setTimeout(() => { btn.textContent = orig; }, 1200);
 }
 
+// Apps grid: collapse to 8, expand on demand — respecting the active filter.
+let APPS_EXPANDED = false;
+const APP_LIMIT = 8;
+
+function applyAppView(){
+  const filter = document.querySelector('.chip.active')?.dataset.filter || 'all';
+  const all = [...document.querySelectorAll('.apps-grid .app-card')];
+  // Visual order: live cards first (CSS puts indev after), then by DOM order.
+  const matching = all
+    .filter(c => filter === 'all' || c.dataset.status === filter)
+    .map((el, i) => ({ el, i, indev: el.classList.contains('indev') }))
+    .sort((a, b) => (a.indev - b.indev) || (a.i - b.i))
+    .map(o => o.el);
+
+  all.forEach(c => { c.style.display = 'none'; });
+  const limit = APPS_EXPANDED ? matching.length : APP_LIMIT;
+  matching.slice(0, limit).forEach(c => { c.style.display = ''; });
+
+  const btn = document.getElementById('appsToggle');
+  if(btn){
+    if(matching.length > APP_LIMIT){
+      btn.parentElement.style.display = '';
+      btn.textContent = APPS_EXPANDED ? 'Show less' : ('Show all apps (' + matching.length + ')');
+    } else {
+      btn.parentElement.style.display = 'none';
+    }
+  }
+}
+
 // Filter chips
 document.querySelectorAll('.chip').forEach(chip => {
   chip.addEventListener('click', () => {
     document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
-    const f = chip.dataset.filter;
-    document.querySelectorAll('.app-card').forEach(card => {
-      card.style.display = (f === 'all' || card.dataset.status === f) ? '' : 'none';
-    });
+    APPS_EXPANDED = false;   // re-collapse when switching filters
+    applyAppView();
   });
 });
+
+document.getElementById('appsToggle')?.addEventListener('click', () => {
+  APPS_EXPANDED = !APPS_EXPANDED;
+  applyAppView();
+});
+
+applyAppView();
 
 // Disabled / classified button notices
 document.querySelectorAll('.app-btn.disabled, .app-btn.classified').forEach(btn => {
