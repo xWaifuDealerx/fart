@@ -237,7 +237,7 @@
     padding: 4px;
     box-shadow: var(--shadow-md);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     overflow: hidden;
   }
   .ticker .item {
@@ -265,6 +265,7 @@
   }
   .ticker .v.up { color: var(--green); }
   .ticker .v.down { color: var(--red); }
+  .ticker .v.burn { color: var(--red); }
   /* ===== CONTRACT BOX ===== */
   .ca-box {
     margin-top: 12px;
@@ -1557,6 +1558,10 @@
       <span class="k">Percentage Staked</span>
       <span class="v" id="t-staked">—</span>
     </div>
+    <div class="item">
+      <span class="k">Percentage Burned</span>
+      <span class="v burn" id="t-burned">—</span>
+    </div>
   </div>
 
   <!-- CONTRACT BOX -->
@@ -2328,11 +2333,13 @@ function renderBurn(){
   const usd = document.getElementById("burnUsdBig");
   const pct = document.getElementById("burnPctBig");
   if(BURNED != null){
+    const pctText = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
     if(tot) tot.textContent = fmtBurn(BURNED);
-    if(pct) pct.textContent = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
+    if(pct) pct.textContent = pctText;
     if(usd) usd.textContent = (FP_PRICE != null)
       ? "$" + Math.round(BURNED * FP_PRICE).toLocaleString(undefined, { maximumFractionDigits: 0 })
       : "$—";
+    const tb = document.getElementById("t-burned"); if(tb) tb.textContent = pctText;
   }
 }
 
@@ -2752,6 +2759,15 @@ async function dexMcaps(addrs){
   return caps;
 }
 
+function fmtMcapShort(n){
+  if(n == null || isNaN(n) || n <= 0) return "$—";
+  const num = Number(n);
+  if(num < 1000)  return "$" + Math.round(num);
+  if(num < 1e6)   return "$" + (num / 1e3).toFixed(1) + "K";
+  if(num < 1e9)   return "$" + (num / 1e6).toFixed(1) + "M";
+  return "$" + (num / 1e9).toFixed(1) + "B";
+}
+
 function renderTop3(elId, rows, emptyMsg){
   const el = $id(elId); if(!el) return;
   // No live tokens to rank → hide the whole widget rather than show an empty header.
@@ -2763,7 +2779,7 @@ function renderTop3(elId, rows, emptyMsg){
       <span class="t3-rank r${i+1}">#${i+1}</span>
       <span class="t3-av">${t.img ? `<img src="${t.img}" alt="" onerror="this.parentNode.textContent='${escHtml((t.sym||'').slice(0,2))}';this.remove();">` : escHtml((t.sym||'?').slice(0,2))}</span>
       <span class="t3-sym">$${escHtml(t.sym || '')}</span>
-      <span class="t3-mcap">${fmtUsd(t.mcap)}</span>
+      <span class="t3-mcap">${fmtMcapShort(t.mcap)}</span>
     </div>`).join("") + `</div>`;
 }
 
