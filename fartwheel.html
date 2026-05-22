@@ -225,7 +225,38 @@
   footer .links a { color: var(--text-2); text-decoration: none; margin-right: 16px; font-weight: 500; }
   footer .links a:hover { color: var(--fire-bright); }
   .sync { font-size: 11px; color: var(--muted); }
+
+  /* ===== BURN TRANSACTION LOG ===== */
+  .burn-log-head { display: flex; align-items: center; justify-content: space-between; margin: 8px 0 16px; }
+  .burn-log-head .section-title { margin: 0; }
+  .burn-log-toggle {
+    background: var(--fire-soft); border: 1px solid rgba(255,90,31,0.32); color: var(--fire-bright);
+    font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 100px; cursor: pointer;
+    transition: all 0.18s; font-family: inherit;
+  }
+  .burn-log-toggle:hover { background: rgba(255,90,31,0.20); }
+  .burn-log-rows { display: grid; gap: 9px; }
+  .burn-row {
+    display: flex; align-items: center; gap: 13px; text-decoration: none; color: inherit;
+    background: var(--card); border: 1px solid var(--border-light);
+    border-radius: 14px; padding: 14px 16px; transition: all 0.18s ease;
+  }
+  .burn-row:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); border-color: var(--fire); }
+  .burn-row .br-flame {
+    width: 38px; height: 38px; border-radius: 10px; flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    background: linear-gradient(135deg,#ff5a1f,#ff2d00);
+  }
+  .burn-row .br-mid { flex: 1 1 auto; min-width: 0; }
+  .burn-row .br-app { font-weight: 800; font-size: 15px; }
+  .burn-row .br-date { font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+  .burn-row .br-amt { font-family: 'Orbitron', sans-serif; font-weight: 900; color: var(--fire-bright); font-size: 17px; text-align: right; flex: 0 0 auto; white-space: nowrap; }
+  .burn-row .br-amt small { display: block; font-size: 10px; color: var(--text-3); font-family: 'Inter',sans-serif; font-weight: 600; letter-spacing: 0.2px; }
+  .burn-row .br-go { color: var(--text-3); font-size: 14px; flex: 0 0 auto; }
+  .burn-row.hidden { display: none; }
+  .burn-empty { color: var(--text-3); font-size: 13px; padding: 6px 2px; }
 </style>
+<script src="burns.js"></script>
 </head>
 <body>
 
@@ -268,12 +299,20 @@
   <div class="section-title">Burning Apps</div>
   <div class="burn-cards" id="burnCards"></div>
 
+  <!-- BURN TRANSACTION LOG -->
+  <div class="burn-log-head">
+    <div class="section-title">Burn Transactions</div>
+    <button class="burn-log-toggle" id="burnLogToggle" style="display:none;">View all</button>
+  </div>
+  <div class="burn-log-rows" id="burnLogRows">
+    <div class="burn-empty">Loading burns…</div>
+  </div>
+
   <div class="note">
     <b>How this is counted:</b> FartBurner totals are summed from its on-chain burn ledger;
-    FartSwap counts every burn-to-list (100,000 $FARTPRINT each). Fart Cup burns happen
-    automatically — trading fees from every nation coin buy back &amp; burn $FARTPRINT on-chain —
-    so its figure accrues continuously. Numbers merge the public feed with locally-recorded burns
-    and refresh every 30 seconds.
+    FartSwap counts every burn-to-list (100,000 $FARTPRINT each). Fart Cup buys back &amp; burns
+    $FARTPRINT on-chain from trading fees — every burn is logged by transaction above, with the
+    amount read straight off the chain. Numbers refresh every 30 seconds.
   </div>
 
   <!-- FOOTER -->
@@ -317,8 +356,8 @@ const APPS = [
   {
     key: "cup", name: "Fart Cup", href: "fartcup.html",
     color: "#22e06b", iconSvg: BALL_SVG, iconGrad: "#ffffff",
-    desc: "Auto buyback & burn via fees",
-    source: "fees", mode: "accruing",
+    desc: "Buyback & burn via fees",
+    source: "ledger", mode: "ledger", appKey: "cup",
   },
 ];
 
@@ -326,8 +365,7 @@ function fmt(n){
   if(n == null || isNaN(n)) return "—";
   const num = Number(n);
   if(num === 0) return "0";
-  if(num < 1000) return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  if(num < 1e6)  return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  if(num < 1e6)  return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
   if(num < 1e9)  return (num / 1e6).toFixed(2) + "M";
   if(num < 1e12) return (num / 1e9).toFixed(2) + "B";
   return (num / 1e12).toFixed(2) + "T";
@@ -369,6 +407,12 @@ async function loadRecords(app){
 
 async function computeApp(app){
   if(app.mode === "accruing") return { burned: null, count: null, accruing: true };
+  if(app.mode === "ledger"){
+    let recs = [];
+    try{ recs = (await FartBurns.load()).filter(r => r.appKey === app.appKey); } catch(_){}
+    const burned = recs.reduce((s, r) => s + (r.amount || 0), 0);
+    return { burned, count: recs.length, accruing: false };
+  }
   const recs = await loadRecords(app);
   if(app.mode === "sum"){
     const burned = recs.reduce((s, r) => s + (Number(r.a) || 0), 0);
@@ -440,7 +484,55 @@ async function refresh(){
   }).join("");
 
   $("sync").textContent = "last synced " + new Date().toTimeString().slice(0, 8);
+
+  renderBurnLog();
 }
+
+// ── Burn transaction log (shared ledger) ──
+let BURN_RECORDS = [];
+let BURN_EXPANDED = false;
+
+function burnDate(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  if(isNaN(d)) return ts;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+}
+
+async function renderBurnLog(){
+  const rows = $("burnLogRows"), toggle = $("burnLogToggle");
+  if(!rows) return;
+  try{ BURN_RECORDS = await FartBurns.load(); } catch(_){ BURN_RECORDS = []; }
+  if(!BURN_RECORDS.length){
+    rows.innerHTML = '<div class="burn-empty">No burns recorded yet.</div>';
+    if(toggle) toggle.style.display = "none";
+    return;
+  }
+  const VISIBLE = 5;
+  rows.innerHTML = BURN_RECORDS.map((r, i) => {
+    const hide = (!BURN_EXPANDED && i >= VISIBLE) ? " hidden" : "";
+    const amt = (r.amount != null) ? fmt(r.amount) : "—";
+    return `<a class="burn-row${hide}" href="${r.url}" target="_blank" rel="noopener">
+      <span class="br-flame">🔥</span>
+      <span class="br-mid"><div class="br-app">${r.app}</div><div class="br-date">${burnDate(r.ts)}</div></span>
+      <span class="br-amt">${amt}<small>$FARTPRINT</small></span>
+      <span class="br-go">↗</span>
+    </a>`;
+  }).join("");
+  if(toggle){
+    if(BURN_RECORDS.length > VISIBLE){
+      toggle.style.display = "";
+      toggle.textContent = BURN_EXPANDED ? "Show less" : ("View all " + BURN_RECORDS.length);
+    } else { toggle.style.display = "none"; }
+  }
+}
+
+document.addEventListener("click", (e) => {
+  if(e.target && e.target.id === "burnLogToggle"){
+    BURN_EXPANDED = !BURN_EXPANDED;
+    renderBurnLog();
+  }
+});
 
 refresh();
 setInterval(refresh, 30000);

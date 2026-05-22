@@ -885,6 +885,38 @@
   .burn-stat .sv { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 800; color: white; line-height: 1.1; margin-top: 4px; }
   .burn-stat .sv.accent { color: #ff6a4d; }
   .burn-stat .sk2 { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .burn-log {
+    grid-column: 1 / -1; position: relative; z-index: 1;
+    margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 22px;
+  }
+  .burn-log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .burn-log-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.6); font-weight: 700; }
+  .burn-log-toggle {
+    background: rgba(255,90,60,0.14); border: 1px solid rgba(255,90,60,0.34); color: #ffb199;
+    font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 100px; cursor: pointer;
+    transition: all 0.18s; font-family: inherit;
+  }
+  .burn-log-toggle:hover { background: rgba(255,90,60,0.26); color: #fff; }
+  .burn-log-rows { display: grid; gap: 8px; }
+  .burn-row {
+    display: flex; align-items: center; gap: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; padding: 11px 14px; text-decoration: none;
+    transition: all 0.18s;
+  }
+  .burn-row:hover { background: rgba(255,90,60,0.10); border-color: rgba(255,90,60,0.32); }
+  .burn-row .br-flame { font-size: 16px; flex: 0 0 auto; }
+  .burn-row .br-mid { flex: 1 1 auto; min-width: 0; }
+  .burn-row .br-app { font-weight: 700; color: #fff; font-size: 14px; }
+  .burn-row .br-date { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 1px; }
+  .burn-row .br-amt {
+    font-family: 'Orbitron', sans-serif; font-weight: 800; color: #ff8a6a; font-size: 15px;
+    text-align: right; flex: 0 0 auto; white-space: nowrap;
+  }
+  .burn-row .br-amt small { display: block; font-size: 10px; color: rgba(255,255,255,0.45); font-family: 'Inter',sans-serif; font-weight: 600; }
+  .burn-row .br-go { color: rgba(255,255,255,0.45); font-size: 13px; flex: 0 0 auto; }
+  .burn-row.hidden { display: none; }
+  .burn-empty { color: rgba(255,255,255,0.55); font-size: 13px; padding: 4px 2px; }
   @media (max-width: 760px) {
     .burn-callout { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
   }
@@ -1378,6 +1410,7 @@
     .manifesto br { display: none; }
   }
 </style>
+<script src="burns.js"></script>
 </head>
 <body>
 
@@ -1837,6 +1870,15 @@
         <div class="sk2">of initial 1B supply</div>
       </div>
     </div>
+    <div class="burn-log">
+      <div class="burn-log-head">
+        <span class="burn-log-title">Burn transactions</span>
+        <button class="burn-log-toggle" id="burnLogToggle" style="display:none;">View all</button>
+      </div>
+      <div class="burn-log-rows" id="burnLogRows">
+        <div class="burn-empty">Loading burns…</div>
+      </div>
+    </div>
   </section>
 
   <!-- BUY $FARTPRINT -->
@@ -2272,12 +2314,21 @@ const INITIAL_SUPPLY = 1_000_000_000;
 let FP_PRICE = null;     // set by loadTicker
 let BURNED   = null;     // set by loadBurned
 
+function fmtBurn(n){
+  if(n == null || isNaN(n)) return "—";
+  const num = Number(n);
+  if(num < 1e6)  return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if(num < 1e9)  return (num / 1e6).toFixed(2) + "M";
+  if(num < 1e12) return (num / 1e9).toFixed(2) + "B";
+  return (num / 1e12).toFixed(2) + "T";
+}
+
 function renderBurn(){
   const tot = document.getElementById("burnTotalBig");
   const usd = document.getElementById("burnUsdBig");
   const pct = document.getElementById("burnPctBig");
   if(BURNED != null){
-    if(tot) tot.textContent = fmtAmount(BURNED);
+    if(tot) tot.textContent = fmtBurn(BURNED);
     if(pct) pct.textContent = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
     if(usd) usd.textContent = (FP_PRICE != null)
       ? "$" + Math.round(BURNED * FP_PRICE).toLocaleString(undefined, { maximumFractionDigits: 0 })
@@ -2285,17 +2336,66 @@ function renderBurn(){
   }
 }
 
-async function loadBurned(){
-  let supply = null;
-  try{
-    const sup = await rpc("getTokenSupply", [TOKEN]);
-    supply = sup?.value?.uiAmount ?? null;
-  } catch(_){}
-  if(supply != null && isFinite(supply)){
-    BURNED = Math.max(0, INITIAL_SUPPLY - supply);
-  }
-  renderBurn();
+// Per-transaction burn ledger (shared burns.js). Each row's amount is read
+// live from the chain. Total burned = sum of every logged burn.
+let BURN_EXPANDED = false;
+let BURN_RECORDS = [];
+
+function burnDate(ts){
+  if(!ts) return "";
+  const d = new Date(ts);
+  if(isNaN(d)) return ts;
+  return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
+
+function renderBurnLog(){
+  const rows = document.getElementById("burnLogRows");
+  const toggle = document.getElementById("burnLogToggle");
+  if(!rows) return;
+  if(!BURN_RECORDS.length){
+    rows.innerHTML = '<div class="burn-empty">No burns recorded yet.</div>';
+    if(toggle) toggle.style.display = "none";
+    return;
+  }
+  const VISIBLE = 3;
+  rows.innerHTML = BURN_RECORDS.map((r, i) => {
+    const hide = (!BURN_EXPANDED && i >= VISIBLE) ? " hidden" : "";
+    const amt = (r.amount != null) ? fmtBurn(r.amount) : "—";
+    return `<a class="burn-row${hide}" href="${r.url}" target="_blank" rel="noopener">
+      <span class="br-flame">🔥</span>
+      <span class="br-mid">
+        <div class="br-app">${r.app}</div>
+        <div class="br-date">${burnDate(r.ts)}</div>
+      </span>
+      <span class="br-amt">${amt}<small>$FARTPRINT</small></span>
+      <span class="br-go">↗</span>
+    </a>`;
+  }).join("");
+  if(toggle){
+    if(BURN_RECORDS.length > VISIBLE){
+      toggle.style.display = "";
+      toggle.textContent = BURN_EXPANDED ? "Show less" : ("View all " + BURN_RECORDS.length);
+    } else {
+      toggle.style.display = "none";
+    }
+  }
+}
+
+async function loadBurned(){
+  try{
+    BURN_RECORDS = await FartBurns.load();
+  } catch(_){ BURN_RECORDS = []; }
+  BURNED = BURN_RECORDS.reduce((s, r) => s + (r.amount || 0), 0);
+  renderBurn();
+  renderBurnLog();
+}
+
+document.addEventListener("click", (e) => {
+  if(e.target && e.target.id === "burnLogToggle"){
+    BURN_EXPANDED = !BURN_EXPANDED;
+    renderBurnLog();
+  }
+});
 
 function copyCA(e){
   e?.preventDefault?.();

@@ -30,7 +30,7 @@
       app: "Fart Cup",
       appKey: "cup",
       ts: "2026-05-22",
-      // amount: 0,   // optional manual fallback if RPC can't be reached
+      amount: 704111.28,   // exact burned amount (pinned; authoritative)
     },
   ];
 
@@ -116,10 +116,14 @@
     if (_cache) return _cache;
     const out = await Promise.all(BURNS.map(async (b) => {
       let amount = (typeof b.amount === "number") ? b.amount : null;
-      try {
-        const a = await getBurnAmount(b.sig);
-        if (a != null && isFinite(a) && a > 0) amount = a;
-      } catch (_) {}
+      // A pinned amount is authoritative — only read the chain when a row
+      // has no amount set (avoids buy-and-burn txs being mis-parsed).
+      if (amount == null) {
+        try {
+          const a = await getBurnAmount(b.sig);
+          if (a != null && isFinite(a) && a > 0) amount = a;
+        } catch (_) {}
+      }
       return {
         sig: b.sig,
         app: b.app,
