@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartForum · burn to post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --purple:#9b5cff; --red:#ff5a5a; --amber:#ffcf5a;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(46,224,107,.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(155,92,255,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ---- top nav ---- */
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:960px;margin:0 auto;padding:26px 18px 80px;}
+
+  /* ---- header / hero ---- */
+  .head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:18px;}
+  .head h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.8px;}
+  .head h1 .a{color:var(--green);}
+  .head .tag{color:var(--text-2);font-size:14px;margin-top:4px;}
+  .head .tag b{color:var(--amber);}
+
+  /* ---- burn counter ---- */
+  .burnbar{
+    display:flex;align-items:center;gap:14px;border:1px solid var(--border-2);
+    background:linear-gradient(135deg,rgba(255,90,90,.10),rgba(255,207,90,.06));
+    border-radius:14px;padding:14px 18px;margin-bottom:22px;
+  }
+  .burnbar .fire{font-size:26px;line-height:1;}
+  .burnbar .n{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:24px;color:#ffd9a3;}
+  .burnbar .lbl{color:var(--text-2);font-size:13px;}
+  .burnbar .lbl b{color:var(--text);}
+  .burnbar .right{margin-left:auto;text-align:right;font-size:11.5px;color:var(--text-3);}
+
+  /* ---- board / toolbar ---- */
+  .toolbar{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
+  .toolbar h2{margin:0;font-size:16px;font-weight:700;color:var(--text);}
+  .toolbar .count{color:var(--text-3);font-size:12.5px;}
+  .btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:10px;
+    padding:9px 16px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.28);transition:.15s;
+  }
+  .btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .btn.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--border-2);box-shadow:none;}
+  .btn:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:none;}
+  .ml-auto{margin-left:auto;}
+
+  /* ---- thread table ---- */
+  .board{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);}
+  .board .thead,.board .trow{display:grid;grid-template-columns:1fr 120px 80px 150px;align-items:center;gap:10px;}
+  .board .thead{background:var(--panel-2);border-bottom:1px solid var(--border);padding:11px 16px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
+  .board .trow{padding:14px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:.12s;}
+  .board .trow:last-child{border-bottom:none;}
+  .board .trow:hover{background:var(--row);}
+  .topic{min-width:0;}
+  .topic .ttl{font-weight:700;font-size:15px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .topic .prev{color:var(--text-3);font-size:12.5px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .topic .badge{display:inline-block;font-size:10px;font-weight:700;color:var(--green);border:1px solid var(--border-2);border-radius:6px;padding:1px 6px;margin-right:6px;vertical-align:middle;}
+  .col-auth,.col-rep,.col-last{font-size:12.5px;color:var(--text-2);}
+  .col-auth{font-family:'JetBrains Mono',monospace;}
+  .col-rep{text-align:center;font-weight:700;color:var(--text);}
+  .col-last{color:var(--text-3);}
+  .empty{padding:46px 20px;text-align:center;color:var(--text-3);}
+  .empty .big{font-size:34px;margin-bottom:8px;}
+
+  /* ---- thread view ---- */
+  .crumb{display:flex;align-items:center;gap:8px;color:var(--text-3);font-size:13px;margin-bottom:14px;}
+  .crumb a{color:var(--green);}
+  .thread-title{font-size:24px;font-weight:800;letter-spacing:-.5px;margin:0 0 16px;}
+  .post{display:grid;grid-template-columns:140px 1fr;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:14px;background:var(--panel);}
+  .post .who{background:var(--panel-2);border-right:1px solid var(--border);padding:16px;text-align:center;}
+  .post .who .av{width:46px;height:46px;border-radius:50%;margin:0 auto 8px;display:grid;place-items:center;font-size:22px;background:linear-gradient(135deg,#13201a,#1d2c23);border:1px solid var(--border-2);}
+  .post .who .addr{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-2);word-break:break-all;}
+  .post .who .op{display:inline-block;margin-top:8px;font-size:9.5px;font-weight:700;letter-spacing:.5px;color:var(--amber);border:1px solid var(--border-2);border-radius:6px;padding:1px 6px;}
+  .post .body{padding:16px 18px;min-width:0;}
+  .post .meta{display:flex;align-items:center;gap:10px;font-size:11.5px;color:var(--text-3);margin-bottom:10px;flex-wrap:wrap;}
+  .post .meta .vbadge{color:var(--green);}
+  .post .meta .vbadge.no{color:var(--text-3);}
+  .post .text{font-size:15px;color:var(--text);white-space:pre-wrap;word-wrap:break-word;}
+  .post.op{border-color:var(--border-2);}
+
+  @media(max-width:680px){
+    .board .thead{display:none;}
+    .board .trow{grid-template-columns:1fr auto;grid-template-areas:"topic rep" "auth last";row-gap:6px;}
+    .topic{grid-area:topic;} .col-rep{grid-area:rep;} .col-auth{grid-area:auth;} .col-last{grid-area:last;text-align:right;}
+    .post{grid-template-columns:1fr;}
+    .post .who{display:flex;align-items:center;gap:12px;text-align:left;border-right:none;border-bottom:1px solid var(--border);padding:12px 16px;}
+    .post .who .av{margin:0;width:38px;height:38px;}
+  }
+
+  /* ---- composer modal ---- */
+  .overlay{position:fixed;inset:0;background:rgba(4,8,6,.72);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;z-index:60;padding:40px 16px;overflow:auto;}
+  .overlay.open{display:flex;}
+  .modal{width:100%;max-width:560px;background:var(--panel);border:1px solid var(--border-2);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;}
+  .modal .mhead{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border);}
+  .modal .mhead h3{margin:0;font-size:16px;font-weight:800;}
+  .modal .x{cursor:pointer;color:var(--text-3);font-size:20px;line-height:1;background:none;border:none;}
+  .modal .mbody{padding:18px;}
+  .modal label{display:block;font-size:12px;font-weight:700;color:var(--text-2);margin:0 0 6px;letter-spacing:.3px;}
+  .modal input,.modal textarea{
+    width:100%;background:var(--bg);border:1px solid var(--border-2);border-radius:10px;
+    color:var(--text);font-family:inherit;font-size:14.5px;padding:11px 13px;margin-bottom:14px;resize:vertical;
+  }
+  .modal input:focus,.modal textarea:focus{outline:none;border-color:var(--green-dark);}
+  .modal textarea{min-height:120px;}
+  .modal .cost{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-2);background:rgba(255,90,90,.08);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px;}
+  .modal .cost b{color:#ffd9a3;}
+  .modal .mfoot{display:flex;gap:10px;justify-content:flex-end;}
+
+  /* ---- toast / status ---- */
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);z-index:90;max-width:90vw;
+    background:var(--panel-2);border:1px solid var(--border-2);border-radius:12px;box-shadow:var(--shadow);
+    padding:13px 18px;font-size:13.5px;color:var(--text);display:none;align-items:center;gap:10px;}
+  .toast.show{display:flex;}
+  .toast.err{border-color:#5a2727;background:#1a0f0f;}
+  .toast.ok{border-color:var(--border-2);}
+  .toast .spin{width:15px;height:15px;border:2px solid var(--text-3);border-top-color:var(--green);border-radius:50%;animation:sp .7s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg);}}
+  .toast a{color:var(--green);}
+
+  .footnote{margin-top:30px;color:var(--text-3);font-size:11.5px;line-height:1.6;text-align:center;}
+  .footnote code{color:var(--text-2);}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="brand" href="index.html">
+    <span class="logo" aria-hidden="true">
+      <svg viewBox="0 0 64 64" fill="#fff"><path d="M33.5 9.2c-2.9-1-6 .8-6.7 3.8-.2.8-.2 1.6 0 2.4-3.7-.2-6.9 2.6-7.1 6.2-.1 1.3.2 2.5.8 3.6-4 .9-6.7 4.6-6 8.6.2 1.4.9 2.6 1.8 3.6-3.3 1.3-5.2 4.8-4.3 8.3.9 3.7 4.7 6 10 6.5h21.9c5.3-.5 9.1-2.8 10-6.5.9-3.5-1-7-4.3-8.3.9-1 1.6-2.2 1.8-3.6.7-4-2-7.7-6-8.6.6-1.1.9-2.3.8-3.6-.2-3.6-3.4-6.4-7.1-6.2.2-.8.2-1.6 0-2.4-.5-2.1-2.3-3.7-4.4-4z"/></svg>
+    </span>
+    Fart<span class="amp">Forum</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">← Ecosystem</a>
+  <a class="pill" href="fartwheel.html">🔥 Burns</a>
+  <button class="wallet-btn" id="walletBtn">Connect Phantom</button>
+</nav>
+
+<div class="wrap">
+
+  <div class="head">
+    <div>
+      <h1>Fart<span class="a">Forum</span></h1>
+      <div class="tag">The methane message board. Every post burns <b>1 $FARTPRINT</b> — forever.</div>
+    </div>
+  </div>
+
+  <div class="burnbar">
+    <span class="fire">🔥</span>
+    <div>
+      <div class="n" id="burnedN">—</div>
+      <div class="lbl"><b>$FARTPRINT</b> burned by the forum</div>
+    </div>
+    <div class="right">1 token per post · no take-backs<br>contract <span class="mono" id="mintShort">—</span></div>
+  </div>
+
+  <!-- BOARD / LIST VIEW -->
+  <section id="viewList">
+    <div class="toolbar">
+      <h2>Threads</h2>
+      <span class="count" id="threadCount"></span>
+      <button class="btn ml-auto" id="newThreadBtn">+ New Thread</button>
+    </div>
+    <div class="board">
+      <div class="thead">
+        <div>Topic</div><div>Author</div><div style="text-align:center;">Replies</div><div>Last post</div>
+      </div>
+      <div id="threadRows">
+        <div class="empty"><div class="big">💨</div>Loading the board…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THREAD VIEW -->
+  <section id="viewThread" style="display:none;">
+    <div class="crumb"><a href="#" id="backLink">← Board</a> <span>/</span> <span id="crumbTitle" class="mono"></span></div>
+    <h2 class="thread-title" id="threadTitle"></h2>
+    <div id="postList"></div>
+    <div class="toolbar" style="margin-top:18px;">
+      <button class="btn" id="replyBtn">↩ Reply (burns 1 $FARTPRINT)</button>
+    </div>
+  </section>
+
+  <div class="footnote">
+    FartForum is a community parody. Posting performs a real on-chain burn of your own $FARTPRINT and costs a little SOL in network fees.<br>
+    Burns are irreversible. Not a financial product. $FARTPRINT mint: <code id="mintFull">…</code>
+  </div>
+</div>
+
+<!-- composer -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="mhead"><h3 id="modalTitle">New Thread</h3><button class="x" id="modalClose">×</button></div>
+    <div class="mbody">
+      <div id="titleField">
+        <label>Thread title</label>
+        <input id="fTitle" maxlength="160" placeholder="What's stinking up the timeline?">
+      </div>
+      <label id="textLabel">Message</label>
+      <textarea id="fText" maxlength="5000" placeholder="Drop your take…"></textarea>
+      <div class="cost">🔥 Posting this burns <b>1&nbsp;$FARTPRINT</b> from your wallet (plus a little SOL for gas).</div>
+      <div class="mfoot">
+        <button class="btn ghost" id="cancelBtn">Cancel</button>
+        <button class="btn" id="submitBtn">Burn &amp; Post</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  Connection, PublicKey, TransactionInstruction, TransactionMessage, VersionedTransaction,
+} from 'https://esm.sh/@solana/web3.js@1.95.3';
+
+// ============================================================
+// Config
+// ============================================================
+const API = "/api/fartforum";
+const MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const MINT = new PublicKey(MINT_STR);
+const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const ASSOC_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const DECIMALS = 6;
+const BURN_AMOUNT = 1000000n;   // 1 token at 6 decimals
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+const State = { wallet:null, view:"list", thread:null, composeKind:"thread", busy:false };
+
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>String(s==null?"":s).replace(/[&<>"']/g,(c)=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+const shortAddr = (a,n=4)=> a ? a.slice(0,n)+"…"+a.slice(-n) : "";
+function relTime(ts){
+  if(!ts) return "";
+  const s=Math.floor((Date.now()-ts)/1000);
+  if(s<60) return s+"s ago";
+  const m=Math.floor(s/60); if(m<60) return m+"m ago";
+  const h=Math.floor(m/60); if(h<24) return h+"h ago";
+  const d=Math.floor(h/24); if(d<30) return d+"d ago";
+  return new Date(ts).toLocaleDateString();
+}
+function avatarFor(addr){
+  const e=["💨","🪐","👽","🤖","🐸","🦨","🚽","🧪","🔥","🍑","👃","💩","🌬️","⚗️"];
+  let h=0; for(const c of (addr||"")) h=(h*31+c.charCodeAt(0))>>>0;
+  return e[h%e.length];
+}
+
+// ============================================================
+// Phantom
+// ============================================================
+function getPhantom(){
+  if(window?.phantom?.solana?.isPhantom) return window.phantom.solana;
+  if(window?.solana?.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph=getPhantom();
+  if(!ph){ if(confirm("Phantom wallet not detected. Open install page?")) window.open("https://phantom.com/download","_blank"); return false; }
+  try{
+    const resp=await ph.connect();
+    State.wallet=resp.publicKey.toString();
+    try{ localStorage.setItem("ff_trusted","1"); }catch(_){}
+    paintWallet(); return true;
+  }catch(e){ return false; }
+}
+async function tryAutoConnect(){
+  const ph=getPhantom(); if(!ph) return;
+  let trusted=false; try{ trusted=localStorage.getItem("ff_trusted")==="1"; }catch(_){}
+  if(!trusted) return;
+  try{ const resp=await ph.connect({onlyIfTrusted:true}); State.wallet=resp.publicKey.toString(); paintWallet(); }catch(_){}
+}
+function paintWallet(){
+  const b=$("walletBtn");
+  if(State.wallet){ b.textContent=shortAddr(State.wallet,5); b.classList.add("connected"); }
+  else { b.textContent="Connect Phantom"; b.classList.remove("connected"); }
+}
+$("walletBtn").addEventListener("click", async ()=>{
+  if(State.wallet){
+    const ph=getPhantom(); try{ await ph?.disconnect?.(); }catch(_){}
+    State.wallet=null; try{ localStorage.removeItem("ff_trusted"); }catch(_){}
+    paintWallet();
+  } else { await connectWallet(); }
+});
+
+// ============================================================
+// On-chain burn of 1 $FARTPRINT
+// ============================================================
+function ataFor(owner){
+  const [ata]=PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), MINT.toBuffer()], ASSOC_PROGRAM_ID
+  );
+  return ata;
+}
+function makeBurnIx(owner){
+  const data=new Uint8Array(9);
+  data[0]=8;                       // SPL Token "Burn" instruction
+  let x=BURN_AMOUNT;
+  for(let i=0;i<8;i++){ data[1+i]=Number(x & 0xffn); x>>=8n; }
+  return new TransactionInstruction({
+    programId:TOKEN_PROGRAM_ID,
+    keys:[
+      { pubkey:ataFor(owner), isSigner:false, isWritable:true },
+      { pubkey:MINT,          isSigner:false, isWritable:true },
+      { pubkey:owner,         isSigner:true,  isWritable:false },
+    ],
+    data,
+  });
+}
+async function freshBlockhash(){
+  for(const url of RPCS){
+    try{ const c=new Connection(url,"confirmed"); const b=await c.getLatestBlockhash("confirmed"); return { conn:c, ...b }; }catch(_){}
+  }
+  throw new Error("Could not reach a Solana RPC. Try again in a moment.");
+}
+async function fartprintBalance(owner){
+  for(const url of RPCS){
+    try{ const c=new Connection(url,"confirmed"); const r=await c.getTokenAccountBalance(ataFor(owner)); return Number(r.value.uiAmount)||0; }catch(_){}
+  }
+  return null; // unknown
+}
+async function burnOne(){
+  const ph=getPhantom();
+  const owner=new PublicKey(State.wallet);
+  const { conn, blockhash, lastValidBlockHeight }=await freshBlockhash();
+  const msg=new TransactionMessage({ payerKey:owner, recentBlockhash:blockhash, instructions:[ makeBurnIx(owner) ] }).compileToV0Message();
+  const tx=new VersionedTransaction(msg);
+  const res=await ph.signAndSendTransaction(tx);
+  const sig=res.signature || res;
+  try{ await conn.confirmTransaction({ signature:sig, blockhash, lastValidBlockHeight }, "confirmed"); }catch(_){}
+  return sig;
+}
+
+// ============================================================
+// Toast
+// ============================================================
+let toastTimer=null;
+function toast(html, kind="ok", sticky=false){
+  const t=$("toast");
+  t.className="toast show "+(kind==="err"?"err":kind==="load"?"":"ok");
+  t.innerHTML=(kind==="load"?'<span class="spin"></span>':"")+"<span>"+html+"</span>";
+  clearTimeout(toastTimer);
+  if(!sticky) toastTimer=setTimeout(()=>t.classList.remove("show"), kind==="err"?6000:4000);
+}
+function hideToast(){ $("toast").classList.remove("show"); }
+
+// ============================================================
+// Data + render
+// ============================================================
+async function loadBoard(){
+  try{
+    const r=await fetch(API+"?t="+Date.now());
+    const j=await r.json();
+    renderBurned(j.burned);
+    renderThreads(j.threads||[]);
+  }catch(e){
+    $("threadRows").innerHTML='<div class="empty"><div class="big">📡</div>Couldn\'t reach the forum. Refresh to retry.</div>';
+  }
+}
+function renderBurned(n){
+  if(n==null||isNaN(n)) return;
+  $("burnedN").textContent=Number(n).toLocaleString();
+}
+function renderThreads(threads){
+  $("threadCount").textContent = threads.length ? `${threads.length} thread${threads.length>1?"s":""}` : "";
+  const host=$("threadRows");
+  if(!threads.length){
+    host.innerHTML='<div class="empty"><div class="big">🚽</div>No threads yet. Light the first one up.</div>';
+    return;
+  }
+  host.innerHTML=threads.map(t=>`
+    <div class="trow" data-id="${esc(t.id)}">
+      <div class="topic">
+        <div class="ttl">${esc(t.title)}</div>
+        <div class="prev">${esc(t.preview||"")}</div>
+      </div>
+      <div class="col-auth">${esc(shortAddr(t.author,4))}</div>
+      <div class="col-rep">${t.replies||0}</div>
+      <div class="col-last">${esc(relTime(t.lastTs))}</div>
+    </div>`).join("");
+  host.querySelectorAll(".trow").forEach(row=>{
+    row.addEventListener("click", ()=>openThread(row.getAttribute("data-id")));
+  });
+}
+
+async function openThread(id){
+  State.view="thread"; State.thread=id;
+  $("viewList").style.display="none";
+  $("viewThread").style.display="";
+  $("postList").innerHTML='<div class="empty"><div class="big">💨</div>Loading thread…</div>';
+  window.scrollTo(0,0);
+  try{
+    const r=await fetch(API+"?thread="+encodeURIComponent(id)+"&t="+Date.now());
+    const j=await r.json();
+    renderBurned(j.burned);
+    if(!j.ok){ $("postList").innerHTML='<div class="empty">Thread not found.</div>'; return; }
+    $("threadTitle").textContent=j.thread.title;
+    $("crumbTitle").textContent="#"+id.slice(0,6);
+    renderPosts(j.posts||[], j.thread.author);
+  }catch(e){
+    $("postList").innerHTML='<div class="empty">Couldn\'t load the thread.</div>';
+  }
+}
+function renderPosts(posts, opAuthor){
+  $("postList").innerHTML=posts.map((p,i)=>{
+    const isOp=i===0;
+    const vb = p.verified
+      ? `<span class="vbadge" title="Burn verified on-chain">✓ burn verified</span>`
+      : `<span class="vbadge no" title="Burn not verified yet">• burn pending</span>`;
+    const link = p.sig ? `<a href="https://solscan.io/tx/${esc(p.sig)}" target="_blank" rel="noopener">tx ↗</a>` : "";
+    return `<div class="post ${isOp?"op":""}">
+      <div class="who">
+        <div class="av">${avatarFor(p.author)}</div>
+        <div class="addr">${esc(shortAddr(p.author,4))}</div>
+        ${isOp?'<span class="op">OP</span>':""}
+      </div>
+      <div class="body">
+        <div class="meta">#${i+1} · ${esc(relTime(p.ts))} · ${vb} ${link}</div>
+        <div class="text">${esc(p.text)}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+function backToBoard(){
+  State.view="list"; State.thread=null;
+  $("viewThread").style.display="none";
+  $("viewList").style.display="";
+  loadBoard();
+}
+$("backLink").addEventListener("click",(e)=>{ e.preventDefault(); backToBoard(); });
+
+// ============================================================
+// Composer
+// ============================================================
+function openComposer(kind){
+  State.composeKind=kind;
+  $("modalTitle").textContent = kind==="thread" ? "New Thread" : "Post a Reply";
+  $("titleField").style.display = kind==="thread" ? "" : "none";
+  $("textLabel").textContent = kind==="thread" ? "Message" : "Your reply";
+  $("fTitle").value=""; $("fText").value="";
+  $("overlay").classList.add("open");
+  setTimeout(()=>{ (kind==="thread"?$("fTitle"):$("fText")).focus(); },50);
+}
+function closeComposer(){ $("overlay").classList.remove("open"); }
+$("newThreadBtn").addEventListener("click",()=>openComposer("thread"));
+$("replyBtn").addEventListener("click",()=>openComposer("reply"));
+$("modalClose").addEventListener("click",closeComposer);
+$("cancelBtn").addEventListener("click",closeComposer);
+$("overlay").addEventListener("click",(e)=>{ if(e.target===$("overlay")) closeComposer(); });
+
+$("submitBtn").addEventListener("click", submitPost);
+
+async function submitPost(){
+  if(State.busy) return;
+  const kind=State.composeKind;
+  const text=$("fText").value.trim();
+  const title=$("fTitle").value.trim();
+  if(kind==="thread" && !title){ toast("Give your thread a title.","err"); return; }
+  if(!text){ toast("Write something first.","err"); return; }
+
+  if(!State.wallet){
+    toast("Connect Phantom to post…","load",true);
+    const ok=await connectWallet();
+    if(!ok){ toast("Wallet connection cancelled.","err"); return; }
+  }
+
+  State.busy=true; $("submitBtn").disabled=true; $("cancelBtn").disabled=true;
+  try{
+    // 1) make sure they actually hold a token to burn
+    toast("Checking your $FARTPRINT balance…","load",true);
+    const bal=await fartprintBalance(State.wallet);
+    if(bal!==null && bal<1){
+      toast("You need at least 1 $FARTPRINT to post. <a href='fartswap.html'>Get some →</a>","err");
+      return;
+    }
+    // 2) burn 1 token
+    toast("Confirm the burn in Phantom… 🔥","load",true);
+    const sig=await burnOne();
+    // 3) submit the message
+    toast("Burn sent. Posting your message…","load",true);
+    const payload = kind==="thread"
+      ? { kind:"thread", title, text, author:State.wallet, sig }
+      : { kind:"reply", thread:State.thread, text, author:State.wallet, sig };
+    const r=await fetch(API,{ method:"POST", headers:{ "Content-Type":"application/json" }, body:JSON.stringify(payload) });
+    const j=await r.json();
+    if(!j.ok){ toast("Burned, but posting failed: "+esc(j.message||r.status)+". <a href='https://solscan.io/tx/"+sig+"' target='_blank'>tx ↗</a>","err"); return; }
+
+    renderBurned(j.burned);
+    closeComposer();
+    toast("Posted. 1 $FARTPRINT burned. 🔥","ok");
+    if(kind==="thread"){ openThread(j.id); }
+    else { openThread(State.thread); }
+  }catch(e){
+    const m=(e&&e.message)||String(e);
+    if(/User rejected|rejected the request/i.test(m)) toast("Burn cancelled.","err");
+    else toast("Couldn't post: "+esc(m),"err");
+  }finally{
+    State.busy=false; $("submitBtn").disabled=false; $("cancelBtn").disabled=false;
+  }
+}
+
+document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") closeComposer(); });
+
+// ============================================================
+// Boot
+// ============================================================
+$("mintShort").textContent=shortAddr(MINT_STR,4);
+$("mintFull").textContent=MINT_STR;
+paintWallet();
+tryAutoConnect();
+loadBoard();
+setInterval(()=>{ if(State.view==="list") loadBoard(); else if(State.thread) {/* keep counter fresh */ fetch(API+"?t="+Date.now()).then(r=>r.json()).then(j=>renderBurned(j.burned)).catch(()=>{}); } }, 30000);
+</script>
+</body>
+</html>
