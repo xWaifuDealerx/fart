@@ -2900,9 +2900,9 @@ const FARTCUP_COINS = [
   { sym:"FARTECU", code:"ec", ca:"FVsKgTaSsZkHQhryfmXiT2GD6FQueVD5ktDb5wTopump" },
   { sym:"FARTCZE", code:"cz", ca:"BaUDFKutxAbHiq1o2ocxyindoc5nyRELyZCspc81pump" },
   { sym:"FARTBIH", code:"ba", ca:"C1TGpFiTex5YKgKxCfJTPDo5TTd7RR27Ts6bx59Gpump" },
-  { sym:"FARTMEX", code:"mx", ca:"HBAQA3dUpyRmTyZ8Tc16AkeivpCcCZfB6gMLm9Y1pump" },
-  { sym:"FARTCAN", code:"ca", ca:"8Mqkv3GZQ5iMFd2bh75ezztn23sNGui5wDBtPyHnpump" },
-  { sym:"FARTTUN", code:"tn", ca:"61s9ZyU4WEibQah2DHuG72XoTsytDtpDj66vrFGqpump" },
+  // DISABLED — awaiting replacement contract: { sym:"FARTMEX", code:"mx", ca:"HBAQA3dUpyRmTyZ8Tc16AkeivpCcCZfB6gMLm9Y1pump" },
+  // DISABLED — awaiting replacement contract: { sym:"FARTCAN", code:"ca", ca:"8Mqkv3GZQ5iMFd2bh75ezztn23sNGui5wDBtPyHnpump" },
+  // DISABLED — awaiting replacement contract: { sym:"FARTTUN", code:"tn", ca:"61s9ZyU4WEibQah2DHuG72XoTsytDtpDj66vrFGqpump" },
   { sym:"FARTRSA", code:"za", ca:"5HXp1icLEgS5MeL2u6LwJe6VGyvEvtJmVGnfnFeRpump" },
   { sym:"FARTHAI", code:"ht", ca:"BTv3VLwQFFTddTtSCkCSEbbxm39FMdF96gxDTQEGpump" },
   { sym:"FARTCUW", code:"cw", ca:"3Bt2iEbToDjjadSfENfG4vbaYMdP7BSmoCf2qGCKpump" },
@@ -2954,30 +2954,45 @@ function renderTop3(elId, rows, emptyMsg){
 }
 
 const _fcImg = {};   // mint -> pump.fun image_uri cache
+
+// Run async tasks with limited concurrency. Firing ~60 pump.fun calls at once
+// gets throttled by pump.fun's Cloudflare edge (most return nothing), so we
+// cap concurrency to keep each request alive and the market caps flowing.
+async function runLimited(items, limit, fn){
+  let i = 0;
+  async function worker(){ while(i < items.length){ const idx = i++; await fn(items[idx], idx); } }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+async function fetchPumpMcap(c, caps){
+  try{
+    const r = await fetch(`/api/pumpfun?mint=${c.ca}`);
+    if(!r.ok) return;
+    const j = await r.json();
+    const v = Number(j?.usd_market_cap); if(v > 0 && caps) caps[c.ca] = v;
+    const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img;
+  }catch(_){}
+}
+
 async function loadTop3FartCup(){
   const caps = await dexMcaps(FARTCUP_COINS.map(c => c.ca));
-  // pump.fun fallback for coins still on the bonding curve — also grabs the token image
-  await Promise.all(FARTCUP_COINS.filter(c => !caps[c.ca]).map(async (c) => {
-    try{
-      const r = await fetch(`/api/pumpfun?mint=${c.ca}`);
-      if(r.ok){
-        const j = await r.json();
-        const v = Number(j?.usd_market_cap); if(v > 0) caps[c.ca] = v;
-        const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img;
-      }
-    }catch(_){}
-  }));
-  const ranked = FARTCUP_COINS
-    .map(c => ({ ...c, mcap: caps[c.ca] || 0 }))
-    .filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3);
-  // make sure the top 3 have their pump.fun image (fetch any we haven't yet)
-  await Promise.all(ranked.filter(c => !_fcImg[c.ca]).map(async (c) => {
-    try{
-      const r = await fetch(`/api/pumpfun?mint=${c.ca}`);
-      if(r.ok){ const j = await r.json(); const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img; }
-    }catch(_){}
-  }));
-  const rows = ranked.map(c => ({
+  // pump.fun fallback for coins still on the bonding curve — throttled so the
+  // burst doesn't get rate-limited, which would zero out most market caps.
+  await runLimited(FARTCUP_COINS.filter(c => !caps[c.ca]), 5, (c) => fetchPumpMcap(c, caps));
+
+  const withCap = FARTCUP_COINS.map(c => ({ ...c, mcap: caps[c.ca] || 0 }));
+  const priced = withCap.filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap);
+  // Always present a podium of 3: priced coins first, backfilled with the rest
+  // so the widget never looks broken when only one or two coins have a mcap yet.
+  let top = priced.slice(0, 3);
+  if(top.length < 3){
+    const used = new Set(top.map(t => t.ca));
+    top = top.concat(withCap.filter(r => !used.has(r.ca)).slice(0, 3 - top.length));
+  }
+  // make sure the podium coins have their pump.fun image (fetch any we haven't yet)
+  await runLimited(top.filter(c => !_fcImg[c.ca]), 5, (c) => fetchPumpMcap(c, null));
+
+  const rows = top.map(c => ({
     sym: c.sym,
     img: _fcImg[c.ca] || `https://flagcdn.com/w80/${c.code}.png`,
     mcap: c.mcap,
