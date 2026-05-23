@@ -263,10 +263,14 @@ import {
 const API = "/api/fartforum";
 const MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
 const MINT = new PublicKey(MINT_STR);
-const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
-const ASSOC_PROGRAM_ID = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
-const DECIMALS = 6;
-const BURN_AMOUNT = 1000000n;   // 1 token at 6 decimals
+const TOKEN_PROGRAM_ID  = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");   // legacy SPL Token
+const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"); // Token-2022
+const ASSOC_PROGRAM_ID  = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+// Resolved at runtime from the mint itself — $FARTPRINT may be a Token-2022
+// mint, in which case the program id AND the derived token account differ.
+let TOKEN_PROGRAM  = TOKEN_PROGRAM_ID;
+let MINT_DECIMALS  = 6;
+let _mintResolved  = false;
 const RPCS = [
   "https://api.mainnet-beta.solana.com",
   "https://solana-rpc.publicnode.com",
@@ -333,19 +337,44 @@ $("walletBtn").addEventListener("click", async ()=>{
 // ============================================================
 // On-chain burn of 1 $FARTPRINT
 // ============================================================
+// Detect which token program owns the $FARTPRINT mint, and its decimals.
+// Both differ between legacy SPL and Token-2022, so we must read them from
+// chain before building the burn — otherwise the program rejects the
+// instruction ("invalid instruction/account data").
+async function resolveMint(){
+  if(_mintResolved) return;
+  for(const url of RPCS){
+    try{
+      const c=new Connection(url,"confirmed");
+      const info=await c.getParsedAccountInfo(MINT);
+      const v=info && info.value;
+      if(v && v.owner){
+        TOKEN_PROGRAM = v.owner;   // PublicKey of the owning token program
+        const dec = v.data && v.data.parsed && v.data.parsed.info && v.data.parsed.info.decimals;
+        if(Number.isInteger(dec)) MINT_DECIMALS = dec;
+        _mintResolved = true;
+        return;
+      }
+    }catch(_){}
+  }
+}
 function ataFor(owner){
   const [ata]=PublicKey.findProgramAddressSync(
-    [owner.toBuffer(), TOKEN_PROGRAM_ID.toBuffer(), MINT.toBuffer()], ASSOC_PROGRAM_ID
+    [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), MINT.toBuffer()], ASSOC_PROGRAM_ID
   );
   return ata;
 }
 function makeBurnIx(owner){
-  const data=new Uint8Array(9);
-  data[0]=8;                       // SPL Token "Burn" instruction
-  let x=BURN_AMOUNT;
+  // BurnChecked (instruction 15): u64 amount (LE) + u8 decimals. Wallets
+  // recognise this as a standard burn and it validates the mint/decimals.
+  const amount = 10n ** BigInt(MINT_DECIMALS);   // exactly 1 whole token
+  const data=new Uint8Array(10);
+  data[0]=15;
+  let x=amount;
   for(let i=0;i<8;i++){ data[1+i]=Number(x & 0xffn); x>>=8n; }
+  data[9]=MINT_DECIMALS;
   return new TransactionInstruction({
-    programId:TOKEN_PROGRAM_ID,
+    programId:TOKEN_PROGRAM,
     keys:[
       { pubkey:ataFor(owner), isSigner:false, isWritable:true },
       { pubkey:MINT,          isSigner:false, isWritable:true },
@@ -361,6 +390,7 @@ async function freshBlockhash(){
   throw new Error("Could not reach a Solana RPC. Try again in a moment.");
 }
 async function fartprintBalance(owner){
+  await resolveMint();
   for(const url of RPCS){
     try{ const c=new Connection(url,"confirmed"); const r=await c.getTokenAccountBalance(ataFor(owner)); return Number(r.value.uiAmount)||0; }catch(_){}
   }
@@ -369,6 +399,7 @@ async function fartprintBalance(owner){
 async function burnOne(){
   const ph=getPhantom();
   const owner=new PublicKey(State.wallet);
+  await resolveMint();
   const { conn, blockhash, lastValidBlockHeight }=await freshBlockhash();
   const msg=new TransactionMessage({ payerKey:owner, recentBlockhash:blockhash, instructions:[ makeBurnIx(owner) ] }).compileToV0Message();
   const tx=new VersionedTransaction(msg);
@@ -555,6 +586,7 @@ $("mintShort").textContent=shortAddr(MINT_STR,4);
 $("mintFull").textContent=MINT_STR;
 paintWallet();
 tryAutoConnect();
+resolveMint();   // warm up the token-program / decimals detection
 loadBoard();
 setInterval(()=>{ if(State.view==="list") loadBoard(); else if(State.thread) {/* keep counter fresh */ fetch(API+"?t="+Date.now()).then(r=>r.json()).then(j=>renderBurned(j.burned)).catch(()=>{}); } }, 30000);
 </script>
