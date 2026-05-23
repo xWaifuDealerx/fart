@@ -218,7 +218,7 @@
       Wall Street wishes it was this liquid. The premier blue chip methane index on Solana, where every FART coin
       floats as a bubble sized by its book. Zap into the <span class="hl">hyper strategic fart pools</span>,
       stack LP fees, and watch every basis point route straight back into buying and burning
-      <span class="hl">$FARTPRINT</span>. Diamond hands only.&nbsp;<span style="white-space:nowrap;">💎🙌💨</span>
+      <span class="hl">$FARTPRINT</span>.
     </p>
   </header>
 
@@ -305,7 +305,7 @@ const TOKENS = [
   { sym:"FARTMART", ca:"4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr", pool:"https://www.meteora.ag/dammv2/CiH9Abhmi9mNjcokq3zcPjYg6pYNVrNNZp85CnsCE9ZV" },
   { sym:"FARTX",    ca:"ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr", pool:"https://www.meteora.ag/dammv2/EYdRr8gnBEqBpLrCpMzgKzjyX3hDreVEL2dPL8STMK6V" },
   { sym:"FARTSFT",  ca:"4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr", pool:"https://www.meteora.ag/dammv2/AbU19bH6vQ7aYWo47a8a7XrKuu21xRVxi9p8uKyS6Y9A" },
-  { sym:null,       ca:"CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr", pool:"https://www.meteora.ag/dammv2/EUUoqygw4K4R6xN6nm9eC7TqG8DikE77jPT32K9ttEG1" },
+  { sym:"FARTBABA", ca:"CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr", pool:"https://www.meteora.ag/dammv2/EUUoqygw4K4R6xN6nm9eC7TqG8DikE77jPT32K9ttEG1" },
 ];
 
 const $ = (id) => document.getElementById(id);
@@ -375,6 +375,41 @@ async function fetchData(){
       if(!_img[t.ca] && j && j.image_uri) _img[t.ca]=j.image_uri;
       if(mc>0){ map[t.ca]=Object.assign({liq:0,price:0,chg:null,mcap:mc},map[t.ca]||{}); map[t.ca].mcap=mc; }
     }catch(_){}
+  }));
+  return map;
+}
+
+// ---- Meteora DAMM v2: real TVL of the FARTPRINT/TOKEN pools ----
+function poolAddr(t){
+  if(!t.pool) return null;
+  const m=t.pool.match(/dammv2\/([1-9A-HJ-NP-Za-km-z]{32,44})/);
+  return m?m[1]:null;
+}
+async function fetchMeteoraTVL(map){
+  await Promise.all(TOKENS.map(async(t)=>{
+    const pa=poolAddr(t); if(!pa) return;
+    let j=null;
+    // Try the two known DAMM v2 API shapes.
+    for(const url of ["https://dammv2-api.meteora.ag/pools/"+pa,
+                      "https://dammv2-api.meteora.ag/pool/"+pa]){
+      try{ const r=await fetch(url); if(r.ok){ j=await r.json(); break; } }catch(_){}
+    }
+    if(!j) return;
+    const p=j.pool||j.data||j;
+    const num=(...keys)=>{ for(const k of keys){ const v=p&&p[k]; if(v!=null&&!isNaN(Number(v))&&Number(v)>0) return Number(v); } return 0; };
+    const tvl=num("tvl","tvl_usd","tvlUsd","liquidity","liquidity_usd","liquidityUsd",
+                  "total_value_locked","totalValueLocked")
+            ||Number((p.metrics&&(p.metrics.tvl||p.metrics.tvl_usd))||0);
+    const price=num("price","token_a_price","tokenAPrice","base_price");
+    const chg=(p.price_change_24h!=null?Number(p.price_change_24h):
+              (p.priceChange24h!=null?Number(p.priceChange24h):null));
+    if(tvl>0||price>0){
+      const cur=map[t.ca]||{liq:0,price:0,chg:null,mcap:0};
+      if(tvl>0) cur.liq=tvl;                       // Meteora pool TVL is authoritative
+      if(price>0&&!(cur.price>0)) cur.price=price;
+      if(chg!=null&&cur.chg==null) cur.chg=chg;
+      map[t.ca]=cur;
+    }
   }));
   return map;
 }
@@ -507,7 +542,7 @@ function renderPools(){
     const chg=d.chg, chgCls=chg==null?"":(chg>=0?"up":"down"), chgTxt=chg==null?"—":(chg>=0?"+":"")+chg.toFixed(2)+"%";
     const pic=img?`<img class="pic" src="${img}" alt="" onerror="this.outerHTML='<div class=\\'pic emoji\\'>💨</div>'">`:`<div class="pic emoji">💨</div>`;
     return `<div class="pool">
-      <div class="ph">${pic}<div><div class="pn">${t.sym}</div><div class="pmeta">${t.ca.slice(0,4)}…${t.ca.slice(-4)} · ${"FART"}/SOL</div></div></div>
+      <div class="ph">${pic}<div><div class="pn">${t.sym}</div><div class="pmeta">${t.ca.slice(0,4)}…${t.ca.slice(-4)} · FARTPRINT/${t.sym}</div></div></div>
       <div class="pstats">
         <div class="ps"><div class="pk">TVL / Liquidity</div><div class="pv">${fmtUsd(d.liq)}</div></div>
         <div class="ps"><div class="pk">Market Cap</div><div class="pv">${fmtUsd(d.mcap)}</div></div>
@@ -564,6 +599,7 @@ async function fetchPrintrImages(){
 // ---- boot ----
 async function load(){
   DATA=await fetchData();
+  await fetchMeteoraTVL(DATA);     // pull real TVL from the Meteora FARTPRINT/TOKEN pools
   await fetchPrintrImages();
   renderTape(); renderStats(); renderPools(); buildBubbles();
 }
@@ -571,6 +607,7 @@ load();
 requestAnimationFrame(tick);
 setInterval(async ()=>{
   DATA=await fetchData();
+  await fetchMeteoraTVL(DATA);
   renderTape(); renderStats(); renderPools();
   for(const b of BUBBLES){
     const d=DATA[b.t.ca]; if(!d) continue;
