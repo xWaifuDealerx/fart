@@ -140,6 +140,10 @@
   .pool .pic.emoji{display:flex;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#6a2cf5,#0ecb81);}
   .pool .pn{font-family:'Orbitron',sans-serif;font-weight:800;font-size:17px;}
   .pool .pmeta{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:2px;letter-spacing:.3px;}
+  .ca-copy{display:inline-flex;align-items:center;gap:4px;cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:1px 6px;color:inherit;transition:border-color .15s,color .15s,background .15s;}
+  .ca-copy:hover{border-color:var(--green-br,#2ee06b);color:#bbf7d0;background:rgba(46,224,107,.08);}
+  .ca-copy .ci{font-size:.92em;opacity:.7;}
+  .ca-copy.copied{border-color:var(--green-br,#2ee06b);color:#2ee06b;background:rgba(46,224,107,.12);}
   .pool .pstats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;position:relative;z-index:1;}
   .pool .ps{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:11px;padding:10px 11px;}
   .pool .ps .pk{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--text-3);font-weight:700;}
@@ -345,6 +349,28 @@ function shortLabel(sym){ return sym==="FARTPRINT" ? "$FP" : sym.replace(/^FART/
 function imgFor(t){ return _img[t.ca] || null; }
 const _img = {};   // mint -> pump.fun/printr image
 
+// ---- copy a full contract address to clipboard, with inline "Copied!" feedback ----
+function copyCA(ca, ev){
+  if(ev){ ev.stopPropagation(); ev.preventDefault(); }
+  const node = ev && ev.currentTarget;
+  const flash = ()=>{
+    if(!node) return;
+    const lbl = node.querySelector(".ca-txt");
+    const orig = lbl ? lbl.textContent : null;
+    node.classList.add("copied");
+    if(lbl) lbl.textContent = "Copied!";
+    setTimeout(()=>{ node.classList.remove("copied"); if(lbl && orig!=null) lbl.textContent = orig; }, 1100);
+  };
+  const fallback = ()=>{
+    const ta=document.createElement("textarea"); ta.value=ca;
+    ta.style.position="fixed"; ta.style.top="-9999px"; document.body.appendChild(ta);
+    ta.select(); try{ document.execCommand("copy"); }catch(_){} ta.remove();
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ca).then(flash).catch(()=>{ fallback(); flash(); });
+  } else { fallback(); flash(); }
+}
+
 // ---- live data ----
 async function fetchData(){
   const map={}; const mints=TOKENS.map(t=>t.ca);
@@ -516,14 +542,14 @@ function openToken(t){
   const d=DATA[t.ca]||{}; const img=imgFor(t);
   $("popHead").innerHTML =
     (t.hero?`<div class="ph-emoji">💩</div>`:(img?`<img class="pflag" src="${img}" alt="" onerror="this.outerHTML='<div class=\\'ph-emoji\\'>💨</div>'">`:`<div class="ph-emoji">💨</div>`))+
-    `<div><div class="nm">${t.hero?"$FARTPRINT":t.sym}</div><div class="tk">${t.ca.slice(0,4)}…${t.ca.slice(-4)}</div></div>`;
+    `<div><div class="nm">${t.hero?"$FARTPRINT":t.sym}</div><div class="tk"><span class="ca-copy" title="Copy contract: ${t.ca}" onclick="copyCA('${t.ca}',event)"><span class="ca-txt">${t.ca.slice(0,4)}…${t.ca.slice(-4)}</span><span class="ci">⧉</span></span></div></div>`;
   const chg=d.chg, chgCls=chg==null?"":(chg>=0?"up":"down"), chgTxt=chg==null?"—":(chg>=0?"+":"")+chg.toFixed(2)+"%";
   $("popGrid").innerHTML=`
     <div class="pop-stat"><div class="pk">Liquidity</div><div class="pv">${fmtUsd(d.liq)}</div></div>
     <div class="pop-stat"><div class="pk">Market Cap</div><div class="pv">${fmtUsd(d.mcap)}</div></div>
     <div class="pop-stat"><div class="pk">Price</div><div class="pv">${fmtPrice(d.price)}</div></div>
     <div class="pop-stat"><div class="pk">24h</div><div class="pv ${chgCls}">${chgTxt}</div></div>`;
-  const tradeUrl=t.hero?t.trade:("https://pump.fun/coin/"+t.ca);
+  const tradeUrl=t.hero?t.trade:("https://app.printr.money/trade/"+t.ca);
   let acts=`<a class="pop-trade${t.pool?" alt":""}" href="${tradeUrl}" target="_blank" rel="noopener">Trade ↗</a>`;
   if(t.pool) acts=`<a class="pop-trade" href="${t.pool}" target="_blank" rel="noopener">⚡ Zap In</a>`+acts;
   $("popActs").innerHTML=acts;
@@ -542,7 +568,7 @@ function renderPools(){
     const chg=d.chg, chgCls=chg==null?"":(chg>=0?"up":"down"), chgTxt=chg==null?"—":(chg>=0?"+":"")+chg.toFixed(2)+"%";
     const pic=img?`<img class="pic" src="${img}" alt="" onerror="this.outerHTML='<div class=\\'pic emoji\\'>💨</div>'">`:`<div class="pic emoji">💨</div>`;
     return `<div class="pool">
-      <div class="ph">${pic}<div><div class="pn">${t.sym}</div><div class="pmeta">${t.ca.slice(0,4)}…${t.ca.slice(-4)} · FARTPRINT/${t.sym}</div></div></div>
+      <div class="ph">${pic}<div><div class="pn">${t.sym}</div><div class="pmeta"><span class="ca-copy" title="Copy contract: ${t.ca}" onclick="copyCA('${t.ca}',event)"><span class="ca-txt">${t.ca.slice(0,4)}…${t.ca.slice(-4)}</span><span class="ci">⧉</span></span> · FARTPRINT/${t.sym}</div></div></div>
       <div class="pstats">
         <div class="ps"><div class="pk">TVL / Liquidity</div><div class="pv">${fmtUsd(d.liq)}</div></div>
         <div class="ps"><div class="pk">Market Cap</div><div class="pv">${fmtUsd(d.mcap)}</div></div>
@@ -551,7 +577,7 @@ function renderPools(){
       </div>
       <div class="pacts">
         <a class="zap" href="${t.pool}" target="_blank" rel="noopener">⚡ Zap In</a>
-        <a class="buy" href="https://pump.fun/coin/${t.ca}" target="_blank" rel="noopener">Buy</a>
+        <a class="buy" href="https://app.printr.money/trade/${t.ca}" target="_blank" rel="noopener">Buy on Printr</a>
       </div>
     </div>`;
   }).join("");
