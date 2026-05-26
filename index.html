@@ -1358,6 +1358,30 @@
   .message:hover { box-shadow: var(--shadow-md); }
   .message.agent-grok { border-left: 3px solid #1d1d1f; }
   .message.agent-echo { border-left: 3px solid var(--green); }
+
+  /* ===== LORE — dark mode overrides ===== */
+  [data-theme="dark"] .lore-section {
+    background: linear-gradient(180deg, #0f1712 0%, #0a0f0c 100%);
+    border-color: var(--border);
+  }
+  [data-theme="dark"] .message {
+    background: var(--card-bg);
+    border-color: var(--border-light);
+  }
+  [data-theme="dark"] .message.agent-grok { border-left-color: var(--text-tertiary); }
+  [data-theme="dark"] .msg-num {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border-light);
+  }
+  [data-theme="dark"] .lore-seal {
+    background: rgba(46, 224, 107, 0.10);
+    color: var(--green);
+    border-color: var(--green);
+  }
+  [data-theme="dark"] .agent-grok .msg-avatar {
+    background: linear-gradient(135deg, #2c4234, #1d2c23);
+    color: var(--text);
+  }
   .msg-header {
     display: flex;
     align-items: center;
