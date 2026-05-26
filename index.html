@@ -726,6 +726,12 @@
     border-color: var(--text);
     color: white;
   }
+  /* Dark mode: keep the chip readable — bright green pill with dark text */
+  [data-theme="dark"] .chip.active {
+    background: var(--green);
+    border-color: var(--green);
+    color: #04230f;
+  }
 
   /* ===== APPS GRID ===== */
   .apps-grid {
@@ -829,6 +835,12 @@
   .status-tag.indev { background: var(--blue-soft); color: #0058b8; }
   .status-tag.planned { background: var(--grey-soft); color: #546e7a; }
   .status-tag.classified { background: #1d1d1f; color: #ff8aa5; }
+
+  /* Dark-mode tag overrides: bright accent on a darker tinted background */
+  [data-theme="dark"] .status-tag.live    { background: rgba(46, 224, 107, 0.16); color: var(--green-bright); }
+  [data-theme="dark"] .status-tag.beta    { background: rgba(255, 207, 90, 0.16); color: var(--amber); }
+  [data-theme="dark"] .status-tag.indev   { background: rgba(90, 155, 255, 0.16); color: var(--blue); }
+  [data-theme="dark"] .status-tag.planned { background: rgba(160, 180, 175, 0.12); color: var(--text-tertiary); }
   [data-theme="dark"] .status-tag.classified { background: #2a1722; color: #ff8aa5; }
 
   @keyframes pulse {
@@ -1197,6 +1209,11 @@
     font-size: 13px;
     font-weight: 600;
     box-shadow: var(--shadow-sm);
+  }
+  [data-theme="dark"] .pill {
+    background: var(--card-bg);
+    border-color: var(--border);
+    color: var(--text);
   }
   .pill .dot {
     display: inline-block;
