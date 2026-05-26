@@ -1131,6 +1131,130 @@
   .apps-grid .app-card { order: 0; }
   .apps-grid .app-card.indev { order: 2; }
 
+  /* ===== FORUM MODULE ===== */
+  .forum-mod {
+    margin-top: 56px;
+    padding: 28px 30px 26px;
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--green-soft-2) 0%, transparent 60%), var(--card-bg);
+    box-shadow: var(--shadow-sm);
+  }
+  [data-theme="dark"] .forum-mod {
+    background: linear-gradient(135deg, rgba(46,224,107,0.05) 0%, transparent 60%), var(--card-bg);
+    border-color: var(--border);
+  }
+  .forum-mod-head {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .forum-mod-head .icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-bright) 100%);
+    box-shadow: 0 4px 14px rgba(0,168,90,0.25);
+    flex-shrink: 0;
+  }
+  .forum-mod-head .icon svg { width: 18px; height: 18px; color: #fff; }
+  .forum-mod-head h3 {
+    font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+    color: var(--text); margin: 0;
+  }
+  .forum-mod-head .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #1ec173; box-shadow: 0 0 8px rgba(30,193,115,0.8);
+    animation: pulse 2s infinite;
+    margin-left: 4px;
+  }
+  .forum-mod-head .sub {
+    font-size: 13px; color: var(--text-muted); margin-left: 2px;
+  }
+  .forum-mod-head .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .forum-burn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 700; color: var(--green-dark);
+    background: var(--green-soft);
+    padding: 6px 12px; border-radius: 100px;
+    border: 1px solid rgba(0,168,90,0.20);
+  }
+  [data-theme="dark"] .forum-burn {
+    color: var(--green-bright);
+    border-color: rgba(46,224,107,0.30);
+  }
+  .forum-burn .num { color: var(--text); }
+  [data-theme="dark"] .forum-burn .num { color: var(--text); }
+  .forum-mod-head .all-link {
+    font-size: 13px; font-weight: 600; color: var(--green-dark);
+    text-decoration: none; transition: color 0.15s;
+  }
+  .forum-mod-head .all-link:hover { color: var(--green); }
+  [data-theme="dark"] .forum-mod-head .all-link { color: var(--green-bright); }
+
+  .forum-list { display: grid; gap: 10px; }
+  .forum-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-light);
+    border-radius: 14px;
+    background: var(--bg-2);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s;
+    min-width: 0;
+  }
+  .forum-row:hover {
+    border-color: var(--green);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+  [data-theme="dark"] .forum-row {
+    background: rgba(255,255,255,0.02);
+    border-color: var(--border-light);
+  }
+  [data-theme="dark"] .forum-row:hover {
+    background: rgba(46,224,107,0.04);
+    border-color: var(--green);
+  }
+  .forum-row .flame { font-size: 18px; }
+  .forum-row .body { min-width: 0; }
+  .forum-row .ttl {
+    font-weight: 700; font-size: 15px; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    letter-spacing: -0.2px;
+  }
+  .forum-row .by {
+    font-size: 12px; color: var(--text-muted); margin-top: 2px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .forum-row .burns {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700; font-size: 13px; color: var(--green-dark);
+    white-space: nowrap;
+  }
+  [data-theme="dark"] .forum-row .burns { color: var(--green-bright); }
+  .forum-row .burns small {
+    display: block; font-size: 10px; font-weight: 600;
+    color: var(--text-muted); margin-top: 1px;
+    font-family: 'Inter', sans-serif; letter-spacing: 0.4px; text-transform: uppercase;
+  }
+  .forum-row .go { color: var(--text-muted); font-size: 14px; }
+  .forum-row:hover .go { color: var(--green); }
+
+  .forum-empty {
+    padding: 22px 12px; text-align: center;
+    color: var(--text-muted); font-size: 13px;
+  }
+
+  @media (max-width: 600px) {
+    .forum-mod { padding: 22px 18px; }
+    .forum-row { grid-template-columns: 24px 1fr auto; gap: 10px; padding: 12px; }
+    .forum-row .go { display: none; }
+    .forum-row .ttl { font-size: 14px; }
+  }
+
   /* ===== BUY $FARTPRINT ===== */
   .buy-grid {
     display: grid;
@@ -2207,6 +2331,29 @@
       <span class="buy-left"><img src="https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg" alt="" onerror="this.style.display='none'"><span class="buy-name">Printr</span></span>
       <span class="buy-go">Trade ↗</span>
     </a>
+  </div>
+
+  <!-- LATEST FROM FARTFORUM -->
+  <div class="forum-mod" id="forumMod">
+    <div class="forum-mod-head">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          <line x1="7" y1="9" x2="17" y2="9"/>
+          <line x1="7" y1="13" x2="13" y2="13"/>
+        </svg>
+      </span>
+      <h3>Latest from FartForum</h3>
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="sub">live · burn-to-post</span>
+      <div class="right">
+        <span class="forum-burn" id="forumBurn"><span class="num">—</span> $FARTPRINT burned</span>
+        <a class="all-link" href="fartforum.html">View all →</a>
+      </div>
+    </div>
+    <div class="forum-list" id="forumList">
+      <div class="forum-empty">Loading recent threads…</div>
+    </div>
   </div>
 
   <!-- BUILDERS -->
@@ -3344,9 +3491,70 @@ async function loadTop3Derivatives(){
   renderTop3("top3-derivatives", rows, "Freshly minted — leaderboard fills as they trade.");
 }
 
+// ===== Latest from FartForum =====
+function _forumAgo(ts){
+  if(!ts) return "—";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if(d < 60)   return d + "s ago";
+  if(d < 3600) return Math.floor(d/60) + "m ago";
+  if(d < 86400)return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+function _forumShort(a){
+  if(!a) return "anon";
+  if(a.length > 12) return a.slice(0,4) + "…" + a.slice(-4);
+  return a;
+}
+function _forumEsc(s){
+  return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+async function loadForumLatest(){
+  const list = $id("forumList");
+  const burn = $id("forumBurn");
+  if(!list) return;
+  try {
+    const r = await fetch("/api/fartforum?t=" + Date.now());
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const threads = Array.isArray(j.threads) ? j.threads : [];
+    const burned = Number(j.burned) || 0;
+    if(burn){
+      burn.innerHTML = `<span class="num">${burned.toLocaleString()}</span> $FARTPRINT burned`;
+    }
+    if(!threads.length){
+      list.innerHTML = `<div class="forum-empty">No threads yet — be the first to post on <a href="fartforum.html" style="color:var(--green);font-weight:600;">FartForum</a>.</div>`;
+      return;
+    }
+    // Most-recently-active first
+    threads.sort((a, b) => (Number(b.lastTs) || 0) - (Number(a.lastTs) || 0));
+    const top = threads.slice(0, 3);
+    list.innerHTML = top.map(t => {
+      const posts = Array.isArray(t.posts) ? t.posts.length : 0;
+      const last  = Number(t.lastTs) || Number(t.ts) || 0;
+      const title = _forumEsc(t.title || "(untitled)");
+      const id    = encodeURIComponent(t.id || "");
+      const by    = _forumShort(t.author);
+      return `
+        <a class="forum-row" href="fartforum.html?thread=${id}">
+          <span class="flame">🔥</span>
+          <div class="body">
+            <div class="ttl">${title}</div>
+            <div class="by">by ${_forumEsc(by)} · last activity ${_forumAgo(last)}</div>
+          </div>
+          <div class="burns">${posts}<small>${posts === 1 ? "burn" : "burns"}</small></div>
+          <span class="go">→</span>
+        </a>
+      `;
+    }).join("");
+  } catch(e){
+    list.innerHTML = `<div class="forum-empty">Could not load forum activity right now.</div>`;
+  }
+}
+
 loadTop3FartCup();
 loadTop3Derivatives();
-setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); }, 60000);
+loadForumLatest();
+setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); loadForumLatest(); }, 60000);
 </script>
 
 <!-- ===== Premium layer: Three.js (reactive painted bg) · GSAP ScrollTrigger (cinematic reveals) · Lenis (smooth scroll) ===== -->
