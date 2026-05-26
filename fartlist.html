@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartList · boost coins by burning $FARTPRINT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --purple:#9b5cff; --red:#ff5a5a; --amber:#ffcf5a; --gold:#ffb020;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(255,176,32,.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(46,224,107,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;cursor:pointer;background:transparent;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+  .pill.primary{color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));border:none;font-weight:800;box-shadow:0 4px 14px rgba(46,224,107,.32);}
+  .pill.primary:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 18px 90px;}
+
+  .hero{margin-bottom:14px;}
+  .hero h1{margin:0;font-size:36px;font-weight:900;letter-spacing:-1px;font-family:'Orbitron',sans-serif;}
+  .hero h1 .a{background:linear-gradient(135deg,var(--amber),var(--green));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin-top:8px;max-width:720px;}
+  .hero .sub b{color:var(--amber);}
+
+  .stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0 22px;
+  }
+  @media (max-width:680px){ .stats{grid-template-columns:1fr;} }
+  .scard{
+    border:1px solid var(--border);background:var(--panel);border-radius:14px;padding:16px 18px;
+    box-shadow:var(--shadow);position:relative;overflow:hidden;
+  }
+  .scard::before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,var(--accent,#ffb020) 0%,transparent 40%);opacity:.08;pointer-events:none;}
+  .scard .lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);font-weight:800;margin-bottom:6px;}
+  .scard .v{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:22px;color:var(--text);}
+  .scard .sub{color:var(--text-3);font-size:12px;margin-top:6px;}
+
+  .listhead{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+  .listhead h2{margin:0;font-size:16px;font-weight:800;}
+  .listhead .ct{color:var(--text-3);font-size:12.5px;}
+  .listhead .right{margin-left:auto;font-size:12px;color:var(--text-3);}
+
+  /* table */
+  .board{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);}
+  .board .head, .board .trow{
+    display:grid;
+    grid-template-columns: 56px 1fr 120px 150px 110px;
+    align-items:center;gap:10px;
+  }
+  .board .head{background:var(--panel-2);border-bottom:1px solid var(--border);padding:11px 16px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .board .trow{padding:12px 14px;border-bottom:1px solid var(--border);transition:.12s;cursor:pointer;}
+  .board .trow:last-child{border-bottom:none;}
+  .board .trow:hover{background:var(--row);}
+  .board .trow.expanded{background:var(--row);}
+  .board .trow.boosted{background:linear-gradient(90deg,rgba(255,176,32,.07),transparent);}
+  .board .trow.boosted:hover{background:linear-gradient(90deg,rgba(255,176,32,.12),transparent);}
+
+  .rank{
+    font-family:'Orbitron',sans-serif;font-weight:800;font-size:16px;color:var(--text-3);
+    display:flex;align-items:center;justify-content:center;width:42px;height:32px;
+    border-radius:8px;background:var(--panel-2);border:1px solid var(--border);
+  }
+  .rank.r1{color:#0a0f0c;background:linear-gradient(135deg,#ffd75a,#ffb020);border-color:#ffb020;}
+  .rank.r2{color:#0a0f0c;background:linear-gradient(135deg,#e0e0e0,#a8a8a8);border-color:#a8a8a8;}
+  .rank.r3{color:#0a0f0c;background:linear-gradient(135deg,#d4884a,#a85a26);border-color:#a85a26;}
+
+  .coin{display:flex;align-items:center;gap:12px;min-width:0;}
+  .coin .img{width:40px;height:40px;border-radius:10px;flex-shrink:0;background:var(--panel-2);
+    display:grid;place-items:center;font-weight:900;color:var(--amber);font-size:14px;overflow:hidden;border:1px solid var(--border);}
+  .coin .img img{width:100%;height:100%;object-fit:cover;display:block;}
+  .coin .nm{min-width:0;}
+  .coin .sym{font-weight:800;font-size:14.5px;letter-spacing:.2px;}
+  .coin .src{font-size:9px;letter-spacing:1.2px;padding:1px 5px;border-radius:5px;margin-left:6px;vertical-align:middle;font-weight:800;border:1px solid var(--border-2);color:var(--text-3);background:var(--panel-2);text-transform:uppercase;}
+  .coin .src.printr{color:#16a34a;border-color:rgba(22,163,74,.35);background:rgba(22,163,74,.08);}
+  .coin .src.pump{color:var(--amber);border-color:rgba(255,176,32,.35);background:rgba(255,176,32,.08);}
+  .coin .src.bags{color:var(--purple);border-color:rgba(155,92,255,.35);background:rgba(155,92,255,.08);}
+  .coin .nm2{font-size:11.5px;color:var(--text-3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;}
+
+  .num{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13.5px;color:var(--text);text-align:right;}
+  .num.amber{color:var(--amber);}
+  .num.muted{color:var(--text-3);}
+  .num .sub{display:block;font-size:11px;color:var(--text-3);font-weight:600;margin-top:1px;}
+
+  .boost-btn{
+    font-weight:800;font-size:12.5px;border:none;cursor:pointer;border-radius:10px;
+    padding:9px 14px;color:#04230f;background:linear-gradient(135deg,var(--amber),#ff8a3d);
+    box-shadow:0 3px 10px rgba(255,138,61,.28);transition:.15s;width:100%;
+    letter-spacing:.3px;
+  }
+  .boost-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .boost-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;filter:none;}
+
+  /* expanded panel */
+  .exp{
+    grid-column:1 / -1; border-top:1px dashed var(--border);
+    padding:14px 16px 18px; background:var(--panel-2); display:none;
+    margin:8px -14px -12px; /* offset trow padding */
+    border-radius:0;
+  }
+  .trow.expanded .exp{display:block;}
+  .exp .row{display:flex;gap:18px;flex-wrap:wrap;}
+  .exp .col{flex:1 1 240px;min-width:0;}
+  .exp h4{margin:0 0 8px;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .exp .blist{display:flex;flex-direction:column;gap:6px;}
+  .exp .blist .b{
+    display:grid;grid-template-columns:24px 1fr auto;gap:10px;align-items:center;
+    padding:6px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--border);
+  }
+  .exp .blist .b .r{font-family:'JetBrains Mono',monospace;color:var(--text-3);font-weight:700;font-size:12px;text-align:center;}
+  .exp .blist .b .w{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);}
+  .exp .blist .b .a{font-family:'JetBrains Mono',monospace;font-weight:800;color:var(--amber);font-size:13px;}
+  .exp .empty{color:var(--text-3);font-size:12.5px;padding:8px 4px;}
+
+  .boost-form{
+    display:flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:8px 10px;
+  }
+  .boost-form input{
+    background:transparent;border:none;color:var(--text);font-family:'JetBrains Mono',monospace;
+    font-size:14px;font-weight:700;outline:none;width:100%;
+  }
+  .boost-form .unit{color:var(--text-3);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+  .boost-form .preset{
+    border:1px solid var(--border-2);background:var(--panel-2);color:var(--text-2);
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    padding:4px 8px;border-radius:6px;cursor:pointer;transition:.12s;
+  }
+  .boost-form .preset:hover{border-color:var(--amber);color:var(--amber);}
+  .boost-do{
+    font-weight:800;font-size:13px;border:none;cursor:pointer;border-radius:10px;padding:10px 16px;
+    color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 3px 10px rgba(46,224,107,.28);white-space:nowrap;
+  }
+  .boost-do:hover{filter:brightness(1.06);}
+  .boost-do:disabled{opacity:.5;cursor:not-allowed;}
+  .boost-msg{font-size:12px;color:var(--text-3);margin-top:6px;}
+  .boost-msg.err{color:var(--red);}
+  .boost-msg.ok{color:var(--green);}
+
+  /* modal: list new coin */
+  .modal{
+    position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;
+    background:rgba(8,11,9,.85);backdrop-filter:blur(8px);padding:18px;
+  }
+  .modal.show{display:flex;}
+  .modal-card{
+    width:100%;max-width:520px;border:1px solid var(--border-2);border-radius:18px;
+    background:linear-gradient(180deg, rgba(255,176,32,.10), var(--panel) 50%);
+    box-shadow:0 24px 60px rgba(0,0,0,.6); padding:24px;
+  }
+  .modal-card h2{margin:0 0 6px;font-family:'Orbitron',sans-serif;font-size:22px;font-weight:900;letter-spacing:-.4px;}
+  .modal-card h2 .a{color:var(--amber);}
+  .modal-card .lead{color:var(--text-2);font-size:13.5px;line-height:1.6;margin-bottom:16px;}
+  .modal-card label{display:block;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-3);font-weight:800;margin:14px 0 6px;}
+  .modal-card input[type=text]{
+    background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);
+    border-radius:10px;padding:10px 13px;font-size:13.5px;font-weight:600;
+    font-family:'JetBrains Mono',monospace;width:100%;outline:none;
+  }
+  .modal-card input[type=text]:focus{border-color:var(--green);}
+  .modal-card .preview{
+    margin-top:12px;border:1px solid var(--border-2);border-radius:12px;padding:12px 14px;background:var(--panel-2);
+    display:flex;align-items:center;gap:12px;
+  }
+  .modal-card .preview .img{width:42px;height:42px;border-radius:10px;background:var(--panel);
+    display:grid;place-items:center;font-weight:900;color:var(--amber);overflow:hidden;border:1px solid var(--border);}
+  .modal-card .preview .img img{width:100%;height:100%;object-fit:cover;}
+  .modal-card .preview .nm{font-weight:800;font-size:14px;}
+  .modal-card .preview .nm2{font-size:12px;color:var(--text-3);margin-top:1px;}
+  .modal-card .preview.empty{color:var(--text-3);font-size:12.5px;text-align:center;display:block;}
+  .modal-actions{display:flex;gap:10px;margin-top:18px;}
+  .modal-actions .btn{flex:1;font-weight:800;font-size:14px;border:none;cursor:pointer;border-radius:12px;padding:12px;}
+  .modal-actions .btn.primary{color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));box-shadow:0 4px 14px rgba(46,224,107,.32);}
+  .modal-actions .btn.primary:disabled{opacity:.5;cursor:not-allowed;}
+  .modal-actions .btn.secondary{background:transparent;border:1px solid var(--border-2);color:var(--text-2);font-weight:700;}
+  .modal-status{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600;background:var(--panel-2);border:1px solid var(--border);display:none;}
+  .modal-status.show{display:block;}
+  .modal-status.err{color:var(--red);border-color:rgba(255,90,90,.4);background:rgba(255,90,90,.06);}
+  .modal-status.ok{color:var(--green);border-color:rgba(46,224,107,.4);background:rgba(46,224,107,.06);}
+
+  /* toast */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);
+    padding:10px 18px;border-radius:99px;font-size:13.5px;font-weight:700;
+    box-shadow:var(--shadow);z-index:50;display:none;
+  }
+  .toast.show{display:block;animation:fadein .25s;}
+  @keyframes fadein{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translateX(-50%);}}
+
+  .empty-state{padding:30px;text-align:center;color:var(--text-3);font-size:13.5px;}
+  .info{margin-top:24px;padding:14px 18px;border:1px dashed var(--border-2);border-radius:12px;color:var(--text-3);font-size:12.5px;line-height:1.6;}
+  .info b{color:var(--text-2);}
+
+  /* responsive */
+  @media (max-width:780px){
+    .board .head, .board .trow{grid-template-columns: 46px 1fr 100px 100px; padding-left:10px;padding-right:10px;}
+    .board .head .h-mcap, .board .trow .c-mcap{display:none;}
+    .coin .nm2{display:none;}
+    .num{font-size:12.5px;}
+    .hero h1{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="8" y1="6"  x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <line x1="3" y1="6"  x2="3.01" y2="6"/>
+        <line x1="3" y1="12" x2="3.01" y2="12"/>
+        <line x1="3" y1="18" x2="3.01" y2="18"/>
+      </svg>
+    </span>
+    FART<span class="amp">LIST</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button id="listBtn" class="pill primary" type="button">+ List a coin</button>
+  <button id="walletBtn" class="wallet-btn" type="button">Connect Wallet</button>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartList</span></h1>
+    <div class="sub">
+      A leaderboard of Solana coins, ranked by how much <b>$FARTPRINT</b> has been burned for them.
+      Boost your bag by burning ≥<b>100 $FARTPRINT</b> on it. Or list a brand new coin from
+      pump.fun / bags.fm by being the first to burn ≥<b>1,000 $FARTPRINT</b> on it.
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="scard" style="--accent:#ffb020;">
+      <div class="lbl">Total Burned</div>
+      <div class="v" id="sumBurned">—</div>
+      <div class="sub">Across every coin on the board</div>
+    </div>
+    <div class="scard" style="--accent:#2ee06b;">
+      <div class="lbl">Coins Listed</div>
+      <div class="v" id="sumCoins">—</div>
+      <div class="sub" id="sumCoinsSub">Seed + community-added</div>
+    </div>
+    <div class="scard" style="--accent:#9b5cff;">
+      <div class="lbl">Boosted Coins</div>
+      <div class="v" id="sumBoosted">—</div>
+      <div class="sub">Coins with at least one burn</div>
+    </div>
+  </div>
+
+  <div class="listhead">
+    <h2>The Board</h2>
+    <span class="ct" id="boardCount"></span>
+    <span class="right">Sorted by $FARTPRINT burned · live</span>
+  </div>
+
+  <div class="board" id="board">
+    <div class="head">
+      <div>Rank</div>
+      <div>Coin</div>
+      <div class="h-mcap" style="text-align:right;">Market Cap</div>
+      <div style="text-align:right;">$FARTPRINT Burned</div>
+      <div></div>
+    </div>
+    <div class="empty-state" id="emptyMsg">Loading coins…</div>
+  </div>
+
+  <div class="info">
+    <b>How ranking works.</b> Each coin's position is determined by the total $FARTPRINT burned on it.
+    Burns are verified on-chain — your wallet must be the burn authority and you must burn the
+    real amount or more. Burn signatures are single-use. Click any row to see top boosters and burn
+    more for that coin. New coins (pump.fun / bags.fm / custom Solana mints) are added with a one-time
+    ≥1,000 $FARTPRINT first-listing burn.
+  </div>
+
+</div>
+
+<!-- LIST NEW COIN MODAL -->
+<div class="modal" id="listModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <h2>List a coin · <span class="a">first-burn</span></h2>
+    <p class="lead">
+      Paste any Solana mint from <b style="color:var(--amber);">pump.fun</b> or
+      <b style="color:var(--purple);">bags.fm</b> (or any custom mint). We'll fetch its metadata.
+      First-listing burn is <b>≥1,000 $FARTPRINT</b>.
+    </p>
+
+    <label for="newMint">Mint address</label>
+    <input id="newMint" type="text" placeholder="e.g. 9BB6NFE…pump" autocomplete="off">
+
+    <div class="preview empty" id="newPrev">Paste a mint to preview the coin.</div>
+
+    <label for="newAmount">Burn amount</label>
+    <div class="boost-form" style="padding:9px 12px;">
+      <input id="newAmount" type="text" inputmode="numeric" value="1000">
+      <span class="unit">$FARTPRINT</span>
+      <button class="preset" type="button" data-amt="1000">1k</button>
+      <button class="preset" type="button" data-amt="5000">5k</button>
+      <button class="preset" type="button" data-amt="10000">10k</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn secondary" id="newCancel" type="button">Cancel</button>
+      <button class="btn primary" id="newGo" type="button" disabled>Burn & List</button>
+    </div>
+    <div class="modal-status" id="newStatus"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  Connection, PublicKey,
+  TransactionInstruction, TransactionMessage, VersionedTransaction
+} from "https://esm.sh/@solana/web3.js@1.95.3";
+
+const API = "/api/fartlist";
+const MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const MINT_PK = new PublicKey(MINT_STR);
+const TOKEN_PROGRAM_ID      = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+const ASSOC_PROGRAM_ID      = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+let TOKEN_PROGRAM = TOKEN_PROGRAM_ID;
+let MINT_DECIMALS = 6;
+let _mintResolved = false;
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+const MIN_BOOST = 100;
+const MIN_LIST  = 1000;
+
+// ---------- state ----------
+const state = {
+  walletPk: null,
+  coins: [],          // [{mint, sym, name, image, totalBurned, mcap, ...}]
+  mcaps: {},          // mint → number
+  images: {},         // mint → string
+  expanded: null,     // mint of currently expanded row
+  newPreview: null,   // {mint, sym, name, image, source, mcap}
+  busy: false,
+};
+
+// ---------- utils ----------
+const $ = (id)=>document.getElementById(id);
+function esc(s){ return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function fmtUsd(n){
+  if(n==null||!isFinite(n)) return "—";
+  if(n>=1e9) return "$"+(n/1e9).toFixed(2)+"B";
+  if(n>=1e6) return "$"+(n/1e6).toFixed(2)+"M";
+  if(n>=1e3) return "$"+(n/1e3).toFixed(2)+"K";
+  if(n>=1)   return "$"+n.toFixed(2);
+  if(n>=0.01)return "$"+n.toFixed(4);
+  if(n>0)    return "$"+n.toFixed(8);
+  return "$0";
+}
+function fmtNum(n){
+  if(n==null||!isFinite(n)) return "0";
+  if(n>=1e9) return (n/1e9).toFixed(2)+"B";
+  if(n>=1e6) return (n/1e6).toFixed(2)+"M";
+  if(n>=1e3) return (n/1e3).toFixed(2)+"K";
+  return n.toLocaleString(undefined,{maximumFractionDigits:0});
+}
+function shortAddr(a){ return a ? (a.slice(0,4)+"…"+a.slice(-4)) : ""; }
+
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+// ---------- burn helpers ----------
+async function resolveMint(){
+  if(_mintResolved) return;
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      const info = await c.getParsedAccountInfo(MINT_PK);
+      const v = info && info.value;
+      if(v && v.owner){
+        TOKEN_PROGRAM = v.owner;
+        const dec = v.data && v.data.parsed && v.data.parsed.info && v.data.parsed.info.decimals;
+        if(Number.isInteger(dec)) MINT_DECIMALS = dec;
+        _mintResolved = true;
+        return;
+      }
+    } catch(_){}
+  }
+}
+function ataFor(owner){
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), MINT_PK.toBuffer()],
+    ASSOC_PROGRAM_ID
+  );
+  return ata;
+}
+function makeBurnIx(owner, tokens){
+  const amount = BigInt(tokens) * (10n ** BigInt(MINT_DECIMALS));
+  const data = new Uint8Array(10);
+  data[0] = 15; // BurnChecked
+  let x = amount;
+  for(let i=0;i<8;i++){ data[1+i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = MINT_DECIMALS;
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM,
+    keys: [
+      { pubkey: ataFor(owner), isSigner:false, isWritable:true },
+      { pubkey: MINT_PK,       isSigner:false, isWritable:true },
+      { pubkey: owner,         isSigner:true,  isWritable:false },
+    ],
+    data,
+  });
+}
+async function freshBlockhash(){
+  for(const url of RPCS){
+    try {
+      const conn = new Connection(url, "confirmed");
+      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+      return { conn, blockhash, lastValidBlockHeight };
+    } catch(_){}
+  }
+  throw new Error("Could not reach a Solana RPC. Try again in a moment.");
+}
+async function burnAmount(tokens){
+  const ph = getPhantom();
+  if(!ph) throw new Error("Phantom not found");
+  if(!state.walletPk) throw new Error("Wallet not connected");
+  if(!Number.isFinite(tokens) || tokens <= 0) throw new Error("Invalid amount");
+  const owner = new PublicKey(state.walletPk);
+  await resolveMint();
+  const { blockhash } = await freshBlockhash();
+  const msg = new TransactionMessage({
+    payerKey: owner,
+    recentBlockhash: blockhash,
+    instructions: [ makeBurnIx(owner, tokens) ],
+  }).compileToV0Message();
+  const tx = new VersionedTransaction(msg);
+  const res = await ph.signAndSendTransaction(tx);
+  const sig = res.signature || res;
+  if(typeof sig !== "string") throw new Error("No signature returned");
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      await c.confirmTransaction(sig, "confirmed");
+      break;
+    } catch(_){}
+  }
+  return sig;
+}
+
+// ---------- Phantom ----------
+function getPhantom(){
+  const p = window.phantom && window.phantom.solana;
+  if(p && p.isPhantom) return p;
+  if(window.solana && window.solana.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if(!ph){ alert("Phantom not found. Install Phantom from https://phantom.app"); return; }
+  try {
+    const res = await ph.connect();
+    state.walletPk = res.publicKey.toString();
+    localStorage.setItem("fl_trusted","1");
+    paintWallet(); renderBoard();
+  } catch(e){ console.warn("connect failed",e); }
+}
+async function disconnectWallet(){
+  const ph = getPhantom();
+  try{ if(ph && ph.disconnect) await ph.disconnect(); }catch(_){}
+  state.walletPk = null;
+  localStorage.removeItem("fl_trusted");
+  paintWallet(); renderBoard();
+}
+async function tryAutoConnect(){
+  if(localStorage.getItem("fl_trusted") !== "1") return;
+  const ph = getPhantom();
+  if(!ph) return;
+  try {
+    const res = await ph.connect({ onlyIfTrusted:true });
+    state.walletPk = res.publicKey.toString();
+    paintWallet();
+  } catch(_){}
+}
+function paintWallet(){
+  const b = $("walletBtn");
+  if(state.walletPk){
+    b.textContent = shortAddr(state.walletPk);
+    b.classList.add("connected");
+    b.onclick = disconnectWallet;
+  } else {
+    b.textContent = "Connect Wallet";
+    b.classList.remove("connected");
+    b.onclick = connectWallet;
+  }
+}
+
+// ---------- mcap fetch (DexScreener + pump.fun fallback) ----------
+async function fetchDexScreener(mints){
+  if(!mints.length) return {};
+  // Batch in groups of 30
+  const out = {};
+  for(let i=0;i<mints.length;i+=30){
+    const batch = mints.slice(i, i+30);
+    try {
+      const r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + batch.join(","));
+      if(!r.ok) continue;
+      const j = await r.json();
+      const pairs = j.pairs || [];
+      for(const p of pairs){
+        const base = p.baseToken && p.baseToken.address;
+        if(!base) continue;
+        const liq = (p.liquidity && p.liquidity.usd) || 0;
+        const prev = out[base];
+        if(!prev || liq > prev._liq){
+          out[base] = {
+            _liq: liq,
+            mcap: Number(p.marketCap) || Number(p.fdv) || null,
+            image: (p.info && p.info.imageUrl) || null,
+            sym: p.baseToken && p.baseToken.symbol,
+          };
+        }
+      }
+    } catch(_){}
+  }
+  return out;
+}
+async function fetchPumpFun(mint){
+  try {
+    const r = await fetch("/api/pumpfun?mint=" + mint);
+    if(!r.ok) return null;
+    const j = await r.json();
+    return {
+      mcap: Number(j.usd_market_cap) || null,
+      image: j.image_uri || j.image || null,
+      sym: j.symbol || null,
+      name: j.name || null,
+    };
+  } catch(_){ return null; }
+}
+async function refreshMcaps(){
+  const mints = state.coins.map(c=>c.mint);
+  const ds = await fetchDexScreener(mints);
+  for(const m of mints){
+    if(ds[m]){
+      state.mcaps[m] = ds[m].mcap;
+      if(ds[m].image) state.images[m] = ds[m].image;
+    }
+  }
+  // pump.fun fallback for those that are still missing
+  const missing = mints.filter(m => !state.mcaps[m]);
+  await Promise.all(missing.slice(0, 20).map(async (m)=>{
+    const p = await fetchPumpFun(m);
+    if(p){
+      if(p.mcap) state.mcaps[m] = p.mcap;
+      if(p.image && !state.images[m]) state.images[m] = p.image;
+    }
+  }));
+  renderBoard();
+}
+
+// ---------- load board ----------
+async function loadBoard(){
+  try {
+    const r = await fetch(API);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = await r.json();
+    state.coins = j.coins || [];
+    $("sumBurned").textContent = fmtNum(j.totalBurned) + " $FARTPRINT";
+    $("sumCoins").textContent = state.coins.length;
+    $("sumBoosted").textContent = state.coins.filter(c => c.totalBurned > 0).length;
+    $("sumCoinsSub").textContent = `${j.seeds||0} seed · ${j.custom||0} community-added`;
+    renderBoard();
+    refreshMcaps(); // background
+  } catch(e){
+    console.warn("loadBoard fail", e);
+    $("emptyMsg").textContent = "Could not load the board. Refresh in a moment.";
+  }
+}
+
+// ---------- render ----------
+function sortedCoins(){
+  // Sort by totalBurned desc; tie-break by mcap desc; tie-break by sym
+  return [...state.coins].sort((a,b)=>{
+    const tb = (Number(b.totalBurned)||0) - (Number(a.totalBurned)||0);
+    if(tb !== 0) return tb;
+    const ma = state.mcaps[a.mint] || 0, mb = state.mcaps[b.mint] || 0;
+    if(mb !== ma) return mb - ma;
+    return (a.sym||"").localeCompare(b.sym||"");
+  });
+}
+
+function coinImageHTML(c){
+  const img = state.images[c.mint] || c.image;
+  if(img) return `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'${esc((c.sym||'?')[0])}'}))">`;
+  return esc((c.sym||"?")[0]);
+}
+
+function renderBoard(){
+  const tbl = $("board");
+  // remove old rows
+  Array.from(tbl.querySelectorAll(".trow")).forEach(n=>n.remove());
+  const sorted = sortedCoins();
+  $("boardCount").textContent = `${sorted.length} coin${sorted.length===1?"":"s"}`;
+  const empty = $("emptyMsg");
+  if(!sorted.length){ empty.textContent = "No coins yet. Be the first to list one!"; empty.style.display="block"; return; }
+  empty.style.display = "none";
+  sorted.forEach((c, idx)=>{
+    const rank = idx + 1;
+    const burned = Number(c.totalBurned) || 0;
+    const mcap = state.mcaps[c.mint];
+    const rankCls = rank===1 ? "rank r1" : rank===2 ? "rank r2" : rank===3 ? "rank r3" : "rank";
+    const sourceTag = c.source ? `<span class="src ${esc(c.source)}">${esc(c.source)}</span>` : "";
+    const expanded = state.expanded === c.mint;
+    const row = document.createElement("div");
+    row.className = "trow" + (burned > 0 ? " boosted":"") + (expanded ? " expanded":"");
+    row.dataset.mint = c.mint;
+    row.innerHTML = `
+      <div class="${rankCls}">${rank}</div>
+      <div class="coin">
+        <div class="img">${coinImageHTML(c)}</div>
+        <div class="nm">
+          <div class="sym">$${esc(c.sym||"?")} ${sourceTag}</div>
+          <div class="nm2">${esc(c.name||"")} · ${esc(shortAddr(c.mint))}</div>
+        </div>
+      </div>
+      <div class="c-mcap num ${mcap?"":"muted"}">${mcap ? fmtUsd(mcap) : "—"}</div>
+      <div class="num amber">${fmtNum(burned)}<span class="sub">${c.burnsCount||0} burn${(c.burnsCount||0)===1?"":"s"} · ${c.boostersCount||0} booster${(c.boostersCount||0)===1?"":"s"}</span></div>
+      <div><button class="boost-btn" data-mint="${esc(c.mint)}">🔥 Boost</button></div>
+    `;
+    // expanded panel
+    if(expanded){
+      const exp = document.createElement("div");
+      exp.className = "exp";
+      exp.style.display = "block";
+      exp.innerHTML = `
+        <div class="row">
+          <div class="col">
+            <h4>Top Boosters</h4>
+            ${
+              (c.topBoosters||[]).length
+                ? `<div class="blist">${c.topBoosters.slice(0,10).map((b,i)=>`
+                    <div class="b">
+                      <div class="r">${i+1}</div>
+                      <div class="w" title="${esc(b.wallet)}">${esc(shortAddr(b.wallet))}</div>
+                      <div class="a">${fmtNum(b.amount)} <span style="font-size:10px;color:var(--text-3);font-family:Inter,sans-serif;">$FP</span></div>
+                    </div>`).join("")}
+                  </div>`
+                : `<div class="empty">No boosters yet — be the first.</div>`
+            }
+          </div>
+          <div class="col">
+            <h4>Boost this coin · min ${MIN_BOOST} $FARTPRINT</h4>
+            <div class="boost-form">
+              <input id="amt-${esc(c.mint)}" type="text" inputmode="numeric" value="${MIN_BOOST}">
+              <span class="unit">$FARTPRINT</span>
+              <button class="preset" type="button" data-set="${esc(c.mint)}" data-amt="${MIN_BOOST}">100</button>
+              <button class="preset" type="button" data-set="${esc(c.mint)}" data-amt="1000">1k</button>
+              <button class="preset" type="button" data-set="${esc(c.mint)}" data-amt="10000">10k</button>
+            </div>
+            <div style="margin-top:8px;">
+              <button class="boost-do" data-do="${esc(c.mint)}">🔥 Burn & Boost</button>
+            </div>
+            <div class="boost-msg" id="msg-${esc(c.mint)}"></div>
+          </div>
+        </div>
+      `;
+      row.appendChild(exp);
+    }
+    tbl.appendChild(row);
+  });
+}
+
+// ---------- interactions ----------
+$("board").addEventListener("click", async (ev)=>{
+  // preset button (inside expanded form)
+  const ps = ev.target.closest(".preset");
+  if(ps && ps.dataset.set){
+    ev.stopPropagation();
+    const m = ps.dataset.set; const amt = ps.dataset.amt;
+    const input = $("amt-" + m); if(input) input.value = amt;
+    return;
+  }
+  // boost-do (burn & boost)
+  const doBtn = ev.target.closest(".boost-do");
+  if(doBtn){
+    ev.stopPropagation();
+    const m = doBtn.dataset.do;
+    const input = $("amt-" + m);
+    const amt = Math.max(0, Math.floor(Number((input && input.value) || 0)));
+    return submitBoost(m, amt, doBtn);
+  }
+  // boost button on collapsed row → expand and focus
+  const bb = ev.target.closest(".boost-btn");
+  if(bb){
+    ev.stopPropagation();
+    const m = bb.dataset.mint;
+    state.expanded = (state.expanded === m) ? null : m;
+    renderBoard();
+    return;
+  }
+  // toggle expand on row click
+  const tr = ev.target.closest(".trow");
+  if(tr){
+    const m = tr.dataset.mint;
+    if(!m) return;
+    state.expanded = (state.expanded === m) ? null : m;
+    renderBoard();
+  }
+});
+
+async function submitBoost(mint, amt, btn){
+  if(!state.walletPk){ toast("Connect your wallet first."); return; }
+  if(state.busy) return;
+  const msg = $("msg-"+mint);
+  if(!Number.isFinite(amt) || amt < MIN_BOOST){
+    if(msg){ msg.className = "boost-msg err"; msg.textContent = `Burn at least ${MIN_BOOST} $FARTPRINT to boost.`; }
+    return;
+  }
+  state.busy = true;
+  if(btn){ btn.disabled = true; btn.textContent = "Burning…"; }
+  if(msg){ msg.className = "boost-msg"; msg.textContent = "Confirm the burn in Phantom… 🔥"; }
+  try {
+    await resolveMint();
+    const sig = await burnAmount(amt);
+    if(msg) msg.textContent = "Burn sent — recording on FartList…";
+    const r = await fetch(API + "?kind=boost", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mint, sig, author: state.walletPk }),
+    });
+    const j = await r.json().catch(()=>null);
+    if(!r.ok || !j || j.ok !== true){
+      const err = (j && (j.message || j.error)) || "Could not record boost. Burn may still be valid — try refresh.";
+      if(msg){ msg.className = "boost-msg err"; msg.textContent = err; }
+      return;
+    }
+    if(msg){ msg.className = "boost-msg ok"; msg.textContent = `Boosted by ${fmtNum(j.verifiedAmount)} $FARTPRINT 🔥`; }
+    toast("Boost recorded · " + fmtNum(j.verifiedAmount) + " $FARTPRINT 🔥");
+    await loadBoard();
+  } catch(e){
+    if(msg){ msg.className = "boost-msg err"; msg.textContent = humanizeError(e); }
+  } finally {
+    state.busy = false;
+    if(btn){ btn.disabled = false; btn.textContent = "🔥 Burn & Boost"; }
+  }
+}
+
+function humanizeError(e){
+  const m = (e && (e.message || e.toString())) || "Unknown error";
+  if(/reject|denied|user/i.test(m)) return "You declined the burn in Phantom.";
+  if(/insufficient/i.test(m)) return "Not enough $FARTPRINT in your wallet.";
+  if(/blockhash|expired/i.test(m)) return "Network was slow — please try again.";
+  return m;
+}
+
+// ---------- list a new coin ----------
+$("listBtn").onclick = ()=> openListModal();
+$("newCancel").onclick = ()=> closeListModal();
+$("listModal").addEventListener("click", (e)=>{ if(e.target.id === "listModal") closeListModal(); });
+
+function openListModal(){
+  $("listModal").classList.add("show");
+  $("newMint").value = "";
+  $("newAmount").value = String(MIN_LIST);
+  state.newPreview = null;
+  renderPreview();
+  $("newGo").disabled = true;
+  $("newStatus").className = "modal-status";
+  $("newStatus").textContent = "";
+  setTimeout(()=>$("newMint").focus(), 50);
+}
+function closeListModal(){ $("listModal").classList.remove("show"); }
+
+// preset amount buttons in modal
+document.querySelectorAll(".modal-card .preset").forEach(b=>{
+  b.onclick = ()=>{ $("newAmount").value = b.dataset.amt; };
+});
+
+// Listen for mint input → fetch preview
+let _previewTok = 0;
+$("newMint").addEventListener("input", async (e)=>{
+  const v = e.target.value.trim();
+  const tok = ++_previewTok;
+  if(v.length < 32){
+    state.newPreview = null;
+    renderPreview();
+    $("newGo").disabled = true;
+    return;
+  }
+  // Check if already on board
+  const existing = state.coins.find(c => c.mint === v);
+  if(existing){
+    state.newPreview = {
+      mint: v, sym: existing.sym, name: existing.name + " (already listed — this will boost it instead)",
+      image: state.images[v] || existing.image, source: existing.source,
+      mcap: state.mcaps[v],
+      alreadyListed: true,
+    };
+    renderPreview();
+    $("newGo").disabled = false;
+    return;
+  }
+  // Fetch metadata
+  let preview = null;
+  // DexScreener
+  try {
+    const r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + v);
+    if(r.ok){
+      const j = await r.json();
+      const pairs = j.pairs || [];
+      pairs.sort((a,b)=> ((b.liquidity&&b.liquidity.usd)||0) - ((a.liquidity&&a.liquidity.usd)||0));
+      const p = pairs[0];
+      if(p && p.baseToken){
+        const dex = (p.dexId||"").toLowerCase();
+        let source = "custom";
+        if(/pump/.test(dex) || /pump/.test(v)) source = "pump";
+        else if(/bags|bag/.test(dex)) source = "bags";
+        else if(/meteora|raydium|orca/.test(dex)) source = "custom";
+        preview = {
+          mint: v,
+          sym: p.baseToken.symbol || "(?)",
+          name: p.baseToken.name || "",
+          image: (p.info && p.info.imageUrl) || null,
+          mcap: Number(p.marketCap) || Number(p.fdv) || null,
+          source,
+        };
+      }
+    }
+  } catch(_){}
+  // pump.fun fallback
+  if(!preview){
+    try {
+      const r = await fetch("/api/pumpfun?mint=" + v);
+      if(r.ok){
+        const j = await r.json();
+        if(j && (j.symbol || j.name || j.usd_market_cap)){
+          preview = {
+            mint: v,
+            sym: j.symbol || "(?)",
+            name: j.name || "",
+            image: j.image_uri || j.image || null,
+            mcap: Number(j.usd_market_cap) || null,
+            source: "pump",
+          };
+        }
+      }
+    } catch(_){}
+  }
+  // Final fallback: allow listing with mint only
+  if(!preview){
+    preview = { mint: v, sym: "(unknown)", name: "(metadata not found)", image: null, mcap: null, source: "custom" };
+  }
+  if(tok !== _previewTok) return; // stale
+  state.newPreview = preview;
+  renderPreview();
+  // Basic validation of the mint string
+  const validShape = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);
+  $("newGo").disabled = !validShape;
+});
+
+function renderPreview(){
+  const el = $("newPrev");
+  const p = state.newPreview;
+  if(!p){
+    el.className = "preview empty";
+    el.textContent = "Paste a mint to preview the coin.";
+    return;
+  }
+  el.className = "preview";
+  el.innerHTML = `
+    <div class="img">${p.image ? `<img src="${esc(p.image)}" alt="">` : esc((p.sym||"?")[0])}</div>
+    <div>
+      <div class="nm">$${esc(p.sym||"?")} <span style="font-size:10px;color:var(--text-3);font-weight:700;text-transform:uppercase;margin-left:6px;">${esc(p.source||"custom")}</span></div>
+      <div class="nm2">${esc(p.name||"")}${p.mcap ? ` · ${fmtUsd(p.mcap)} mcap`:""}</div>
+    </div>
+  `;
+}
+
+$("newGo").onclick = async ()=>{
+  if(!state.walletPk){ toast("Connect your wallet first."); return; }
+  const p = state.newPreview;
+  if(!p) return;
+  const amtRaw = Number($("newAmount").value || 0);
+  const amt = Math.max(0, Math.floor(amtRaw));
+  const minTokens = p.alreadyListed ? MIN_BOOST : MIN_LIST;
+  if(!Number.isFinite(amt) || amt < minTokens){
+    showModalStatus(`Burn at least ${minTokens.toLocaleString()} $FARTPRINT to ${p.alreadyListed?"boost":"list"}.`, "err");
+    return;
+  }
+  const btn = $("newGo");
+  btn.disabled = true; btn.textContent = "Burning…";
+  showModalStatus("Confirm the burn in Phantom… 🔥", "");
+  try {
+    await resolveMint();
+    const sig = await burnAmount(amt);
+    showModalStatus("Burn sent — recording on FartList…", "");
+    const r = await fetch(API + "?kind=" + (p.alreadyListed ? "boost" : "list"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mint: p.mint, sig, author: state.walletPk,
+        name: p.name || "", sym: p.sym || "", image: p.image || "",
+        source: p.source || "custom",
+      }),
+    });
+    const j = await r.json().catch(()=>null);
+    if(!r.ok || !j || j.ok !== true){
+      const err = (j && (j.message || j.error)) || "Could not record. Try again.";
+      showModalStatus(err, "err");
+      btn.disabled = false; btn.textContent = "Burn & List";
+      return;
+    }
+    showModalStatus(`Listed! Burned ${fmtNum(j.verifiedAmount)} $FARTPRINT.`, "ok");
+    toast(p.alreadyListed ? "Boosted 🔥" : "Coin listed 🔥");
+    await loadBoard();
+    setTimeout(closeListModal, 900);
+  } catch(e){
+    showModalStatus(humanizeError(e), "err");
+    btn.disabled = false; btn.textContent = "Burn & List";
+  }
+};
+
+function showModalStatus(msg, cls){
+  const el = $("newStatus");
+  el.textContent = msg || "";
+  el.className = "modal-status" + (msg ? " show " + (cls||""):"");
+}
+
+// ---------- boot ----------
+paintWallet();
+resolveMint();
+tryAutoConnect();
+loadBoard();
+setInterval(()=>{ loadBoard(); }, 45_000);
+</script>
+
+</body>
+</html>
