@@ -130,7 +130,24 @@
     background: conic-gradient(var(--border) 0deg 360deg);
     box-shadow: 0 0 50px rgba(255, 90, 31, 0.25), inset 0 0 40px rgba(0,0,0,0.5);
     transition: background 0.5s ease;
+    cursor: pointer;
   }
+  /* Hover tooltip on segments */
+  .wheel-tip {
+    position: fixed; z-index: 100; pointer-events: none; display: none;
+    background: rgba(15,8,5,0.96);
+    border: 1px solid rgba(255,138,61,0.42);
+    border-radius: 12px; padding: 10px 14px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.55);
+    font-size: 13px; color: #fff;
+    transform: translate(14px, 14px);
+    backdrop-filter: blur(8px);
+  }
+  .wheel-tip .nm { font-weight: 800; font-size: 14px; letter-spacing: 0.2px; }
+  .wheel-tip .ds { color: rgba(255,255,255,0.6); font-size: 11.5px; margin-top: 2px; }
+  .wheel-tip .row { display: flex; justify-content: space-between; gap: 16px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.18); font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .wheel-tip .row b { color: var(--amber); font-weight: 800; }
+  .wheel-tip.show { display: block; }
   .wheel-hole {
     position: absolute; inset: 26%;
     border-radius: 50%;
@@ -327,6 +344,9 @@
     amount read straight off the chain. Numbers refresh every 30 seconds.
   </div>
 
+  <!-- Wheel hover tooltip -->
+  <div class="wheel-tip" id="wheelTip"></div>
+
   <!-- FOOTER -->
   <footer>
     <div class="left">
@@ -345,6 +365,9 @@
 
 <script>
 const $ = (id) => document.getElementById(id);
+
+// Wheel-segment state used for hover tooltips. Refilled by refresh().
+let WHEEL_SEGMENTS = [];
 
 // ── Ball icon for Fart Cup (matches the rest of the ecosystem) ──
 const BALL_SVG = `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><circle cx="32" cy="32" r="29" fill="#ffffff" stroke="#111" stroke-width="3"/><path d="M32 17 L44 26 L39.5 40 L24.5 40 L20 26 Z" fill="#111"/><path d="M32 17 L32 6" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M44 26 L55 22" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M39.5 40 L47 51" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M24.5 40 L17 51" stroke="#111" stroke-width="3" stroke-linecap="round"/><path d="M20 26 L9 22" stroke="#111" stroke-width="3" stroke-linecap="round"/></svg>`;
@@ -496,12 +519,18 @@ async function refresh(){
   // ── Wheel (conic gradient by share) ──
   const wheel = $("wheel");
   const segs = APPS.filter(a => (a._r.burned || 0) > 0);
+  WHEEL_SEGMENTS = [];   // reset for hover
   if(segs.length && total > 0){
     let acc = 0;
     const stops = segs.map(a => {
       const start = (acc / total) * 360;
       acc += a._r.burned;
       const end = (acc / total) * 360;
+      WHEEL_SEGMENTS.push({
+        start, end,
+        name: a.name, desc: a.desc, color: a.color,
+        burned: a._r.burned, pct: (a._r.burned / total) * 100,
+      });
       return `${a.color} ${start.toFixed(2)}deg ${end.toFixed(2)}deg`;
     });
     wheel.style.background = `conic-gradient(${stops.join(", ")})`;
@@ -611,6 +640,43 @@ document.addEventListener("click", (e) => {
     renderBurnLog();
   }
 });
+
+// ── Hover tooltip on wheel segments ──
+// Conic-gradient starts at 12 o'clock and goes clockwise. atan2 gives an
+// angle from the +X axis counter-clockwise; remap so 0deg = top, clockwise.
+function _wheelAngle(cx, cy, x, y){
+  let a = Math.atan2(y - cy, x - cx) * 180 / Math.PI;  // [-180,180], 0 = right
+  return ((a + 90) % 360 + 360) % 360;                  // 0deg = top, CW
+}
+(function bindWheelHover(){
+  const wheel = $("wheel");
+  const tip   = $("wheelTip");
+  if(!wheel || !tip) return;
+  wheel.addEventListener("mousemove", (e) => {
+    if(!WHEEL_SEGMENTS.length){ tip.classList.remove("show"); return; }
+    const rect = wheel.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    const dx = e.clientX - cx, dy = e.clientY - cy;
+    const r  = Math.sqrt(dx*dx + dy*dy);
+    const outer = rect.width / 2;
+    const inner = outer * 0.52;          // matches the .wheel-hole 26% inset (×2)
+    if(r > outer || r < inner){ tip.classList.remove("show"); return; }
+    const ang = _wheelAngle(cx, cy, e.clientX, e.clientY);
+    const seg = WHEEL_SEGMENTS.find(s => ang >= s.start && ang < s.end);
+    if(!seg){ tip.classList.remove("show"); return; }
+    tip.innerHTML = `
+      <div class="nm" style="color:${seg.color};">${seg.name}</div>
+      <div class="ds">${seg.desc || ""}</div>
+      <div class="row"><span>Burned</span><b>${fmt(seg.burned || 0)}</b></div>
+      <div class="row"><span>Wheel share</span><b>${seg.pct.toFixed(1)}%</b></div>
+    `;
+    tip.classList.add("show");
+    tip.style.left = e.clientX + "px";
+    tip.style.top  = e.clientY + "px";
+  });
+  wheel.addEventListener("mouseleave", () => tip.classList.remove("show"));
+})();
 
 refresh();
 setInterval(refresh, 30000);

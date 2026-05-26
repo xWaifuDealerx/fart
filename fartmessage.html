@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartMessage · iMessage on $FARTPRINT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --bubble-out:#2ee06b; --bubble-out-fg:#04230f;
+    --bubble-in:#1e2c25;   --bubble-in-fg:#e8f5ee;
+    --amber:#ffcf5a;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(46,224,107,.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,207,90,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;background:transparent;cursor:pointer;font-family:inherit;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 18px 80px;}
+
+  .hero{margin-bottom:18px;}
+  .hero h1{margin:0;font-size:34px;font-weight:900;letter-spacing:-1px;}
+  .hero h1 .a{
+    background:linear-gradient(135deg,var(--green),var(--amber));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin-top:8px;max-width:680px;}
+  .hero .sub b{color:var(--amber);}
+
+  /* Two-pane layout */
+  .app{
+    display:grid; grid-template-columns: 320px 1fr;
+    gap:16px;
+    border:1px solid var(--border); border-radius:18px; overflow:hidden;
+    background:var(--panel); box-shadow:var(--shadow);
+    height: 680px; max-height: 80vh;
+  }
+  @media (max-width: 780px){
+    .app{ grid-template-columns: 1fr; height: auto; max-height: none; }
+    .convo-list{ max-height: 280px; }
+  }
+
+  /* Left: conversations */
+  .convo-list{
+    background: var(--panel-2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .convo-head{
+    padding:14px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; gap:8px;
+  }
+  .convo-head h3{ margin:0; font-size:14px; font-weight:800; letter-spacing:.2px; }
+  .convo-new{
+    margin-left:auto; font-size:11px; font-weight:800; letter-spacing:.8px; text-transform:uppercase;
+    color:#04230f; background:linear-gradient(135deg,var(--green-br),var(--green));
+    border:none; border-radius:99px; padding:5px 11px; cursor:pointer;
+  }
+  .convo-new:hover{ filter:brightness(1.06); }
+  .convo-item{
+    display:flex; gap:10px; align-items:flex-start;
+    padding:12px 14px; border-bottom:1px solid var(--border);
+    cursor:pointer; transition:.12s;
+  }
+  .convo-item:hover{ background: var(--row); }
+  .convo-item.active{ background: linear-gradient(90deg, rgba(46,224,107,.10), transparent); border-left:3px solid var(--green); padding-left:11px; }
+  .convo-avatar{
+    width:38px; height:38px; border-radius:50%;
+    background: linear-gradient(135deg,#0a7d3a,#16a34a);
+    display:grid; place-items:center;
+    font-family:'JetBrains Mono', monospace; font-weight:800; font-size:13px;
+    color:#fff; flex-shrink:0;
+  }
+  .convo-meta{ min-width:0; flex:1; }
+  .convo-addr{ font-family:'JetBrains Mono', monospace; font-size:13px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--text); }
+  .convo-prev{ color:var(--text-3); font-size:12px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .convo-prev b{ color:var(--amber); font-weight:700; }
+  .convo-time{ color:var(--text-3); font-size:10.5px; flex-shrink:0; font-variant-numeric: tabular-nums; }
+  .convo-empty{ padding:24px 16px; color:var(--text-3); font-size:13px; text-align:center; }
+
+  /* Right: thread + compose */
+  .thread-pane{ display:flex; flex-direction:column; min-height: 0; }
+  .thread-head{
+    display:flex; align-items:center; gap:12px;
+    padding:14px 16px; border-bottom:1px solid var(--border);
+    background: rgba(15,23,18,.6);
+  }
+  .thread-head .av{
+    width:32px; height:32px; border-radius:50%;
+    background: linear-gradient(135deg,#0a7d3a,#16a34a);
+    display:grid; place-items:center;
+    font-family:'JetBrains Mono', monospace; font-weight:800; font-size:11px;
+    color:#fff; flex-shrink:0;
+  }
+  .thread-head .addr{ font-family:'JetBrains Mono', monospace; font-weight:800; font-size:14px; color:var(--text); }
+  .thread-head .addr small{ display:block; font-size:11px; color:var(--text-3); font-weight:600; margin-top:1px; font-family:'Inter',sans-serif;}
+  .thread-head .right{ margin-left:auto; font-size:11px; color:var(--text-3); }
+
+  .thread-empty{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px; color:var(--text-3); font-size:14px;
+    padding:30px; text-align:center;
+  }
+  .thread-empty .big{ font-size:40px; opacity:.7; }
+  .thread-empty .lead{ color:var(--text-2); font-size:14px; max-width: 360px; line-height:1.6; }
+
+  .thread{
+    flex:1; overflow-y:auto; padding:16px 18px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .day-sep{
+    text-align:center; color:var(--text-3); font-size:11px; letter-spacing:1.5px;
+    text-transform:uppercase; margin:14px 0 4px; font-weight:700;
+  }
+  .bubble-row{ display:flex; gap:6px; align-items:flex-end; }
+  .bubble-row.out{ justify-content:flex-end; }
+  .bubble{
+    max-width: 72%;
+    padding:8px 12px;
+    border-radius: 18px;
+    line-height:1.45; font-size:14px;
+    word-break: break-word; white-space: pre-wrap;
+    position:relative;
+  }
+  .bubble.in{
+    background: var(--bubble-in); color: var(--bubble-in-fg);
+    border-bottom-left-radius: 6px;
+  }
+  .bubble.out{
+    background: var(--bubble-out); color: var(--bubble-out-fg);
+    border-bottom-right-radius: 6px;
+  }
+  .bubble .amt-tag{
+    display:inline-block; margin-top:6px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px; font-weight:800; letter-spacing:.4px;
+    padding: 3px 8px; border-radius: 99px;
+  }
+  .bubble.in .amt-tag{ background: rgba(255,207,90,.16); color: var(--amber); }
+  .bubble.out .amt-tag{ background: rgba(255,255,255,.20); color: #04230f; }
+  .bubble .ts{
+    font-size:10px; color: rgba(0,0,0,.4); margin-top: 2px; font-family:'JetBrains Mono', monospace;
+  }
+  .bubble.in .ts{ color: var(--text-3); }
+
+  /* Compose */
+  .compose{
+    border-top:1px solid var(--border); padding:12px 14px;
+    background:var(--panel-2);
+  }
+  .compose-new-fields{ display:none; gap:10px; margin-bottom:10px; }
+  .compose.new-mode .compose-new-fields{ display:flex; }
+  .compose-new-fields input{
+    flex:1; min-width:0;
+    background:var(--panel); border:1px solid var(--border-2); color:var(--text);
+    border-radius:10px; padding:9px 13px; font-size:13px;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .compose-new-fields input:focus{ outline:none; border-color:var(--green); }
+  .compose-row{ display:flex; gap:10px; align-items:flex-end; }
+  .compose-text{
+    flex:1;
+    background:var(--panel); border:1px solid var(--border-2); color:var(--text);
+    border-radius:14px; padding:10px 13px; font-size:14px;
+    resize:none; min-height: 44px; max-height: 120px;
+    font-family:'Inter',sans-serif; line-height:1.4;
+  }
+  .compose-text:focus{ outline:none; border-color:var(--green); }
+  .compose-amt{
+    width:118px;
+    background:var(--panel); border:1px solid var(--border-2); color:var(--text);
+    border-radius:14px; padding:10px 13px; font-size:14px;
+    font-family:'JetBrains Mono', monospace; font-weight:700;
+    text-align:right;
+  }
+  .compose-amt:focus{ outline:none; border-color:var(--green); }
+  .compose-send{
+    border:none; cursor:pointer; border-radius:50%;
+    width:44px; height:44px; flex-shrink:0;
+    color:#04230f; background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 14px rgba(46,224,107,.32);
+    display:grid; place-items:center;
+  }
+  .compose-send:hover{ filter:brightness(1.06); transform: translateY(-1px); }
+  .compose-send:disabled{ opacity:.45; cursor:not-allowed; filter:none; transform:none; }
+  .compose-send svg{ width:18px; height:18px; }
+  .compose-hint{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:6px; font-size:11px; color:var(--text-3);
+  }
+  .compose-hint .err{ color: #ff7a7a; }
+  .compose-hint .ok{ color: var(--green); }
+
+  /* Toast */
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--panel-2); border:1px solid var(--border-2); color:var(--text);
+    padding:10px 18px; border-radius:99px; font-size:13.5px; font-weight:700;
+    box-shadow:var(--shadow); z-index:60; display:none;
+  }
+  .toast.show{ display:block; animation: fadein .25s; }
+  @keyframes fadein{ from{ opacity:0; transform:translate(-50%, 8px); } to{ opacity:1; transform:translateX(-50%); } }
+
+  .info{
+    margin-top:16px; font-size:12.5px; color:var(--text-3); line-height:1.55;
+    border:1px dashed var(--border-2); padding:12px 14px; border-radius:12px;
+  }
+  .info b{ color: var(--text-2); }
+
+  /* Scrollbars */
+  .thread::-webkit-scrollbar, .convo-list::-webkit-scrollbar{ width:8px; }
+  .thread::-webkit-scrollbar-thumb, .convo-list::-webkit-scrollbar-thumb{
+    background: var(--border-2); border-radius:4px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/>
+      </svg>
+    </span>
+    FART<span class="amp">MESSAGE</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button id="walletBtn" class="wallet-btn" type="button">Connect Wallet</button>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartMessage</span> app</h1>
+    <div class="sub">
+      iMessage, but every message is a $FARTPRINT transfer. Pay your friend $FARTPRINT to ping them.
+      They get the tokens, you get the brap. Receipts are on Solana — no servers, no inbox to hack.
+      Each message costs <b>≥1 $FARTPRINT</b> (whatever you choose to send).
+    </div>
+  </header>
+
+  <div class="app">
+    <!-- LEFT: conversations -->
+    <aside class="convo-list" id="convoList">
+      <div class="convo-head">
+        <h3>Conversations</h3>
+        <button class="convo-new" id="newBtn" type="button">+ NEW</button>
+      </div>
+      <div id="convoItems">
+        <div class="convo-empty">Connect Phantom to load your conversations.</div>
+      </div>
+    </aside>
+
+    <!-- RIGHT: thread -->
+    <section class="thread-pane">
+      <div class="thread-head" id="threadHead" style="display:none;">
+        <div class="av" id="threadAv">??</div>
+        <div>
+          <div class="addr" id="threadAddr">—</div>
+          <small id="threadCount">— messages</small>
+        </div>
+        <span class="right" id="threadFull"></span>
+      </div>
+
+      <div id="threadOrEmpty" style="flex:1; display:flex; flex-direction:column; min-height:0;">
+        <div class="thread-empty" id="threadEmpty">
+          <div class="big">💬</div>
+          <div class="lead">Pick a conversation on the left, or hit <b style="color:var(--green);">+ NEW</b> to message a friend by their Solana address.</div>
+        </div>
+        <div class="thread" id="thread" style="display:none;"></div>
+      </div>
+
+      <div class="compose" id="compose" style="display:none;">
+        <div class="compose-new-fields" id="composeNewFields">
+          <input id="newRecipient" type="text" placeholder="Recipient Solana address" autocomplete="off">
+        </div>
+        <div class="compose-row">
+          <textarea id="composeText" class="compose-text" rows="1" maxlength="200" placeholder="Write your message…"></textarea>
+          <input id="composeAmt" class="compose-amt" type="text" inputmode="numeric" value="1">
+          <button class="compose-send" id="sendBtn" type="button" title="Send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+          </button>
+        </div>
+        <div class="compose-hint">
+          <span id="hintLeft">200 chars left</span>
+          <span id="hintRight">$FARTPRINT per message</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="info">
+    <b>How it works.</b> Every message is a Solana transaction with two instructions: a $FARTPRINT
+    <code>transferChecked</code> to your friend, and a <code>spl-memo</code> carrying the message text.
+    Your friend's wallet receives the tokens, and the memo is permanently attached to that transfer
+    on-chain. No server stores your messages — your inbox is just your wallet's transaction history.
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  Connection, PublicKey,
+  TransactionInstruction, TransactionMessage, VersionedTransaction
+} from "https://esm.sh/@solana/web3.js@1.95.3";
+
+// ============================================================
+// FartMessage — fully on-chain messaging via $FARTPRINT transfers
+// ============================================================
+
+const MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const MINT_PK = new PublicKey(MINT_STR);
+const TOKEN_PROGRAM_ID      = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+const ASSOC_PROGRAM_ID      = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const MEMO_PROGRAM_ID       = new PublicKey("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+const SYSTEM_PROGRAM_ID     = new PublicKey("11111111111111111111111111111111");
+const SYSVAR_RENT_PK        = new PublicKey("SysvarRent111111111111111111111111111111111");
+
+let TOKEN_PROGRAM = TOKEN_PROGRAM_ID;
+let MINT_DECIMALS = 6;
+let _mintResolved = false;
+
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+// ---------- state ----------
+const state = {
+  walletPk: null,
+  myAta: null,
+  messages: [],          // [{ sig, ts, from, to, amount, text, dir:"in"|"out" }]
+  convoOpen: null,       // counterpart wallet OR "__new__" for new compose
+  busy: false,
+};
+
+// ---------- DOM helpers ----------
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function shortAddr(a){ if(!a) return "(none)"; return a.slice(0,4)+"…"+a.slice(-4); }
+function fmtAmt(n){
+  if(n == null || !isFinite(n)) return "0";
+  if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+  if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
+  if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
+  if(n >= 1)   return Math.round(n).toLocaleString();
+  return n.toFixed(2);
+}
+function fmtTime(ts){
+  if(!ts) return "";
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  if(d.toDateString() === now.toDateString()){
+    return d.toLocaleTimeString(undefined, { hour:"numeric", minute:"2-digit" });
+  }
+  const diff = Math.floor((now - d) / 1000 / 86400);
+  if(diff < 7) return d.toLocaleDateString(undefined, { weekday:"short" }) + " " + d.toLocaleTimeString(undefined, { hour:"numeric", minute:"2-digit" });
+  return d.toLocaleDateString(undefined, { month:"short", day:"numeric" });
+}
+function fmtDay(ts){
+  const d = new Date(ts * 1000);
+  const today = new Date();
+  if(d.toDateString() === today.toDateString()) return "Today";
+  const y = new Date(today); y.setDate(y.getDate()-1);
+  if(d.toDateString() === y.toDateString()) return "Yesterday";
+  return d.toLocaleDateString(undefined, { weekday:"long", month:"short", day:"numeric", year: d.getFullYear() === today.getFullYear() ? undefined : "numeric" });
+}
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove("show"), 2400);
+}
+
+// ---------- Phantom ----------
+function getPhantom(){
+  const p = window.phantom && window.phantom.solana;
+  if(p && p.isPhantom) return p;
+  if(window.solana && window.solana.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if(!ph){ alert("Phantom not found. Install from https://phantom.app"); return; }
+  try {
+    const res = await ph.connect();
+    state.walletPk = res.publicKey.toString();
+    localStorage.setItem("fm_trusted","1");
+    paintWallet();
+    await initInbox();
+  } catch(e){ console.warn(e); }
+}
+async function disconnectWallet(){
+  const ph = getPhantom();
+  try { if(ph && ph.disconnect) await ph.disconnect(); } catch(_){}
+  state.walletPk = null;
+  state.myAta = null;
+  state.messages = [];
+  state.convoOpen = null;
+  localStorage.removeItem("fm_trusted");
+  paintWallet();
+  renderConvos();
+  renderThread();
+  $("compose").style.display = "none";
+}
+async function tryAutoConnect(){
+  if(localStorage.getItem("fm_trusted") !== "1") return;
+  const ph = getPhantom();
+  if(!ph) return;
+  try {
+    const res = await ph.connect({ onlyIfTrusted:true });
+    state.walletPk = res.publicKey.toString();
+    paintWallet();
+    await initInbox();
+  } catch(_){}
+}
+function paintWallet(){
+  const b = $("walletBtn");
+  if(state.walletPk){
+    b.textContent = shortAddr(state.walletPk);
+    b.classList.add("connected");
+    b.onclick = disconnectWallet;
+  } else {
+    b.textContent = "Connect Wallet";
+    b.classList.remove("connected");
+    b.onclick = connectWallet;
+  }
+}
+
+// ---------- Mint resolution + ATA ----------
+async function resolveMint(){
+  if(_mintResolved) return;
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      const info = await c.getParsedAccountInfo(MINT_PK);
+      const v = info && info.value;
+      if(v && v.owner){
+        TOKEN_PROGRAM = v.owner;
+        const dec = v.data && v.data.parsed && v.data.parsed.info && v.data.parsed.info.decimals;
+        if(Number.isInteger(dec)) MINT_DECIMALS = dec;
+        _mintResolved = true;
+        return;
+      }
+    } catch(_){}
+  }
+}
+function ataFor(owner){
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), MINT_PK.toBuffer()],
+    ASSOC_PROGRAM_ID
+  );
+  return ata;
+}
+
+// ---------- Build instructions ----------
+// Associated Token Account: createAssociatedTokenAccountIdempotent (tag 1)
+function createATAIxIdempotent(payer, owner){
+  const ata = ataFor(owner);
+  return new TransactionInstruction({
+    programId: ASSOC_PROGRAM_ID,
+    keys: [
+      { pubkey: payer,         isSigner:true,  isWritable:true  },
+      { pubkey: ata,           isSigner:false, isWritable:true  },
+      { pubkey: owner,         isSigner:false, isWritable:false },
+      { pubkey: MINT_PK,       isSigner:false, isWritable:false },
+      { pubkey: SYSTEM_PROGRAM_ID, isSigner:false, isWritable:false },
+      { pubkey: TOKEN_PROGRAM, isSigner:false, isWritable:false },
+    ],
+    data: new Uint8Array([1]),   // CAAI = 1
+  });
+}
+// transferChecked instruction tag = 12, data: [12, amount(u64 LE), decimals]
+function transferCheckedIx(srcOwner, dstOwner, amountTokens){
+  const amount = BigInt(amountTokens) * (10n ** BigInt(MINT_DECIMALS));
+  const data = new Uint8Array(10);
+  data[0] = 12;
+  let x = amount;
+  for(let i=0;i<8;i++){ data[1+i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = MINT_DECIMALS;
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM,
+    keys: [
+      { pubkey: ataFor(srcOwner), isSigner:false, isWritable:true  },  // source ATA
+      { pubkey: MINT_PK,          isSigner:false, isWritable:false },  // mint
+      { pubkey: ataFor(dstOwner), isSigner:false, isWritable:true  },  // dest ATA
+      { pubkey: srcOwner,         isSigner:true,  isWritable:false },  // authority
+    ],
+    data,
+  });
+}
+function memoIx(text){
+  const enc = new TextEncoder().encode(text);
+  return new TransactionInstruction({
+    programId: MEMO_PROGRAM_ID,
+    keys: [],
+    data: enc,
+  });
+}
+
+// ---------- Send ----------
+async function freshBlockhash(){
+  for(const url of RPCS){
+    try {
+      const conn = new Connection(url, "confirmed");
+      const { blockhash } = await conn.getLatestBlockhash("confirmed");
+      return { conn, blockhash };
+    } catch(_){}
+  }
+  throw new Error("Could not reach a Solana RPC.");
+}
+async function sendMessage(recipientStr, amountTokens, text){
+  const ph = getPhantom();
+  if(!ph) throw new Error("Phantom not found");
+  if(!state.walletPk) throw new Error("Wallet not connected");
+  if(!recipientStr) throw new Error("Recipient required");
+  let recipient;
+  try { recipient = new PublicKey(recipientStr); } catch(_){ throw new Error("Invalid recipient address"); }
+  if(recipient.toBase58() === state.walletPk) throw new Error("You can't message yourself");
+  amountTokens = Math.max(1, Math.floor(Number(amountTokens) || 1));
+
+  await resolveMint();
+  const me = new PublicKey(state.walletPk);
+  const { blockhash } = await freshBlockhash();
+  const ixs = [
+    createATAIxIdempotent(me, recipient),
+    transferCheckedIx(me, recipient, amountTokens),
+  ];
+  if(text && text.trim()){
+    ixs.push(memoIx(text.trim().slice(0, 200)));
+  }
+  const msg = new TransactionMessage({
+    payerKey: me,
+    recentBlockhash: blockhash,
+    instructions: ixs,
+  }).compileToV0Message();
+  const tx = new VersionedTransaction(msg);
+  const res = await ph.signAndSendTransaction(tx);
+  const sig = res.signature || res;
+  if(typeof sig !== "string") throw new Error("No signature returned");
+  // Confirm
+  for(const url of RPCS){
+    try { const c = new Connection(url,"confirmed"); await c.confirmTransaction(sig,"confirmed"); break; } catch(_){}
+  }
+  return sig;
+}
+
+// ---------- Inbox: load FARTPRINT-tagged transactions ----------
+async function loadInbox(){
+  if(!state.walletPk) return [];
+  await resolveMint();
+  const me = new PublicKey(state.walletPk);
+  state.myAta = ataFor(me);
+
+  // Get signatures hitting our ATA
+  let sigs = [];
+  for(const url of RPCS){
+    try {
+      const r = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc:"2.0", id:1, method:"getSignaturesForAddress",
+          params:[state.myAta.toBase58(), { limit: 100 }],
+        }),
+      });
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j && j.result){ sigs = j.result; break; }
+    } catch(_){}
+  }
+  if(!sigs.length) return [];
+
+  // Parse each transaction
+  const out = [];
+  for(const s of sigs){
+    if(s.err) continue;
+    const tx = await fetchParsedTx(s.signature);
+    if(!tx) continue;
+    const parsed = parseMessage(tx);
+    if(parsed){
+      out.push({ ...parsed, sig: s.signature, ts: s.blockTime || 0 });
+    }
+  }
+  return out.sort((a, b) => (b.ts || 0) - (a.ts || 0));
+}
+async function fetchParsedTx(sig){
+  for(const url of RPCS){
+    try {
+      const r = await fetch(url, {
+        method:"POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc:"2.0", id:1, method:"getTransaction",
+          params:[sig, { encoding:"jsonParsed", maxSupportedTransactionVersion:0, commitment:"confirmed" }],
+        }),
+      });
+      if(!r.ok) continue;
+      const j = await r.json();
+      if(j && j.result) return j.result;
+    } catch(_){}
+  }
+  return null;
+}
+function parseMessage(tx){
+  // Walk top-level + inner instructions, find transferChecked of MINT and any memo nearby.
+  const groups = [];
+  const msg = tx.transaction && tx.transaction.message;
+  if(msg && Array.isArray(msg.instructions)) groups.push(msg.instructions);
+  const inner = tx.meta && tx.meta.innerInstructions;
+  if(Array.isArray(inner)) for(const ig of inner) if(Array.isArray(ig.instructions)) groups.push(ig.instructions);
+
+  let transfer = null;
+  let memoText = null;
+  for(const ixs of groups){
+    for(const ix of ixs){
+      // memo
+      if(ix && ix.program === "spl-memo"){
+        // For jsonParsed encoding, ix.parsed is the memo string
+        if(typeof ix.parsed === "string") memoText = ix.parsed;
+        else if(ix.parsed && typeof ix.parsed === "object" && ix.parsed.info) memoText = ix.parsed.info;
+      }
+      // transferChecked
+      const p = ix && ix.parsed;
+      if(p && (p.type === "transferChecked") && (ix.program === "spl-token" || ix.program === "spl-token-2022")){
+        const info = p.info || {};
+        if(info.mint !== MINT_STR) continue;
+        // info.source and info.destination are token accounts (ATAs);
+        // we need to compare against our ATA to determine direction.
+        // The owners come from info.authority (for outgoing) — but for incoming we
+        // need a different anchor. Use account-keys / postTokenBalances heuristic:
+        // we identify "me" as the owner of our ATA. Otherwise compare ATA strings.
+        const myAtaStr = state.myAta.toBase58();
+        if(info.destination === myAtaStr){
+          // incoming
+          transfer = {
+            dir: "in",
+            counterpart: info.authority || null,   // sender (owner of source ATA)
+            amount: Number((info.tokenAmount && info.tokenAmount.uiAmount) || 0),
+          };
+        } else if(info.source === myAtaStr){
+          // outgoing
+          // destination owner comes from accountKeys / postTokenBalances; for jsonParsed
+          // we don't have it directly. We'll resolve via postTokenBalances on the tx.
+          transfer = {
+            dir: "out",
+            counterpart: null,  // filled below
+            amount: Number((info.tokenAmount && info.tokenAmount.uiAmount) || 0),
+            destinationAta: info.destination || null,
+          };
+        }
+      }
+    }
+  }
+  if(!transfer) return null;
+
+  // For outgoing, look up destination owner from postTokenBalances
+  if(transfer.dir === "out" && transfer.destinationAta){
+    const balances = (tx.meta && tx.meta.postTokenBalances) || [];
+    const keys = (tx.transaction && tx.transaction.message && tx.transaction.message.accountKeys) || [];
+    // accountKeys is array of strings (parsed)
+    const destIdx = keys.findIndex(k => (typeof k === "string" ? k : (k && k.pubkey)) === transfer.destinationAta);
+    if(destIdx >= 0){
+      const b = balances.find(b => b.accountIndex === destIdx);
+      if(b && b.owner) transfer.counterpart = b.owner;
+    }
+  }
+  if(!transfer.counterpart) return null;
+  return {
+    dir: transfer.dir,
+    counterpart: transfer.counterpart,
+    amount: transfer.amount,
+    text: memoText || "",
+  };
+}
+
+// ---------- Render: conversations ----------
+function groupByCounterpart(messages){
+  const byKey = new Map();
+  for(const m of messages){
+    if(!m.counterpart) continue;
+    let list = byKey.get(m.counterpart);
+    if(!list){ list = []; byKey.set(m.counterpart, list); }
+    list.push(m);
+  }
+  // Sort each list newest-first, sort conversations newest-first
+  const conv = [];
+  for(const [key, list] of byKey.entries()){
+    list.sort((a,b)=> (b.ts||0) - (a.ts||0));
+    conv.push({ wallet: key, messages: list, lastTs: list[0] ? list[0].ts : 0 });
+  }
+  conv.sort((a,b)=> b.lastTs - a.lastTs);
+  return conv;
+}
+
+function renderConvos(){
+  const el = $("convoItems");
+  if(!state.walletPk){
+    el.innerHTML = '<div class="convo-empty">Connect Phantom to load your conversations.</div>';
+    return;
+  }
+  const conv = groupByCounterpart(state.messages);
+  if(!conv.length && state.convoOpen !== "__new__"){
+    el.innerHTML = '<div class="convo-empty">No messages yet — tap <b style="color:var(--green);">+ NEW</b> to start one.</div>';
+    return;
+  }
+  // If "new mode" is active, show that as a virtual item at the top
+  let html = "";
+  if(state.convoOpen === "__new__"){
+    html += `<div class="convo-item active">
+      <div class="convo-avatar" style="background:linear-gradient(135deg,#ffb020,#ff8a3d);">+</div>
+      <div class="convo-meta"><div class="convo-addr">New Message</div><div class="convo-prev">Type a Solana address to send to</div></div>
+    </div>`;
+  }
+  html += conv.map(c => {
+    const isActive = c.wallet === state.convoOpen ? " active" : "";
+    const last = c.messages[0];
+    const prev = last ? (last.dir === "out" ? "You: " : "") + (last.text || `Sent ${fmtAmt(last.amount)} $FARTPRINT`) : "";
+    const initials = c.wallet.slice(0,2).toUpperCase();
+    return `
+      <div class="convo-item${isActive}" data-w="${esc(c.wallet)}">
+        <div class="convo-avatar">${esc(initials)}</div>
+        <div class="convo-meta">
+          <div class="convo-addr" title="${esc(c.wallet)}">${esc(shortAddr(c.wallet))}</div>
+          <div class="convo-prev">${esc(prev.slice(0, 60))}</div>
+        </div>
+        <div class="convo-time">${fmtTime(c.lastTs)}</div>
+      </div>
+    `;
+  }).join("");
+  el.innerHTML = html;
+}
+
+// ---------- Render: thread ----------
+function renderThread(){
+  const empty = $("threadEmpty");
+  const thread = $("thread");
+  const head = $("threadHead");
+  const compose = $("compose");
+
+  if(!state.convoOpen){
+    empty.style.display = "flex";
+    thread.style.display = "none";
+    head.style.display = "none";
+    compose.style.display = "none";
+    return;
+  }
+
+  if(state.convoOpen === "__new__"){
+    empty.style.display = "none";
+    thread.style.display = "none";
+    head.style.display = "none";
+    compose.style.display = "block";
+    compose.classList.add("new-mode");
+    $("newRecipient").focus();
+    return;
+  }
+
+  // Show thread for selected counterpart
+  empty.style.display = "none";
+  thread.style.display = "flex";
+  head.style.display = "flex";
+  compose.style.display = "block";
+  compose.classList.remove("new-mode");
+
+  const conv = groupByCounterpart(state.messages).find(c => c.wallet === state.convoOpen);
+  if(!conv){ thread.innerHTML = ""; return; }
+
+  $("threadAv").textContent = conv.wallet.slice(0,2).toUpperCase();
+  $("threadAddr").textContent = shortAddr(conv.wallet);
+  $("threadCount").textContent = `${conv.messages.length} message${conv.messages.length===1?"":"s"} · ${conv.wallet}`;
+  $("threadFull").textContent = conv.wallet;
+
+  // Reverse to oldest-first for chronological display
+  const msgs = [...conv.messages].reverse();
+  let lastDay = "";
+  let html = "";
+  for(const m of msgs){
+    const day = fmtDay(m.ts);
+    if(day !== lastDay){
+      html += `<div class="day-sep">${esc(day)}</div>`;
+      lastDay = day;
+    }
+    const cls = m.dir === "out" ? "out" : "in";
+    const text = m.text ? esc(m.text) : "<em style='opacity:.6;'>(no message — just tokens)</em>";
+    html += `
+      <div class="bubble-row ${cls}">
+        <div class="bubble ${cls}">
+          <div>${text}</div>
+          <div class="amt-tag">${m.dir === "in" ? "+" : "−"}${fmtAmt(m.amount)} $FARTPRINT</div>
+          <div class="ts">${fmtTime(m.ts)}</div>
+        </div>
+      </div>
+    `;
+  }
+  thread.innerHTML = html;
+  thread.scrollTop = thread.scrollHeight;
+}
+
+// ---------- Inbox boot ----------
+async function initInbox(){
+  if(!state.walletPk){ renderConvos(); renderThread(); return; }
+  $("convoItems").innerHTML = '<div class="convo-empty">Reading on-chain history…</div>';
+  try {
+    state.messages = await loadInbox();
+    renderConvos();
+    renderThread();
+  } catch(e){
+    $("convoItems").innerHTML = `<div class="convo-empty">Could not load messages: ${esc(e.message || e)}</div>`;
+  }
+}
+
+// ---------- Compose UI ----------
+$("composeText").addEventListener("input", (e) => {
+  const left = 200 - e.target.value.length;
+  $("hintLeft").textContent = left + " chars left";
+  // Auto-grow textarea
+  e.target.style.height = "auto";
+  e.target.style.height = Math.min(120, e.target.scrollHeight) + "px";
+});
+$("composeAmt").addEventListener("input", () => {
+  const v = Math.max(1, Math.floor(Number($("composeAmt").value) || 0));
+  $("hintRight").textContent = v.toLocaleString() + " $FARTPRINT per message";
+});
+
+$("newBtn").addEventListener("click", () => {
+  if(!state.walletPk){ toast("Connect your wallet first."); return; }
+  state.convoOpen = "__new__";
+  renderConvos();
+  renderThread();
+});
+
+// Convo selection
+$("convoItems").addEventListener("click", (e) => {
+  const item = e.target.closest(".convo-item");
+  if(!item) return;
+  const w = item.dataset.w;
+  if(!w) return;
+  state.convoOpen = w;
+  renderConvos();
+  renderThread();
+});
+
+// Send
+$("sendBtn").addEventListener("click", async () => {
+  if(!state.walletPk){ toast("Connect your wallet first."); return; }
+  if(state.busy) return;
+  const text = $("composeText").value.trim();
+  const amt  = Math.max(1, Math.floor(Number($("composeAmt").value) || 0));
+  const recipient = state.convoOpen === "__new__"
+    ? $("newRecipient").value.trim()
+    : state.convoOpen;
+  if(!recipient){ toast("Pick a recipient first."); return; }
+  state.busy = true;
+  $("sendBtn").disabled = true;
+  try {
+    toast("Confirm in Phantom…");
+    const sig = await sendMessage(recipient, amt, text);
+    toast("Sent! 🔥");
+    // Optimistically push message to state so it appears immediately
+    state.messages.unshift({
+      sig, ts: Math.floor(Date.now()/1000),
+      dir: "out", counterpart: recipient, amount: amt, text,
+    });
+    state.convoOpen = recipient;
+    $("composeText").value = "";
+    $("composeText").style.height = "auto";
+    $("hintLeft").textContent = "200 chars left";
+    renderConvos();
+    renderThread();
+    // Refresh from chain after a few seconds to grab the canonical record
+    setTimeout(initInbox, 4500);
+  } catch(e){
+    console.warn(e);
+    toast("Failed: " + (e.message || e));
+  } finally {
+    state.busy = false;
+    $("sendBtn").disabled = false;
+  }
+});
+
+// Enter to send (shift+enter for newline)
+$("composeText").addEventListener("keydown", (e) => {
+  if(e.key === "Enter" && !e.shiftKey){
+    e.preventDefault();
+    $("sendBtn").click();
+  }
+});
+
+// ---------- boot ----------
+paintWallet();
+resolveMint();
+tryAutoConnect();
+renderConvos();
+renderThread();
+setInterval(() => { if(state.walletPk) initInbox(); }, 30000);
+</script>
+
+</body>
+</html>
