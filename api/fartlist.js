@@ -75,10 +75,18 @@ const PRINTR_SEEDS = [
   { mint: "3bRN6aEr82qw95P7vVwwyFBPnN5Z3eDu9HMrtk99brrr", sym:"FART",      name:"Printr Mint" },
 ];
 
-// Printr Partner Preview API (server-side, with auth JWT). Same creds as api/printr.js.
+// Printr Partner Preview API. The "darksu" JWT has broader access than the
+// "daily" one — used here for per-token resolution.
 const PRINTR_BASE = "https://api-preview.printr.money/v0";
-const PRINTR_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWlseSJ9.Ml8JzU5AedtwjRHAy6qZBZB4FEyc9jy5CkXsLv__nRQ";
+const PRINTR_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYXJrc3UifQ.Oij3d5eNtIdcQ4fSUKIgZg-KKxtW-qHumOEVb95_aU0";
 const SOL_CAIP    = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+
+// Extra Printr Telecoin IDs (the 0x… cross-chain identifier format).
+// These get resolved server-side via /tokens/{id} and merged into the board.
+const PRINTR_TELECOIN_IDS = [
+  "0xa8a31cf9c7754ea3a7de3dc9ccf65cc919d3064eccb6046627061f7f85bd3df6",
+  "0xd1f813e670765bf55d92f981a4f1cee55c82d1a6751eb6209bac191f8337a0b4",
+];
 
 // Auto-source detection from mint address suffix.
 function inferSource(mint){
@@ -132,8 +140,45 @@ function extractPrintrCoin(t){
 let _printrCache = { coins: [], at: 0 };
 const PRINTR_CACHE_TTL = 5 * 60 * 1000;
 
+// Resolve a single Printr token by id (Solana mint as CAIP-10, OR Telecoin
+// 0x… hex). Returns a normalized FartList-shape coin record or null.
+async function resolvePrintrToken(id){
+  try {
+    const ctrl = new AbortController();
+    const tt = setTimeout(()=>ctrl.abort(), 4000);
+    const r = await fetch(PRINTR_BASE + "/tokens/" + encodeURIComponent(id), {
+      headers: { Authorization: "Bearer " + PRINTR_JWT, Accept: "application/json" },
+      signal: ctrl.signal,
+    });
+    clearTimeout(tt);
+    if(!r.ok) return null;
+    const j = await r.json();
+    if(!j || typeof j !== "object") return null;
+    // Extract the on-chain mint: prefer CAIP path, then deployments[].contract_address.
+    let mint = extractPrintrMint(j);
+    if(!mint){
+      // For raw 0x-prefixed Telecoin IDs we may need to look in chain-specific fields.
+      const chains = j.chains || [];
+      for(const c of chains){ if(typeof c === "string"){ const last = c.split(":").pop(); if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(last)) mint = last; } }
+    }
+    if(!mint) return null;
+    if(mint === MINT) return null;
+    return {
+      mint,
+      sym: j.symbol || "(?)",
+      name: j.name || "",
+      image: j.imageUrl || j.image_url || null,
+      source: "printr",
+    };
+  } catch(_){ return null; }
+}
+
+// "Top" Printr coins for the FartList board.
+// Strategy: try a few list endpoints first (in case Printr exposes one for
+// this JWT). If none work, fall back to resolving the curated seed list
+// per-mint via the documented /tokens/{id} endpoint.
 async function fetchPrintrTopCoins(){
-  const candidates = [
+  const listCandidates = [
     "/tokens?limit=100",
     "/tokens",
     "/tokens/popular?limit=100",
@@ -146,7 +191,8 @@ async function fetchPrintrTopCoins(){
     "/projects?limit=100",
   ];
   const headers = { Authorization: "Bearer " + PRINTR_JWT, Accept: "application/json" };
-  for(const path of candidates){
+  // 1) Try list endpoints first
+  for(const path of listCandidates){
     try {
       const ctrl = new AbortController();
       const tt = setTimeout(()=>ctrl.abort(), 4000);
@@ -157,10 +203,22 @@ async function fetchPrintrTopCoins(){
       const arr = Array.isArray(j) ? j : (j.tokens || j.data || j.results || j.items || j.projects || j.coins);
       if(!Array.isArray(arr) || arr.length === 0) continue;
       const coins = arr.map(extractPrintrCoin).filter(Boolean);
-      if(coins.length > 0) return coins;
+      if(coins.length > 0){
+        console.log("[fartlist] printr list ok:", path, "→", coins.length, "coins");
+        return coins;
+      }
     } catch(_){ /* try next */ }
   }
-  return [];
+  // 2) Fall back to per-token resolution against the documented /tokens/{id}
+  // endpoint — every brrr-suffixed seed mint + every Telecoin ID.
+  const ids = [
+    ...PRINTR_SEEDS.map(s => `${SOL_CAIP}:${s.mint}`),
+    ...PRINTR_TELECOIN_IDS,
+  ];
+  const resolved = await Promise.all(ids.map(id => resolvePrintrToken(id)));
+  const coins = resolved.filter(Boolean);
+  console.log("[fartlist] printr resolved", coins.length, "/", ids.length, "via /tokens/{id}");
+  return coins;
 }
 
 async function getPrintrTopCoins(){
