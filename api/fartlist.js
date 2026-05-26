@@ -85,6 +85,8 @@ function inferSource(mint){
   if(typeof mint !== "string") return "custom";
   if(/pump$/i.test(mint))  return "pump";
   if(/brrr$/i.test(mint))  return "printr";
+  if(/bags$/i.test(mint))  return "bags";
+  if(/BAGS$/.test(mint))   return "bags";
   if(/bonk$/i.test(mint))  return "custom";
   return "custom";
 }
@@ -176,6 +178,93 @@ async function getPrintrTopCoins(){
     }
   } catch(_){}
   return _printrCache.coins;
+}
+
+// ---- Bags.fm top coins -------------------------------------------------
+// Mirrors the Printr fetch pattern — best-effort discovery against a list
+// of likely endpoints. The API key + user UUID live in api/bags.js too.
+const BAGS_API_KEY    = "bags_prod_4CFspFz1h5xt8jH0jyOJTyu2Dlclu4c1u1Y4CqrmJxw";
+const BAGS_USER_UUID  = "2737eeee-d1b1-4caa-a93e-476b97f2619a";
+const BAGS_BASES = [
+  "https://public-api-v2.bags.fm/api/v1",
+  "https://public-api.bags.fm/api/v1",
+  "https://api.bags.fm/v1",
+  "https://api.bags.fm",
+  "https://www.bags.fm/api/v1",
+];
+let _bagsCache = { coins: [], at: 0 };
+
+function extractBagsCoin(t){
+  const mint = extractPrintrMint(t); // same heuristic — mint/address/contract/CAIP
+  if(!mint) return null;
+  if(mint === MINT) return null;
+  return {
+    mint,
+    sym: t.symbol || t.ticker || t.sym || "(?)",
+    name: t.name || t.title || "",
+    image: t.image_url || t.image || t.imageUrl || t.logo || t.icon || null,
+    source: "bags",
+  };
+}
+
+async function fetchBagsTopCoins(){
+  // UUID-scoped + global endpoints. First successful list wins.
+  const paths = [
+    "/tokens?limit=100",
+    "/tokens",
+    "/tokens/popular?limit=100",
+    "/tokens/trending?limit=100",
+    "/tokens/feed?limit=100",
+    "/explore/tokens?limit=100",
+    "/explore?limit=100",
+    "/leaderboard?limit=100",
+    `/users/${BAGS_USER_UUID}/tokens?limit=100`,
+    `/users/${BAGS_USER_UUID}/tokens`,
+    `/users/${BAGS_USER_UUID}/feed`,
+  ];
+  const headers = {
+    "x-api-key":     BAGS_API_KEY,
+    "Authorization": "Bearer " + BAGS_API_KEY,
+    "x-user-id":     BAGS_USER_UUID,
+    "Accept":        "application/json",
+  };
+  for(const base of BAGS_BASES){
+    for(const path of paths){
+      try {
+        const ctrl = new AbortController();
+        const tt = setTimeout(()=>ctrl.abort(), 4000);
+        const r = await fetch(base + path, { headers, signal: ctrl.signal });
+        clearTimeout(tt);
+        if(!r.ok) continue;
+        const j = await r.json();
+        const arr = Array.isArray(j) ? j : (j.tokens || j.data || j.results || j.items || j.feed || j.coins);
+        if(!Array.isArray(arr) || arr.length === 0) continue;
+        const coins = arr.map(extractBagsCoin).filter(Boolean);
+        if(coins.length > 0){
+          // Stash the winning base+path for diagnostics on cold start logs
+          console.log("[fartlist] bags ok:", base + path, "→", coins.length, "coins");
+          return coins;
+        }
+      } catch(_){ /* try next */ }
+    }
+  }
+  return [];
+}
+
+async function getBagsTopCoins(){
+  const now = Date.now();
+  if(_bagsCache.coins.length > 0 && (now - _bagsCache.at) < PRINTR_CACHE_TTL){
+    return _bagsCache.coins;
+  }
+  try {
+    const coins = await fetchBagsTopCoins();
+    if(coins.length > 0){
+      _bagsCache = { coins, at: now };
+    } else if(_bagsCache.coins.length === 0){
+      _bagsCache.at = now;
+    }
+  } catch(_){}
+  return _bagsCache.coins;
 }
 
 const hasKV = () => !!(KV_URL && KV_TOKEN);
@@ -341,9 +430,9 @@ async function verifyBurnAmount(sig, author){
 }
 
 // --- seed merge ---------------------------------------------------------
-// Combines: KV-stored boosted coins → curated PRINTR_SEEDS → live Printr API top.
-// Stored coins always win; seeds fill gaps; Printr API fills more gaps.
-function mergeSeeds(stored, printrTop){
+// Combines: KV-stored boosted coins → curated PRINTR_SEEDS → live Printr API → live Bags API.
+// Stored coins always win; seeds fill gaps; API discoveries fill more gaps.
+function mergeSeeds(stored, printrTop, bagsTop){
   const byMint = new Map();
   for(const c of stored) byMint.set(c.mint, c);
   const addIfNew = (s, source) => {
@@ -363,6 +452,7 @@ function mergeSeeds(stored, printrTop){
   };
   for(const s of PRINTR_SEEDS) addIfNew(s, "printr");
   for(const s of (printrTop || [])) addIfNew(s, "printr");
+  for(const s of (bagsTop || []))   addIfNew(s, "bags");
   return Array.from(byMint.values());
 }
 
@@ -410,12 +500,13 @@ export default async function handler(req, res){
     if(req.method === "GET"){
       const url = new URL(req.url, "http://x");
       const mintQ = url.searchParams.get("mint");
-      // Run KV fetch + Printr API fetch in parallel so the slower one doesn't block us
-      const [all, printrTop] = await Promise.all([
+      // Run KV fetch + both API fetches in parallel
+      const [all, printrTop, bagsTop] = await Promise.all([
         getAllCoins(),
         getPrintrTopCoins(),
+        getBagsTopCoins(),
       ]);
-      const merged = mergeSeeds(all, printrTop);
+      const merged = mergeSeeds(all, printrTop, bagsTop);
       if(mintQ){
         const c = merged.find(c => c.mint === mintQ);
         if(!c){ res.status(404).json({ ok:false, error:"not-found" }); return; }
@@ -423,13 +514,14 @@ export default async function handler(req, res){
         return;
       }
       const coins = merged.map(c => shape(c, false));
-      const seedCount = PRINTR_SEEDS.length + (printrTop ? printrTop.length : 0);
+      const seedCount = PRINTR_SEEDS.length + (printrTop ? printrTop.length : 0) + (bagsTop ? bagsTop.length : 0);
       res.status(200).json({
         ok: true,
         coins,
         totalBurned: totalBurnedAcross(merged),
         seeds: seedCount,
         printrApi: printrTop ? printrTop.length : 0,
+        bagsApi:   bagsTop   ? bagsTop.length   : 0,
         custom: merged.filter(c => !c.seed).length,
         minBoostTokens: MIN_BOOST_TOKENS,
         minListTokens: MIN_LIST_TOKENS,
