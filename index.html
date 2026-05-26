@@ -1349,6 +1349,232 @@
     .forum-row .ttl { font-size: 14px; }
   }
 
+  /* ===== FARTIDLER MODULE (paid-access) ===== */
+  .idler-mod {
+    margin-top: 24px;
+    padding: 28px 30px 26px;
+    border: 1px solid var(--border-light);
+    border-radius: 20px;
+    background:
+      linear-gradient(135deg, var(--amber-soft) 0%, transparent 65%),
+      var(--card-bg);
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  [data-theme="dark"] .idler-mod {
+    background:
+      linear-gradient(135deg, rgba(255,176,32,0.10) 0%, transparent 65%),
+      var(--card-bg);
+    border-color: var(--border);
+  }
+  .idler-mod::before{
+    content: "";
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(255,176,32,0.18), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .idler-mod-head {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 18px;
+    position: relative; z-index: 1;
+  }
+  .idler-mod-head .icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #0a7d3a 0%, #ffb020 100%);
+    box-shadow: 0 4px 14px rgba(255,176,32,0.32);
+    flex-shrink: 0;
+  }
+  .idler-mod-head .icon svg{ width: 22px; height: 22px; color: #fff; }
+  .idler-mod-head .titles{ display: flex; flex-direction: column; min-width: 0; }
+  .idler-mod-head h3 {
+    font-size: 19px; font-weight: 800; letter-spacing: -0.3px;
+    color: var(--text); margin: 0;
+  }
+  .idler-mod-head .cat {
+    font-size: 11px; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 1px;
+    font-weight: 700; margin-top: 2px;
+  }
+  .price-badge{
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-left: 8px;
+    background: linear-gradient(135deg, #ffb020, #ff8a3d);
+    color: #2c1900;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 12px;
+    letter-spacing: 0.4px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(255,176,32,0.36);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .price-badge .lock { font-size: 11px; }
+  .idler-mod-head .right {
+    margin-left: auto; display: flex; align-items: center; gap: 10px;
+  }
+  .idler-mod-head .all-link {
+    font-size: 13px; font-weight: 700;
+    color: var(--green-dark); text-decoration: none;
+    transition: color 0.15s;
+  }
+  .idler-mod-head .all-link:hover{ color: var(--green); }
+  [data-theme="dark"] .idler-mod-head .all-link{ color: var(--green-bright); }
+
+  .idler-mod-pitch{
+    color: var(--text-secondary); font-size: 14px; line-height: 1.65;
+    margin-bottom: 16px; max-width: 720px;
+    position: relative; z-index: 1;
+  }
+  .idler-mod-pitch b{ color: var(--amber); }
+
+  .idler-stats{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+    position: relative; z-index: 1;
+  }
+  @media (max-width:680px){ .idler-stats{ grid-template-columns: 1fr 1fr; } }
+  .idler-stat{
+    background: var(--bg-2);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  [data-theme="dark"] .idler-stat{
+    background: rgba(255,255,255,0.02);
+    border-color: var(--border-light);
+  }
+  .idler-stat .lbl{
+    font-size: 10.5px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 800;
+  }
+  .idler-stat .v{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 17px; color: var(--text); margin-top: 3px;
+  }
+  .idler-stat .v.amber{ color: var(--amber); }
+  .idler-stat .v.green{ color: var(--green); }
+
+  .idler-pool-bar{
+    height: 6px; background: var(--border-light); border-radius: 99px;
+    overflow: hidden; margin-top: 6px;
+  }
+  [data-theme="dark"] .idler-pool-bar{ background: rgba(255,255,255,0.06); }
+  .idler-pool-bar .fill{
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber), var(--green));
+    width: 0;
+    transition: width 0.6s;
+  }
+
+  .idler-top{
+    display: grid; gap: 8px;
+    position: relative; z-index: 1;
+  }
+  .idler-top-head{
+    display: flex; align-items: center; gap: 10px;
+    font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 800;
+    margin-bottom: 2px;
+  }
+  .idler-row{
+    display: grid;
+    grid-template-columns: 30px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: var(--bg-2);
+    transition: all 0.15s;
+  }
+  [data-theme="dark"] .idler-row{
+    background: rgba(255,255,255,0.02);
+  }
+  .idler-row .rank{
+    font-family: 'Orbitron', sans-serif; font-weight: 800;
+    font-size: 13px; text-align: center;
+    color: var(--text-3);
+  }
+  .idler-row .rank.r1{ color: var(--gold, #ffb020); }
+  .idler-row .rank.r2{ color: #b6b6b6; }
+  .idler-row .rank.r3{ color: #d4884a; }
+  .idler-row .who{ min-width: 0; }
+  .idler-row .who .nm{ font-weight: 800; font-size: 14px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .idler-row .who .nm.empty{ color: var(--text-3); font-style: italic; font-weight: 600; }
+  .idler-row .who .ad{ font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3); margin-top: 1px; }
+  .idler-row .farts{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 14px; color: var(--amber);
+    text-align: right;
+  }
+  .idler-row .farts small{
+    display: block; font-size: 9.5px; font-weight: 600;
+    color: var(--text-3); margin-top: 1px;
+    font-family: 'Inter', sans-serif; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  .idler-cta-row{
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    margin-top: 14px;
+    position: relative; z-index: 1;
+  }
+  .idler-cta{
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, #ffb020, #ff8a3d);
+    color: #2c1900;
+    font-weight: 800; font-size: 14px;
+    letter-spacing: 0.4px;
+    padding: 12px 22px;
+    border-radius: 14px;
+    text-decoration: none;
+    box-shadow: 0 8px 24px rgba(255,138,61,0.32);
+    transition: all 0.15s;
+  }
+  .idler-cta:hover{ filter: brightness(1.06); transform: translateY(-1px); }
+  .idler-cta .price{
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(44,25,0,0.18);
+    padding: 4px 9px; border-radius: 7px;
+    font-size: 12px;
+  }
+  .idler-cta-note{
+    font-size: 12px; color: var(--text-3);
+  }
+  .idler-cta-note b{ color: var(--amber); }
+
+  @media (max-width: 600px) {
+    .idler-mod { padding: 22px 18px; }
+  }
+
+  /* ===== APP STORE PRICE TAG (on app-cards) ===== */
+  .app-card .price-tag{
+    position: absolute;
+    top: 14px; right: 14px;
+    display: inline-flex; align-items: center; gap: 5px;
+    background: linear-gradient(135deg, #ffb020, #ff8a3d);
+    color: #2c1900;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 11px;
+    letter-spacing: 0.4px;
+    padding: 5px 10px;
+    border-radius: 99px;
+    box-shadow: 0 3px 10px rgba(255,138,61,0.28);
+    z-index: 2;
+    text-transform: uppercase;
+  }
+  .app-card .price-tag .lock{ font-size: 10px; }
+  [data-theme="dark"] .app-card .price-tag{
+    box-shadow: 0 3px 14px rgba(255,138,61,0.40);
+  }
+
   /* ===== BUY $FARTPRINT ===== */
   .buy-grid {
     display: grid;
@@ -2233,6 +2459,9 @@
 
     <!-- FARTIDLER -->
     <div class="app-card live" data-status="live">
+      <span class="price-tag" title="One-time entry burn">
+        <span class="lock">🔒</span>10,000 $FP
+      </span>
       <div class="app-icon" style="background: linear-gradient(135deg, #0a7d3a 0%, #ffb020 100%); box-shadow: 0 4px 14px rgba(255, 176, 32, 0.30);">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <polyline points="6 9 6 2 18 2 18 9"/>
@@ -2516,6 +2745,64 @@
     </div>
     <div class="forum-list" id="forumList">
       <div class="forum-empty">Loading recent threads…</div>
+    </div>
+  </div>
+
+  <!-- FARTIDLER · paid-access module -->
+  <div class="idler-mod" id="idlerMod">
+    <div class="idler-mod-head">
+      <span class="icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 6 2 18 2 18 9"/>
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+          <rect x="6" y="14" width="12" height="8"/>
+        </svg>
+      </span>
+      <div class="titles">
+        <h3>FartIdler</h3>
+        <div class="cat">Idle Game · Burn-to-play</div>
+      </div>
+      <span class="price-badge"><span class="lock">🔒</span>10,000 $FARTPRINT</span>
+      <div class="right">
+        <a class="all-link" href="fartidler.html">Open app →</a>
+      </div>
+    </div>
+
+    <p class="idler-mod-pitch">
+      The ecosystem's <b>first paid app</b>. Burn 10,000 $FARTPRINT one time to unlock
+      lifetime access, then click the printer to mine FARTS, buy upgrades, and climb the
+      leaderboard. Top wallets win real $FARTPRINT at airdrop events.
+    </p>
+
+    <div class="idler-stats">
+      <div class="idler-stat">
+        <div class="lbl">Paid Players</div>
+        <div class="v" id="idlerPlayers">—</div>
+      </div>
+      <div class="idler-stat">
+        <div class="lbl">Burned via Entries</div>
+        <div class="v amber" id="idlerBurned">—</div>
+      </div>
+      <div class="idler-stat">
+        <div class="lbl">Event Pool Remaining</div>
+        <div class="v green" id="idlerPool">—</div>
+        <div class="idler-pool-bar"><div class="fill" id="idlerPoolFill" style="width:0;"></div></div>
+      </div>
+    </div>
+
+    <div class="idler-top">
+      <div class="idler-top-head">🔥 Top 3 farters · live</div>
+      <div id="idlerTopRows">
+        <div class="idler-row"><div class="rank">—</div><div class="who"><div class="nm empty">No players yet</div></div><div class="farts">—<small>FARTS</small></div></div>
+      </div>
+    </div>
+
+    <div class="idler-cta-row">
+      <a class="idler-cta" href="fartidler.html">
+        🔒 Unlock FartIdler
+        <span class="price">10,000 $FP</span>
+      </a>
+      <span class="idler-cta-note">Pay once, play forever · <b>1,000,000 $FARTPRINT</b> first-event pool</span>
     </div>
   </div>
 
@@ -3927,10 +4214,63 @@ async function loadForumLatest(){
   }
 }
 
+// ===== FartIdler module =====
+function _idlerShort(a){
+  if(!a) return "anonymous";
+  if(a.length > 12) return a.slice(0,4) + "…" + a.slice(-4);
+  return a;
+}
+function _idlerFmt(n){
+  if(n == null || !isFinite(n)) return "0";
+  if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+  if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
+  if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
+  return Math.round(n).toLocaleString();
+}
+async function loadIdlerMod(){
+  const rowsEl = document.getElementById("idlerTopRows");
+  if(!rowsEl) return;
+  try {
+    const r = await fetch("/api/fartidler?t=" + Date.now());
+    if(!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const entry  = j.entry || { paidPlayers: 0, totalBurned: 0 };
+    const pool   = j.pool  || { total: 1000000, distributed: 0, remaining: 1000000 };
+    const top    = (j.topByFarts || []).slice(0, 3);
+
+    document.getElementById("idlerPlayers").textContent = (entry.paidPlayers || 0).toLocaleString();
+    document.getElementById("idlerBurned").textContent  = _idlerFmt(entry.totalBurned) + " $FARTPRINT";
+    document.getElementById("idlerPool").textContent    = _idlerFmt(pool.remaining) + " / " + _idlerFmt(pool.total);
+    const pct = pool.total > 0 ? Math.min(100, (pool.distributed / pool.total) * 100) : 0;
+    document.getElementById("idlerPoolFill").style.width = pct + "%";
+
+    if(!top.length){
+      rowsEl.innerHTML = `<div class="idler-row"><div class="rank">—</div><div class="who"><div class="nm empty">No players yet — be the first to unlock</div></div><div class="farts">—<small>FARTS</small></div></div>`;
+      return;
+    }
+    rowsEl.innerHTML = top.map((p, i) => {
+      const rankCls = (i+1) === 1 ? "rank r1" : (i+1) === 2 ? "rank r2" : (i+1) === 3 ? "rank r3" : "rank";
+      return `
+        <div class="idler-row">
+          <div class="${rankCls}">#${i+1}</div>
+          <div class="who">
+            <div class="nm ${p.name?'':'empty'}">${escHtml(p.name || "(unnamed)")}</div>
+            <div class="ad">${escHtml(_idlerShort(p.wallet))}</div>
+          </div>
+          <div class="farts">${_idlerFmt(Number(p.farts) || 0)}<small>FARTS</small></div>
+        </div>
+      `;
+    }).join("");
+  } catch(e){
+    rowsEl.innerHTML = `<div class="idler-row"><div class="rank">—</div><div class="who"><div class="nm empty">Couldn't load leaderboard</div></div><div class="farts">—<small>FARTS</small></div></div>`;
+  }
+}
+
 loadTop3FartCup();
 loadTop3Derivatives();
 loadForumLatest();
-setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); loadForumLatest(); }, 60000);
+loadIdlerMod();
+setInterval(() => { loadTop3FartCup(); loadTop3Derivatives(); loadForumLatest(); loadIdlerMod(); }, 60000);
 </script>
 
 <!-- ===== Premium layer: Three.js (reactive painted bg) · GSAP ScrollTrigger (cinematic reveals) · Lenis (smooth scroll) ===== -->
