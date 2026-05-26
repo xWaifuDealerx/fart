@@ -3075,6 +3075,28 @@ async function loadTop3FartCup(){
 
 // Per-derivative image cache (so we don't keep re-fetching the same pump.fun image_uri)
 const _drvImg = {};
+
+// Same seed list used by derivatives.html — the well-known brrr-suffixed
+// Printr derivatives that exist independent of the community-minted registry.
+const DERIVATIVE_SEEDS = [
+  "2iCTndXvsRc5XS4PgoPffg4uxnaftxp3XmsEXYSSbrrr", // genesis FART derivative
+  "8YWLJnkiggWvuMTViFGtSfMTkRFysUuhvnhz8xJmbrrr",
+  "DHxKCdydJaHrgnzFJfJo4vNQv5fN8ooQXGTxfs8gbrrr",
+  "3XTQFSvfBkNZZ5k26xD5nHex5CUtAyC9X5ckjMFHbrrr",
+  "8Etxo4Z6ixYpu7kh8xgX67M5chwRkqxXwjXRi5rcbrrr",
+  "12519nzTv29udANTwk1RthGWcjpHaKyYunuPetmqbrrr",
+  "EoBaF6Kj8jSQQYzE2psw151VTkoEsmtstUQ1xZMtbrrr",
+  "CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr",
+  "4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr",
+  "ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr",
+  "2mDz9haqq51iFTQnHeVnABGcUCpwdVuivWEdR1SMbrrr",
+  "3bRN6aEr82qw95P7vVwwyFBPnN5Z3eDu9HMrtk99brrr",
+  "BCwvw9XJCzA8WixpMH2tjQxePZRq92vu2PAyo78obrrr",
+  "4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr",
+  "CnJk3UfUsHy5aSx6JBhoogLxmrcFhpsLP6xaUiGJbrrr",
+  "7EU2j1pUw97XUwxGYsKueCWDTxX8PtRncvN7xUdhbrrr",
+];
+
 async function fetchDrvPump(t, caps){
   if(!t.ma) return;
   try {
@@ -3087,23 +3109,58 @@ async function fetchDrvPump(t, caps){
     if(img) _drvImg[t.ma] = img;
   } catch(_){}
 }
+
+// Pull metadata (sym / name / image) for the curated seed mints from Printr.
+async function fetchSeedDerivatives(){
+  const out = [];
+  await Promise.all(DERIVATIVE_SEEDS.map(async (ma) => {
+    try {
+      const path = `/tokens/solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:${ma}`;
+      const r = await fetch("/api/printr?path=" + encodeURIComponent(path));
+      if(!r.ok) return;
+      const j = await r.json();
+      out.push({
+        tid: j.id || ma,
+        sym: j.symbol || "FART",
+        name: j.name || "",
+        img: j.imageUrl || j.image_url || null,
+        ma,
+        ts: j.createdAt ? new Date(j.createdAt).getTime() : 0,
+        lp: "printr",
+      });
+    } catch(_){}
+  }));
+  return out;
+}
+
 async function loadTop3Derivatives(){
-  let toks = [];
+  // 1) Pull registry (community-minted) + seed list (well-known) in parallel
+  let registryToks = [];
   try {
     const r = await fetch("/api/registry?t=" + Date.now());
-    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.tokens)) toks = j.tokens; }
+    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.tokens)) registryToks = j.tokens; }
   } catch(_){}
-  const withMa = toks.filter(t => t.ma);
-  if(!withMa.length){
+  let seedToks = [];
+  try { seedToks = await fetchSeedDerivatives(); } catch(_){}
+
+  // 2) Merge + dedupe by mint address; require a mint (no ma = no mcap)
+  const seen = new Set();
+  const all = [];
+  for(const t of [...seedToks, ...registryToks]){
+    if(!t || !t.ma) continue;
+    if(seen.has(t.ma)) continue;
+    seen.add(t.ma);
+    all.push(t);
+  }
+  if(!all.length){
     renderTop3("top3-derivatives", [], "Freshly minted — leaderboard fills as they trade.");
     return;
   }
-  // 1) DexScreener for graduated coins
-  const caps = await dexMcaps(withMa.map(t => t.ma));
-  // 2) pump.fun fallback (throttled) for everything still on the curve
-  await runLimited(withMa.filter(t => !caps[t.ma]), 5, (t) => fetchDrvPump(t, caps));
 
-  // Helper to resolve a usable image src
+  // 3) Market caps — DexScreener first (graduated), pump.fun fallback (on curve)
+  const caps = await dexMcaps(all.map(t => t.ma));
+  await runLimited(all.filter(t => !caps[t.ma]), 5, (t) => fetchDrvPump(t, caps));
+
   const imgOf = (t) => {
     if(_drvImg[t.ma]) return _drvImg[t.ma];
     if(!t.img) return null;
@@ -3111,16 +3168,16 @@ async function loadTop3Derivatives(){
     return "data:image/jpeg;base64," + t.img;
   };
 
-  const withCap = withMa.map(t => ({ ...t, mcap: caps[t.ma] || 0 }));
+  // 4) Sort by mcap desc; backfill to always show 3
+  const withCap = all.map(t => ({ ...t, mcap: caps[t.ma] || 0 }));
   const priced = withCap.filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap);
-  // Always present a podium of 3: priced first, backfilled with the rest by recency
   let top = priced.slice(0, 3);
   if(top.length < 3){
     const used = new Set(top.map(t => t.ma));
     const remaining = withCap.filter(r => !used.has(r.ma)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
     top = top.concat(remaining.slice(0, 3 - top.length));
   }
-  // Make sure podium coins have an image (fetch any we haven't yet via pump.fun)
+  // Last-ditch image grab for podium coins still missing an image
   await runLimited(top.filter(t => !_drvImg[t.ma] && !t.img), 5, (t) => fetchDrvPump(t, null));
 
   const rows = top.map(t => ({ sym: t.sym, img: imgOf(t), mcap: t.mcap }));
