@@ -1691,7 +1691,7 @@
       <h3>Derivatives</h3>
       <div class="tagline">Mint your own FART derivative on Solana</div>
       <p class="desc">
-        Spawn a FART-prefixed token on Solana via the Printr launchpad. Pick a 10-character
+        Spawn a FART-prefixed token on Solana via any launchpad. Pick a 10-character
         suffix, upload an image, mint to chain in one signature. Every derivative
         <strong style="color:#bbf7d0;">inherits the $FARTPRINT bloodline</strong> and lands
         instantly in the public family gallery. The fastest way to add your own brap to the
@@ -3073,15 +3073,57 @@ async function loadTop3FartCup(){
   renderTop3("top3-fartcup", rows, "Nation coins warming up — check back soon.");
 }
 
+// Per-derivative image cache (so we don't keep re-fetching the same pump.fun image_uri)
+const _drvImg = {};
+async function fetchDrvPump(t, caps){
+  if(!t.ma) return;
+  try {
+    const r = await fetch(`/api/pumpfun?mint=${t.ma}`);
+    if(!r.ok) return;
+    const j = await r.json();
+    const v = Number(j?.usd_market_cap);
+    if(v > 0 && caps) caps[t.ma] = v;
+    const img = j?.image_uri || j?.image || j?.imageUrl;
+    if(img) _drvImg[t.ma] = img;
+  } catch(_){}
+}
 async function loadTop3Derivatives(){
   let toks = [];
-  try{ const r = await fetch("/api/registry?t=" + Date.now()); if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.tokens)) toks = j.tokens; } }catch(_){}
+  try {
+    const r = await fetch("/api/registry?t=" + Date.now());
+    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.tokens)) toks = j.tokens; }
+  } catch(_){}
   const withMa = toks.filter(t => t.ma);
+  if(!withMa.length){
+    renderTop3("top3-derivatives", [], "Freshly minted — leaderboard fills as they trade.");
+    return;
+  }
+  // 1) DexScreener for graduated coins
   const caps = await dexMcaps(withMa.map(t => t.ma));
-  const imgOf = (t) => t.img ? ((/^https?:\/\//.test(t.img) || String(t.img).startsWith("data:")) ? t.img : ("data:image/jpeg;base64," + t.img)) : null;
-  const rows = withMa
-    .map(t => ({ sym: t.sym, img: imgOf(t), mcap: caps[t.ma] || 0 }))
-    .filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap).slice(0, 3);
+  // 2) pump.fun fallback (throttled) for everything still on the curve
+  await runLimited(withMa.filter(t => !caps[t.ma]), 5, (t) => fetchDrvPump(t, caps));
+
+  // Helper to resolve a usable image src
+  const imgOf = (t) => {
+    if(_drvImg[t.ma]) return _drvImg[t.ma];
+    if(!t.img) return null;
+    if(/^https?:\/\//.test(t.img) || String(t.img).startsWith("data:")) return t.img;
+    return "data:image/jpeg;base64," + t.img;
+  };
+
+  const withCap = withMa.map(t => ({ ...t, mcap: caps[t.ma] || 0 }));
+  const priced = withCap.filter(r => r.mcap > 0).sort((a, b) => b.mcap - a.mcap);
+  // Always present a podium of 3: priced first, backfilled with the rest by recency
+  let top = priced.slice(0, 3);
+  if(top.length < 3){
+    const used = new Set(top.map(t => t.ma));
+    const remaining = withCap.filter(r => !used.has(r.ma)).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    top = top.concat(remaining.slice(0, 3 - top.length));
+  }
+  // Make sure podium coins have an image (fetch any we haven't yet via pump.fun)
+  await runLimited(top.filter(t => !_drvImg[t.ma] && !t.img), 5, (t) => fetchDrvPump(t, null));
+
+  const rows = top.map(t => ({ sym: t.sym, img: imgOf(t), mcap: t.mcap }));
   renderTop3("top3-derivatives", rows, "Freshly minted — leaderboard fills as they trade.");
 }
 
