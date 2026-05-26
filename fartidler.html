@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartIdler · click the printer, win $FARTPRINT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --purple:#9b5cff; --red:#ff5a5a; --amber:#ffcf5a; --gold:#ffb020;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(46,224,107,.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,176,32,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ---- top nav ---- */
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:24px 18px 80px;}
+
+  /* ---- hero ---- */
+  .hero{margin-bottom:18px;}
+  .hero h1{margin:0;font-size:38px;font-weight:900;letter-spacing:-1px;font-family:'Orbitron',sans-serif;}
+  .hero h1 .a{
+    background:linear-gradient(135deg,var(--green),var(--amber) 70%,var(--gold));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin-top:8px;max-width:680px;}
+  .hero .sub b{color:var(--amber);}
+
+  /* ---- pool gauge ---- */
+  .pool{
+    display:flex;align-items:center;gap:16px;
+    border:1px solid var(--border-2);
+    background:linear-gradient(135deg,rgba(255,176,32,.10),rgba(46,224,107,.05));
+    border-radius:14px;padding:14px 18px;margin:14px 0 22px;
+    box-shadow:var(--shadow);flex-wrap:wrap;
+  }
+  .pool .lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .pool .v{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:18px;}
+  .pool .v.amber{color:var(--amber);}
+  .pool .v.green{color:var(--green);}
+  .pool .bar{flex:1 1 200px;height:10px;background:var(--panel-2);border-radius:99px;overflow:hidden;border:1px solid var(--border);min-width:120px;}
+  .pool .bar .fill{height:100%;background:linear-gradient(90deg,var(--amber),var(--green));width:0;transition:width .6s;}
+  .pool .right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+
+  /* ---- two-col main layout ---- */
+  .game{display:grid;grid-template-columns: 1fr 360px;gap:22px;}
+  @media (max-width:920px){ .game{grid-template-columns: 1fr;} }
+
+  /* ---- player card ---- */
+  .pcard{
+    border:1px solid var(--border);border-radius:14px;background:var(--panel);
+    box-shadow:var(--shadow);padding:16px 18px;margin-bottom:18px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  }
+  .pcard .lbl{font-size:11px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .pcard input[type="text"]{
+    background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);
+    border-radius:10px;padding:9px 13px;font-size:14px;font-weight:600;
+    font-family:'Inter',sans-serif;min-width:160px;
+  }
+  .pcard input[type="text"]:focus{outline:none;border-color:var(--green);}
+  .pcard .stat{display:flex;flex-direction:column;gap:2px;}
+  .pcard .v{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:18px;}
+  .pcard .v.green{color:var(--green);}
+  .pcard .v.amber{color:var(--amber);}
+  .pcard .v.text{color:var(--text);}
+  .pcard .sep{width:1px;height:36px;background:var(--border);}
+  .pcard .right{margin-left:auto;font-size:11px;color:var(--text-3);}
+
+  /* ---- click stage ---- */
+  .stage{
+    position:relative;border:1px solid var(--border);border-radius:18px;background:var(--panel);
+    box-shadow:var(--shadow);padding:30px 18px 26px;overflow:hidden;text-align:center;
+  }
+  .stage .bigcount{
+    font-family:'Orbitron',sans-serif;font-weight:900;font-size:48px;letter-spacing:-.5px;
+    background:linear-gradient(135deg,var(--green-br),var(--amber));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    text-shadow:0 0 24px rgba(46,224,107,.25);
+    line-height:1.1;
+  }
+  .stage .bigcount .tk{color:var(--text-3);font-size:14px;letter-spacing:2.4px;text-transform:uppercase;font-family:'Inter',sans-serif;font-weight:800;display:block;margin-top:4px;-webkit-text-fill-color:var(--text-3);}
+  .stage .fps{margin-top:6px;color:var(--text-2);font-size:13px;}
+  .stage .fps b{color:var(--amber);font-family:'JetBrains Mono',monospace;}
+  .printer-wrap{
+    position:relative;margin:18px auto 4px;width:240px;height:240px;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    user-select:none;-webkit-user-select:none;
+    transition:transform .06s ease-out;
+  }
+  .printer-wrap:active{transform:scale(.94);}
+  .printer-wrap.shake{animation:shake .18s;}
+  @keyframes shake{
+    0%{transform:translate(0,0) rotate(0);}
+    25%{transform:translate(-2px,2px) rotate(-1deg);}
+    50%{transform:translate(2px,-1px) rotate(1deg);}
+    75%{transform:translate(-1px,1px) rotate(-0.5deg);}
+    100%{transform:translate(0,0) rotate(0);}
+  }
+  .printer-wrap svg{width:100%;height:100%;filter:drop-shadow(0 6px 18px rgba(46,224,107,.20));}
+  .printer-wrap .glow{
+    position:absolute;inset:8px;border-radius:50%;
+    background:radial-gradient(circle, rgba(46,224,107,.20), transparent 65%);
+    pointer-events:none;
+  }
+  .floaters{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+  .floater{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    font-family:'JetBrains Mono',monospace;font-weight:800;font-size:18px;
+    color:var(--green);pointer-events:none;white-space:nowrap;
+    animation:floatup 1.1s ease-out forwards;
+    text-shadow:0 0 12px rgba(46,224,107,.55);
+  }
+  @keyframes floatup{
+    0%  { opacity:0;   transform:translate(-50%,-50%) scale(.6);}
+    20% { opacity:1;   transform:translate(-50%,-70%) scale(1.1);}
+    100%{ opacity:0;   transform:translate(-50%,-180%) scale(.9);}
+  }
+  .stage .clickhint{font-size:13px;color:var(--text-3);margin-top:8px;}
+  .stage .clickhint b{color:var(--green);}
+
+  /* ---- upgrades ---- */
+  .ucol{display:flex;flex-direction:column;gap:0;}
+  .ucol h3{margin:0 0 10px;font-size:14px;letter-spacing:1.4px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .ulist{border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);}
+  .uitem{
+    display:grid;grid-template-columns:42px 1fr auto;align-items:center;gap:12px;
+    padding:11px 14px;border-bottom:1px solid var(--border);
+    cursor:pointer;transition:.12s;
+  }
+  .uitem:last-child{border-bottom:none;}
+  .uitem:hover{background:var(--row);}
+  .uitem.affordable{background:linear-gradient(90deg,rgba(46,224,107,.05),transparent);}
+  .uitem.affordable:hover{background:linear-gradient(90deg,rgba(46,224,107,.10),transparent);}
+  .uitem.locked{opacity:.55;cursor:not-allowed;}
+  .uitem .ico{
+    width:42px;height:42px;border-radius:10px;display:grid;place-items:center;font-size:20px;
+    background:var(--panel-2);border:1px solid var(--border-2);
+  }
+  .uitem .nm{font-weight:800;font-size:13.5px;}
+  .uitem .nm .cnt{display:inline-block;background:var(--panel-2);color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px;padding:1px 6px;border-radius:6px;border:1px solid var(--border-2);margin-left:6px;}
+  .uitem .ds{color:var(--text-3);font-size:11.5px;margin-top:1px;}
+  .uitem .ds b{color:var(--amber);}
+  .uitem .cost{
+    font-family:'JetBrains Mono',monospace;font-weight:800;font-size:13.5px;color:var(--text-2);
+    white-space:nowrap;text-align:right;
+  }
+  .uitem.affordable .cost{color:var(--green);}
+
+  /* ---- leaderboards ---- */
+  .lbsec{margin-top:34px;}
+  .tabs{display:flex;gap:6px;margin-bottom:10px;border-bottom:1px solid var(--border);}
+  .tabs .tab{
+    padding:9px 14px;font-size:13px;font-weight:800;color:var(--text-3);cursor:pointer;
+    border-radius:8px 8px 0 0;border:1px solid transparent;border-bottom:none;transition:.12s;
+  }
+  .tabs .tab.active{color:var(--text);background:var(--panel);border-color:var(--border);border-bottom:1px solid var(--panel);margin-bottom:-1px;}
+  .tabs .tab:hover{color:var(--text);}
+  .tabs .tab .pl{font-family:'JetBrains Mono',monospace;color:var(--text-3);font-weight:700;font-size:11px;margin-left:6px;}
+  .lbtable{border:1px solid var(--border);border-radius:0 14px 14px 14px;overflow:hidden;background:var(--panel);box-shadow:var(--shadow);}
+  .lbtable .head, .lbtable .trow{
+    display:grid;grid-template-columns: 60px 1fr 200px 160px;align-items:center;gap:10px;
+  }
+  .lbtable .head{background:var(--panel-2);border-bottom:1px solid var(--border);padding:11px 16px;font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .lbtable .trow{padding:13px 16px;border-bottom:1px solid var(--border);transition:.12s;}
+  .lbtable .trow:last-child{border-bottom:none;}
+  .lbtable .trow:hover{background:var(--row);}
+  .lbtable .trow.me{background:linear-gradient(90deg,rgba(46,224,107,.10),transparent);border-left:3px solid var(--green);}
+  .rank{
+    font-family:'Orbitron',sans-serif;font-weight:800;font-size:18px;color:var(--text-3);
+    display:flex;align-items:center;justify-content:center;width:42px;height:32px;
+    border-radius:8px;background:var(--panel-2);border:1px solid var(--border);
+  }
+  .rank.r1{color:#0a0f0c;background:linear-gradient(135deg,#ffd75a,#ffb020);border-color:#ffb020;text-shadow:none;}
+  .rank.r2{color:#0a0f0c;background:linear-gradient(135deg,#e0e0e0,#a8a8a8);border-color:#a8a8a8;}
+  .rank.r3{color:#0a0f0c;background:linear-gradient(135deg,#d4884a,#a85a26);border-color:#a85a26;}
+  .who{min-width:0;}
+  .who .nm{font-weight:800;font-size:14.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .who .nm.empty{color:var(--text-3);font-style:italic;font-weight:600;}
+  .who .ad{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--text-3);margin-top:1px;cursor:pointer;}
+  .who .ad:hover{color:var(--green);}
+  .farts-cell{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:14.5px;color:var(--amber);text-align:right;}
+  .earned-cell{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:14.5px;color:var(--green);text-align:right;text-shadow:0 0 10px rgba(46,224,107,.25);}
+  .earned-cell .tk{color:var(--text-3);font-size:11px;margin-left:4px;font-family:'Inter',sans-serif;}
+
+  /* ---- entry paywall ---- */
+  .gate{
+    position:fixed;inset:0;z-index:60;display:none;
+    background:rgba(8,11,9,.85);backdrop-filter:blur(8px);
+    align-items:center;justify-content:center;padding:18px;
+  }
+  .gate.show{display:flex;}
+  .gate-card{
+    width:100%;max-width:480px;border:1px solid var(--border-2);border-radius:18px;
+    background:linear-gradient(180deg, rgba(255,176,32,.10), rgba(46,224,107,.04) 50%, var(--panel));
+    box-shadow:0 24px 60px rgba(0,0,0,.6); padding:26px 24px;
+  }
+  .gate-card h2{
+    margin:0 0 6px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:24px;
+    letter-spacing:-.4px;color:var(--text);
+  }
+  .gate-card h2 .a{color:var(--amber);}
+  .gate-card .lead{color:var(--text-2);font-size:14px;line-height:1.6;margin-bottom:16px;}
+  .gate-card .lead b{color:var(--amber);}
+  .gate-fee{
+    margin:14px 0 18px;border:1px solid var(--border-2);border-radius:14px;padding:14px 16px;
+    background:linear-gradient(135deg,rgba(255,90,90,.10),rgba(255,176,32,.06));
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .gate-fee .fire{font-size:30px;line-height:1;}
+  .gate-fee .col{display:flex;flex-direction:column;gap:1px;}
+  .gate-fee .lbl{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);font-weight:800;}
+  .gate-fee .v{font-family:'JetBrains Mono',monospace;font-weight:800;font-size:18px;color:var(--text);}
+  .gate-fee .v.amber{color:var(--amber);}
+  .gate-fee .right{margin-left:auto;text-align:right;}
+  .gate-fee .right .v{color:var(--green);}
+  .gate-fee .right .v.warn{color:var(--red);}
+  .gate-btn{
+    width:100%;font-weight:800;font-size:15px;border:none;cursor:pointer;border-radius:12px;
+    padding:14px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 6px 20px rgba(46,224,107,.32);transition:.15s;
+  }
+  .gate-btn:hover:not(:disabled){filter:brightness(1.06);transform:translateY(-1px);}
+  .gate-btn:disabled{opacity:.55;cursor:not-allowed;transform:none;filter:none;}
+  .gate-btn.busy{background:var(--panel-2);color:var(--text);border:1px solid var(--border-2);box-shadow:none;}
+  .gate-foot{font-size:11.5px;color:var(--text-3);margin-top:12px;line-height:1.6;text-align:center;}
+  .gate-foot a{color:var(--green);}
+  .gate-status{
+    margin-top:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:600;
+    background:var(--panel-2);border:1px solid var(--border);display:none;
+  }
+  .gate-status.show{display:block;}
+  .gate-status.err{color:var(--red);border-color:rgba(255,90,90,.4);background:rgba(255,90,90,.06);}
+  .gate-status.ok{color:var(--green);border-color:rgba(46,224,107,.4);background:rgba(46,224,107,.06);}
+  .gate-secondary{
+    background:transparent;border:1px solid var(--border-2);color:var(--text-2);
+    box-shadow:none;margin-top:8px;font-weight:700;font-size:13px;padding:10px 14px;
+  }
+
+  /* ---- toast ---- */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    background:var(--panel-2);border:1px solid var(--border-2);color:var(--text);
+    padding:10px 18px;border-radius:99px;font-size:13.5px;font-weight:700;
+    box-shadow:var(--shadow);z-index:50;display:none;
+  }
+  .toast.show{display:block;animation:fadein .25s;}
+  @keyframes fadein{from{opacity:0;transform:translate(-50%,8px);}to{opacity:1;transform:translateX(-50%);}}
+
+  /* small */
+  .help{font-size:11.5px;color:var(--text-3);margin-top:8px;line-height:1.6;}
+  .help a{color:var(--green);}
+
+  /* responsive tweaks */
+  @media (max-width:780px){
+    .lbtable .head, .lbtable .trow{grid-template-columns: 50px 1fr 120px;font-size:13px;padding-left:12px;padding-right:12px;}
+    .lbtable .trow .ad{display:none;}
+    .farts-cell, .earned-cell{font-size:13px;}
+    .stage .bigcount{font-size:38px;}
+    .hero h1{font-size:30px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+    </span>
+    FART<span class="amp">IDLER</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button id="walletBtn" class="wallet-btn" type="button">Connect Wallet</button>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartIdler</span></h1>
+    <div class="sub">
+      Connect your wallet, give yourself a name, and click the printer to mine <b>FARTS</b> — an off-chain
+      game currency. Spend FARTS on printer upgrades to auto-idle. Climb the leaderboard.
+      Top wallets get airdropped real <b>$FARTPRINT</b> at events.
+    </div>
+  </header>
+
+  <!-- POOL GAUGE -->
+  <div class="pool">
+    <div class="stat">
+      <span class="lbl">Event Pool</span>
+      <span class="v amber" id="poolTotal">1,000,000 $FARTPRINT</span>
+    </div>
+    <div class="bar"><div class="fill" id="poolFill" style="width:0;"></div></div>
+    <div class="right">
+      <span class="lbl">Remaining</span>
+      <span class="v green" id="poolRemain">—</span>
+    </div>
+    <div class="stat" style="margin-left:14px;">
+      <span class="lbl">Distributed</span>
+      <span class="v" id="poolDist" style="color:var(--text);">—</span>
+    </div>
+    <div class="stat" style="margin-left:14px;border-left:1px solid var(--border);padding-left:14px;">
+      <span class="lbl">Entry Burns</span>
+      <span class="v" id="entryBurns" style="color:var(--red);">— $FARTPRINT</span>
+    </div>
+  </div>
+
+  <!-- PLAYER CARD -->
+  <div class="pcard">
+    <div class="stat">
+      <span class="lbl">Your Name</span>
+      <input type="text" id="nameIn" placeholder="anonymous farter" maxlength="24" disabled>
+    </div>
+    <div class="sep"></div>
+    <div class="stat">
+      <span class="lbl">FARTS</span>
+      <span class="v amber" id="hStatFarts">0</span>
+    </div>
+    <div class="stat">
+      <span class="lbl">FPS</span>
+      <span class="v green" id="hStatFps">0</span>
+    </div>
+    <div class="stat">
+      <span class="lbl">Click Power</span>
+      <span class="v text" id="hStatCp">+1</span>
+    </div>
+    <div class="right" id="walletLbl">Connect Phantom to start playing →</div>
+  </div>
+
+  <div class="game">
+    <!-- LEFT: stage -->
+    <div>
+      <div class="stage">
+        <div class="bigcount">
+          <span id="bigFarts">0</span>
+          <span class="tk">FARTS</span>
+        </div>
+        <div class="fps">Auto-printing <b id="fpsBig">0</b> per second</div>
+
+        <div class="printer-wrap" id="printer">
+          <div class="glow"></div>
+          <!-- printer SVG -->
+          <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <!-- top tray -->
+            <rect x="60" y="22" width="80" height="30" rx="4" fill="#1b2a22" stroke="#2c4234" stroke-width="2"/>
+            <line x1="70" y1="32" x2="130" y2="32" stroke="#3a5a48" stroke-width="2"/>
+            <line x1="70" y1="42" x2="130" y2="42" stroke="#3a5a48" stroke-width="2"/>
+            <!-- body -->
+            <rect x="36" y="52" width="128" height="86" rx="10" fill="url(#bodyGrad)" stroke="#274234" stroke-width="2"/>
+            <!-- screen -->
+            <rect x="52" y="68" width="50" height="22" rx="4" fill="#0d1612" stroke="#2c4234"/>
+            <circle cx="62" cy="79" r="2.5" fill="#46f08a"/>
+            <rect x="70" y="75.5" width="26" height="3" rx="1.5" fill="#46f08a" opacity=".75"/>
+            <rect x="70" y="81.5" width="18" height="3" rx="1.5" fill="#46f08a" opacity=".45"/>
+            <!-- buttons -->
+            <circle cx="120" cy="74" r="3.5" fill="#ffcf5a"/>
+            <circle cx="132" cy="74" r="3.5" fill="#ff5a5a"/>
+            <circle cx="144" cy="74" r="3.5" fill="#46f08a"/>
+            <rect x="116" y="84" width="34" height="6" rx="2" fill="#1b2a22"/>
+            <!-- paper slot -->
+            <rect x="52" y="108" width="96" height="8" rx="3" fill="#0d1612"/>
+            <rect x="58" y="116" width="84" height="14" rx="2" fill="#f5f7f2"/>
+            <line x1="64" y1="121" x2="120" y2="121" stroke="#9fbcab" stroke-width="1.2"/>
+            <line x1="64" y1="125" x2="110" y2="125" stroke="#9fbcab" stroke-width="1.2"/>
+            <!-- base -->
+            <rect x="32" y="138" width="136" height="10" rx="3" fill="#0d1612"/>
+            <!-- gradient -->
+            <defs>
+              <linearGradient id="bodyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" stop-color="#1f3128"/>
+                <stop offset="1" stop-color="#14211a"/>
+              </linearGradient>
+            </defs>
+          </svg>
+          <div class="floaters" id="floaters"></div>
+        </div>
+
+        <div class="clickhint">Click the printer. Each click prints <b id="hCp">+1</b> fart.</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: upgrades -->
+    <div class="ucol">
+      <h3>Printer Parts</h3>
+      <div class="ulist" id="upgrades"></div>
+      <div class="help">
+        Upgrades stack — each copy bought makes the next one ~15% pricier (classic Cookie Clicker curve).
+        Auto-FPS keeps printing even when you walk away. Progress is saved to your wallet across devices.
+      </div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARDS -->
+  <div class="lbsec">
+    <div class="tabs">
+      <div class="tab active" data-tab="farts" id="tabFarts">FARTS leaderboard <span class="pl" id="cntFarts"></span></div>
+      <div class="tab" data-tab="earned" id="tabEarned">$FARTPRINT earned <span class="pl" id="cntEarned"></span></div>
+    </div>
+
+    <div class="lbtable" id="lbFarts">
+      <div class="head">
+        <div>Rank</div>
+        <div>Player</div>
+        <div style="text-align:right;">Wallet</div>
+        <div style="text-align:right;">FARTS</div>
+      </div>
+      <!-- rows injected -->
+    </div>
+
+    <div class="lbtable" id="lbEarned" style="display:none;">
+      <div class="head">
+        <div>Rank</div>
+        <div>Player</div>
+        <div style="text-align:right;">Wallet</div>
+        <div style="text-align:right;">$FARTPRINT</div>
+      </div>
+      <!-- rows injected -->
+    </div>
+  </div>
+
+</div>
+
+<!-- ENTRY PAYWALL -->
+<div class="gate" id="gate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="gate-card">
+    <h2 id="gateTitle">Burn <span class="a">10,000 $FARTPRINT</span> to play</h2>
+    <p class="lead">
+      FartIdler is <b>burn-to-participate</b>. One-time entry fee — your 10,000 $FARTPRINT
+      is burned forever, your wallet is remembered, and you can play across devices.
+    </p>
+
+    <div class="gate-fee">
+      <div class="fire">🔥</div>
+      <div class="col">
+        <span class="lbl">Entry fee</span>
+        <span class="v amber">10,000 $FARTPRINT</span>
+      </div>
+      <div class="right col">
+        <span class="lbl">Your balance</span>
+        <span class="v" id="gateBal">checking…</span>
+      </div>
+    </div>
+
+    <button id="gatePay" class="gate-btn" type="button">Connect wallet first</button>
+    <button id="gateClose" class="gate-btn gate-secondary" type="button" style="display:none;">Close</button>
+    <div class="gate-status" id="gateStatus"></div>
+
+    <div class="gate-foot">
+      Your burn transaction is verified on-chain. Once paid, your wallet is in the database
+      and qualifies for the <b style="color:var(--amber);">1,000,000 $FARTPRINT</b> event pool.
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  Connection, PublicKey,
+  TransactionInstruction, TransactionMessage, VersionedTransaction
+} from "https://esm.sh/@solana/web3.js@1.95.3";
+
+// ============================================================
+// FartIdler — frontend
+// ============================================================
+
+const API = "/api/fartidler";
+const FARTPRINT_MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const MINT_PK = new PublicKey(FARTPRINT_MINT_STR);
+const TOKEN_PROGRAM_ID      = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+const ASSOC_PROGRAM_ID      = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+let TOKEN_PROGRAM = TOKEN_PROGRAM_ID;     // resolved at runtime from the mint owner
+let MINT_DECIMALS = 6;
+let _mintResolved = false;
+const ENTRY_FEE_TOKENS = 10_000;
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+// ---- upgrades (Cookie-Clicker style, 1.15x cost) ----
+const UPGRADES = [
+  { id:"finger",  ico:"👆", name:"Greasy Finger",   desc:"+1 per click",   baseCost:15,         mult:1.15, kind:"click", value:1 },
+  { id:"robot",   ico:"🤖", name:"Robot Finger",    desc:"+0.5 FPS",       baseCost:100,        mult:1.15, kind:"fps",   value:0.5 },
+  { id:"nozzle",  ico:"🔧", name:"Better Nozzle",   desc:"+5 FPS",         baseCost:1100,       mult:1.15, kind:"fps",   value:5 },
+  { id:"ink",     ico:"🧪", name:"Ink Refill",      desc:"+47 FPS",        baseCost:12000,      mult:1.15, kind:"fps",   value:47 },
+  { id:"pipe",    ico:"🚰", name:"Industrial Pipe", desc:"+260 FPS",       baseCost:130000,     mult:1.15, kind:"fps",   value:260 },
+  { id:"farm",    ico:"🏭", name:"Server Farm",     desc:"+1,400 FPS",     baseCost:1_400_000,  mult:1.15, kind:"fps",   value:1400 },
+  { id:"ai",      ico:"🧠", name:"AI Optimizer",    desc:"+7,800 FPS",     baseCost:20_000_000, mult:1.15, kind:"fps",   value:7800 },
+  { id:"anus",    ico:"🌀", name:"Quantum Anus",    desc:"+44,000 FPS",    baseCost:330_000_000,mult:1.15, kind:"fps",   value:44000 },
+];
+
+// ---- state ----
+const state = {
+  walletPk: null,
+  name: "",
+  farts: 0,
+  counts: {},        // upgrade id → count
+  paid: false,       // burn-to-enter status
+  entrySig: null,    // last entry sig (kept in localStorage too, in case backend miss)
+  lastTick: performance.now(),
+  lastBackendSave: 0,
+  lastBackendFetch: 0,
+  saving: false,
+  // leaderboards
+  top: { byFarts: [], byEarned: [], pool: null, totalPlayers: 0, entry: null },
+  tab: "farts",
+};
+
+// =============== Burn helpers (port from FartForum) ================
+async function resolveMint(){
+  if(_mintResolved) return;
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      const info = await c.getParsedAccountInfo(MINT_PK);
+      const v = info && info.value;
+      if(v && v.owner){
+        TOKEN_PROGRAM = v.owner;
+        const dec = v.data && v.data.parsed && v.data.parsed.info && v.data.parsed.info.decimals;
+        if(Number.isInteger(dec)) MINT_DECIMALS = dec;
+        _mintResolved = true;
+        return;
+      }
+    } catch(_){}
+  }
+}
+function ataFor(owner){
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), MINT_PK.toBuffer()],
+    ASSOC_PROGRAM_ID
+  );
+  return ata;
+}
+// BurnChecked (ix tag 15): u64 amount LE + u8 decimals
+function makeBurnIx(owner, tokens){
+  const amount = BigInt(tokens) * (10n ** BigInt(MINT_DECIMALS));
+  const data = new Uint8Array(10);
+  data[0] = 15;
+  let x = amount;
+  for(let i=0;i<8;i++){ data[1+i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = MINT_DECIMALS;
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM,
+    keys: [
+      { pubkey: ataFor(owner), isSigner:false, isWritable:true },
+      { pubkey: MINT_PK,       isSigner:false, isWritable:true },
+      { pubkey: owner,         isSigner:true,  isWritable:false },
+    ],
+    data,
+  });
+}
+async function freshBlockhash(){
+  for(const url of RPCS){
+    try {
+      const conn = new Connection(url, "confirmed");
+      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("confirmed");
+      return { conn, blockhash, lastValidBlockHeight };
+    } catch(_){}
+  }
+  throw new Error("Could not reach a Solana RPC. Try again in a moment.");
+}
+async function fartprintBalance(owner){
+  await resolveMint();
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      const r = await c.getTokenAccountBalance(ataFor(owner));
+      return Number(r.value.uiAmount) || 0;
+    } catch(_){}
+  }
+  return null; // unknown
+}
+async function burnEntryFee(){
+  const ph = getPhantom();
+  if(!ph) throw new Error("Phantom not found");
+  if(!state.walletPk) throw new Error("Wallet not connected");
+  const owner = new PublicKey(state.walletPk);
+  await resolveMint();
+  const { blockhash } = await freshBlockhash();
+  const msg = new TransactionMessage({
+    payerKey: owner,
+    recentBlockhash: blockhash,
+    instructions: [ makeBurnIx(owner, ENTRY_FEE_TOKENS) ],
+  }).compileToV0Message();
+  const tx = new VersionedTransaction(msg);
+  const res = await ph.signAndSendTransaction(tx);
+  const sig = res.signature || res;
+  if(typeof sig !== "string") throw new Error("No signature returned from wallet");
+  // Wait for confirmation (best-effort)
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      await c.confirmTransaction(sig, "confirmed");
+      break;
+    } catch(_){}
+  }
+  return sig;
+}
+
+// derived
+function clickPower(){
+  const c = state.counts["finger"] || 0;
+  return 1 + c; // each finger +1
+}
+function fps(){
+  let f = 0;
+  for(const u of UPGRADES){
+    if(u.kind !== "fps") continue;
+    const c = state.counts[u.id] || 0;
+    f += c * u.value;
+  }
+  return f;
+}
+function upgradeCost(u){
+  const c = state.counts[u.id] || 0;
+  return Math.ceil(u.baseCost * Math.pow(u.mult, c));
+}
+
+// ---- format ----
+function fmt(n){
+  if(n==null||!isFinite(n)) return "0";
+  if(n>=1e15) return (n/1e15).toFixed(2)+"Q";
+  if(n>=1e12) return (n/1e12).toFixed(2)+"T";
+  if(n>=1e9)  return (n/1e9).toFixed(2)+"B";
+  if(n>=1e6)  return (n/1e6).toFixed(2)+"M";
+  if(n>=1e3)  return (n/1e3).toFixed(2)+"K";
+  if(n>=100)  return n.toFixed(0);
+  if(n>=10)   return n.toFixed(1);
+  return n.toFixed(2).replace(/\.00$/,"");
+}
+function fmtInt(n){
+  if(n==null||!isFinite(n)) return "0";
+  return Math.floor(n).toLocaleString();
+}
+function shortAddr(a){
+  if(!a) return "";
+  return a.slice(0,4) + "…" + a.slice(-4);
+}
+function esc(s){ return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+// ---- DOM ----
+const $ = (id)=>document.getElementById(id);
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+// ---- Phantom ----
+function getPhantom(){
+  const p = window.phantom && window.phantom.solana;
+  if(p && p.isPhantom) return p;
+  if(window.solana && window.solana.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if(!ph){ alert("Phantom wallet not found. Install Phantom from https://phantom.app"); return; }
+  try {
+    const res = await ph.connect();
+    state.walletPk = res.publicKey.toString();
+    localStorage.setItem("fi_trusted","1");
+    paintWallet();
+    await loadFromBackend();
+    saveLocal();
+  } catch(e){ console.warn("connect failed",e); }
+}
+async function disconnectWallet(){
+  const ph = getPhantom();
+  try{ if(ph && ph.disconnect) await ph.disconnect(); }catch(_){}
+  // Save before clearing so they don't lose anything
+  if(state.walletPk && state.paid) try { await saveToBackend(true); } catch(_){}
+  state.walletPk = null;
+  state.paid = false;
+  localStorage.removeItem("fi_trusted");
+  paintWallet();
+  refreshGate();
+}
+async function tryAutoConnect(){
+  if(localStorage.getItem("fi_trusted") !== "1") return;
+  const ph = getPhantom();
+  if(!ph) return;
+  try {
+    const res = await ph.connect({ onlyIfTrusted:true });
+    state.walletPk = res.publicKey.toString();
+    paintWallet();
+    await loadFromBackend();
+    saveLocal();
+  } catch(_){}
+}
+function paintWallet(){
+  const b = $("walletBtn");
+  const lbl = $("walletLbl");
+  const nameIn = $("nameIn");
+  if(state.walletPk){
+    b.textContent = shortAddr(state.walletPk);
+    b.classList.add("connected");
+    b.onclick = disconnectWallet;
+    const paidTag = state.paid ? ' · <span style="color:var(--amber);">entry paid 🔥</span>' : ' · <span style="color:var(--red);">entry fee due</span>';
+    lbl.innerHTML = `<span class="mono" style="color:var(--green);">${esc(shortAddr(state.walletPk))}</span>${paidTag}`;
+    nameIn.disabled = !state.paid;
+  } else {
+    b.textContent = "Connect Wallet";
+    b.classList.remove("connected");
+    b.onclick = connectWallet;
+    lbl.textContent = "Connect Phantom to start playing →";
+    nameIn.disabled = true;
+  }
+}
+
+// ---- local persistence (per-wallet) ----
+function localKey(){ return state.walletPk ? `fi_save:${state.walletPk}` : null; }
+function saveLocal(){
+  const k = localKey(); if(!k) return;
+  try {
+    localStorage.setItem(k, JSON.stringify({
+      name: state.name, farts: state.farts, counts: state.counts, ts: Date.now(),
+    }));
+  } catch(_){}
+}
+function loadLocal(){
+  const k = localKey(); if(!k) return null;
+  try { const raw = localStorage.getItem(k); return raw ? JSON.parse(raw) : null; } catch(_){ return null; }
+}
+
+// ---- backend sync ----
+async function loadFromBackend(){
+  if(!state.walletPk) return;
+  try {
+    const r = await fetch(`${API}?wallet=${encodeURIComponent(state.walletPk)}`);
+    if(!r.ok) return;
+    const j = await r.json();
+    state.top.byFarts = j.topByFarts || [];
+    state.top.byEarned = j.topByEarned || [];
+    state.top.pool = j.pool || null;
+    state.top.entry = j.entry || null;
+    state.top.totalPlayers = j.totalPlayers || 0;
+    renderPool(); renderBoards();
+
+    // Paid status from server is the source of truth for the gate.
+    const remote = j.self;
+    state.paid = !!(remote && remote.paid === true);
+
+    // Merge progress: use the higher of (server, localStorage)
+    const local = loadLocal();
+    let chosen = local;
+    if(remote && (!local || (remote.farts||0) > (local.farts||0))){
+      chosen = { name: remote.name, farts: remote.farts, counts: remote.counts || {}, ts: remote.lastSaved };
+    }
+    if(chosen){
+      state.name = chosen.name || "";
+      state.farts = Number(chosen.farts) || 0;
+      state.counts = (chosen.counts && typeof chosen.counts === "object") ? chosen.counts : (local && local.counts) || {};
+    }
+    $("nameIn").value = state.name || "";
+    state.lastTick = performance.now();
+    renderHeader(); renderUpgrades(); renderBigCount();
+
+    // Retry a pending entry-sig if we burned but never confirmed with the API.
+    const pending = localStorage.getItem(pendingSigKey());
+    if(pending && !state.paid){
+      await submitEntrySig(pending, /*silent=*/true);
+    }
+
+    // Refresh the gate (show or hide based on paid).
+    refreshGate();
+  } catch(e){ console.warn("backend load fail", e); }
+}
+
+async function saveToBackend(force){
+  if(!state.walletPk) return;
+  const now = Date.now();
+  if(!force && (state.saving || now - state.lastBackendSave < 12000)) return;
+  state.saving = true;
+  try {
+    const r = await fetch(API, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        wallet: state.walletPk,
+        name: state.name,
+        farts: Math.floor(state.farts),
+        fps: fps(),
+      }),
+    });
+    if(r.ok){
+      state.lastBackendSave = now;
+      const j = await r.json().catch(()=>null);
+      if(j && j.accepted === false && j.reason === "monotonic-violation" && j.player){
+        // Server thinks we had more — adopt the higher value to stay in sync
+        if((j.player.farts||0) > state.farts){
+          state.farts = j.player.farts;
+          renderBigCount(); renderHeader();
+        }
+      }
+    }
+  } catch(e){ console.warn("save fail",e); }
+  finally { state.saving = false; }
+}
+
+async function refreshBoards(){
+  try {
+    const r = await fetch(API);
+    if(!r.ok) return;
+    const j = await r.json();
+    state.top.byFarts = j.topByFarts || [];
+    state.top.byEarned = j.topByEarned || [];
+    state.top.pool = j.pool || null;
+    state.top.entry = j.entry || null;
+    state.top.totalPlayers = j.totalPlayers || 0;
+    renderPool(); renderBoards();
+  } catch(_){}
+}
+
+// ---- game loop ----
+let acc = 0;
+function tick(now){
+  const dt = (now - state.lastTick) / 1000;
+  state.lastTick = now;
+  if(state.walletPk && state.paid){
+    const f = fps();
+    state.farts += f * dt;
+  }
+  acc += dt;
+  if(acc >= 0.2){
+    renderBigCount();
+    renderHeader();
+    renderUpgradesAffordability();
+    acc = 0;
+  }
+  requestAnimationFrame(tick);
+}
+
+// click handler
+$("printer").addEventListener("click", (ev)=>{
+  if(!state.walletPk){ toast("Connect your wallet to start."); return; }
+  if(!state.paid){ openGate(); return; }
+  const gain = clickPower();
+  state.farts += gain;
+  // spawn floater
+  const f = document.createElement("div");
+  f.className = "floater";
+  f.textContent = "+" + fmt(gain);
+  const rect = $("printer").getBoundingClientRect();
+  // random x offset for fun
+  const x = 50 + (Math.random()*60 - 30);
+  const y = 40 + (Math.random()*20 - 10);
+  f.style.left = x + "%";
+  f.style.top = y + "%";
+  $("floaters").appendChild(f);
+  setTimeout(()=>f.remove(), 1100);
+  // shake
+  $("printer").classList.remove("shake"); void $("printer").offsetWidth; $("printer").classList.add("shake");
+  renderBigCount(); renderHeader();
+  saveLocal();
+});
+
+// ---- upgrades buy ----
+function buyUpgrade(id){
+  if(!state.walletPk){ toast("Connect your wallet to buy upgrades."); return; }
+  if(!state.paid){ openGate(); return; }
+  const u = UPGRADES.find(x=>x.id===id);
+  if(!u) return;
+  const cost = upgradeCost(u);
+  if(state.farts < cost){ toast("Not enough FARTS for " + u.name); return; }
+  state.farts -= cost;
+  state.counts[id] = (state.counts[id]||0) + 1;
+  renderUpgrades(); renderHeader(); renderBigCount();
+  saveLocal();
+  saveToBackend();
+}
+
+// =============== Entry paywall ===============
+function pendingSigKey(){ return state.walletPk ? `fi_pending_sig:${state.walletPk}` : null; }
+
+function gateStatus(msg, cls){
+  const el = $("gateStatus");
+  el.textContent = msg || "";
+  el.className = "gate-status" + (msg ? " show " + (cls||"") : "");
+}
+function setGateBtn(text, busy){
+  const b = $("gatePay");
+  b.textContent = text;
+  b.classList.toggle("busy", !!busy);
+}
+
+function refreshGate(){
+  // Show only when wallet is connected but not yet paid.
+  const show = !!state.walletPk && !state.paid;
+  $("gate").classList.toggle("show", show);
+  if(!show) return;
+  // Refresh balance + button text
+  const pay = $("gatePay");
+  pay.disabled = false;
+  setGateBtn("Burn 10,000 $FARTPRINT", false);
+  pay.onclick = onGatePay;
+  $("gateBal").textContent = "checking…";
+  fartprintBalance(new PublicKey(state.walletPk)).then((bal)=>{
+    if(bal == null){ $("gateBal").textContent = "unknown"; return; }
+    const enough = bal >= ENTRY_FEE_TOKENS;
+    $("gateBal").innerHTML = fmt(bal) + ' <span style="font-size:11px;color:var(--text-3);font-family:Inter,sans-serif;font-weight:600;margin-left:4px;">$FARTPRINT</span>';
+    $("gateBal").className = "v " + (enough ? "" : "warn");
+    if(!enough){
+      setGateBtn("Not enough $FARTPRINT", false);
+      pay.disabled = true;
+      gateStatus("You need 10,000 $FARTPRINT in this wallet to enter. Buy on Printr first.", "err");
+    }
+  }).catch(()=>{ $("gateBal").textContent = "unknown"; });
+}
+
+function openGate(){ refreshGate(); }
+
+async function onGatePay(){
+  if(!state.walletPk) return;
+  const pay = $("gatePay");
+  pay.disabled = true;
+  try {
+    setGateBtn("Resolving mint…", true);
+    await resolveMint();
+
+    setGateBtn("Confirm the burn in Phantom… 🔥", true);
+    const sig = await burnEntryFee();
+
+    // Stash the sig in case the next step fails — we'll retry on next load.
+    if(pendingSigKey()) localStorage.setItem(pendingSigKey(), sig);
+
+    setGateBtn("Verifying burn on chain…", true);
+    await submitEntrySig(sig, /*silent=*/false);
+  } catch(e){
+    console.warn("entry burn failed", e);
+    gateStatus(humanizeError(e), "err");
+    setGateBtn("Burn 10,000 $FARTPRINT", false);
+    pay.disabled = false;
+  }
+}
+
+function humanizeError(e){
+  const msg = (e && (e.message || e.toString())) || "Unknown error";
+  if(/User rejected|reject|denied/i.test(msg)) return "You declined the burn in Phantom.";
+  if(/insufficient/i.test(msg)) return "Not enough $FARTPRINT to burn 10,000.";
+  if(/blockhash|expired/i.test(msg)) return "Network was slow — please try again.";
+  return msg;
+}
+
+async function submitEntrySig(sig, silent){
+  try {
+    if(!silent) setGateBtn("Recording entry…", true);
+    const r = await fetch(API + "?entry=1", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wallet: state.walletPk, sig, name: state.name || "" }),
+    });
+    const j = await r.json().catch(()=>null);
+    if(!r.ok || !j || j.ok !== true){
+      const err = (j && (j.message || j.error)) || "Could not record your entry. The burn may still be valid — refresh in a minute.";
+      if(!silent){
+        gateStatus(err, "err");
+        setGateBtn("Burn 10,000 $FARTPRINT", false);
+        $("gatePay").disabled = false;
+      }
+      return;
+    }
+    // Success — clear pending sig
+    if(pendingSigKey()) localStorage.removeItem(pendingSigKey());
+    state.paid = true;
+    state.entrySig = sig;
+    if(j.entry) state.top.entry = j.entry;
+    if(j.pool) state.top.pool = j.pool;
+    if(j.topByFarts) state.top.byFarts = j.topByFarts;
+    if(j.topByEarned) state.top.byEarned = j.topByEarned;
+    renderPool(); renderBoards(); paintWallet();
+    if(!silent) gateStatus("Entry confirmed — welcome aboard! 🔥", "ok");
+    // Close after a short beat
+    setTimeout(()=>{ $("gate").classList.remove("show"); }, 900);
+  } catch(e){
+    if(!silent){
+      gateStatus(humanizeError(e), "err");
+      setGateBtn("Burn 10,000 $FARTPRINT", false);
+      $("gatePay").disabled = false;
+    }
+  }
+}
+
+// ---- name ----
+$("nameIn").addEventListener("input", (e)=>{
+  const v = e.target.value.replace(/[\x00-\x1f<>]/g,"").slice(0,24);
+  state.name = v;
+  saveLocal();
+});
+$("nameIn").addEventListener("blur", ()=> saveToBackend(true));
+
+// ---- render ----
+function renderBigCount(){
+  $("bigFarts").textContent = fmt(state.farts);
+  $("fpsBig").textContent = fmt(fps());
+  $("hCp").textContent = "+" + fmt(clickPower());
+}
+function renderHeader(){
+  $("hStatFarts").textContent = fmt(state.farts);
+  $("hStatFps").textContent = fmt(fps());
+  $("hStatCp").textContent = "+" + fmt(clickPower());
+}
+function renderUpgrades(){
+  const ul = $("upgrades");
+  ul.innerHTML = "";
+  for(const u of UPGRADES){
+    const c = state.counts[u.id] || 0;
+    const cost = upgradeCost(u);
+    const can = state.farts >= cost && !!state.walletPk;
+    const row = document.createElement("div");
+    row.className = "uitem" + (can?" affordable":"") + (state.walletPk?"":" locked");
+    row.innerHTML = `
+      <div class="ico">${u.ico}</div>
+      <div>
+        <div class="nm">${esc(u.name)}${c>0?`<span class="cnt">×${c}</span>`:""}</div>
+        <div class="ds">${esc(u.desc)} · base <b>${fmt(u.baseCost)}</b></div>
+      </div>
+      <div class="cost">${fmt(cost)}</div>
+    `;
+    row.onclick = ()=> buyUpgrade(u.id);
+    ul.appendChild(row);
+  }
+}
+function renderUpgradesAffordability(){
+  const items = document.querySelectorAll("#upgrades .uitem");
+  let i = 0;
+  for(const u of UPGRADES){
+    const cost = upgradeCost(u);
+    const can = state.farts >= cost && !!state.walletPk;
+    const el = items[i]; if(!el){ i++; continue; }
+    el.classList.toggle("affordable", can);
+    el.classList.toggle("locked", !state.walletPk);
+    i++;
+  }
+}
+function renderPool(){
+  const p = state.top.pool;
+  if(p){
+    $("poolTotal").textContent = fmtInt(p.total) + " $FARTPRINT";
+    $("poolDist").textContent = fmtInt(p.distributed);
+    $("poolRemain").textContent = fmtInt(p.remaining);
+    const pct = p.total > 0 ? Math.min(100, (p.distributed / p.total) * 100) : 0;
+    $("poolFill").style.width = pct + "%";
+  }
+  const e = state.top.entry;
+  if(e){
+    $("entryBurns").textContent = fmtInt(e.totalBurned||0) + " $FARTPRINT";
+  }
+}
+function renderBoards(){
+  $("cntFarts").textContent = state.top.byFarts.length ? `(${state.top.byFarts.length})` : "";
+  $("cntEarned").textContent = state.top.byEarned.length ? `(${state.top.byEarned.length})` : "";
+  renderTable("lbFarts", state.top.byFarts, "farts");
+  renderTable("lbEarned", state.top.byEarned, "earned");
+}
+function renderTable(elId, rows, kind){
+  const tbl = $(elId);
+  Array.from(tbl.querySelectorAll(".trow")).forEach(n=>n.remove());
+  if(!rows.length){
+    const empty = document.createElement("div");
+    empty.style.padding = "30px 16px";
+    empty.style.textAlign = "center";
+    empty.style.color = "var(--text-3)";
+    empty.style.fontSize = "13px";
+    empty.className = "trow";
+    empty.innerHTML = kind==="farts"
+      ? "No farters yet — be the first to start clicking."
+      : "No $FARTPRINT distributed yet. Climb the FARTS board to qualify for the first event.";
+    tbl.appendChild(empty);
+    return;
+  }
+  rows.slice(0, 100).forEach((p, idx)=>{
+    const rank = idx + 1;
+    const isMe = state.walletPk && p.wallet === state.walletPk;
+    const valHtml = kind === "farts"
+      ? `<div class="farts-cell">${fmtInt(Number(p.farts)||0)}</div>`
+      : `<div class="earned-cell">${fmtInt(Number(p.earned)||0)}<span class="tk">$FARTPRINT</span></div>`;
+    const rankCls = rank===1?"rank r1":rank===2?"rank r2":rank===3?"rank r3":"rank";
+    const row = document.createElement("div");
+    row.className = "trow" + (isMe?" me":"");
+    row.innerHTML = `
+      <div class="${rankCls}">${rank}</div>
+      <div class="who">
+        <div class="nm ${p.name?"":"empty"}">${esc(p.name || "(unnamed)")}</div>
+        <div class="ad" title="Click to copy" data-w="${esc(p.wallet)}">${esc(shortAddr(p.wallet))}</div>
+      </div>
+      <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text-3);">${esc(shortAddr(p.wallet))}</div>
+      ${valHtml}
+    `;
+    tbl.appendChild(row);
+  });
+}
+
+// copy wallet on click
+document.addEventListener("click", (e)=>{
+  const t = e.target.closest(".who .ad");
+  if(!t) return;
+  const w = t.getAttribute("data-w");
+  if(!w) return;
+  navigator.clipboard.writeText(w).then(()=>toast("Wallet copied")).catch(()=>{});
+});
+
+// tabs
+document.querySelectorAll(".tabs .tab").forEach(tab=>{
+  tab.onclick = ()=>{
+    document.querySelectorAll(".tabs .tab").forEach(t=>t.classList.remove("active"));
+    tab.classList.add("active");
+    const k = tab.getAttribute("data-tab");
+    state.tab = k;
+    $("lbFarts").style.display = k==="farts" ? "" : "none";
+    $("lbEarned").style.display = k==="earned" ? "" : "none";
+  };
+});
+
+// gate close (only visible after success in this UI; allows ESC if desired)
+document.addEventListener("keydown", (e)=>{
+  if(e.key === "Escape" && $("gate").classList.contains("show") && state.paid){
+    $("gate").classList.remove("show");
+  }
+});
+
+// ---- boot ----
+paintWallet();
+resolveMint();          // warm up token-program / decimals
+tryAutoConnect();
+refreshBoards();
+renderBigCount(); renderHeader(); renderUpgrades();
+requestAnimationFrame(t => { state.lastTick = t; tick(t); });
+
+// periodic syncs
+setInterval(()=>{ saveLocal(); saveToBackend(); }, 15000);
+setInterval(refreshBoards, 30000);
+window.addEventListener("beforeunload", ()=>{
+  saveLocal();
+  if(state.walletPk){
+    try {
+      navigator.sendBeacon(API, new Blob([JSON.stringify({
+        wallet: state.walletPk, name: state.name,
+        farts: Math.floor(state.farts), fps: fps(),
+      })], { type:"application/json" }));
+    } catch(_){}
+  }
+});
+</script>
+
+</body>
+</html>
