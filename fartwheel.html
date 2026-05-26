@@ -140,14 +140,26 @@
     align-items: center; justify-content: center;
     text-align: center;
   }
-  .wheel-hole .lbl { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); font-weight: 700; }
+  .wheel-hole .lbl {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; letter-spacing: 2.6px; text-transform: uppercase;
+    color: var(--amber); font-weight: 800;
+    text-shadow: 0 0 10px rgba(255,176,32,0.35);
+    margin-bottom: 6px;
+  }
   .wheel-hole .big {
     font-family: 'Orbitron', sans-serif;
-    font-size: clamp(26px, 7vw, 38px); font-weight: 900; line-height: 1.05;
+    font-size: clamp(28px, 7.4vw, 42px); font-weight: 900; line-height: 1.05;
     background: linear-gradient(135deg, var(--fire-bright), var(--amber));
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 14px rgba(255,138,61,0.45));
+    letter-spacing: -0.5px;
   }
-  .wheel-hole .unit { font-size: 11px; color: var(--text-3); margin-top: 2px; letter-spacing: 0.5px; }
+  .wheel-hole .unit {
+    font-size: 11px; color: var(--amber); margin-top: 4px;
+    letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase;
+    opacity: 0.85;
+  }
 
   .wheel-legend { display: flex; flex-direction: column; gap: 12px; min-width: 230px; }
   .leg {
@@ -168,7 +180,7 @@
     font-size: 18px; font-weight: 800; text-transform: uppercase;
     letter-spacing: -0.3px; margin: 8px 0 16px;
   }
-  .burn-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .burn-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; }
   @media (max-width: 760px) { .burn-cards { grid-template-columns: 1fr; } }
   .bcard {
     background: var(--card);
@@ -359,6 +371,13 @@ const APPS = [
     desc: "Buyback & burn via fees",
     source: "ledger", mode: "ledger", appKey: "cup",
   },
+  {
+    key: "incineration", name: "Incineration Burn",
+    href: "https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY",
+    color: "#9b5cff", icon: "☠", iconGrad: "linear-gradient(135deg,#9b5cff,#6a2cf5)",
+    desc: "Supply burned at launch",
+    source: "supply", mode: "incineration",
+  },
 ];
 
 function fmt(n){
@@ -407,13 +426,19 @@ async function loadRecords(app){
 
 async function computeApp(app){
   if(app.mode === "accruing") return { burned: null, count: null, accruing: true };
+  if(app.mode === "incineration") return { burned: null, count: null, accruing: false, incineration: true };
   if(app.mode === "ledger"){
     let recs = [];
     try{ recs = (await FartBurns.load()).filter(r => r.appKey === app.appKey); } catch(_){}
     const burned = recs.reduce((s, r) => s + (r.amount || 0), 0);
     return { burned, count: recs.length, accruing: false };
   }
-  const recs = await loadRecords(app);
+  let recs = await loadRecords(app);
+  // Merge seeded FartBurner burns from the shared ledger
+  if(app.key === "burner" && window.FartBurns && FartBurns.burnerRecords){
+    const seen = new Set(recs.map(r => r.tx));
+    FartBurns.burnerRecords().forEach(s => { if(!seen.has(s.tx)) recs.push(s); });
+  }
   if(app.mode === "sum"){
     const burned = recs.reduce((s, r) => s + (Number(r.a) || 0), 0);
     return { burned, count: recs.length, accruing: false };
@@ -426,6 +451,25 @@ async function computeApp(app){
 async function refresh(){
   const results = await Promise.all(APPS.map(computeApp));
   APPS.forEach((a, i) => { a._r = results[i]; });
+
+  // ── Incineration Burn = (initial supply − current supply) minus every
+  // other burn we can attribute. Whatever's missing from the 1B launch
+  // supply that isn't FartBurner / FartSwap / Fart Cup was burned at launch.
+  const inc = APPS.find(a => a.mode === "incineration");
+  if(inc){
+    let missing = null;
+    try{
+      const supply = await FartBurns.getSupply();
+      if(supply != null) missing = Math.max(0, FartBurns.INITIAL_SUPPLY - supply);
+    } catch(_){}
+    if(missing != null){
+      const others = APPS.filter(a => a.mode !== "incineration")
+                         .reduce((s, a) => s + (a._r.burned || 0), 0);
+      inc._r = { burned: Math.max(0, missing - others), count: null, accruing: false, incineration: true };
+    } else {
+      inc._r = { burned: null, count: null, accruing: false, incineration: true };
+    }
+  }
 
   const total = APPS.reduce((s, a) => s + (a._r.burned || 0), 0);
   $("totalBurned").textContent = fmt(total);
@@ -467,9 +511,13 @@ async function refresh(){
       : `<div class="amt" style="color:${a.color};">${fmt(r.burned || 0)}<span class="tok">$FARTPRINT</span></div>`;
     const metaLeft = r.accruing
       ? `<span>via trading fees</span>`
+      : r.incineration
+      ? `<span>burned at launch</span>`
       : `<span>${(r.count || 0).toLocaleString()} burn${(r.count === 1) ? "" : "s"}</span>`;
     const metaRight = r.accruing ? "" : `<span>${pct.toFixed(1)}% of wheel</span>`;
-    return `<a class="bcard" href="${a.href}" style="--accent:${a.color};">
+    const pillLabel = r.accruing ? "AUTO" : r.incineration ? "LAUNCH" : "LIVE";
+    const ext = /^https?:/.test(a.href) ? ' target="_blank" rel="noopener"' : "";
+    return `<a class="bcard" href="${a.href}"${ext} style="--accent:${a.color};">
       <div class="top">
         <div class="ico" style="background:${a.iconGrad};">${iconInner}</div>
         <div><div class="nm">${a.name}</div><div class="ds">${a.desc}</div></div>
@@ -478,7 +526,7 @@ async function refresh(){
       <div class="bar"><i style="width:${r.accruing ? 100 : pct.toFixed(1)}%; background:${a.color}; ${r.accruing ? "opacity:0.25;" : ""}"></i></div>
       <div class="meta">
         ${metaLeft}
-        <span class="pill" style="background:${a.color}22; color:${a.color};"><span class="dot" style="background:${a.color};"></span>${r.accruing ? "AUTO" : "LIVE"}</span>
+        <span class="pill" style="background:${a.color}22; color:${a.color};"><span class="dot" style="background:${a.color};"></span>${pillLabel}</span>
       </div>
     </a>`;
   }).join("");
@@ -499,10 +547,20 @@ function burnDate(ts){
   return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
+function shortW(a){ return a ? a.slice(0,4) + "…" + a.slice(-4) : ""; }
+
 async function renderBurnLog(){
   const rows = $("burnLogRows"), toggle = $("burnLogToggle");
   if(!rows) return;
-  try{ BURN_RECORDS = await FartBurns.load(); } catch(_){ BURN_RECORDS = []; }
+  // Fart Cup transaction burns + FartBurner wallet burns, newest first.
+  let cup = [];
+  try{ cup = await FartBurns.load(); } catch(_){}
+  const burner = (window.FartBurns && FartBurns.burnerRecords ? FartBurns.burnerRecords() : []).map(s => ({
+    app: "FartBurner", ts: s.tsISO, amount: s.a, url: s.url, sub: shortW(s.w),
+  }));
+  BURN_RECORDS = cup.map(r => ({ app: r.app, ts: r.ts, amount: r.amount, url: r.url, sub: null }))
+                    .concat(burner)
+                    .sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   if(!BURN_RECORDS.length){
     rows.innerHTML = '<div class="burn-empty">No burns recorded yet.</div>';
     if(toggle) toggle.style.display = "none";
@@ -512,9 +570,10 @@ async function renderBurnLog(){
   rows.innerHTML = BURN_RECORDS.map((r, i) => {
     const hide = (!BURN_EXPANDED && i >= VISIBLE) ? " hidden" : "";
     const amt = (r.amount != null) ? fmt(r.amount) : "—";
+    const sub = r.sub ? `${r.sub} · ${burnDate(r.ts)}` : burnDate(r.ts);
     return `<a class="burn-row${hide}" href="${r.url}" target="_blank" rel="noopener">
       <span class="br-flame">🔥</span>
-      <span class="br-mid"><div class="br-app">${r.app}</div><div class="br-date">${burnDate(r.ts)}</div></span>
+      <span class="br-mid"><div class="br-app">${r.app}</div><div class="br-date">${sub}</div></span>
       <span class="br-amt">${amt}<small>$FARTPRINT</small></span>
       <span class="br-go">↗</span>
     </a>`;
