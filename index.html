@@ -58,6 +58,51 @@
     --shadow-md: 0 4px 12px rgba(0,0,0,0.06), 0 2px 4px rgba(0,0,0,0.04);
     --shadow-lg: 0 12px 36px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.06);
     --shadow-green: 0 12px 40px rgba(0, 168, 90, 0.20);
+    --body-glow-1: rgba(0, 168, 90, 0.08);
+    --body-glow-2: rgba(0, 168, 90, 0.04);
+    --app-btn-bg: #f5f5f7;
+    --app-btn-bg-disabled: #ececef;
+    --staking-card-bg: rgba(255, 255, 255, 0.06);
+    --staking-card-border: rgba(255, 255, 255, 0.10);
+  }
+
+  /* ===== DARK THEME ===== */
+  [data-theme="dark"] {
+    --bg: #0a0f0c;
+    --bg-2: #0f1712;
+    --card-bg: #13201a;
+    --text: #e8f5ee;
+    --text-secondary: #c8d8d0;
+    --text-tertiary: #9fbcab;
+    --text-muted: #6e8a7d;
+    --border: #2c4234;
+    --border-light: #1d2c23;
+    --green: #2ee06b;
+    --green-bright: #46f08a;
+    --green-dark: #0a7d3a;
+    --green-soft: rgba(46, 224, 107, 0.12);
+    --green-soft-2: rgba(46, 224, 107, 0.06);
+    --green-glow: rgba(46, 224, 107, 0.28);
+    --amber: #ffcf5a;
+    --amber-soft: rgba(255, 207, 90, 0.14);
+    --blue: #5a9bff;
+    --blue-soft: rgba(90, 155, 255, 0.12);
+    --pink: #ff5a7a;
+    --pink-soft: rgba(255, 90, 122, 0.12);
+    --grey: #8e8e93;
+    --grey-soft: rgba(140, 140, 148, 0.12);
+    --red: #ff5a5a;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.18);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.22);
+    --shadow-lg: 0 12px 36px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.32);
+    --shadow-green: 0 12px 40px rgba(46, 224, 107, 0.30);
+    --body-glow-1: rgba(46, 224, 107, 0.10);
+    --body-glow-2: rgba(46, 224, 107, 0.04);
+    --app-btn-bg: #1a2920;
+    --app-btn-bg-disabled: #182018;
+    --staking-card-bg: rgba(255, 255, 255, 0.04);
+    --staking-card-border: rgba(255, 255, 255, 0.06);
+    color-scheme: dark;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,8 +121,8 @@
 
   body {
     background:
-      radial-gradient(900px 600px at 85% 0%, rgba(0, 168, 90, 0.08), transparent 60%),
-      radial-gradient(700px 500px at 0% 30%, rgba(0, 168, 90, 0.04), transparent 60%),
+      radial-gradient(900px 600px at 85% 0%, var(--body-glow-1), transparent 60%),
+      radial-gradient(700px 500px at 0% 30%, var(--body-glow-2), transparent 60%),
       var(--bg);
     background-attachment: fixed;
   }
@@ -121,6 +166,32 @@
     transition: color 0.15s;
   }
   .nav .links a:hover { color: var(--green); }
+
+  /* ===== THEME TOGGLE ===== */
+  .theme-toggle {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px;
+    margin-left: 22px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    transition: all 0.18s ease;
+    padding: 0;
+    font-family: inherit;
+  }
+  .theme-toggle:hover {
+    color: var(--green);
+    border-color: var(--green);
+    transform: translateY(-1px);
+  }
+  .theme-toggle svg { width: 16px; height: 16px; display: block; transition: transform 0.25s ease; }
+  .theme-toggle .sun { display: none; }
+  .theme-toggle .moon { display: block; }
+  [data-theme="dark"] .theme-toggle .sun { display: block; }
+  [data-theme="dark"] .theme-toggle .moon { display: none; }
+  .theme-toggle:active svg { transform: rotate(30deg); }
 
   /* ===== HERO ===== */
   .hero {
@@ -758,6 +829,7 @@
   .status-tag.indev { background: var(--blue-soft); color: #0058b8; }
   .status-tag.planned { background: var(--grey-soft); color: #546e7a; }
   .status-tag.classified { background: #1d1d1f; color: #ff8aa5; }
+  [data-theme="dark"] .status-tag.classified { background: #2a1722; color: #ff8aa5; }
 
   @keyframes pulse {
     0%, 100% { opacity: 1; }
@@ -765,7 +837,7 @@
   }
 
   .app-btn {
-    background: #f5f5f7;
+    background: var(--app-btn-bg);
     color: var(--green);
     padding: 7px 18px;
     border-radius: 100px;
@@ -780,7 +852,7 @@
   }
   .app-btn:hover { background: var(--green-soft); }
   .app-btn.disabled { color: var(--text-tertiary); }
-  .app-btn.disabled:hover { background: #ececef; color: var(--text-secondary); }
+  .app-btn.disabled:hover { background: var(--app-btn-bg-disabled); color: var(--text-secondary); }
   .app-btn.classified { color: var(--pink); }
   .app-btn.classified:hover { background: var(--pink-soft); }
 
@@ -1474,6 +1546,17 @@
   }
 </style>
 <script src="burns.js"></script>
+<!-- Theme init (runs before paint to avoid flash) -->
+<script>
+  (function(){
+    try {
+      var saved = localStorage.getItem("fp_theme");
+      var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var theme = saved || (prefersDark ? "dark" : "light");
+      if(theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    } catch(_){}
+  })();
+</script>
 </head>
 <body>
 
@@ -1489,6 +1572,15 @@
       <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X</a>
       <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a>
       <a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Trade</a>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" title="Toggle dark mode">
+        <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+        <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+        </svg>
+      </button>
       <button class="wallet-btn" id="navConnect">Connect Phantom</button>
       <span class="wallet-pill" id="navWallet" style="display:none;">
         <span class="addr" id="navAddr"></span>
@@ -2875,6 +2967,33 @@ async function submitPvReview(){
     PV.busy = false; $id("pvSubmit").disabled = false;
   }
 }
+
+// ===== Theme toggle =====
+(function initTheme(){
+  const root = document.documentElement;
+  const btn = document.getElementById("themeToggle");
+  if(!btn) return;
+  function apply(theme){
+    if(theme === "dark") root.setAttribute("data-theme", "dark");
+    else root.removeAttribute("data-theme");
+    btn.setAttribute("aria-label", theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+    btn.setAttribute("title",      theme === "dark" ? "Switch to light mode" : "Switch to dark mode");
+  }
+  // Sync the button's accessible label with whatever the blocking init script chose.
+  apply(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+  btn.addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+    apply(next);
+    try { localStorage.setItem("fp_theme", next); } catch(_){}
+  });
+  // Follow system changes if user has not explicitly chosen.
+  try {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener && mq.addEventListener("change", (e) => {
+      if(!localStorage.getItem("fp_theme")) apply(e.matches ? "dark" : "light");
+    });
+  } catch(_){}
+})();
 
 (function initWalletAndPreview(){
   $id("navConnect")?.addEventListener("click", connectWallet);
