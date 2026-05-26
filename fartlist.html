@@ -268,8 +268,8 @@
     <h1>The <span class="a">FartList</span></h1>
     <div class="sub">
       A leaderboard of Solana coins, ranked by how much <b>$FARTPRINT</b> has been burned for them.
-      Boost your bag by burning ≥<b>100 $FARTPRINT</b> on it. Or list a brand new coin from
-      pump.fun / bags.fm by being the first to burn ≥<b>1,000 $FARTPRINT</b> on it.
+      Boost your bag by burning ≥<b>100 $FARTPRINT</b> on it. Or list a brand new Solana coin
+      by being the first to burn ≥<b>1,000 $FARTPRINT</b> on it.
     </div>
   </header>
 
@@ -323,9 +323,8 @@
   <div class="modal-card">
     <h2>List a coin · <span class="a">first-burn</span></h2>
     <p class="lead">
-      Paste any Solana mint from <b style="color:var(--amber);">pump.fun</b> or
-      <b style="color:var(--purple);">bags.fm</b> (or any custom mint). We'll fetch its metadata.
-      First-listing burn is <b>≥1,000 $FARTPRINT</b>.
+      Paste any Solana mint. We'll fetch its metadata and auto-detect the source
+      (Printr, pump.fun, bags.fm, or custom). First-listing burn is <b>≥1,000 $FARTPRINT</b>.
     </p>
 
     <label for="newMint">Mint address</label>
@@ -410,11 +409,13 @@ function fmtNum(n){
 function shortAddr(a){ return a ? (a.slice(0,4)+"…"+a.slice(-4)) : ""; }
 
 // Authoritative source by mint-address suffix.
-// pump → pump.fun · brrr → Printr · everything else → custom.
+// pump → pump.fun · brrr → Printr · bags/BAGS → bags.fm · everything else → custom.
 function inferSource(mint){
   if(typeof mint !== "string") return "custom";
   if(/pump$/i.test(mint)) return "pump";
   if(/brrr$/i.test(mint)) return "printr";
+  if(/bags$/i.test(mint)) return "bags";
+  if(/BAGS$/.test(mint))  return "bags";
   return "custom";
 }
 

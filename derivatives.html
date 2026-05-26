@@ -420,6 +420,7 @@
   .lp-tag img { width: 14px; height: 14px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
   .lp-tag.lp-pump { color: #15a34a; border-color: #bfe6cc; }
   .lp-tag.lp-printr { color: #1a1a1a; border-color: #dadada; }
+  .lp-tag.lp-bags { color: #7b3df0; border-color: #d8c7ff; background: #f7f1ff; }
 
   .collapse-toggle {
     background: transparent;
@@ -933,6 +934,7 @@
         <div class="segmented" id="lpSeg">
           <button type="button" class="seg active" data-lp="printr">Printr</button>
           <button type="button" class="seg" data-lp="pump">pump.fun</button>
+          <button type="button" class="seg" data-lp="bags">bags.fm</button>
         </div>
         <div class="hint" id="lpHint">Minting on <strong>Printr</strong> — the $FARTPRINT launchpad with native staking &amp; fee routing.</div>
       </div>
@@ -1138,6 +1140,7 @@ const State = {
 const LP_LOGOS = {
   printr: "https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg",
   pump:   "https://hamzabenjeddi.com/wp-content/uploads/2025/06/pump.webp",
+  bags:   "https://bags.fm/favicon.ico",
 };
 
 // ============================================================
@@ -1442,6 +1445,98 @@ function b64ToU8(b64){
   return u8;
 }
 
+// ===== bags.fm mint path =====
+// Uses /api/bags as a server-side proxy with the API key, and the
+// launchpad config key below identifies the platform / fee-routing config
+// requested by Bags on token creation.
+const BAGS_LAUNCHPAD_CONFIG_KEY = "5HAP3fGkedfM3rvTNfXobhTpZmzvuMZUGMZEsNi7azPe";
+async function mintBags(){
+  if(State.minting) return;
+  State.minting = true;
+  updateMintButton();
+  $("statusLog").classList.add("show");
+  $("statusLog").innerHTML = "";
+  try {
+    log("Validating form…");
+    if(!State.wallet) throw new Error("Wallet not connected");
+    if(!State.imageBase64) throw new Error("Image missing");
+    const symbol = fullSymbol();
+    if(symbol.length <= 4) throw new Error("Ticker suffix required");
+    const name = ($("name").value || "").trim();
+    if(!name) throw new Error("Token name required");
+    const description = "Toxic spawn of $FARTPRINT. Inherits the bloodline, none of the manners.";
+
+    let devSol = 0;
+    const amt = parseFloat($("buyAmount").value) || 0;
+    if(State.buyMode === "spend_native") devSol = Math.max(0, amt);
+
+    log("Uploading metadata to bags.fm…");
+    const metaRes = await fetch("/api/bags-create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name, symbol, description,
+        imageBase64: State.imageBase64,
+        twitter: $("linkX").value || "",
+        telegram: $("linkTelegram").value || "",
+        website: $("linkWebsite").value || "",
+        launchpadConfigKey: BAGS_LAUNCHPAD_CONFIG_KEY,
+        creator: State.wallet,
+        initialBuySol: devSol,
+      }),
+    });
+    if(!metaRes.ok){
+      const t = await metaRes.text().catch(()=>"");
+      throw new Error("bags.fm metadata upload failed (HTTP " + metaRes.status + ")" + (t ? " — " + t.slice(0,160) : ""));
+    }
+    const meta = await metaRes.json();
+    if(meta && meta.error) throw new Error("bags.fm: " + (meta.error.message || meta.error));
+    log("Metadata uploaded.", "ok");
+
+    // The /api/bags-create response is expected to give us a serialized
+    // transaction (base64) that the user signs in Phantom — same shape as
+    // pump.fun's flow. If your Bags integration returns a different shape,
+    // adjust api/bags-create.js to normalize.
+    if(!meta.txBase64 && !meta.transaction){
+      throw new Error("bags.fm returned no transaction to sign. Verify api/bags-create.js endpoints.");
+    }
+
+    log("Awaiting wallet signature…");
+    const phantom = getPhantom();
+    const connection = new Connection(RPC_URLS[0], "confirmed");
+    const txBytes = b64ToU8(meta.txBase64 || meta.transaction);
+    const tx = VersionedTransaction.deserialize(txBytes);
+
+    let signature;
+    try {
+      const r = await phantom.signAndSendTransaction(tx);
+      signature = r.signature || r;
+    } catch(e){
+      const signed = await phantom.signTransaction(tx);
+      signature = await connection.sendRawTransaction(signed.serialize());
+    }
+    log(`Tx submitted: <a href="https://solscan.io/tx/${signature}" target="_blank">${signature.slice(0,16)}…</a>`, "ok");
+
+    const ma = meta.mint || meta.mintAddress || null;
+    const galleryRec = {
+      tid: ma || signature, sym: symbol, name, img: null,
+      by: State.wallet, tx: signature, ts: Date.now(), ma, lp: "bags",
+    };
+    await publishMintToGallery(galleryRec);
+    loadGallery();
+    showAlert("success", `
+      <strong>${symbol} launched on bags.fm!</strong><br>
+      ${ma ? `Mint: <a href="https://bags.fm/${ma}" target="_blank" rel="noopener" style="color:var(--green-dark);font-weight:600;">${ma}</a>` : ""}
+    `, true);
+  } catch(e){
+    log(`bags.fm mint failed: ${e.message || e}`, "err");
+    showAlert("error", "bags.fm mint failed: " + escapeHtml(e.message || String(e)), true);
+  } finally {
+    State.minting = false;
+    updateMintButton();
+  }
+}
+
 // ===== pump.fun mint path (PumpPortal local transaction) =====
 async function mintPump(){
   if(State.minting) return;
@@ -1544,6 +1639,7 @@ async function mintPump(){
 async function mint(){
   if(State.minting) return;
   if(State.launchpad === "pump"){ return mintPump(); }
+  if(State.launchpad === "bags"){ return mintBags(); }
   State.minting = true;
   updateMintButton();
   $("statusLog").classList.add("show");
@@ -1938,8 +2034,9 @@ function renderGalleryCard(rec){
       mcapEl = `<span class="mcap-val none">on bonding curve</span>`;
     }
   }
-  const lp = rec.lp === "pump" ? "pump" : "printr";
-  const lpTag = `<span class="lp-tag lp-${lp}"><img src="${LP_LOGOS[lp]}" alt="" onerror="this.style.display='none'">${lp === "pump" ? "PUMP" : "PRINTR"}</span>`;
+  const lp = (rec.lp === "pump" || rec.lp === "bags") ? rec.lp : "printr";
+  const lpLabel = lp === "pump" ? "PUMP" : lp === "bags" ? "BAGS" : "PRINTR";
+  const lpTag = `<span class="lp-tag lp-${lp}"><img src="${LP_LOGOS[lp]}" alt="" onerror="this.style.display='none'">${lpLabel}</span>`;
   return `
     <div class="d-card ${isPending ? 'pending' : ''}" title="${escapeHtml(rec.sym)} · ${ago(rec.ts)}">
       ${lpTag}
@@ -2089,16 +2186,21 @@ document.querySelectorAll("#buyModeSeg .seg").forEach(seg => {
   });
 });
 
-// Launchpad selector — Printr vs pump.fun
+// Launchpad selector — Printr / pump.fun / bags.fm
 document.querySelectorAll("#lpSeg .seg").forEach(seg => {
   seg.addEventListener("click", () => {
     document.querySelectorAll("#lpSeg .seg").forEach(s => s.classList.remove("active"));
     seg.classList.add("active");
     State.launchpad = seg.dataset.lp;
-    const isPump = State.launchpad === "pump";
-    $("lpHint").innerHTML = isPump
-      ? `Minting on <strong>pump.fun</strong> — classic bonding curve. The Fee Sink &amp; Graduation options below are Printr-only and are ignored here.`
-      : `Minting on <strong>Printr</strong> — the $FARTPRINT launchpad with native staking &amp; fee routing.`;
+    let hint;
+    if(State.launchpad === "pump"){
+      hint = `Minting on <strong>pump.fun</strong> — classic bonding curve. The Fee Sink &amp; Graduation options below are Printr-only and are ignored here.`;
+    } else if(State.launchpad === "bags"){
+      hint = `Minting on <strong>bags.fm</strong> — community launchpad with shared liquidity. Fee Sink &amp; Graduation options below are Printr-only and are ignored here.`;
+    } else {
+      hint = `Minting on <strong>Printr</strong> — the $FARTPRINT launchpad with native staking &amp; fee routing.`;
+    }
+    $("lpHint").innerHTML = hint;
   });
 });
 
