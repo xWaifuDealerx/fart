@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartMemes · the gallery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --amber:#ffcf5a;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(46,224,107,.07), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,207,90,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:30px 18px 80px;}
+
+  .hero{margin-bottom:22px;}
+  .hero h1{margin:0;font-size:38px;font-weight:900;letter-spacing:-1px;font-family:'Orbitron',sans-serif;}
+  .hero h1 .a{
+    background:linear-gradient(135deg,var(--green),var(--amber) 70%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin-top:8px;max-width:680px;}
+  .hero .sub b{color:var(--amber);}
+
+  .meme-grid{
+    columns: 3;
+    column-gap: 16px;
+    margin-top:14px;
+  }
+  @media (max-width:900px){ .meme-grid{ columns: 2; } }
+  @media (max-width:560px){ .meme-grid{ columns: 1; } }
+  .meme-card{
+    display:block;
+    width:100%;
+    break-inside:avoid;
+    margin:0 0 16px;
+    border-radius:16px;
+    overflow:hidden;
+    border:1px solid var(--border);
+    background:var(--panel);
+    box-shadow:var(--shadow);
+    cursor:zoom-in;
+    transition:transform .18s ease, box-shadow .18s ease;
+    -webkit-column-break-inside:avoid;
+  }
+  .meme-card:hover{ transform:translateY(-4px); box-shadow:0 14px 40px rgba(0,0,0,.55); }
+  .meme-card img{ width:100%; display:block; }
+
+  .meme-lb{
+    position:fixed; inset:0; z-index:5000;
+    display:none; align-items:center; justify-content:center;
+    padding:24px;
+    background:rgba(6,10,18,.9);
+    -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  }
+  .meme-lb.open{ display:flex; }
+  .meme-lb img{ max-width:92vw; max-height:88vh; border-radius:14px; box-shadow:0 24px 70px rgba(0,0,0,.7); }
+  .meme-lb .meme-close{
+    position:absolute; top:16px; right:22px;
+    font-size:34px; line-height:1; color:#fff;
+    background:none; border:0; cursor:pointer; opacity:.85;
+  }
+  .meme-lb .meme-close:hover{ opacity:1; }
+
+  footer{
+    max-width:1180px;margin:60px auto 0;padding:20px 18px;
+    border-top:1px solid var(--border);color:var(--text-3);font-size:12.5px;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  }
+  footer a{color:var(--text-2);} footer a:hover{color:var(--green);}
+
+  @media (max-width:780px){
+    .hero h1{font-size:28px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+      </svg>
+    </span>
+    FART<span class="amp">MEMES</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartMemes</span> gallery</h1>
+    <div class="sub">
+      Every meme worth remembering from the $FARTPRINT timeline. Click any meme to view full-size.
+      Bookmark the page — new <b>brap-cards</b> drop here whenever the timeline gets spicy.
+    </div>
+  </header>
+
+  <div class="meme-grid" id="memeGrid">
+    <a class="meme-card" href="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+    <a class="meme-card" href="https://pbs.twimg.com/media/HI6JY-3aMAA6cvy?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HI6JY-3aMAA6cvy?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+  </div>
+
+  <div class="meme-lb" id="memeLb">
+    <button class="meme-close" id="memeClose" aria-label="Close">×</button>
+    <img id="memeLbImg" src="" alt="$FARTPRINT meme">
+  </div>
+
+</div>
+
+<footer>
+  <div>$FARTPRINT · FartMemes · v1.0</div>
+  <div>
+    <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X</a> ·
+    <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a> ·
+    <a href="index.html">Ecosystem ↗</a>
+  </div>
+</footer>
+
+<script>
+  // Lightbox
+  const lb = document.getElementById("memeLb");
+  const lbImg = document.getElementById("memeLbImg");
+  function openLb(src){
+    lbImg.src = src;
+    lb.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  function closeLb(){
+    lb.classList.remove("open");
+    document.body.style.overflow = "";
+  }
+  document.querySelectorAll(".meme-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      const src = card.querySelector("img").src.replace("name=medium","name=large");
+      openLb(src);
+    });
+  });
+  document.getElementById("memeClose").addEventListener("click", closeLb);
+  lb.addEventListener("click", (e) => { if(e.target === lb) closeLb(); });
+  document.addEventListener("keydown", (e) => { if(e.key === "Escape") closeLb(); });
+</script>
+
+</body>
+</html>

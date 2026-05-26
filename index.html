@@ -996,6 +996,81 @@
     grid-column: 1 / -1; position: relative; z-index: 1;
     margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.12); padding-top: 22px;
   }
+  .burn-log-body {
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    gap: 28px;
+    align-items: start;
+  }
+  @media (max-width: 820px){
+    .burn-log-body { grid-template-columns: 1fr; }
+  }
+
+  /* ===== mini fartwheel (lives inside the burn-callout) ===== */
+  .wheel-mini-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  .wheel-mini {
+    position: relative;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    background: conic-gradient(
+      #ff5a1f   0deg  72deg,   /* FartBurner — orange */
+      #ffb020  72deg 144deg,   /* FartSwap — amber */
+      #22e06b 144deg 216deg,   /* Fart Cup — green */
+      #16a34a 216deg 252deg,   /* FartForum — dark green */
+      #9b5cff 252deg 360deg    /* Incineration — purple */
+    );
+    box-shadow: 0 0 40px rgba(255, 90, 31, 0.30), inset 0 0 30px rgba(0,0,0,0.55);
+    transition: transform 0.25s ease;
+    text-decoration: none;
+    display: block;
+  }
+  .wheel-mini:hover { transform: scale(1.03) rotate(-2deg); }
+  .wheel-mini .rim {
+    position: absolute; inset: -6px;
+    border-radius: 50%;
+    border: 1.5px dashed rgba(255, 138, 61, 0.42);
+    animation: wheelMiniSpin 30s linear infinite;
+  }
+  @keyframes wheelMiniSpin { to { transform: rotate(360deg); } }
+  .wheel-mini .hole {
+    position: absolute; inset: 26%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #2a1410, #0a0a0a);
+    border: 1px solid rgba(255,255,255,0.08);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 6px;
+  }
+  .wheel-mini .hole .lbl {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: #ffcf5a; font-weight: 800;
+    text-shadow: 0 0 8px rgba(255,176,32,0.32);
+  }
+  .wheel-mini .hole .v {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; line-height: 1.05;
+    font-size: clamp(18px, 4vw, 22px);
+    background: linear-gradient(135deg, #ff8a3d, #ffcf5a);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255,138,61,0.45));
+    margin-top: 2px;
+  }
+  .wheel-mini .hole .unit {
+    font-size: 8.5px; color: #ffcf5a; opacity: 0.75;
+    letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .wheel-mini-cta {
+    font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase;
+    color: #ffb199; text-decoration: none; padding: 6px 14px;
+    border: 1px solid rgba(255,90,60,0.36); border-radius: 100px;
+    background: rgba(255,90,60,0.10); transition: all 0.15s;
+  }
+  .wheel-mini-cta:hover { background: rgba(255,90,60,0.20); color: #fff; }
   .burn-log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .burn-log-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: rgba(255,255,255,0.6); font-weight: 700; }
   .burn-log-toggle {
@@ -2141,6 +2216,25 @@
       </div>
     </div>
 
+    <!-- FARTMEMES -->
+    <div class="app-card live" data-status="live">
+      <div class="app-icon" style="background: linear-gradient(135deg, #ff5a3c 0%, #ffb020 100%); box-shadow: 0 4px 14px rgba(255, 90, 60, 0.30);">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+        </svg>
+      </div>
+      <h4>FartMemes</h4>
+      <div class="cat">Gallery · Memes · Timeline</div>
+      <p>Every $FARTPRINT meme worth saving in one place. Click any image to view full-size. New brap-cards drop here whenever the timeline gets spicy.</p>
+      <div class="row-bottom">
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
+        <a href="fartmemes.html" class="app-btn">LAUNCH</a>
+      </div>
+    </div>
+
     <!-- FARTANALYZER -->
     <div class="app-card live" data-status="live">
       <div class="app-icon" style="background: linear-gradient(135deg, #7b3df0 0%, #9b5cff 100%); box-shadow: 0 4px 14px rgba(155, 92, 255, 0.30);">
@@ -2303,8 +2397,22 @@
         <span class="burn-log-title">Burn transactions</span>
         <button class="burn-log-toggle" id="burnLogToggle" style="display:none;">View all</button>
       </div>
-      <div class="burn-log-rows" id="burnLogRows">
-        <div class="burn-empty">Loading burns…</div>
+      <div class="burn-log-body">
+        <div class="burn-log-rows" id="burnLogRows">
+          <div class="burn-empty">Loading burns…</div>
+        </div>
+        <!-- Mini FartWheel: visual entry to the full wheel page -->
+        <div class="wheel-mini-wrap">
+          <a class="wheel-mini" href="fartwheel.html" aria-label="Open the FartWheel">
+            <div class="rim"></div>
+            <div class="hole">
+              <div class="lbl">Total Burned</div>
+              <div class="v" id="wheelMiniTotal">—</div>
+              <div class="unit">$FARTPRINT</div>
+            </div>
+          </a>
+          <a class="wheel-mini-cta" href="fartwheel.html">See the FartWheel ↗</a>
+        </div>
       </div>
     </div>
   </section>
@@ -2603,7 +2711,7 @@
   <!-- MEME VAULT -->
   <div class="section-header" id="memes">
     <h2>Meme Vault</h2>
-    <span class="meta">straight from the timeline</span>
+    <a class="meta" href="fartmemes.html" style="color:var(--green); font-weight:600;">See all on FartMemes →</a>
   </div>
   <div class="meme-grid" id="memeGrid">
     <a class="meme-card" href="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
@@ -2612,10 +2720,9 @@
     <a class="meme-card" href="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
     <a class="meme-card" href="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
     <a class="meme-card" href="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIZbEAkakAA_WAl?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIv1RjDbIAAFLGc?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HI5AdAjbUAA8GrE?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HI6JY-3aMAA6cvy?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HI6JY-3aMAA6cvy?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
+  </div>
+  <div style="display:flex;justify-content:center;margin-top:8px;">
+    <a href="fartmemes.html" class="apps-toggle" style="text-decoration:none;">Open the full gallery on FartMemes →</a>
   </div>
 
   <!-- MEME LIGHTBOX -->
@@ -2802,13 +2909,16 @@ function renderBurn(){
   const tot = document.getElementById("burnTotalBig");
   const usd = document.getElementById("burnUsdBig");
   const pct = document.getElementById("burnPctBig");
+  const wm  = document.getElementById("wheelMiniTotal");
   if(BURNED != null){
     const pctText = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
-    if(tot) tot.textContent = fmtBurn(BURNED);
+    const burnedTxt = fmtBurn(BURNED);
+    if(tot) tot.textContent = burnedTxt;
     if(pct) pct.textContent = pctText;
     if(usd) usd.textContent = (FP_PRICE != null)
       ? "$" + Math.round(BURNED * FP_PRICE).toLocaleString(undefined, { maximumFractionDigits: 0 })
       : "$—";
+    if(wm)  wm.textContent = burnedTxt;
     const tb = document.getElementById("t-burned"); if(tb) tb.textContent = pctText;
   }
 }
@@ -3529,11 +3639,12 @@ async function loadForumLatest(){
     threads.sort((a, b) => (Number(b.lastTs) || 0) - (Number(a.lastTs) || 0));
     const top = threads.slice(0, 3);
     list.innerHTML = top.map(t => {
-      const posts = Array.isArray(t.posts) ? t.posts.length : 0;
-      const last  = Number(t.lastTs) || Number(t.ts) || 0;
-      const title = _forumEsc(t.title || "(untitled)");
-      const id    = encodeURIComponent(t.id || "");
-      const by    = _forumShort(t.author);
+      const posts   = Array.isArray(t.posts) ? t.posts.length : 0;
+      const replies = Math.max(0, posts - 1);   // 1st post is the OP, the rest are replies
+      const last    = Number(t.lastTs) || Number(t.ts) || 0;
+      const title   = _forumEsc(t.title || "(untitled)");
+      const id      = encodeURIComponent(t.id || "");
+      const by      = _forumShort(t.author);
       return `
         <a class="forum-row" href="fartforum.html?thread=${id}">
           <span class="flame">🔥</span>
@@ -3541,7 +3652,7 @@ async function loadForumLatest(){
             <div class="ttl">${title}</div>
             <div class="by">by ${_forumEsc(by)} · last activity ${_forumAgo(last)}</div>
           </div>
-          <div class="burns">${posts}<small>${posts === 1 ? "burn" : "burns"}</small></div>
+          <div class="burns">${replies}<small>${replies === 1 ? "reply" : "replies"}</small></div>
           <span class="go">→</span>
         </a>
       `;

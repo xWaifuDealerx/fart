@@ -372,6 +372,12 @@ const APPS = [
     source: "ledger", mode: "ledger", appKey: "cup",
   },
   {
+    key: "forum", name: "FartForum", href: "fartforum.html",
+    color: "#16a34a", icon: "💬", iconGrad: "linear-gradient(135deg,#0a7d3a,#16a34a)",
+    desc: "Burn-to-post · 1 each",
+    source: "api", mode: "forumApi", api: "/api/fartforum",
+  },
+  {
     key: "incineration", name: "Incineration Burn",
     href: "https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY",
     color: "#9b5cff", icon: "☠", iconGrad: "linear-gradient(135deg,#9b5cff,#6a2cf5)",
@@ -432,6 +438,19 @@ async function computeApp(app){
     try{ recs = (await FartBurns.load()).filter(r => r.appKey === app.appKey); } catch(_){}
     const burned = recs.reduce((s, r) => s + (r.amount || 0), 0);
     return { burned, count: recs.length, accruing: false };
+  }
+  // FartForum: every post = 1 burned $FARTPRINT. The API returns the running
+  // total directly (= total events in the event log).
+  if(app.mode === "forumApi"){
+    try {
+      const r = await fetch(app.api + "?t=" + Date.now());
+      if(r.ok){
+        const j = await r.json();
+        const burned = Number(j && j.burned) || 0;
+        return { burned, count: burned, accruing: false };
+      }
+    } catch(_){}
+    return { burned: 0, count: 0, accruing: false };
   }
   let recs = await loadRecords(app);
   // Merge seeded FartBurner burns from the shared ledger
