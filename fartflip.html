@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartFlip · double or burn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --amber:#ffcf5a; --gold:#ffb020; --red:#ff5a5a; --purple:#9b5cff;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 500px at 80% -10%, rgba(255,176,32,.10), transparent 60%),
+      radial-gradient(800px 500px at 0% 110%, rgba(46,224,107,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#ffb020,#ff8a3d); box-shadow:0 4px 14px rgba(255,138,61,.32);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--amber);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;background:transparent;cursor:pointer;font-family:inherit;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px;}
+
+  .hero{margin-bottom:18px;text-align:center;}
+  .hero h1{margin:0;font-size:48px;font-weight:900;letter-spacing:-1.2px;font-family:'Orbitron',sans-serif;}
+  .hero h1 .a{
+    background:linear-gradient(135deg,var(--amber),var(--gold) 70%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    text-shadow: 0 0 50px rgba(255,176,32,.2);
+  }
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin:10px auto 0;max-width:580px;}
+  .hero .sub b{color:var(--amber);}
+
+  /* Coin + side picker */
+  .stage{
+    position:relative; margin:30px auto 24px;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .coin-3d{
+    width: 220px; height: 220px;
+    position: relative;
+    perspective: 1000px;
+    cursor: default;
+  }
+  .coin-3d .coin{
+    width:100%; height:100%; position:relative;
+    transform-style:preserve-3d;
+    transition: transform 1.4s cubic-bezier(.2,.7,.3,1);
+  }
+  .coin-3d .coin.flipping{
+    animation: flipping 1.2s linear infinite;
+  }
+  @keyframes flipping{
+    0%   { transform: rotateY(0deg)   rotateX(20deg); }
+    100% { transform: rotateY(360deg) rotateX(20deg); }
+  }
+  .coin-3d .face{
+    position:absolute; inset:0; border-radius:50%;
+    display:grid; place-items:center;
+    color: #2a1700;
+    backface-visibility: hidden;
+    box-shadow:
+      inset 0 0 26px rgba(120,60,0,.45),
+      inset 0 -10px 24px rgba(255,255,200,.18),
+      0 14px 40px rgba(180,110,20,.45);
+    border: 3px solid rgba(255,235,170,.35);
+    overflow: hidden;
+  }
+  /* Antique-gold $FARTPRINT coin finish — brown-amber metallic */
+  .coin-3d .heads, .coin-3d .tails{
+    background:
+      radial-gradient(circle at 30% 22%, #fff5b8 0%, transparent 38%),
+      radial-gradient(circle at 75% 80%, #6e3d04 0%, transparent 55%),
+      linear-gradient(135deg, #ffd75a 0%, #ffb020 45%, #b27406 100%);
+  }
+  .coin-3d .tails{ transform: rotateY(180deg); }
+  /* Decorative dashed rim — gives it a "minted coin" feel */
+  .coin-3d .face::before{
+    content: "";
+    position: absolute; inset: 9px;
+    border-radius: 50%;
+    border: 2px dashed rgba(50,28,0,.35);
+    pointer-events: none;
+  }
+  /* Subtle inner ring around the central icon */
+  .coin-3d .face::after{
+    content: "";
+    position: absolute; left: 50%; top: 50%;
+    width: 96px; height: 96px;
+    transform: translate(-50%,-50%);
+    border-radius: 50%;
+    border: 1.5px solid rgba(50,28,0,.22);
+    pointer-events: none;
+  }
+  .coin-3d .face .inner{
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+  }
+  .coin-3d .face .lbl{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 3px; text-transform: uppercase;
+    color: rgba(40,22,0,.78); font-weight: 800;
+  }
+  .coin-3d .face .icon{
+    width: 70px; height: 70px;
+    display: grid; place-items: center;
+    color: #2a1700;
+    filter: drop-shadow(0 1px 0 rgba(255,235,170,.6));
+  }
+  .coin-3d .face .icon svg{ width: 100%; height: 100%; display: block; }
+  .coin-3d .face .foot{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 9px; letter-spacing: 2.4px; text-transform: uppercase;
+    color: rgba(40,22,0,.55); font-weight: 800;
+    margin-top: 2px;
+  }
+  /* tiny "studs" along the rim (3 o'clock, 9 o'clock) for that minted-coin look */
+  .coin-3d .face .stud{
+    position: absolute; width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(40,22,0,.35);
+    box-shadow: inset 0 0 2px rgba(255,235,170,.3);
+  }
+  .coin-3d .face .stud.l{ left: 12px;  top: 50%; transform: translateY(-50%); }
+  .coin-3d .face .stud.r{ right: 12px; top: 50%; transform: translateY(-50%); }
+  .coin-3d .face .stud.t{ top: 12px;   left: 50%; transform: translateX(-50%); }
+  .coin-3d .face .stud.b{ bottom: 12px;left: 50%; transform: translateX(-50%); }
+  .coin-3d.win{ filter: drop-shadow(0 0 30px rgba(46,224,107,.7)); animation: pulseWin 1.5s ease-out 1; }
+  .coin-3d.lose{ filter: drop-shadow(0 0 30px rgba(255,90,90,.7)); animation: shake 0.5s ease-out 1; }
+  @keyframes pulseWin{
+    0%   { transform: scale(0.9); }
+    40%  { transform: scale(1.10); }
+    100% { transform: scale(1); }
+  }
+  @keyframes shake{
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-12px); }
+    50% { transform: translateX(10px); }
+    75% { transform: translateX(-6px); }
+  }
+
+  /* Side picker */
+  .pick-row{ display:flex; gap:12px; }
+  .pick-btn{
+    flex:1; min-width: 130px;
+    border: 1px solid var(--border-2);
+    background: var(--panel-2);
+    color: var(--text);
+    border-radius: 14px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    font-weight: 800; font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .pick-btn:hover{ border-color: var(--amber); transform: translateY(-1px); }
+  .pick-btn.active{
+    background: linear-gradient(135deg, var(--amber), var(--gold));
+    color: #2c1900;
+    border-color: var(--gold);
+    box-shadow: 0 6px 20px rgba(255,176,32,.32);
+  }
+  .pick-btn .ico{ font-size: 18px; }
+
+  /* Bet + go */
+  .bet-row{
+    display:flex; gap:10px; align-items:center;
+    background: var(--panel-2);
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+    padding: 8px 10px 8px 14px;
+    width: 100%; max-width: 460px;
+  }
+  .bet-row label{
+    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 800; flex-shrink: 0;
+  }
+  .bet-row input{
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 18px;
+    outline: none;
+    text-align: right; padding-right: 6px;
+  }
+  .bet-presets{
+    display: flex; gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .preset{
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    padding: 5px 9px; border-radius: 7px;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .preset:hover{ border-color: var(--amber); color: var(--amber); }
+  .go-btn{
+    width: 100%; max-width: 460px;
+    border: none; cursor: pointer; border-radius: 14px;
+    padding: 16px;
+    color: #2c1900;
+    background: linear-gradient(135deg, var(--amber), #ff8a3d);
+    box-shadow: 0 8px 24px rgba(255,138,61,.4);
+    font-weight: 900; font-size: 17px;
+    letter-spacing: 1.5px; text-transform: uppercase;
+    transition: all 0.15s;
+  }
+  .go-btn:hover:not(:disabled){ filter: brightness(1.06); transform: translateY(-1px); }
+  .go-btn:disabled{ opacity: 0.55; cursor: not-allowed; filter: none; transform: none; }
+  .go-btn.busy{
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border-2); box-shadow: none;
+  }
+
+  .result-card{
+    margin: 18px auto 0;
+    max-width: 460px;
+    border-radius: 14px;
+    padding: 16px 18px;
+    background: var(--panel);
+    border: 1px solid var(--border-2);
+    display: none;
+  }
+  .result-card.show{ display: block; }
+  .result-card.win{
+    background: linear-gradient(135deg, rgba(46,224,107,.16), rgba(46,224,107,.05));
+    border-color: var(--green);
+  }
+  .result-card.lose{
+    background: linear-gradient(135deg, rgba(255,90,90,.14), rgba(255,90,90,.05));
+    border-color: var(--red);
+  }
+  .result-card .h{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px; font-weight: 900; letter-spacing: -0.4px;
+  }
+  .result-card.win .h{ color: var(--green-br); }
+  .result-card.lose .h{ color: var(--red); }
+  .result-card .b{
+    color: var(--text-2); font-size: 13.5px; margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .result-card .b b{ color: var(--text); }
+  .result-card .link{
+    display: inline-block; margin-top: 10px;
+    color: var(--amber); font-size: 12px; font-weight: 700;
+    text-decoration: underline;
+  }
+
+  /* Stats grid */
+  .stats-row{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 30px;
+  }
+  @media (max-width:680px){ .stats-row{ grid-template-columns: repeat(2,1fr); } }
+  .scard{
+    border:1px solid var(--border); border-radius:14px; padding:14px 16px;
+    background: var(--panel); box-shadow: var(--shadow);
+  }
+  .scard .lbl{
+    font-size: 10.5px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-3); font-weight: 800; margin-bottom: 4px;
+  }
+  .scard .v{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 18px; color: var(--text);
+  }
+  .scard .v.amber{ color: var(--amber); }
+  .scard .v.green{ color: var(--green); }
+  .scard .v.red{   color: var(--red); }
+  .scard .sub{ font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+  /* Recent flips */
+  .sec-h{ display:flex; align-items:center; gap:10px; margin: 28px 0 10px; }
+  .sec-h h2{ margin:0; font-size: 16px; font-weight:800; }
+  .sec-h .sub{ color: var(--text-3); font-size: 12.5px; }
+  .flip-log{ border:1px solid var(--border); border-radius:14px; overflow:hidden; background: var(--panel); box-shadow: var(--shadow); }
+  .flip-row{
+    display: grid;
+    grid-template-columns: 26px 1fr auto auto;
+    align-items:center; gap:12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none; color: inherit;
+    transition: background 0.12s;
+  }
+  .flip-row:last-child{ border-bottom: none; }
+  .flip-row:hover{ background: var(--row); }
+  .flip-row .ico{ font-size: 16px; text-align: center; }
+  .flip-row .who{ min-width: 0; }
+  .flip-row .who .addr{ font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight:700; }
+  .flip-row .who .meta{ font-size: 11.5px; color: var(--text-3); margin-top: 1px; }
+  .flip-row .amt{
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 14px;
+    text-align: right;
+  }
+  .flip-row .amt small{ display:block; font-size: 10px; color: var(--text-3); font-weight: 600; margin-top: 1px; letter-spacing: .5px; text-transform: uppercase; font-family: 'Inter', sans-serif; }
+  .flip-row .amt.win{ color: var(--green-br); }
+  .flip-row .amt.lose{ color: var(--red); }
+  .flip-row .go{ color: var(--text-3); font-size: 13px; }
+  .flip-row:hover .go{ color: var(--amber); }
+
+  .empty{ padding: 30px; text-align: center; color: var(--text-3); font-size: 13px; }
+
+  /* Treasury banner */
+  .treasury-bar{
+    margin: 14px 0 20px;
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    border: 1px solid var(--border-2); border-radius: 14px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, rgba(255,176,32,.08), rgba(46,224,107,.04));
+  }
+  .treasury-bar .lbl{ font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--text-3); font-weight: 800; }
+  .treasury-bar .v{ font-family: 'JetBrains Mono', monospace; font-weight: 800; font-size: 16px; color: var(--text); }
+  .treasury-bar .v.amber{ color: var(--amber); }
+  .treasury-bar .right{ margin-left: auto; font-size: 11.5px; color: var(--text-3); }
+  .treasury-bar .err{ color: var(--red); }
+
+  /* Toast */
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--panel-2); border:1px solid var(--border-2); color:var(--text);
+    padding:10px 18px; border-radius:99px; font-size:13.5px; font-weight:700;
+    box-shadow:var(--shadow); z-index:60; display:none; max-width: 90%;
+  }
+  .toast.show{ display:block; animation: fadein .25s; }
+  @keyframes fadein{ from{ opacity:0; transform:translate(-50%, 8px); } to{ opacity:1; transform:translateX(-50%); } }
+
+  .info{
+    margin-top:18px; padding:12px 16px; border:1px dashed var(--border-2); border-radius:12px;
+    color:var(--text-3); font-size:12.5px; line-height:1.55;
+  }
+  .info b{ color: var(--text-2); }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+        <line x1="9" y1="9" x2="9.01" y2="9"/>
+        <line x1="15" y1="9" x2="15.01" y2="9"/>
+      </svg>
+    </span>
+    FART<span class="amp">FLIP</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button id="walletBtn" class="wallet-btn" type="button">Connect Wallet</button>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartFlip</span> coin</h1>
+    <div class="sub">
+      Pick heads or tails. Bet $FARTPRINT. Win <b>2x</b>, or burn it all.
+      Fair 50/50, server-signed flip, instant on-chain payout.
+    </div>
+  </header>
+
+  <div class="treasury-bar" id="treasuryBar">
+    <div>
+      <div class="lbl">Treasury Balance</div>
+      <div class="v amber" id="trFart">— $FARTPRINT</div>
+    </div>
+    <div style="border-left:1px solid var(--border); padding-left:14px;">
+      <div class="lbl">Max Bet</div>
+      <div class="v" id="trMax">— $FARTPRINT</div>
+    </div>
+    <div class="right" id="trWarn"></div>
+  </div>
+
+  <div class="stage">
+    <div class="coin-3d" id="coin3d">
+      <div class="coin" id="coin">
+        <!-- HEADS: the FartPrint printer -->
+        <div class="face heads">
+          <span class="stud t"></span><span class="stud b"></span>
+          <span class="stud l"></span><span class="stud r"></span>
+          <div class="inner">
+            <div class="lbl">Heads</div>
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <!-- paper sticking out top -->
+                <rect x="22" y="6"  width="20" height="14" rx="1.5" fill="#fff2c8" stroke="#2a1700" stroke-width="2.4"/>
+                <line x1="26" y1="11" x2="38" y2="11" stroke="#2a1700" stroke-width="1.8" stroke-linecap="round"/>
+                <line x1="26" y1="15" x2="34" y2="15" stroke="#2a1700" stroke-width="1.8" stroke-linecap="round"/>
+                <!-- printer body -->
+                <rect x="10" y="20" width="44" height="28" rx="4" fill="none" stroke="#2a1700" stroke-width="2.8"/>
+                <!-- LED -->
+                <circle cx="46" cy="28" r="2.4" fill="#2a1700"/>
+                <!-- paper coming out the bottom -->
+                <rect x="18" y="44" width="28" height="12" rx="1.5" fill="#fff2c8" stroke="#2a1700" stroke-width="2.4"/>
+                <line x1="22" y1="49" x2="42" y2="49" stroke="#2a1700" stroke-width="1.6" stroke-linecap="round"/>
+                <line x1="22" y1="53" x2="38" y2="53" stroke="#2a1700" stroke-width="1.6" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div class="foot">FartPrint · MMXXVI</div>
+          </div>
+        </div>
+
+        <!-- TAILS: fart cloud + stink lines -->
+        <div class="face tails">
+          <span class="stud t"></span><span class="stud b"></span>
+          <span class="stud l"></span><span class="stud r"></span>
+          <div class="inner">
+            <div class="lbl">Tails</div>
+            <div class="icon" aria-hidden="true">
+              <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <!-- stink lines wafting up -->
+                <path d="M14 12 q 3 -4 6 0 t 6 0" fill="none" stroke="#2a1700" stroke-width="2" stroke-linecap="round"/>
+                <path d="M30 8  q 3 -4 6 0 t 6 0" fill="none" stroke="#2a1700" stroke-width="2" stroke-linecap="round"/>
+                <path d="M44 14 q 3 -4 6 0"        fill="none" stroke="#2a1700" stroke-width="2" stroke-linecap="round"/>
+                <!-- fart cloud (overlapping ovals) -->
+                <ellipse cx="22" cy="34" rx="13" ry="10" fill="#2a1700" opacity="0.92"/>
+                <ellipse cx="38" cy="30" rx="14" ry="11" fill="#2a1700" opacity="0.95"/>
+                <ellipse cx="46" cy="40" rx="11" ry="9"  fill="#2a1700" opacity="0.92"/>
+                <ellipse cx="30" cy="44" rx="16" ry="9"  fill="#2a1700" opacity="0.88"/>
+                <!-- highlights -->
+                <ellipse cx="20" cy="29" rx="4" ry="2.2" fill="#ffd75a" opacity="0.45"/>
+                <ellipse cx="36" cy="26" rx="5" ry="2.4" fill="#ffd75a" opacity="0.50"/>
+              </svg>
+            </div>
+            <div class="foot">Stank · MMXXVI</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pick-row">
+      <button class="pick-btn active" data-side="heads" id="pickHeads">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        </span>
+        Heads
+      </button>
+      <button class="pick-btn" data-side="tails" id="pickTails">
+        <span class="ico" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><ellipse cx="9" cy="13" rx="5" ry="4"/><ellipse cx="15" cy="11" rx="5.5" ry="4.5"/><ellipse cx="17" cy="15" rx="4" ry="3.5"/><ellipse cx="12" cy="17" rx="6" ry="3"/></svg>
+        </span>
+        Tails
+      </button>
+    </div>
+    <div class="bet-row">
+      <label>Bet</label>
+      <input id="betAmt" type="text" inputmode="numeric" value="10">
+      <div class="bet-presets">
+        <button class="preset" type="button" data-amt="10">10</button>
+        <button class="preset" type="button" data-amt="100">100</button>
+        <button class="preset" type="button" data-amt="1000">1K</button>
+        <button class="preset" type="button" data-amt="10000">10K</button>
+      </div>
+    </div>
+    <button class="go-btn" id="goBtn" type="button" disabled>Connect wallet first</button>
+    <div class="result-card" id="resultCard"></div>
+  </div>
+
+  <div class="stats-row">
+    <div class="scard">
+      <div class="lbl">Total Flips</div>
+      <div class="v" id="stFlips">—</div>
+      <div class="sub">across all players</div>
+    </div>
+    <div class="scard">
+      <div class="lbl">Total Bet</div>
+      <div class="v amber" id="stBet">—</div>
+      <div class="sub">$FARTPRINT wagered</div>
+    </div>
+    <div class="scard">
+      <div class="lbl">Biggest Win</div>
+      <div class="v green" id="stWin">—</div>
+      <div class="sub">single payout profit</div>
+    </div>
+    <div class="scard">
+      <div class="lbl">Biggest Loss</div>
+      <div class="v red" id="stLoss">—</div>
+      <div class="sub">single bet incinerated</div>
+    </div>
+  </div>
+
+  <div class="sec-h">
+    <h2>Recent Flips</h2>
+    <span class="sub">live · 20 most recent</span>
+  </div>
+  <div class="flip-log" id="flipLog">
+    <div class="empty">Loading recent flips…</div>
+  </div>
+
+  <div class="info">
+    <b>How it works.</b> You sign a transferChecked instruction sending your bet to the FartFlip treasury wallet.
+    The server cryptographically flips the coin (Node <code>crypto.randomInt</code>) and signs a 2× payout
+    transaction back to your wallet if you win. Every bet is single-use (signature dedupe). Lose and your
+    tokens stay in the treasury — they fund future winners. The treasury wallet is set up by the admin and
+    needs to hold enough $FARTPRINT to cover any potential 2× payout.
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import {
+  Connection, PublicKey,
+  TransactionInstruction, TransactionMessage, VersionedTransaction
+} from "https://esm.sh/@solana/web3.js@1.95.3";
+
+// ===== Config =====
+const API = "/api/fartflip";
+const MINT_STR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const MINT_PK  = new PublicKey(MINT_STR);
+const TOKEN_PROGRAM_ID      = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+const TOKEN_2022_PROGRAM_ID = new PublicKey("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb");
+const ASSOC_PROGRAM_ID      = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+const SYSTEM_PROGRAM_ID     = new PublicKey("11111111111111111111111111111111");
+let TOKEN_PROGRAM = TOKEN_PROGRAM_ID;
+let MINT_DECIMALS = 6;
+let _mintResolved = false;
+
+const RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+
+const state = {
+  walletPk: null,
+  side: "heads",
+  treasury: null,        // { pubkey, fart, sol } from /api/fartflip GET
+  busy: false,
+  maxBet: 100000,
+};
+
+// ===== utils =====
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s||"").replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function shortAddr(a){ return a ? (a.slice(0,4)+"…"+a.slice(-4)) : ""; }
+function fmt(n){
+  if(n == null || !isFinite(n)) return "—";
+  if(n >= 1e9) return (n/1e9).toFixed(2)+"B";
+  if(n >= 1e6) return (n/1e6).toFixed(2)+"M";
+  if(n >= 1e3) return (n/1e3).toFixed(2)+"K";
+  return Math.round(n).toLocaleString();
+}
+function ago(ts){
+  if(!ts) return "";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if(d < 60)    return d + "s ago";
+  if(d < 3600)  return Math.floor(d/60) + "m ago";
+  if(d < 86400) return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(()=>t.classList.remove("show"), 2500);
+}
+
+// ===== Phantom =====
+function getPhantom(){
+  const p = window.phantom && window.phantom.solana;
+  if(p && p.isPhantom) return p;
+  if(window.solana && window.solana.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if(!ph){ alert("Phantom not found. Install from https://phantom.app"); return; }
+  try {
+    const res = await ph.connect();
+    state.walletPk = res.publicKey.toString();
+    localStorage.setItem("ff_trusted","1");
+    paintWallet();
+    updateGoBtn();
+  } catch(e){ console.warn(e); }
+}
+async function disconnectWallet(){
+  const ph = getPhantom();
+  try { if(ph && ph.disconnect) await ph.disconnect(); } catch(_){}
+  state.walletPk = null;
+  localStorage.removeItem("ff_trusted");
+  paintWallet();
+  updateGoBtn();
+}
+async function tryAutoConnect(){
+  if(localStorage.getItem("ff_trusted") !== "1") return;
+  const ph = getPhantom();
+  if(!ph) return;
+  try {
+    const res = await ph.connect({ onlyIfTrusted:true });
+    state.walletPk = res.publicKey.toString();
+    paintWallet();
+    updateGoBtn();
+  } catch(_){}
+}
+function paintWallet(){
+  const b = $("walletBtn");
+  if(state.walletPk){
+    b.textContent = shortAddr(state.walletPk);
+    b.classList.add("connected");
+    b.onclick = disconnectWallet;
+  } else {
+    b.textContent = "Connect Wallet";
+    b.classList.remove("connected");
+    b.onclick = connectWallet;
+  }
+}
+
+// ===== Mint resolution + ATA =====
+async function resolveMint(){
+  if(_mintResolved) return;
+  for(const url of RPCS){
+    try {
+      const c = new Connection(url, "confirmed");
+      const info = await c.getParsedAccountInfo(MINT_PK);
+      const v = info && info.value;
+      if(v && v.owner){
+        TOKEN_PROGRAM = v.owner;
+        const dec = v.data && v.data.parsed && v.data.parsed.info && v.data.parsed.info.decimals;
+        if(Number.isInteger(dec)) MINT_DECIMALS = dec;
+        _mintResolved = true;
+        return;
+      }
+    } catch(_){}
+  }
+}
+function ataFor(owner){
+  const [ata] = PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), MINT_PK.toBuffer()],
+    ASSOC_PROGRAM_ID
+  );
+  return ata;
+}
+
+// ===== Build send-bet transaction =====
+function createATAIxIdempotent(payer, owner){
+  const ata = ataFor(owner);
+  return new TransactionInstruction({
+    programId: ASSOC_PROGRAM_ID,
+    keys: [
+      { pubkey: payer,             isSigner:true,  isWritable:true  },
+      { pubkey: ata,               isSigner:false, isWritable:true  },
+      { pubkey: owner,             isSigner:false, isWritable:false },
+      { pubkey: MINT_PK,           isSigner:false, isWritable:false },
+      { pubkey: SYSTEM_PROGRAM_ID, isSigner:false, isWritable:false },
+      { pubkey: TOKEN_PROGRAM,     isSigner:false, isWritable:false },
+    ],
+    data: new Uint8Array([1]),
+  });
+}
+function transferCheckedIx(srcOwner, dstOwner, amountTokens){
+  const amount = BigInt(amountTokens) * (10n ** BigInt(MINT_DECIMALS));
+  const data = new Uint8Array(10);
+  data[0] = 12;
+  let x = amount;
+  for(let i=0;i<8;i++){ data[1+i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = MINT_DECIMALS;
+  return new TransactionInstruction({
+    programId: TOKEN_PROGRAM,
+    keys: [
+      { pubkey: ataFor(srcOwner), isSigner:false, isWritable:true  },
+      { pubkey: MINT_PK,          isSigner:false, isWritable:false },
+      { pubkey: ataFor(dstOwner), isSigner:false, isWritable:true  },
+      { pubkey: srcOwner,         isSigner:true,  isWritable:false },
+    ],
+    data,
+  });
+}
+async function freshBlockhash(){
+  for(const url of RPCS){
+    try {
+      const conn = new Connection(url, "confirmed");
+      const { blockhash } = await conn.getLatestBlockhash("confirmed");
+      return { conn, blockhash };
+    } catch(_){}
+  }
+  throw new Error("Could not reach a Solana RPC.");
+}
+async function sendBetTx(amountTokens){
+  const ph = getPhantom();
+  if(!ph) throw new Error("Phantom not found");
+  if(!state.walletPk) throw new Error("Wallet not connected");
+  if(!state.treasury || !state.treasury.pubkey) throw new Error("Treasury not configured");
+  const me = new PublicKey(state.walletPk);
+  const tr = new PublicKey(state.treasury.pubkey);
+  await resolveMint();
+  const { blockhash } = await freshBlockhash();
+  const ixs = [
+    createATAIxIdempotent(me, tr),   // make sure the treasury has an ATA
+    transferCheckedIx(me, tr, amountTokens),
+  ];
+  const msg = new TransactionMessage({
+    payerKey: me, recentBlockhash: blockhash, instructions: ixs,
+  }).compileToV0Message();
+  const tx = new VersionedTransaction(msg);
+  const res = await ph.signAndSendTransaction(tx);
+  const sig = res.signature || res;
+  if(typeof sig !== "string") throw new Error("No signature returned");
+  for(const url of RPCS){
+    try { const c = new Connection(url,"confirmed"); await c.confirmTransaction(sig,"confirmed"); break; } catch(_){}
+  }
+  return sig;
+}
+
+// ===== Side picker =====
+document.querySelectorAll(".pick-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".pick-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    state.side = btn.dataset.side;
+  });
+});
+
+// ===== Bet input =====
+document.querySelectorAll(".preset").forEach(b => {
+  b.addEventListener("click", () => { $("betAmt").value = b.dataset.amt; });
+});
+$("betAmt").addEventListener("input", () => updateGoBtn());
+
+function updateGoBtn(){
+  const btn = $("goBtn");
+  if(!state.walletPk){ btn.disabled = true; btn.textContent = "Connect wallet first"; return; }
+  if(!state.treasury || !state.treasury.pubkey){ btn.disabled = true; btn.textContent = "House not configured"; return; }
+  const bet = Math.floor(Number($("betAmt").value) || 0);
+  if(bet < 1){ btn.disabled = true; btn.textContent = "Enter bet amount"; return; }
+  if(bet > state.maxBet){ btn.disabled = true; btn.textContent = `Max bet ${fmt(state.maxBet)}`; return; }
+  btn.disabled = false;
+  btn.textContent = `Flip · burn ${fmt(bet)} · win ${fmt(bet*2)}`;
+}
+
+// ===== Flip flow =====
+$("goBtn").addEventListener("click", async () => {
+  if(state.busy) return;
+  if(!state.walletPk){ toast("Connect your wallet first."); return; }
+  const bet = Math.floor(Number($("betAmt").value) || 0);
+  if(bet < 1){ toast("Invalid bet"); return; }
+  state.busy = true;
+  const btn = $("goBtn");
+  btn.disabled = true; btn.classList.add("busy"); btn.textContent = "Confirm in Phantom…";
+  $("resultCard").classList.remove("show", "win", "lose");
+
+  // Start coin animation immediately for vibes
+  const coin = $("coin");
+  const coin3d = $("coin3d");
+  coin3d.classList.remove("win","lose");
+  coin.classList.add("flipping");
+
+  try {
+    const sig = await sendBetTx(bet);
+    btn.textContent = "Flipping the coin…";
+
+    const r = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ author: state.walletPk, sig, bet, side: state.side }),
+    });
+    const j = await r.json().catch(() => null);
+    if(!r.ok || !j || j.ok !== true){
+      const msg = (j && (j.message || j.error)) || "Server error";
+      throw new Error(msg);
+    }
+    // Land coin on result (heads = 0deg, tails = 180deg)
+    coin.classList.remove("flipping");
+    const landing = (j.result === "tails" ? 1620 : 1440);   // 4 full spins + face
+    coin.style.transition = "transform 1.2s cubic-bezier(.2,.7,.2,1)";
+    coin.style.transform  = `rotateY(${landing}deg) rotateX(20deg)`;
+
+    setTimeout(() => {
+      coin3d.classList.add(j.won ? "win" : "lose");
+      const card = $("resultCard");
+      card.classList.add("show", j.won ? "win" : "lose");
+      const linkLine = (j.payoutSig)
+        ? `<a class="link" href="https://solscan.io/tx/${j.payoutSig}" target="_blank" rel="noopener">View payout ↗</a>`
+        : (j.treasuryLow
+            ? `<div class="link" style="color:var(--red); text-decoration:none;">Treasury too low — admin notified.</div>`
+            : `<a class="link" href="https://solscan.io/tx/${j.betSig}" target="_blank" rel="noopener">View bet ↗</a>`);
+      card.innerHTML = j.won
+        ? `<div class="h">YOU WIN — ${j.result.toUpperCase()}!</div>
+           <div class="b">+${fmt(j.payout)} <b>$FARTPRINT</b> just landed in your wallet.</div>
+           ${linkLine}`
+        : `<div class="h">YOU LOSE — ${j.result.toUpperCase()}.</div>
+           <div class="b">${fmt(bet)} <b>$FARTPRINT</b> went to the treasury.</div>
+           ${linkLine}`;
+      toast(j.won ? `Won ${fmt(j.payout)} $FARTPRINT 🎉` : `Lost ${fmt(bet)} $FARTPRINT 💀`);
+      refresh();
+    }, 1300);
+  } catch(e){
+    coin.classList.remove("flipping");
+    coin3d.classList.add("lose");
+    toast("Flip failed: " + (e.message || e));
+    console.warn(e);
+  } finally {
+    state.busy = false;
+    btn.classList.remove("busy");
+    updateGoBtn();
+  }
+});
+
+// ===== Refresh state from server =====
+async function refresh(){
+  try {
+    const r = await fetch(API + "?t=" + Date.now());
+    if(!r.ok) return;
+    const j = await r.json();
+    state.maxBet = Number(j.maxBet) || 100000;
+    state.treasury = j.treasury || null;
+
+    // Treasury bar
+    if(j.treasury){
+      $("trFart").textContent = fmt(j.treasury.fart) + " $FARTPRINT";
+      // Max payable from treasury (1/2 to avoid drain)
+      const maxFromHouse = Math.floor(j.treasury.fart / 2);
+      const effectiveMax = Math.min(state.maxBet, maxFromHouse > 0 ? maxFromHouse : state.maxBet);
+      $("trMax").textContent = fmt(effectiveMax) + " $FARTPRINT";
+      state.maxBet = effectiveMax;
+      $("trWarn").innerHTML = (j.treasury.sol < 0.005)
+        ? `<span class="err">⚠ Treasury low on SOL — payouts may stall</span>`
+        : `house pubkey: <span class="mono">${esc(shortAddr(j.treasury.pubkey))}</span>`;
+    } else {
+      $("trFart").textContent = "(not configured)";
+      $("trMax").textContent  = "—";
+      $("trWarn").innerHTML = j.configured
+        ? `<span class="err">Treasury unreachable</span>`
+        : `<span class="err">House wallet not set up — admin must configure FARTFLIP_TREASURY_PUBKEY + _SK env vars.</span>`;
+    }
+
+    // Stats
+    const s = j.stats || { flips:0, totalBet:0, totalWon:0, biggestWin:0, biggestLoss:0 };
+    $("stFlips").textContent = (s.flips || 0).toLocaleString();
+    $("stBet").textContent   = fmt(s.totalBet);
+    $("stWin").textContent   = fmt(s.biggestWin);
+    $("stLoss").textContent  = fmt(s.biggestLoss);
+
+    // Recent flips
+    const rows = (j.recent || []);
+    const log = $("flipLog");
+    if(!rows.length){
+      log.innerHTML = `<div class="empty">No flips yet — be the first to test your luck.</div>`;
+    } else {
+      log.innerHTML = rows.map(f => {
+        const cls = f.won ? "win" : "lose";
+        const ico = f.won ? "🎉" : "💀";
+        const sign = f.won ? "+" : "−";
+        const amt = f.won ? f.payout : f.bet;
+        const sig = f.payoutSig || f.betSig;
+        const url = sig ? ("https://solscan.io/tx/" + sig) : "#";
+        const yours = state.walletPk && f.author === state.walletPk;
+        return `<a class="flip-row" href="${esc(url)}" target="_blank" rel="noopener">
+          <div class="ico">${ico}</div>
+          <div class="who">
+            <div class="addr">${esc(shortAddr(f.author))}${yours ? ' <span style="color:var(--amber);font-size:10px;letter-spacing:1px;">YOU</span>' : ''}</div>
+            <div class="meta">picked ${esc(f.side)} · landed ${esc(f.result)} · ${ago(f.ts)}</div>
+          </div>
+          <div class="amt ${cls}">${sign}${fmt(amt)}<small>$FARTPRINT</small></div>
+          <div class="go">↗</div>
+        </a>`;
+      }).join("");
+    }
+
+    updateGoBtn();
+  } catch(e){
+    console.warn("refresh fail", e);
+  }
+}
+
+// ===== Boot =====
+paintWallet();
+resolveMint();
+tryAutoConnect();
+refresh();
+setInterval(refresh, 20000);
+</script>
+
+</body>
+</html>

@@ -2212,6 +2212,25 @@
       </div>
     </div>
 
+    <!-- FARTFLIP -->
+    <div class="app-card live" data-status="live">
+      <div class="app-icon" style="background: linear-gradient(135deg, #ffb020 0%, #ff8a3d 100%); box-shadow: 0 4px 14px rgba(255, 138, 61, 0.30);">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+          <line x1="9" y1="9" x2="9.01" y2="9"/>
+          <line x1="15" y1="9" x2="15.01" y2="9"/>
+        </svg>
+      </div>
+      <h4>FartFlip</h4>
+      <div class="cat">Gambling · Coin Flip · 2x or burn</div>
+      <p>Heads or tails. Bet $FARTPRINT, win 2x or watch it burn. Fair 50/50 server-signed flip, instant on-chain payout from the house treasury. Don't bet the rent.</p>
+      <div class="row-bottom">
+        <span class="status-tag live"><span class="dot"></span>LIVE</span>
+        <a href="fartflip.html" class="app-btn">LAUNCH</a>
+      </div>
+    </div>
+
     <!-- FARTIDLER -->
     <div class="app-card live" data-status="live">
       <div class="app-icon" style="background: linear-gradient(135deg, #0a7d3a 0%, #ffb020 100%); box-shadow: 0 4px 14px rgba(255, 176, 32, 0.30);">
@@ -2969,6 +2988,8 @@ const MINI_APPS = [
     mode:"ledger",      appKey:"cup" },
   { key:"forum",        name:"FartForum",   desc:"Burn-to-post · 1 each",     color:"#16a34a",
     mode:"forumApi",    api:"/api/fartforum" },
+  { key:"idler",        name:"FartIdler",   desc:"Burn-to-enter · 10K each",  color:"#ffd75a",
+    mode:"idlerApi",    api:"/api/fartidler" },
   { key:"incineration", name:"Incineration",desc:"Supply burned at launch",   color:"#9b5cff",
     mode:"incineration" },
 ];
@@ -3012,6 +3033,13 @@ async function _mwComputeApp(app){
     try {
       const r = await fetch(app.api + "?t=" + Date.now());
       if(r.ok){ const j = await r.json(); return Number(j && j.burned) || 0; }
+    } catch(_){}
+    return 0;
+  }
+  if(app.mode === "idlerApi"){
+    try {
+      const r = await fetch(app.api + "?t=" + Date.now());
+      if(r.ok){ const j = await r.json(); return Number(j && j.entry && j.entry.totalBurned) || 0; }
     } catch(_){}
     return 0;
   }
@@ -3145,23 +3173,87 @@ function renderBurnLog(){
   }
 }
 
+// ---- Load FartBurner ntfy + localStorage burns (same as fartwheel.html) ----
+async function _loadBurnerBurns(){
+  const out = [];
+  const seen = new Set();
+  const add = (r) => { if(!r || !r.tx || seen.has(r.tx)) return; seen.add(r.tx); out.push(r); };
+  try {
+    const r = await fetch("https://ntfy.sh/fartprint-burns-v1-bk2yw9/json?poll=1&since=all");
+    if(r.ok){
+      const text = await r.text();
+      if(text.trim()){
+        for(const line of text.trim().split("\n")){
+          try {
+            const evt = JSON.parse(line);
+            if(evt.event === "message" && evt.message){
+              try { add(JSON.parse(evt.message)); } catch(_){}
+            }
+          } catch(_){}
+        }
+      }
+    }
+  } catch(_){}
+  try { const local = JSON.parse(localStorage.getItem("fp_burns_v1") || "[]"); for(const r of local) add(r); } catch(_){}
+  return out;
+}
+// ---- Load FartIdler entry burns (each = 10K $FARTPRINT) ----
+async function _loadIdlerEntries(){
+  try {
+    const r = await fetch("/api/fartidler?t=" + Date.now());
+    if(!r.ok) return [];
+    const j = await r.json();
+    return (j.recentEntries || []).map(e => ({
+      app: "FartIdler",
+      ts:  e.ts ? new Date(e.ts).toISOString() : null,
+      amount: Number(e.amount) || 10000,
+      url: e.sig ? ("https://solscan.io/tx/" + e.sig) : "https://solscan.io/token/" + TOKEN,
+      sub: e.wallet ? (e.wallet.slice(0,4) + "…" + e.wallet.slice(-4) + " · entry") : "entry",
+    }));
+  } catch(_){ return []; }
+}
 async function loadBurned(){
-  let cup = [];
-  try{ cup = await FartBurns.load(); } catch(_){}
-  const burner = (window.FartBurns && FartBurns.burnerRecords) ? FartBurns.burnerRecords() : [];
+  // Pull every source in parallel
+  const [cup, burnerNtfy, idlerEntries] = await Promise.all([
+    FartBurns.load().catch(()=>[]),
+    _loadBurnerBurns(),
+    _loadIdlerEntries(),
+  ]);
+  const burnerSeeds = (window.FartBurns && FartBurns.burnerRecords) ? FartBurns.burnerRecords() : [];
+
+  // Merge seeded FartBurner records + ntfy/local records, dedupe by tx
+  const burnerMap = new Map();
+  for(const r of burnerSeeds) if(r && r.tx) burnerMap.set(r.tx, { w:r.w, a:r.a, ts:r.tsISO, tx:r.tx, url:r.url });
+  for(const r of burnerNtfy){
+    if(!r || !r.tx) continue;
+    if(burnerMap.has(r.tx)) continue;
+    burnerMap.set(r.tx, r);
+  }
+  const burnerAll = Array.from(burnerMap.values());
+
+  // Total burns we can attribute
   const tracked = cup.reduce((s, r) => s + (r.amount || 0), 0)
-                + burner.reduce((s, r) => s + (r.a || 0), 0);
+                + burnerAll.reduce((s, r) => s + (Number(r.a) || 0), 0)
+                + idlerEntries.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
   // Full deflation from the chain: 1B launch supply − current supply.
   let supply = null;
-  try{ supply = await FartBurns.getSupply(); } catch(_){}
+  try { supply = await FartBurns.getSupply(); } catch(_){}
   const missing = (supply != null) ? Math.max(0, INITIAL_SUPPLY - supply) : null;
   const incineration = (missing != null) ? Math.max(0, missing - tracked) : null;
   BURNED = (missing != null) ? missing : tracked;
 
+  // Build display list
   const list = [];
   cup.forEach(r => list.push({ app: r.app, ts: r.ts, amount: r.amount, url: r.url, sub: null }));
-  burner.forEach(s => list.push({ app: "FartBurner", ts: s.tsISO, amount: s.a, url: s.url, sub: shortW(s.w) }));
+  burnerAll.forEach(s => list.push({
+    app: "FartBurner",
+    ts: s.ts || s.tsISO,
+    amount: Number(s.a) || 0,
+    url: s.url || (s.tx ? "https://solscan.io/tx/" + s.tx : ("https://solscan.io/account/" + s.w)),
+    sub: shortW(s.w),
+  }));
+  idlerEntries.forEach(e => list.push(e));
   list.sort((a, b) => (Date.parse(b.ts) || 0) - (Date.parse(a.ts) || 0));
   if(incineration != null && incineration > 0){
     list.push({ app: "Incineration Burn", ts: null, amount: incineration, sub: "Burned at launch",
