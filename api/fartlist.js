@@ -52,36 +52,131 @@ const RPCS = [
   "https://rpc.ankr.com/solana",
 ];
 
-// Curated seed list of popular Printr-ecosystem coins.
-// They appear in the board with totalBurned=0 and are pushed up by burns.
+// Curated fallback seed list of known Printr-launched coins (brrr-suffixed).
+// These appear in the board with totalBurned=0 if the Printr API is unreachable.
+// On every GET we also try to pull Printr's top-coins endpoint to enrich this.
 const PRINTR_SEEDS = [
-  // Ecosystem main
-  { mint: "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump", sym:"FARTCOIN",  name:"Fartcoin" },
   { mint: "CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr", sym:"FARTBABA",  name:"Fartbaba" },
-  { mint: "2RA1v8NdkEQcF5N5zHUqLuAHxjnDMQFjwEE8fwKNpump", sym:"FARTHOUSE", name:"FartHouse" },
   { mint: "BYVmWXkubwRxnZfdM389RtJJajDMh1LULZjXvfonbrrr", sym:"POOL",      name:"FartPool" },
   { mint: "CnJk3UfUsHy5aSx6JBhoogLxmrcFhpsLP6xaUiGJbrrr", sym:"FARTYD",    name:"FartYD" },
-  { mint: "7EU2j1pUw97XUwxGYsKueCWDTxX8PtRncvN7xUdhbrrr", sym:"FART?",     name:"Recent Printr Mint" },
-  // Fart Cup country coins
-  { mint: "BKSpHNaYuiKePyDHGcvzSzA31sSjoLxYWo2e7A5Npump", sym:"FARTUSA",   name:"FartUnitedStates" },
-  { mint: "BfpTdR2J5cREH5hL1GLHBRM4Z5d3w3AUZ1ZWnKGdpump", sym:"FARTCAN",   name:"FartCanada" },
-  { mint: "EXhnmpdNr7aFeggMrWVYssQZ56jepx8zsgeXiaK2pump", sym:"FARTMEX",   name:"FartMexico" },
-  { mint: "9USgK2EHrE2vENGT1W3PRb2r8pzcpF9bmNvNMxmXpump", sym:"FARTTUN",   name:"FartTunisia" },
-  { mint: "6g3oW3K8PvNVTh6R2sHudBEwq4Xrr2a8zM3gueXUpump", sym:"FARTNOR",   name:"FartNorway" },
-  { mint: "3sPgkRsx5eDDPksajReBL1RS3PQdGBjj2WDh2EYopump", sym:"FARTGER",   name:"FartGermany" },
-  { mint: "HgyngmReZJZPd4gHDjEx54rnQZWMMNYwb5RrRvsppump", sym:"FARTFRA",   name:"FartFrance" },
-  { mint: "F92RKZcmMP1K5Nm4hRMCiHDC6E4QQH3oHrioLyxkpump", sym:"FARTJPN",   name:"FartJapan" },
-  { mint: "9MJ9HwX9oH5uTKN9AVfiMLS4G3rp89E7fvjMAdJBpump", sym:"FARTKOR",   name:"FartSouthKorea" },
-  { mint: "GLpukFRRvJggzhPxPapTy7wraPZaE8VkYCb3RkAbpump", sym:"FARTBRA",   name:"FartBrazil" },
-  { mint: "8K65cs6wL3Wq41yTF5GM8u2scKbaSMtTZ9ZaF64Zpump", sym:"FARTNED",   name:"FartNetherlands" },
-  { mint: "4kamBpKBuWaotT4W22x99CuFWi1b5CBS4KpY3Nrbpump", sym:"FARTAUS",   name:"FartAustralia" },
-  { mint: "5HXp1icLEgS5MeL2u6LwJe6VGyvEvtJmVGnfnFeRpump", sym:"FARTRSA",   name:"FartSouthAfrica" },
-  { mint: "8HTgMPZ7UZBKMiyoiUoboWBGoBpGraUqZRsUvXiYpump", sym:"FARTENG",   name:"FartEngland" },
-  { mint: "BWz5wMZj1ui9ipiLbNxF6hLURpniwNuup9a9Ftskpump", sym:"FARTTUR",   name:"FartTurkey" },
-  { mint: "GWruYEd3318ENjeRv8LRYaS2rAfRz92jYDTkrGeSpump", sym:"FARTSWE",   name:"FartSweden" },
-  { mint: "wqEyyAk72oohRtNfpwBen85TV89ZFYBXBZ6uttXpump",  sym:"FARTARG",   name:"FartArgentina" },
-  { mint: "Aqo71vtBSoEh7q3vpRi6KFVgWt6o2yPL1kBdbavXpump", sym:"FARTUZB",   name:"FartUzbekistan" },
+  { mint: "BCwvw9XJCzA8WixpMH2tjQxePZRq92vu2PAyo78obrrr", sym:"FARTSUNG",  name:"FartSung" },
+  { mint: "4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr", sym:"FARTMART",  name:"FartMart" },
+  { mint: "ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr", sym:"FARTX",     name:"FartX" },
+  { mint: "4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr", sym:"FARTSFT",   name:"FartSFT" },
+  { mint: "7EU2j1pUw97XUwxGYsKueCWDTxX8PtRncvN7xUdhbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "2iCTndXvsRc5XS4PgoPffg4uxnaftxp3XmsEXYSSbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "8YWLJnkiggWvuMTViFGtSfMTkRFysUuhvnhz8xJmbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "DHxKCdydJaHrgnzFJfJo4vNQv5fN8ooQXGTxfs8gbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "3XTQFSvfBkNZZ5k26xD5nHex5CUtAyC9X5ckjMFHbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "8Etxo4Z6ixYpu7kh8xgX67M5chwRkqxXwjXRi5rcbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "12519nzTv29udANTwk1RthGWcjpHaKyYunuPetmqbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "EoBaF6Kj8jSQQYzE2psw151VTkoEsmtstUQ1xZMtbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "2mDz9haqq51iFTQnHeVnABGcUCpwdVuivWEdR1SMbrrr", sym:"FART",      name:"Printr Mint" },
+  { mint: "3bRN6aEr82qw95P7vVwwyFBPnN5Z3eDu9HMrtk99brrr", sym:"FART",      name:"Printr Mint" },
 ];
+
+// Printr Partner Preview API (server-side, with auth JWT). Same creds as api/printr.js.
+const PRINTR_BASE = "https://api-preview.printr.money/v0";
+const PRINTR_JWT  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkYWlseSJ9.Ml8JzU5AedtwjRHAy6qZBZB4FEyc9jy5CkXsLv__nRQ";
+const SOL_CAIP    = "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp";
+
+// Auto-source detection from mint address suffix.
+function inferSource(mint){
+  if(typeof mint !== "string") return "custom";
+  if(/pump$/i.test(mint))  return "pump";
+  if(/brrr$/i.test(mint))  return "printr";
+  if(/bonk$/i.test(mint))  return "custom";
+  return "custom";
+}
+
+// Pull a sane mint string out of arbitrary Printr token records.
+function extractPrintrMint(t){
+  if(!t || typeof t !== "object") return null;
+  // Direct address fields
+  const direct = t.contract_address || t.contract || t.mint || t.address || t.solana_address || t.tokenAddress;
+  if(typeof direct === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(direct)) return direct;
+  // CAIP-formatted id: solana:5eykt4UsFv8P…:MINT
+  const id = t.id || t.tokenId || t.token_id;
+  if(typeof id === "string"){
+    const last = id.split(":").pop();
+    if(/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(last)) return last;
+  }
+  // deployments[].contract_address
+  if(Array.isArray(t.deployments)){
+    for(const d of t.deployments){
+      const a = d && (d.contract_address || d.address || d.contract);
+      if(typeof a === "string" && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(a)) return a;
+    }
+  }
+  return null;
+}
+
+function extractPrintrCoin(t){
+  const mint = extractPrintrMint(t);
+  if(!mint) return null;
+  // Skip the $FARTPRINT mint itself — never boost ourselves
+  if(mint === MINT) return null;
+  return {
+    mint,
+    sym: t.symbol || t.ticker || t.sym || "(?)",
+    name: t.name || "",
+    image: t.image_url || t.image || t.imageUrl || t.logo || null,
+    source: inferSource(mint),
+  };
+}
+
+// Module-level cache of the Printr top-coins fetch (5 min TTL).
+// Cold starts will re-fetch; warm starts reuse.
+let _printrCache = { coins: [], at: 0 };
+const PRINTR_CACHE_TTL = 5 * 60 * 1000;
+
+async function fetchPrintrTopCoins(){
+  const candidates = [
+    "/tokens?limit=100",
+    "/tokens",
+    "/tokens/popular?limit=100",
+    "/tokens?popular=true&limit=100",
+    "/tokens?sort=popular&limit=100",
+    "/tokens?sort=mcap&limit=100",
+    "/tokens/trending?limit=100",
+    "/leaderboard?limit=100",
+    "/tokens/leaderboard?limit=100",
+    "/projects?limit=100",
+  ];
+  const headers = { Authorization: "Bearer " + PRINTR_JWT, Accept: "application/json" };
+  for(const path of candidates){
+    try {
+      const ctrl = new AbortController();
+      const tt = setTimeout(()=>ctrl.abort(), 4000);
+      const r = await fetch(PRINTR_BASE + path, { headers, signal: ctrl.signal });
+      clearTimeout(tt);
+      if(!r.ok) continue;
+      const j = await r.json();
+      const arr = Array.isArray(j) ? j : (j.tokens || j.data || j.results || j.items || j.projects || j.coins);
+      if(!Array.isArray(arr) || arr.length === 0) continue;
+      const coins = arr.map(extractPrintrCoin).filter(Boolean);
+      if(coins.length > 0) return coins;
+    } catch(_){ /* try next */ }
+  }
+  return [];
+}
+
+async function getPrintrTopCoins(){
+  const now = Date.now();
+  if(_printrCache.coins.length > 0 && (now - _printrCache.at) < PRINTR_CACHE_TTL){
+    return _printrCache.coins;
+  }
+  try {
+    const coins = await fetchPrintrTopCoins();
+    if(coins.length > 0){
+      _printrCache = { coins, at: now };
+    } else if(_printrCache.coins.length === 0){
+      // Mark even an empty result so we don't hammer the API on every request
+      _printrCache.at = now;
+    }
+  } catch(_){}
+  return _printrCache.coins;
+}
 
 const hasKV = () => !!(KV_URL && KV_TOKEN);
 
@@ -246,20 +341,28 @@ async function verifyBurnAmount(sig, author){
 }
 
 // --- seed merge ---------------------------------------------------------
-function mergeSeeds(stored){
+// Combines: KV-stored boosted coins → curated PRINTR_SEEDS → live Printr API top.
+// Stored coins always win; seeds fill gaps; Printr API fills more gaps.
+function mergeSeeds(stored, printrTop){
   const byMint = new Map();
   for(const c of stored) byMint.set(c.mint, c);
-  for(const s of PRINTR_SEEDS){
-    if(byMint.has(s.mint)) continue;
+  const addIfNew = (s, source) => {
+    if(!s || !s.mint || byMint.has(s.mint)) return;
+    if(s.mint === MINT) return; // never list $FARTPRINT itself
     byMint.set(s.mint, {
-      mint: s.mint, sym: s.sym, name: s.name, image: null,
-      source: "printr",
+      mint: s.mint,
+      sym: s.sym || "(?)",
+      name: s.name || "",
+      image: s.image || null,
+      source: source || s.source || inferSource(s.mint),
       totalBurned: 0, burnsCount: 0,
       listedBy: null, listedAt: 0, lastBoostAt: 0,
       boosters: {},
       seed: true,
     });
-  }
+  };
+  for(const s of PRINTR_SEEDS) addIfNew(s, "printr");
+  for(const s of (printrTop || [])) addIfNew(s, "printr");
   return Array.from(byMint.values());
 }
 
@@ -307,8 +410,12 @@ export default async function handler(req, res){
     if(req.method === "GET"){
       const url = new URL(req.url, "http://x");
       const mintQ = url.searchParams.get("mint");
-      const all = await getAllCoins();
-      const merged = mergeSeeds(all);
+      // Run KV fetch + Printr API fetch in parallel so the slower one doesn't block us
+      const [all, printrTop] = await Promise.all([
+        getAllCoins(),
+        getPrintrTopCoins(),
+      ]);
+      const merged = mergeSeeds(all, printrTop);
       if(mintQ){
         const c = merged.find(c => c.mint === mintQ);
         if(!c){ res.status(404).json({ ok:false, error:"not-found" }); return; }
@@ -316,11 +423,13 @@ export default async function handler(req, res){
         return;
       }
       const coins = merged.map(c => shape(c, false));
+      const seedCount = PRINTR_SEEDS.length + (printrTop ? printrTop.length : 0);
       res.status(200).json({
         ok: true,
         coins,
         totalBurned: totalBurnedAcross(merged),
-        seeds: PRINTR_SEEDS.length,
+        seeds: seedCount,
+        printrApi: printrTop ? printrTop.length : 0,
         custom: merged.filter(c => !c.seed).length,
         minBoostTokens: MIN_BOOST_TOKENS,
         minListTokens: MIN_LIST_TOKENS,
@@ -390,6 +499,12 @@ export default async function handler(req, res){
     const now = Date.now();
     const amountTokens = Number(rawAmount) / Number(ONE);
 
+    // Authoritative source from mint suffix — clients can't fake this.
+    const suffixSource = inferSource(mint);
+    // Allow client to override only if the suffix is ambiguous (no pump/brrr suffix)
+    const clientSource = ["printr","pump","bags","custom"].includes(body.source) ? body.source : "custom";
+    const finalSource = (suffixSource !== "custom") ? suffixSource : clientSource;
+
     let coin;
     if(isFirstList){
       coin = {
@@ -397,7 +512,7 @@ export default async function handler(req, res){
         sym: sanitize(body.sym, 16) || "(?)",
         name: sanitize(body.name, 60) || "Untitled",
         image: sanitizeUrl(body.image),
-        source: ["printr","pump","bags","custom"].includes(body.source) ? body.source : "custom",
+        source: finalSource,
         totalBurned: amountTokens,
         burnsCount: 1,
         listedBy: author,
@@ -418,7 +533,9 @@ export default async function handler(req, res){
       // Allow client to fill in missing image/sym/name (helpful for seeds)
       const img = sanitizeUrl(body.image); if(img && !coin.image) coin.image = img;
       const sym = sanitize(body.sym, 16); if(sym && (!coin.sym || coin.sym === "(?)" || coin.sym === "FART?")) coin.sym = sym;
-      const nm  = sanitize(body.name, 60); if(nm && !coin.name) coin.name = nm;
+      const nm  = sanitize(body.name, 60); if(nm && (!coin.name || coin.name === "Printr Mint")) coin.name = nm;
+      // Pin source to whatever the mint suffix says — fixes any stale tag.
+      if(suffixSource !== "custom") coin.source = suffixSource;
     }
 
     await setCoin(coin);
