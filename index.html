@@ -877,72 +877,774 @@
   .app-btn.classified { color: var(--pink); }
   .app-btn.classified:hover { background: var(--pink-soft); }
 
+  /* ===== TOP PERFORMERS (new design) ===== */
+  .tp-header {
+    text-align: center;
+    margin: 56px 0 26px;
+  }
+  .tp-header h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(28px, 4vw, 38px);
+    font-weight: 800;
+    letter-spacing: -0.6px;
+    color: var(--text);
+    margin: 0;
+  }
+  .tp-header .sub {
+    color: var(--text-tertiary);
+    font-size: 14.5px;
+    margin-top: 6px;
+  }
+
+  .tp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px;
+  }
+  @media (max-width: 880px){ .tp-grid { grid-template-columns: 1fr; } }
+
+  .tp-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 22px 22px 18px;
+    background: linear-gradient(135deg, rgba(7,18,12,0.92), rgba(5,12,9,0.92));
+    border: 1px solid rgba(46,224,107,0.18);
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+  }
+  .tp-card:hover { transform: translateY(-3px); }
+  .tp-card::before {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(420px 240px at 50% -20%, var(--tp-glow, rgba(46,224,107,0.22)), transparent 60%);
+    pointer-events: none;
+  }
+  .tp-card.cup    { --tp-glow: rgba(46,224,107,0.28); border-color: rgba(46,224,107,0.28); }
+  .tp-card.cup:hover    { box-shadow: 0 18px 50px rgba(30,193,115,0.32); border-color: rgba(46,224,107,0.55); }
+  .tp-card.derivs { --tp-glow: rgba(155,92,255,0.30); border-color: rgba(155,92,255,0.32); }
+  .tp-card.derivs:hover { box-shadow: 0 18px 50px rgba(155,92,255,0.32); border-color: rgba(155,92,255,0.55); }
+
+  .tp-head {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 18px;
+  }
+  .tp-head .tp-icon {
+    width: 38px; height: 38px; border-radius: 10px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+    background: linear-gradient(135deg, #16a34a 0%, #2ee06b 100%);
+  }
+  .tp-head .tp-icon svg { width: 60%; height: 60%; color: #04230f; }
+  .tp-card.derivs .tp-head .tp-icon { background: linear-gradient(135deg, #7b3df0, #9b5cff); }
+  .tp-card.derivs .tp-head .tp-icon svg { color: #fff; }
+  .tp-head .tp-title { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 19px; letter-spacing: -0.2px; color: #fff; }
+  .tp-head .tp-kicker { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 2px; color: rgba(255,255,255,0.55); text-transform: uppercase; margin-top: 1px; font-weight: 700; }
+  .tp-head .tp-live {
+    margin-left: auto;
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 800; letter-spacing: 1.4px;
+    background: rgba(46,224,107,0.14);
+    color: #5ff0a0;
+    border: 1px solid rgba(46,224,107,0.32);
+    padding: 4px 10px; border-radius: 99px;
+  }
+  .tp-card.derivs .tp-head .tp-live { background: rgba(155,92,255,0.16); color: #c89bff; border-color: rgba(155,92,255,0.38); }
+  .tp-head .tp-live::before {
+    content: ""; width: 6px; height: 6px; border-radius: 50%;
+    background: currentColor; box-shadow: 0 0 8px currentColor; animation: pulse 1.8s infinite;
+  }
+
+  /* Podium */
+  .podium {
+    position: relative; z-index: 1;
+    display: grid;
+    grid-template-columns: 1fr 1.15fr 1fr;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 16px;
+    min-height: 200px;
+  }
+  .pod-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .pod-item .pod-pos {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13px; letter-spacing: 0.8px;
+    color: rgba(255,255,255,0.78);
+  }
+  .pod-card {
+    width: 100%;
+    border-radius: 14px;
+    padding: 16px 12px 14px;
+    text-align: center;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .pod-1 .pod-card {
+    background: radial-gradient(circle at 50% 0%, var(--tp-glow-soft, rgba(46,224,107,0.22)) 0%, rgba(46,224,107,0.06) 60%);
+    border-color: var(--tp-glow-edge, rgba(46,224,107,0.4));
+    padding-top: 22px; padding-bottom: 20px;
+  }
+  .tp-card.cup    { --tp-glow-soft: rgba(46,224,107,0.18); --tp-glow-edge: rgba(46,224,107,0.45); }
+  .tp-card.derivs { --tp-glow-soft: rgba(155,92,255,0.16); --tp-glow-edge: rgba(155,92,255,0.40); }
+
+  .pod-rank {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 26px; line-height: 1;
+    color: rgba(255,255,255,0.85);
+    margin-bottom: 8px;
+  }
+  .pod-1 .pod-rank { font-size: 32px; color: #fff; text-shadow: 0 0 18px rgba(46,224,107,0.6); }
+  .tp-card.derivs .pod-1 .pod-rank { text-shadow: 0 0 18px rgba(155,92,255,0.6); }
+  .pod-name { font-weight: 800; font-size: 14px; color: #fff; }
+  .pod-1 .pod-name { font-size: 16px; }
+  .pod-ticker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 0.6px;
+    color: rgba(255,255,255,0.55);
+    margin-top: 1px;
+  }
+  .pod-mcap {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 12.5px;
+    margin-top: 8px; color: #5ff0a0;
+  }
+  .pod-1 .pod-mcap { font-size: 13.5px; }
+  .tp-card.derivs .pod-mcap { color: #c89bff; }
+
+  /* Crown above #1 */
+  .pod-crown {
+    position: absolute;
+    top: -34px; left: 50%; transform: translateX(-50%);
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2ee06b, #1ec173);
+    box-shadow: 0 6px 18px rgba(46,224,107,0.45);
+    display: grid; place-items: center;
+  }
+  .pod-crown svg { width: 18px; height: 18px; color: #04230f; }
+  .tp-card.derivs .pod-crown { background: linear-gradient(135deg, #9b5cff, #7b3df0); box-shadow: 0 6px 18px rgba(155,92,255,0.45); }
+  .tp-card.derivs .pod-crown svg { color: #fff; }
+  .pod-2 .pod-card { transform: translateY(8px); }
+  .pod-3 .pod-card { transform: translateY(8px); }
+
+  /* Flat list below podium */
+  .tp-list { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+  .tp-row {
+    display: grid;
+    grid-template-columns: 32px 28px 1fr auto auto;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid rgba(255,255,255,0.06);
+    font-size: 13px;
+  }
+  .tp-row .tp-r { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 11.5px; color: rgba(255,255,255,0.55); }
+  .tp-row .tp-r.r1 { color: #ffd64d; }
+  .tp-row .tp-r.r2 { color: #e3eaf5; }
+  .tp-row .tp-r.r3 { color: #ff9d6b; }
+  .tp-row .tp-av {
+    width: 22px; height: 22px; border-radius: 50%; overflow: hidden;
+    background: rgba(255,255,255,0.08); display: grid; place-items: center;
+    font-size: 10px; font-weight: 800; color: #fff;
+  }
+  .tp-row .tp-av img { width: 100%; height: 100%; object-fit: cover; }
+  .tp-row .tp-nm { color: #fff; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .tp-row .tp-nm small { color: rgba(255,255,255,0.5); font-weight: 600; margin-left: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10.5px; }
+  .tp-row .tp-price { font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: rgba(255,255,255,0.85); }
+  .tp-row .tp-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 800;
+    padding: 3px 8px; border-radius: 6px;
+    background: rgba(46,224,107,0.16); color: #5ff0a0;
+    border: 1px solid rgba(46,224,107,0.28);
+  }
+  .tp-card.derivs .tp-row .tp-pct { background: rgba(155,92,255,0.14); color: #c89bff; border-color: rgba(155,92,255,0.32); }
+
+  .tp-foot {
+    position: relative; z-index: 1;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 12.5px; color: rgba(255,255,255,0.55);
+  }
+  .tp-foot .tp-meta { font-family: 'JetBrains Mono', monospace; }
+  .tp-foot .tp-view { font-weight: 700; color: #5ff0a0; }
+  .tp-card.derivs .tp-foot .tp-view { color: #c89bff; }
+  .tp-foot .tp-view:hover { text-decoration: underline; }
+
+  /* ===== ECOSYSTEM HEADER (new) ===== */
+  .eco-header {
+    margin: 80px 0 28px;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .eco-header .left h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(26px, 3.5vw, 36px);
+    font-weight: 800; letter-spacing: -0.5px;
+    color: var(--text); margin: 0;
+  }
+  .eco-header .left .sub { color: var(--text-tertiary); font-size: 14px; margin-top: 6px; }
+  .eco-header .view-all-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 9px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 11.5px; letter-spacing: 1.3px;
+    color: var(--text); cursor: pointer; transition: all 0.18s ease;
+    font-family: inherit;
+  }
+  [data-theme="dark"] .eco-header .view-all-btn { background: rgba(255,255,255,0.03); border-color: var(--border-2); }
+  .eco-header .view-all-btn:hover { border-color: var(--green); color: var(--green); }
+  .eco-header .view-all-btn .count {
+    display: inline-block;
+    background: var(--green);
+    color: #04230f;
+    padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 900;
+  }
+
+  /* ===== Flagship + 2x2 (new featured layout) ===== */
+  .eco-flagship-row {
+    display: grid;
+    grid-template-columns: 1.1fr 2fr;
+    gap: 18px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 980px){ .eco-flagship-row { grid-template-columns: 1fr; } }
+
+  .flag-card {
+    position: relative;
+    border-radius: 24px;
+    padding: 26px;
+    min-height: 480px;
+    display: flex; flex-direction: column;
+    text-decoration: none; color: inherit;
+    overflow: hidden;
+    background:
+      radial-gradient(560px 380px at 80% 80%, rgba(46,224,107,0.16), transparent 60%),
+      linear-gradient(180deg, rgba(7,29,17,0.85), rgba(4,17,10,0.85));
+    border: 1px solid rgba(46,224,107,0.18);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .flag-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(46,224,107,0.5);
+    box-shadow: 0 18px 50px rgba(46,224,107,0.20);
+  }
+  .flag-card .top-row {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    position: relative; z-index: 1;
+  }
+  .flag-card .flag-icon {
+    width: 60px; height: 60px;
+    border-radius: 14px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #16a34a, #2ee06b);
+    box-shadow: 0 8px 22px rgba(46,224,107,0.32);
+  }
+  .flag-card .flag-icon svg { width: 32px; height: 32px; color: #fff; }
+  .flag-card .flag-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 800; letter-spacing: 1.8px;
+    color: #5ff0a0;
+    background: rgba(46,224,107,0.10);
+    border: 1px solid rgba(46,224,107,0.36);
+    padding: 5px 11px;
+    border-radius: 99px;
+  }
+  .flag-card .flag-content {
+    margin-top: auto;
+    position: relative; z-index: 1;
+  }
+  .flag-card h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+    color: #fff; margin: 0 0 12px;
+  }
+  .flag-card p {
+    color: rgba(255,255,255,0.62);
+    font-size: 14px; line-height: 1.6;
+    margin: 0 0 18px;
+  }
+  .flag-card .flag-actions {
+    display: inline-flex; align-items: center; gap: 14px;
+  }
+  .flag-card .flag-launch {
+    background: linear-gradient(135deg, #46f08a, #2ee06b);
+    color: #04230f;
+    font-weight: 800; font-size: 13.5px; letter-spacing: 0.2px;
+    padding: 10px 22px;
+    border-radius: 99px;
+    box-shadow: 0 6px 20px rgba(46,224,107,0.35);
+  }
+  .flag-card .flag-live {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: #5ff0a0; font-size: 12.5px; font-weight: 600;
+  }
+  .flag-card .flag-live::before {
+    content: ""; width: 7px; height: 7px;
+    background: #5ff0a0; border-radius: 50%;
+    box-shadow: 0 0 8px #5ff0a0;
+    animation: pulse 1.8s infinite;
+  }
+
+  /* 2x2 grid */
+  .eco-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px){ .eco-2x2 { grid-template-columns: 1fr; grid-auto-rows: auto; } }
+
+  /* small featured card (also reused for the "more apps" grid) */
+  .eco-mini-card {
+    position: relative;
+    background: linear-gradient(180deg, rgba(8,18,12,0.65), rgba(4,11,8,0.65));
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 20px;
+    display: flex; flex-direction: column;
+    text-decoration: none; color: inherit;
+    overflow: hidden;
+    transition: all 0.18s ease;
+    min-height: 232px;
+  }
+  .eco-mini-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-2);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+  }
+  [data-theme="dark"] .eco-mini-card { background: linear-gradient(180deg, rgba(15,23,18,0.75), rgba(10,15,12,0.75)); }
+  .eco-mini-card .em-icon {
+    width: 32px; height: 32px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    margin-bottom: auto;
+    flex-shrink: 0;
+  }
+  .eco-mini-card .em-icon svg { width: 16px; height: 16px; color: #fff; }
+  .eco-mini-card .em-icon.green   { background: linear-gradient(135deg, #16a34a, #2ee06b); box-shadow: 0 4px 12px rgba(46,224,107,0.30); }
+  .eco-mini-card .em-icon.red     { background: linear-gradient(135deg, #b83a10, #ff5a1f); box-shadow: 0 4px 12px rgba(255,90,31,0.30); }
+  .eco-mini-card .em-icon.amber   { background: linear-gradient(135deg, #ff8a3d, #ffb020); box-shadow: 0 4px 12px rgba(255,138,61,0.30); }
+  .eco-mini-card .em-icon.purple  { background: linear-gradient(135deg, #6b3df0, #9b5cff); box-shadow: 0 4px 12px rgba(155,92,255,0.30); }
+  .eco-mini-card .em-icon.cyan    { background: linear-gradient(135deg, #0891b2, #22d3ee); box-shadow: 0 4px 12px rgba(34,211,238,0.28); }
+  .eco-mini-card .em-icon.blue    { background: linear-gradient(135deg, #2f7bff, #5a9bff); box-shadow: 0 4px 12px rgba(90,155,255,0.28); }
+  .eco-mini-card .em-icon.pink    { background: linear-gradient(135deg, #ff5a3c, #ff8a3d); box-shadow: 0 4px 12px rgba(255,90,60,0.28); }
+  .eco-mini-card .em-icon.gold    { background: linear-gradient(135deg, #ffb020, #ffd75a); box-shadow: 0 4px 12px rgba(255,176,32,0.28); }
+  .eco-mini-card .em-icon.dark    { background: linear-gradient(135deg, #1d1d1f, #3a3a3c); }
+  .eco-mini-card h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px; font-weight: 800; letter-spacing: -0.3px;
+    color: #fff; margin: 16px 0 4px;
+  }
+  .eco-mini-card .em-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; font-weight: 700; letter-spacing: 1.6px;
+    color: rgba(255,255,255,0.42);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .eco-mini-card p {
+    color: rgba(255,255,255,0.55);
+    font-size: 13px; line-height: 1.5;
+    margin: 0 0 14px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .eco-mini-card .em-bottom {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: auto;
+  }
+  .eco-mini-card .em-live   { color: #5ff0a0; font-weight: 700; font-size: 12.5px; font-family: 'JetBrains Mono', monospace; }
+  .eco-mini-card .em-indev  { color: #ffcf5a; font-weight: 700; font-size: 12.5px; font-family: 'JetBrains Mono', monospace; }
+  .eco-mini-card .em-arrow  { color: rgba(255,255,255,0.45); font-size: 18px; transition: transform 0.18s ease; }
+  .eco-mini-card:hover .em-arrow { color: #5ff0a0; transform: translateX(3px); }
+
+  /* "More Apps" grid below the flagship row */
+  .eco-more-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 6px;
+  }
+  @media (max-width: 980px){ .eco-more-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px){ .eco-more-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px){ .eco-more-grid { grid-template-columns: 1fr; } }
+
+  /* ===== MORE APPS — horizontal-list cards, 5 per row, expandable ===== */
+  .more-apps-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin: 44px 0 18px;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .more-apps-header h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; font-weight: 800; letter-spacing: -0.3px;
+    color: var(--text);
+    margin: 0;
+    line-height: 1.1;
+  }
+  .more-apps-header .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 700; letter-spacing: 1.8px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+  .more-apps-list {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+    margin-top: 6px;
+  }
+  @media (max-width: 1100px){ .more-apps-list { grid-template-columns: repeat(4, 1fr); } }
+  @media (max-width: 900px){  .more-apps-list { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 640px){  .more-apps-list { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 420px){  .more-apps-list { grid-template-columns: 1fr; } }
+
+  .more-apps-list .more-card.hidden-rest { display: none; }
+  .more-apps-list.expanded .more-card.hidden-rest { display: flex; }
+
+  .more-card {
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(180deg, rgba(8,18,12,0.55), rgba(4,11,8,0.55));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 14px;
+    text-decoration: none; color: inherit;
+    transition: all 0.18s ease;
+    min-height: 64px;
+    cursor: pointer;
+  }
+  [data-theme="dark"] .more-card { background: linear-gradient(180deg, rgba(15,23,18,0.70), rgba(10,15,12,0.70)); }
+  .more-card:hover {
+    transform: translateY(-1px);
+    border-color: var(--green);
+    box-shadow: 0 8px 22px rgba(0,0,0,0.35);
+  }
+  .more-card .em-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .more-card .em-icon svg { width: 18px; height: 18px; color: #fff; }
+  .more-card .em-icon.green   { background: linear-gradient(135deg, #16a34a, #2ee06b); box-shadow: 0 4px 12px rgba(46,224,107,0.30); }
+  .more-card .em-icon.red     { background: linear-gradient(135deg, #b83a10, #ff5a1f); box-shadow: 0 4px 12px rgba(255,90,31,0.30); }
+  .more-card .em-icon.amber   { background: linear-gradient(135deg, #ff8a3d, #ffb020); box-shadow: 0 4px 12px rgba(255,138,61,0.30); }
+  .more-card .em-icon.purple  { background: linear-gradient(135deg, #6b3df0, #9b5cff); box-shadow: 0 4px 12px rgba(155,92,255,0.30); }
+  .more-card .em-icon.cyan    { background: linear-gradient(135deg, #0891b2, #22d3ee); box-shadow: 0 4px 12px rgba(34,211,238,0.28); }
+  .more-card .em-icon.blue    { background: linear-gradient(135deg, #2f7bff, #5a9bff); box-shadow: 0 4px 12px rgba(90,155,255,0.28); }
+  .more-card .em-icon.pink    { background: linear-gradient(135deg, #ff5a3c, #ff8a3d); box-shadow: 0 4px 12px rgba(255,90,60,0.28); }
+  .more-card .em-icon.gold    { background: linear-gradient(135deg, #ffb020, #ffd75a); box-shadow: 0 4px 12px rgba(255,176,32,0.28); }
+  .more-card .em-icon.dark    { background: linear-gradient(135deg, #1d1d1f, #3a3a3c); }
+  .more-card .mc-text {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .more-card h4 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px; font-weight: 700; letter-spacing: -0.2px;
+    color: var(--text);
+    margin: 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .more-card .mc-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.6px;
+    color: var(--text-muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .more-card .em-arrow {
+    color: rgba(255,255,255,0.35);
+    font-size: 16px;
+    flex-shrink: 0;
+    transition: transform 0.18s ease, color 0.18s ease;
+  }
+  .more-card:hover .em-arrow { color: var(--green); transform: translateX(3px); }
+
+  .eco-rest { display: none; }
+  .eco-rest.expanded { display: block; }
+  .eco-rest .eco-more-grid { margin-top: 16px; }
+  .eco-expand-row { display: flex; justify-content: center; margin-top: 22px; }
+  .eco-expand-btn {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13.5px; font-weight: 700; letter-spacing: 0.3px;
+    padding: 12px 28px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .eco-expand-btn:hover { border-color: var(--green); color: var(--green); }
+
+  /* Hide the original duplicated cards from the apps-grid (they appear in flagship + 2x2 + more-grid instead). */
+  .apps-grid { display: none; }
+
   /* ===== BUILDERS ===== */
-  /* ===== STAKING CALLOUT ===== */
+  /* ===== STAKING CALLOUT (redesigned) ===== */
   .stake-callout {
     margin-top: 72px;
-    padding: 44px;
-    background: linear-gradient(135deg, #062614 0%, #0d3a22 50%, #16573a 100%);
+    padding: 52px 56px;
+    background: linear-gradient(180deg, rgba(7,29,17,0.96), rgba(4,17,10,0.96));
+    border: 1px solid rgba(46,224,107,0.25);
     border-radius: 28px;
     color: white;
     display: grid;
-    grid-template-columns: 1.15fr 1fr;
-    gap: 40px;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 48px;
     align-items: center;
     position: relative;
     overflow: hidden;
-    box-shadow: var(--shadow-green);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.45);
   }
   .stake-callout::before {
     content: "";
     position: absolute;
     top: -120px; right: -100px;
-    width: 380px; height: 380px;
-    background: radial-gradient(circle, rgba(30,193,115,0.28), transparent 65%);
+    width: 420px; height: 420px;
+    background: radial-gradient(circle, rgba(46,224,107,0.22), transparent 65%);
     pointer-events: none;
   }
   .stake-info { position: relative; z-index: 1; }
   .stake-eyebrow {
     display: inline-block;
-    font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase;
-    color: #6dff9a; font-weight: 700; margin-bottom: 12px;
-    background: rgba(30,193,115,0.12); border: 1px solid rgba(30,193,115,0.3);
-    padding: 4px 10px; border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 2px; text-transform: uppercase;
+    color: #5ff0a0; font-weight: 800; margin-bottom: 18px;
+    background: rgba(46,224,107,0.10);
+    border: 1px solid rgba(46,224,107,0.36);
+    padding: 6px 14px; border-radius: 999px;
   }
   .stake-callout h2 {
-    font-size: clamp(26px, 3vw, 34px); font-weight: 700;
-    letter-spacing: -0.6px; margin-bottom: 14px; color: white;
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(36px, 5vw, 56px);
+    font-weight: 900;
+    letter-spacing: -1.5px; line-height: 1.0;
+    margin: 0 0 18px; color: white;
   }
-  .stake-callout h2 .accent { color: #1ec173; }
+  .stake-callout h2 .accent {
+    background: linear-gradient(135deg, #46f08a, #2ee06b);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
   /* mobile-only forced line break inside callout headlines */
   .m-br { display: none; }
   @media (max-width: 760px) { .m-br { display: inline; } }
   .stake-callout p {
-    color: rgba(255,255,255,0.72); font-size: 15px; line-height: 1.7; max-width: 520px;
+    color: rgba(255,255,255,0.66); font-size: 14.5px; line-height: 1.7; max-width: 480px;
+    margin: 0 0 24px;
   }
   .stake-cta {
-    display: inline-block; margin-top: 22px;
-    background: #1ec173; color: #062614; font-weight: 700;
-    padding: 11px 26px; border-radius: 100px; text-decoration: none;
-    font-size: 14px; letter-spacing: 0.3px; transition: all 0.2s;
-    box-shadow: 0 4px 14px rgba(30,193,115,0.4);
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, #46f08a, #2ee06b);
+    color: #04230f; font-weight: 800;
+    padding: 13px 28px; border-radius: 12px;
+    text-decoration: none;
+    font-size: 14.5px; letter-spacing: 0.2px;
+    transition: all 0.15s ease;
+    box-shadow: 0 8px 22px rgba(46,224,107,0.40);
   }
-  .stake-cta:hover { background: white; transform: translateY(-1px); }
-  .stake-stats { display: grid; gap: 12px; position: relative; z-index: 1; }
+  .stake-cta:hover { filter: brightness(1.06); transform: translateY(-1px); }
+  .stake-stats {
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "big"
+      "row";
+    gap: 14px;
+    position: relative; z-index: 1;
+  }
+  .stake-stats .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; grid-area: row; }
+  .stake-stats .big { grid-area: big; }
   .stake-stat {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 16px; padding: 16px 18px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 16px; padding: 20px 22px;
   }
-  .stake-stat .sk { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.55); font-weight: 600; }
-  .stake-stat .sv { font-family: 'Orbitron', sans-serif; font-size: 30px; font-weight: 800; color: white; line-height: 1.1; margin-top: 4px; }
-  .stake-stat .sv.accent { color: #1ec173; }
-  .stake-stat .sk2 { font-size: 11px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+  .stake-stat.big { padding: 24px 26px; }
+  .stake-stat .sk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.6px;
+    color: rgba(255,255,255,0.50); font-weight: 800;
+  }
+  .stake-stat .sv {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; font-weight: 800; color: white;
+    line-height: 1.05; margin-top: 8px;
+  }
+  .stake-stat.big .sv {
+    font-size: clamp(48px, 5.5vw, 60px);
+    background: linear-gradient(135deg, #46f08a, #2ee06b);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .stake-stat .sk2 {
+    font-size: 11px; color: rgba(255,255,255,0.40); margin-top: 4px;
+    font-family: 'JetBrains Mono', monospace; letter-spacing: 0.4px;
+  }
   @media (max-width: 760px) {
-    .stake-callout { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; }
+    .stake-callout { grid-template-columns: 1fr; padding: 36px 26px; gap: 32px; }
+    .stake-stats .row { grid-template-columns: 1fr; }
   }
 
-  /* ===== BURN CALLOUT (red, deflationary) ===== */
+  /* ===== BURN CALLOUT V2 (donut chart design) ===== */
+  .burn-callout-v2 {
+    margin-top: 28px;
+    border-radius: 28px;
+    background:
+      radial-gradient(680px 360px at 78% 30%, rgba(255,90,31,0.18), transparent 60%),
+      linear-gradient(180deg, rgba(28,7,5,0.95), rgba(15,4,3,0.95));
+    border: 1px solid rgba(255,90,31,0.20);
+    padding: 38px 44px;
+    color: #fff;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    align-items: center;
+    box-shadow: 0 28px 60px rgba(0,0,0,0.45);
+  }
+  @media (max-width: 880px){ .burn-callout-v2 { grid-template-columns: 1fr; padding: 28px; } }
+
+  .burn-v2-eyebrow {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: #ff8a3d;
+    background: rgba(255,90,31,0.10);
+    border: 1px solid rgba(255,90,31,0.34);
+    padding: 5px 12px; border-radius: 99px; font-weight: 800;
+    margin-bottom: 22px;
+  }
+  .burn-v2-left h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(38px, 5.5vw, 64px);
+    font-weight: 900; letter-spacing: -1.4px; line-height: 1.0;
+    margin: 0 0 18px;
+    color: #fff;
+  }
+  .burn-v2-left h2 .accent {
+    background: linear-gradient(135deg, #ff5a3c, #ff8a3d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .burn-v2-left p {
+    color: rgba(255,255,255,0.62);
+    font-size: 14.5px; line-height: 1.65;
+    margin: 0 0 22px;
+    max-width: 420px;
+  }
+  .burn-v2-stats {
+    display: grid; grid-template-columns: auto auto; gap: 36px;
+    margin-bottom: 24px;
+  }
+  .burn-v2-stat .sk {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: rgba(255,255,255,0.40); font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .burn-v2-stat .sv {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px; font-weight: 800;
+    line-height: 1;
+  }
+  .burn-v2-stat .sv.accent {
+    background: linear-gradient(135deg, #ff5a3c, #ff8a3d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .burn-v2-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 22px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 99px;
+    color: #fff; font-weight: 700; font-size: 13.5px;
+    text-decoration: none; transition: all 0.18s ease;
+  }
+  .burn-v2-cta:hover { border-color: #ff8a3d; color: #ff8a3d; }
+
+  .burn-v2-right {
+    position: relative;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 20px;
+    padding: 22px;
+    min-height: 320px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .burn-v2-right .right-label {
+    position: absolute;
+    top: 14px; left: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 1.8px; text-transform: uppercase;
+    color: rgba(255,255,255,0.40); font-weight: 800;
+  }
+  .donut-wrap {
+    display: flex; align-items: center; gap: 26px;
+    width: 100%; justify-content: center;
+  }
+  /* The donut disc — SVG + centered text live together inside this
+     position:relative container so the center text aligns to the SVG,
+     not to the whole flex row (which includes the legend). */
+  .donut-disc {
+    position: relative;
+    width: 230px; height: 230px;
+    flex-shrink: 0;
+  }
+  .donut-svg { width: 100%; height: 100%; display: block; }
+  .donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    pointer-events: none;
+    padding: 0 28px;   /* keep the value safely inside the inner hole */
+  }
+  .donut-center .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: rgba(255,255,255,0.40); font-weight: 800;
+  }
+  .donut-center .val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 19px; font-weight: 800;
+    line-height: 1.05;
+    margin-top: 6px;
+    background: linear-gradient(135deg, #ff5a3c, #ff8a3d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .donut-legend {
+    display: flex; flex-direction: column; gap: 8px;
+    font-size: 12.5px;
+    min-width: 110px;
+  }
+  .donut-legend .lg {
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,0.78);
+  }
+  .donut-legend .lg .sw { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .donut-legend .lg .lg-name { white-space: nowrap; }
+  .donut-legend .lg .lg-pct {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(255,255,255,0.45); font-size: 11px;
+  }
+
+  /* hide the old burn callout entirely */
+  .burn-callout { display: none !important; }
+
+  /* ===== BURN CALLOUT (red, deflationary) — legacy, hidden ===== */
   .burn-callout {
     margin-top: 28px;
     padding: 44px;
@@ -1143,8 +1845,42 @@
   .lenis.lenis-smooth iframe { pointer-events: none; }
 
   /* ===== WALLET (nav) ===== */
-  .wallet-btn {
+  /* Non-interactive "Live on Solana" pill sits immediately left of the
+     Connect Phantom button. Pure indicator — no link, no hover behavior. */
+  .live-pill {
     margin-left: 22px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--green-soft);
+    border: 1px solid rgba(0,168,90,0.25);
+    color: var(--green-dark);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 6px 12px 6px 10px;
+    border-radius: 100px;
+    vertical-align: middle;
+    cursor: default;
+    user-select: none;
+  }
+  [data-theme="dark"] .live-pill { color: var(--green-bright); }
+  .live-pill .sol-logo {
+    width: 12px; height: 12px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .live-pill .sol-logo svg { width: 100%; height: 100%; display: block; }
+  .live-pill .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px var(--green-glow);
+    animation: pulse 2.5s infinite;
+  }
+  .wallet-btn {
+    margin-left: 12px;
     background: var(--green); color: #fff; border: 0;
     font-family: inherit; font-size: 12px; font-weight: 700;
     padding: 7px 16px; border-radius: 100px; cursor: pointer;
@@ -2038,7 +2774,8 @@
     }
     .nav .links a { margin-left: 0; }
     .nav .wallet-btn,
-    .nav .wallet-pill { margin-left: 0; }
+    .nav .wallet-pill,
+    .nav .live-pill { margin-left: 0; }
   }
 
   /* ===== FOOTER ===== */
@@ -2133,6 +2870,13 @@
           <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
         </svg>
       </button>
+      <span class="live-pill" aria-label="Live on Solana">
+        <span class="live-dot" aria-hidden="true"></span>
+        <span class="sol-logo" aria-hidden="true">
+          <svg viewBox="0 0 397.7 311.7" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="solGradNav" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#00ffa3"/><stop offset="1" stop-color="#dc1fff"/></linearGradient></defs><path fill="url(#solGradNav)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGradNav)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGradNav)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1z"/></svg>
+        </span>
+        <span>Live on Solana</span>
+      </span>
       <button class="wallet-btn" id="navConnect">Connect Phantom</button>
       <span class="wallet-pill" id="navWallet" style="display:none;">
         <span class="addr" id="navAddr"></span>
@@ -2289,77 +3033,261 @@
     Funded by trading fees and powered by the conviction of farting degens.
   </p>
 
-  <!-- FEATURED -->
-  <div class="section-header">
-    <h2>Featured</h2>
-    <span class="meta">flagship · available now</span>
+  <!-- THE ECOSYSTEM -->
+  <div class="eco-header" id="apps">
+    <div class="left">
+      <h2>The Ecosystem</h2>
+      <div class="sub">Funded by trading fees and powered by the conviction of farting degens.</div>
+    </div>
+    <span class="view-all-btn" id="ecoCountBadge">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      VIEW ALL APPS <span class="count" id="ecoCount">21</span>
+    </span>
   </div>
 
-  <a href="fartcup.html" class="featured-link">
-  <div class="featured-card glow">
-    <div class="featured-icon" style="background: linear-gradient(135deg, #0a7d3a 0%, #f5c542 100%); box-shadow: 0 12px 36px rgba(10,125,58,0.40);">
-      <svg viewBox="0 0 64 64" width="58%" height="58%" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style="display:block;">
-        <g fill="none" stroke="#ffffff" stroke-width="3.2" stroke-linejoin="round" stroke-linecap="round">
-          <circle cx="32" cy="32" r="22"/>
-          <polygon points="32,20 42,27.5 38.2,39.5 25.8,39.5 22,27.5" fill="#ffffff" stroke="#ffffff" stroke-width="2"/>
-          <path d="M32 20 V10 M42 27.5 L51 24 M38.2 39.5 L44 49 M25.8 39.5 L20 49 M22 27.5 L13 24"/>
-        </g>
-      </svg>
-    </div>
-    <div class="featured-meta">
-      <div class="label">Hot Right Now</div>
-      <h3>Fart Cup</h3>
-      <div class="tagline">An alternative way to "bet" on the World Cup</div>
-      <p class="desc">
-        A community-made World Cup parody — every nation gets its own FART coin. Pick your
-        country, hold the bag, talk trash. And it all feeds the ecosystem:
-        <strong style="color:#bbf7d0;">every trade buys back and burns $FARTPRINT</strong>.
-        Pure fun, zero guarantees — don't take it too seriously.
-      </p>
-      <div class="top3" id="top3-fartcup">
-        <div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>
-        <div class="t3-empty">Loading the hottest nations…</div>
+  <!-- FLAGSHIP + 2x2 -->
+  <div class="eco-flagship-row">
+    <!-- FLAGSHIP: Fart Cup -->
+    <a href="fartcup.html" class="flag-card" data-bg-slot="fartcup">
+      <div class="top-row">
+        <span class="flag-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+          </svg>
+        </span>
+        <span class="flag-pill">FLAGSHIP</span>
       </div>
-    </div>
-    <div class="featured-actions">
-      <span class="get-btn">LAUNCH</span>
-    </div>
-  </div>
-  </a>
-
-  <a href="derivatives.html" class="featured-link" style="margin-top:18px;">
-  <div class="featured-card">
-    <div class="featured-icon">⌐</div>
-    <div class="featured-meta">
-      <div class="label">Editor's Pick</div>
-      <h3>Derivatives</h3>
-      <div class="tagline">Mint your own FART derivative on Solana</div>
-      <p class="desc">
-        Spawn a FART-prefixed token on Solana via any launchpad. Pick a 10-character
-        suffix, upload an image, mint to chain in one signature. Every derivative
-        <strong style="color:#bbf7d0;">inherits the $FARTPRINT bloodline</strong> and lands
-        instantly in the public family gallery. The fastest way to add your own brap to the
-        ecosystem.
-      </p>
-      <div class="top3" id="top3-derivatives">
-        <div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>
-        <div class="t3-empty">Loading the family leaderboard…</div>
+      <div class="flag-content">
+        <h3>Fart Cup</h3>
+        <p>A community-made World Cup parody. Pick your country, hold the bag, talk trash. Every trade buys back and burns $FARTPRINT.</p>
+        <div class="flag-actions">
+          <span class="flag-launch">Launch App</span>
+          <span class="flag-live">Live Now</span>
+        </div>
       </div>
-    </div>
-    <div class="featured-actions">
-      <span class="get-btn">LAUNCH</span>
+    </a>
+
+    <!-- 2x2 FEATURED -->
+    <div class="eco-2x2">
+      <a href="terminal.html" class="eco-mini-card" data-bg-slot="terminal">
+        <span class="em-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+        </span>
+        <h4>Terminal</h4>
+        <div class="em-cat">Hub · Data</div>
+        <p>Matrix-vibes on-chain dashboard. Live price, pools, transactions, and a chat gated for holders.</p>
+        <div class="em-bottom"><span class="em-live">Live</span><span class="em-arrow">→</span></div>
+      </a>
+
+      <a href="burner.html" class="eco-mini-card" data-bg-slot="burner">
+        <span class="em-icon red">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+        </span>
+        <h4>FartBurner</h4>
+        <div class="em-cat">Burn · Deflation</div>
+        <p>Permanently destroy $FARTPRINT tokens. Reduce supply. Increase scarcity.</p>
+        <div class="em-bottom"><span class="em-live">Live</span><span class="em-arrow">→</span></div>
+      </a>
+
+      <a href="fartwheel.html" class="eco-mini-card" data-bg-slot="fartwheel">
+        <span class="em-icon amber">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/><line x1="2" y1="12" x2="8" y2="12"/><line x1="16" y1="12" x2="22" y2="12"/></svg>
+        </span>
+        <h4>FartWheel</h4>
+        <div class="em-cat">Dashboard</div>
+        <p>The ecosystem burn dashboard. See how much $FARTPRINT each app has burned, live.</p>
+        <div class="em-bottom"><span class="em-live">Live</span><span class="em-arrow">→</span></div>
+      </a>
+
+      <a href="derivatives.html" class="eco-mini-card" data-bg-slot="derivatives">
+        <span class="em-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="3" r="2.5"/><circle cx="6" cy="21" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M6 5.5v13"/><path d="M6 12c0-3 2-6 5-6h4"/></svg>
+        </span>
+        <h4>Derivatives</h4>
+        <div class="em-cat">Mint · Fork</div>
+        <p>Spawn your own FART-prefixed derivative on Solana. Inherit the bloodline. One signature to launch.</p>
+        <div class="em-bottom"><span class="em-live">Live</span><span class="em-arrow">→</span></div>
+      </a>
     </div>
   </div>
-  </a>
 
-  <!-- ALL APPS -->
-  <div class="section-header" id="apps">
-    <h2>All Apps</h2>
-    <div class="chips">
-      <button class="chip active" data-filter="all">All</button>
-      <button class="chip" data-filter="live">Live</button>
-      <button class="chip" data-filter="indev">In Dev</button>
+  <!-- MORE APPS — horizontal list, 5 per row, first row visible, expandable -->
+  <div class="more-apps-header">
+    <div class="left">
+      <h2>More Apps</h2>
+      <div class="sub">Full Ecosystem · <span id="moreAppsCount">21</span> Apps</div>
     </div>
+    <span class="view-all-btn" id="moreAppsViewAll">
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      View All Apps <span class="count" id="moreAppsRestCount">+9</span>
+    </span>
+  </div>
+
+  <div class="more-apps-list" id="moreAppsList">
+    <!-- Row 1 (visible) — 5 picks -->
+    <a href="fartchart.html" class="more-card">
+      <span class="em-icon cyan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-7"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartChart</h4>
+        <div class="mc-cat">Analytics · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartforum.html" class="more-card">
+      <span class="em-icon green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartForum</h4>
+        <div class="mc-cat">Forum · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartidler.html" class="more-card">
+      <span class="em-icon gold">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartIdler</h4>
+        <div class="mc-cat">Idle · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartflip.html" class="more-card">
+      <span class="em-icon amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartFlip</h4>
+        <div class="mc-cat">Gambling · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartmessage.html" class="more-card">
+      <span class="em-icon green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartMessage</h4>
+        <div class="mc-cat">Messaging · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <!-- Rest (hidden until expanded) — 9 more -->
+    <a href="fartlist.html" class="more-card hidden-rest">
+      <span class="em-icon amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartList</h4>
+        <div class="mc-cat">Coin Board · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartworker.html" class="more-card hidden-rest">
+      <span class="em-icon green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartWorker</h4>
+        <div class="mc-cat">Grants · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartmemes.html" class="more-card hidden-rest">
+      <span class="em-icon pink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartMemes</h4>
+        <div class="mc-cat">Gallery · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartswap.html" class="more-card hidden-rest">
+      <span class="em-icon amber">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17l-4-4 4-4"/><path d="M3 13h14"/><path d="M17 7l4 4-4 4"/><path d="M21 11H7"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartSwap</h4>
+        <div class="mc-cat">Swap · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartpoop500.html" class="more-card hidden-rest">
+      <span class="em-icon blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>Fart&amp;Poop500</h4>
+        <div class="mc-cat">Index · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartanalyzer.html" class="more-card hidden-rest">
+      <span class="em-icon purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 3 5-7"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartAnalyzer</h4>
+        <div class="mc-cat">Compare · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener" class="more-card hidden-rest">
+      <span class="em-icon green">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>Staking</h4>
+        <div class="mc-cat">Stake · Live</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="fartnft.html" class="more-card hidden-rest">
+      <span class="em-icon purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartNFT</h4>
+        <div class="mc-cat">NFT · In Dev</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+
+    <a href="#" class="more-card hidden-rest">
+      <span class="em-icon cyan">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.5 8.5 0 0 1-3.8-.9L3 21l1.9-5.7A8.38 8.38 0 0 1 4 11.5 8.5 8.5 0 0 1 12.5 3 8.38 8.38 0 0 1 21 11.5z"/></svg>
+      </span>
+      <div class="mc-text">
+        <h4>FartRoom</h4>
+        <div class="mc-cat">Social · In Dev</div>
+      </div>
+      <span class="em-arrow">→</span>
+    </a>
+  </div>
+
+  <div class="eco-expand-row">
+    <button class="eco-expand-btn" id="ecoExpandBtn" type="button">Show all apps ↓</button>
   </div>
 
   <div class="apps-grid">
@@ -2698,38 +3626,137 @@
     <button class="apps-toggle" id="appsToggle">Show all apps</button>
   </div>
 
+  <!-- TOP PERFORMERS -->
+  <div class="tp-header">
+    <h2>Top Performers</h2>
+    <div class="sub">The hottest coins across the ecosystem right now.</div>
+  </div>
+
+  <div class="tp-grid">
+    <!-- FART CUP -->
+    <a href="fartcup.html" class="tp-card cup" id="tp-fartcup">
+      <div class="tp-head">
+        <span class="tp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+            <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+            <path d="M4 22h16"/>
+            <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+            <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+            <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
+          </svg>
+        </span>
+        <div>
+          <div class="tp-title">Fart Cup</div>
+          <div class="tp-kicker">TOP 3 COUNTRIES</div>
+        </div>
+        <span class="tp-live">LIVE</span>
+      </div>
+      <div id="tpc-fartcup">
+        <div class="podium"></div>
+        <div class="tp-list"></div>
+      </div>
+      <div class="tp-foot">
+        <span class="tp-meta" id="tpFootCup">— countries competing</span>
+        <span class="tp-view">View All →</span>
+      </div>
+    </a>
+
+    <!-- DERIVATIVES -->
+    <a href="derivatives.html" class="tp-card derivs" id="tp-derivs">
+      <div class="tp-head">
+        <span class="tp-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="6"  cy="3"  r="2.5"/>
+            <circle cx="6"  cy="21" r="2.5"/>
+            <circle cx="18" cy="6"  r="2.5"/>
+            <path d="M6 5.5v13"/>
+            <path d="M6 12c0-3 2-6 5-6h4"/>
+          </svg>
+        </span>
+        <div>
+          <div class="tp-title">Derivatives</div>
+          <div class="tp-kicker">TOP 3 FORKS</div>
+        </div>
+        <span class="tp-live">LIVE</span>
+      </div>
+      <div id="tpc-derivs">
+        <div class="podium"></div>
+        <div class="tp-list"></div>
+      </div>
+      <div class="tp-foot">
+        <span class="tp-meta" id="tpFootDerivs">— derivatives spawned</span>
+        <span class="tp-view">View All →</span>
+      </div>
+    </a>
+  </div>
+
   <!-- STAKING CALLOUT -->
   <section class="stake-callout" id="staking">
     <div class="stake-info">
-      <span class="stake-eyebrow">Proof-of-Burn Staking · Printr</span>
-      <h2>Stake $FARTPRINT, <br class="m-br"><span class="accent">earn the fees</span></h2>
+      <span class="stake-eyebrow">▲ Proof-of-Burn Staking</span>
+      <h2>Stake $FARTPRINT,<br><span class="accent">earn the fees.</span></h2>
       <p>
-        Every trade across the ecosystem pays a fee — and 100% of it flows to stakers. Lock your
-        $FARTPRINT on Printr and you earn your share of trading fees from the whole $FARTPRINT
-        economy, streamed continuously. The more you stake, the bigger your slice of the gas.
+        Every trade across the ecosystem pays a fee &mdash; and 100% of it flows to stakers.
+        Lock your tokens on Printr and earn your share of the economy, streamed continuously.
       </p>
-      <a class="stake-cta" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Stake on Printr ↗</a>
+      <a class="stake-cta" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Stake on Printr &rarr;</a>
     </div>
     <div class="stake-stats">
-      <div class="stake-stat">
+      <div class="stake-stat big">
         <div class="sk">Currently Staked</div>
-        <div class="sv accent" id="stakePctBig">—</div>
+        <div class="sv" id="stakePctBig">—</div>
         <div class="sk2">of total supply</div>
       </div>
-      <div class="stake-stat">
-        <div class="sk">Tokens Locked</div>
-        <div class="sv" id="stakeAmtBig">—</div>
-        <div class="sk2">$FARTPRINT staked</div>
-      </div>
-      <div class="stake-stat">
-        <div class="sk">Fees to Stakers</div>
-        <div class="sv">100%</div>
-        <div class="sk2">of every trade</div>
+      <div class="row">
+        <div class="stake-stat">
+          <div class="sk">Tokens Locked</div>
+          <div class="sv" id="stakeAmtBig">—</div>
+          <div class="sk2">$FARTPRINT</div>
+        </div>
+        <div class="stake-stat">
+          <div class="sk">Staker Share</div>
+          <div class="sv">100%</div>
+          <div class="sk2">of all fees</div>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- BURN CALLOUT -->
+  <!-- BURN CALLOUT V2 (new donut design) -->
+  <section class="burn-callout-v2" id="burning-v2">
+    <div class="burn-v2-left">
+      <span class="burn-v2-eyebrow">▲ Deflationary Engine</span>
+      <h2>$FARTPRINT<br><span class="accent">burned forever.</span></h2>
+      <p>Every app buys back and incinerates $FARTPRINT. Permanent, on-chain, and irreversible. Supply only goes down.</p>
+      <div class="burn-v2-stats">
+        <div class="burn-v2-stat">
+          <div class="sk">Total Burned</div>
+          <div class="sv accent" id="burnV2Total">—</div>
+        </div>
+        <div class="burn-v2-stat">
+          <div class="sk">Supply Burned</div>
+          <div class="sv" id="burnV2Pct">—</div>
+        </div>
+      </div>
+      <a class="burn-v2-cta" href="fartwheel.html">Open FartWheel <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+    </div>
+    <div class="burn-v2-right">
+      <span class="right-label">Burn Distribution</span>
+      <div class="donut-wrap">
+        <div class="donut-disc">
+          <svg class="donut-svg" id="burnDonut" viewBox="0 0 120 120"></svg>
+          <div class="donut-center">
+            <div class="lbl">Total Burn</div>
+            <div class="val" id="burnDonutTotal">—</div>
+          </div>
+        </div>
+        <div class="donut-legend" id="burnDonutLegend"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LEGACY BURN CALLOUT (hidden via CSS, still here for the transaction log + mini-wheel) -->
   <section class="burn-callout" id="burning">
     <div class="burn-info">
       <span class="burn-eyebrow">Proof-of-Burn · Deflationary</span>
@@ -2831,8 +3858,12 @@
     </div>
   </div>
 
-  <!-- FARTIDLER · paid-access module -->
-  <div class="idler-mod" id="idlerMod">
+  <!-- FARTIDLER · paid-access module — HIDDEN per design.
+       The block stays in the DOM (display:none) so the JS that updates
+       #idlerPlayers / #idlerBurned / #idlerPool / #idlerTopRows etc. keeps
+       finding its targets and the FartIdler app itself (cards + wheel +
+       burn-log feed) continues working untouched. -->
+  <div class="idler-mod" id="idlerMod" style="display:none;" aria-hidden="true">
     <div class="idler-mod-head">
       <span class="icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -3313,11 +4344,18 @@ function renderBurn(){
   const usd = document.getElementById("burnUsdBig");
   const pct = document.getElementById("burnPctBig");
   const wm  = document.getElementById("wheelMiniTotal");
+  // New V2 donut callout fields
+  const v2tot = document.getElementById("burnV2Total");
+  const v2pct = document.getElementById("burnV2Pct");
+  const v2dt  = document.getElementById("burnDonutTotal");
   if(BURNED != null){
     const pctText = ((BURNED / INITIAL_SUPPLY) * 100).toFixed(2) + "%";
     const burnedTxt = fmtBurn(BURNED);
     if(tot) tot.textContent = burnedTxt;
     if(pct) pct.textContent = pctText;
+    if(v2tot) v2tot.textContent = burnedTxt;
+    if(v2pct) v2pct.textContent = pctText;
+    if(v2dt)  v2dt.textContent  = burnedTxt;
     if(usd) usd.textContent = (FP_PRICE != null)
       ? "$" + Math.round(BURNED * FP_PRICE).toLocaleString(undefined, { maximumFractionDigits: 0 })
       : "$—";
@@ -3435,6 +4473,49 @@ async function refreshMiniWheel(){
     });
     wheel.style.background = `conic-gradient(${stops.join(", ")})`;
   }
+  // Mirror the segments into the new burn-callout-v2 donut chart.
+  renderBurnDonut(MINI_SEGMENTS);
+}
+
+// ===== Burn donut (SVG arcs, fed by MINI_SEGMENTS) =====
+function renderBurnDonut(segments){
+  const svg = document.getElementById("burnDonut");
+  const legend = document.getElementById("burnDonutLegend");
+  if(!svg || !legend) return;
+  if(!segments || !segments.length){
+    svg.innerHTML = "";
+    legend.innerHTML = "";
+    return;
+  }
+  // SVG arcs (stroke-based donut). viewBox 0 0 120 120, radius 50, stroke 14.
+  const R = 50, C = 60, STROKE = 14;
+  const CIRC = 2 * Math.PI * R;
+  // Build arc segments by mapping each segment's percentage to stroke-dasharray length
+  let offset = 0;
+  let html = `<circle cx="${C}" cy="${C}" r="${R}" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="${STROKE}"></circle>`;
+  segments.forEach(s => {
+    if(s.pct <= 0) return;
+    const len = (s.pct / 100) * CIRC;
+    html += `<circle cx="${C}" cy="${C}" r="${R}" fill="none"
+              stroke="${s.color}" stroke-width="${STROKE}"
+              stroke-dasharray="${len.toFixed(2)} ${(CIRC - len).toFixed(2)}"
+              stroke-dashoffset="${(-offset).toFixed(2)}"
+              transform="rotate(-90 ${C} ${C})"
+              stroke-linecap="butt"></circle>`;
+    offset += len;
+  });
+  svg.innerHTML = html;
+  // Legend — every burn source from the wheel (FartBurner, FartSwap, Fart Cup,
+  // FartForum, FartIdler, Incineration) sorted by share. No "Other" bucket;
+  // every source gets its own row so the donut and legend match the wheel 1:1.
+  const sorted = [...segments].sort((a, b) => b.pct - a.pct);
+  legend.innerHTML = sorted.map(s => `
+    <div class="lg">
+      <span class="sw" style="background:${s.color};"></span>
+      <span class="lg-name">${escHtml(s.name)}</span>
+      <span class="lg-pct">${s.pct >= 1 ? s.pct.toFixed(0) : s.pct.toFixed(1)}%</span>
+    </div>
+  `).join("");
 }
 (function bindMiniWheelHover(){
   const wheel = document.getElementById("wheelMini");
@@ -3675,7 +4756,28 @@ function applyAppView(){
       btn.parentElement.style.display = 'none';
     }
   }
+
+  // Sync the "VIEW ALL APPS (N)" count badge in the new ecosystem header.
+  const countEl = document.getElementById('ecoCount');
+  if(countEl) countEl.textContent = String(all.length);
 }
+
+// Clicking the VIEW ALL APPS badge or "Show all apps" button toggles the
+// expandable rest section (FartSwap / Fart&Poop500 / FartAnalyzer / Staking
+// / FartNFT / FartRoom — the apps below the featured flagship + 2x2 + 2 rows).
+function _ecoToggleRest(open){
+  const rest = document.getElementById('ecoRest');
+  const btn  = document.getElementById('ecoExpandBtn');
+  if(!rest) return;
+  const willOpen = (open == null) ? !rest.classList.contains('expanded') : open;
+  rest.classList.toggle('expanded', willOpen);
+  if(btn) btn.textContent = willOpen ? 'Show less ↑' : 'Show all apps ↓';
+  if(willOpen) rest.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+document.addEventListener('click', (e) => {
+  if(e.target.closest('#ecoCountBadge')) { _ecoToggleRest(true); }
+  if(e.target.closest('#ecoExpandBtn'))  { _ecoToggleRest();     }
+});
 
 // Filter chips
 document.querySelectorAll('.chip').forEach(chip => {
@@ -3931,6 +5033,37 @@ async function submitPvReview(){
       if(card) openPreview(card);
     }, true);
   });
+  // NEW: flagship + 2x2 + more-grid cards (eco-mini-card / flag-card) also
+  // route to the per-app preview. Each card's <h4> (or <h3> for flagship)
+  // matches the name of the underlying .app-card in the (hidden) apps-grid.
+  document.querySelectorAll(".flag-card, .eco-mini-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const name = (card.querySelector("h3, h4")?.textContent || "").trim();
+      const original = findCardByName(name);
+      if(original) openPreview(original);
+      else {
+        // Fallback if the apps-grid copy doesn't exist (e.g. external links)
+        const href = card.getAttribute("href");
+        if(href && href !== "#") window.location.href = href;
+      }
+    }, true);
+  });
+  // Top Performers podium cards also route to the per-app preview.
+  document.querySelectorAll(".tp-card").forEach(card => {
+    card.addEventListener("click", (e) => {
+      // Don't capture clicks on the "View All →" link — let those flow through.
+      e.preventDefault(); e.stopPropagation();
+      const isCup = card.classList.contains("cup");
+      const name = isCup ? "Fart Cup" : "Derivatives";
+      const original = findCardByName(name);
+      if(original) openPreview(original);
+      else {
+        const href = card.getAttribute("href");
+        if(href) window.location.href = href;
+      }
+    }, true);
+  });
 
   fetchReviews();
 
@@ -4042,18 +5175,59 @@ function fmtMcapShort(n){
 }
 
 function renderTop3(elId, rows, emptyMsg){
-  const el = $id(elId); if(!el) return;
-  // No live tokens to rank → hide the whole widget rather than show an empty header.
-  if(!rows.length){ el.style.display = "none"; return; }
-  el.style.display = "";
-  const head = `<div class="top3-head"><span class="live-dot"></span>Top 3 Tokens · live</div>`;
-  el.innerHTML = head + `<div class="top3-list">` + rows.map((t, i) => `
-    <div class="t3-row" style="animation-delay:${(i*0.06).toFixed(2)}s">
-      <span class="t3-rank r${i+1}">#${i+1}</span>
-      <span class="t3-av">${t.img ? `<img src="${t.img}" alt="" onerror="this.parentNode.textContent='${escHtml((t.sym||'').slice(0,2))}';this.remove();">` : escHtml((t.sym||'?').slice(0,2))}</span>
-      <span class="t3-sym">$${escHtml(t.sym || '')}</span>
-      <span class="t3-mcap">${fmtMcapShort(t.mcap)}</span>
-    </div>`).join("") + `</div>`;
+  // New podium layout. elId is the legacy id; we route to the new tp-card by mapping.
+  const tpMap = { "top3-fartcup": "tpc-fartcup", "top3-derivatives": "tpc-derivs" };
+  const targetId = tpMap[elId] || elId;
+  const root = $id(targetId);
+  if(!root) return;
+  const podEl  = root.querySelector(".podium");
+  const listEl = root.querySelector(".tp-list");
+  if(!podEl || !listEl) return;
+
+  if(!rows.length){
+    podEl.innerHTML = "";
+    listEl.innerHTML = `<div class="t3-empty" style="padding:30px 12px;text-align:center;color:rgba(255,255,255,.5);font-size:13px;">${escHtml(emptyMsg || "Loading…")}</div>`;
+    return;
+  }
+
+  // Pad to 3 entries so the podium always has #1 / #2 / #3
+  const r1 = rows[0] || null;
+  const r2 = rows[1] || null;
+  const r3 = rows[2] || null;
+
+  function podItem(t, rank){
+    if(!t) return `<div class="pod-item pod-${rank}"><div class="pod-card"><div class="pod-rank">#${rank}</div><div class="pod-name" style="opacity:.5;">—</div></div></div>`;
+    const code = String(t.sym || "").slice(0,3).toUpperCase();
+    const crown = rank === 1
+      ? `<div class="pod-crown"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 16L3 7l5 4 4-7 4 7 5-4-2 9H5zm0 2h14v2H5v-2z"/></svg></div>`
+      : "";
+    return `
+      <div class="pod-item pod-${rank}">
+        ${crown}
+        <div class="pod-pos">${escHtml(code || "?")}</div>
+        <div class="pod-card">
+          <div class="pod-rank">#${rank}</div>
+          <div class="pod-name">${escHtml(t.sym || "?")}</div>
+          ${rank === 1 ? `<div class="pod-mcap">${fmtMcapShort(t.mcap)}</div>` : `<div class="pod-mcap">${fmtMcapShort(t.mcap)}</div>`}
+        </div>
+      </div>
+    `;
+  }
+  podEl.innerHTML = podItem(r2, 2) + podItem(r1, 1) + podItem(r3, 3);
+
+  listEl.innerHTML = rows.map((t, i) => {
+    const rank = i + 1;
+    const code = String(t.sym || "").slice(0,3).toUpperCase();
+    return `
+      <div class="tp-row">
+        <span class="tp-r r${rank}">#${rank}</span>
+        <span class="tp-av">${t.img ? `<img src="${t.img}" alt="" onerror="this.parentNode.textContent='${escHtml((t.sym||'?').slice(0,2))}';this.remove();">` : escHtml((t.sym||'?').slice(0,2))}</span>
+        <span class="tp-nm">${escHtml(t.sym || '?')}<small>$${escHtml((t.sym||'').slice(0,8))}</small></span>
+        <span class="tp-price">${fmtMcapShort(t.mcap)}</span>
+        <span class="tp-pct">${escHtml(code)}</span>
+      </div>
+    `;
+  }).join("");
 }
 
 const _fcImg = {};   // mint -> pump.fun image_uri cache
@@ -4101,6 +5275,8 @@ async function loadTop3FartCup(){
     mcap: c.mcap,
   }));
   renderTop3("top3-fartcup", rows, "Nation coins warming up — check back soon.");
+  const foot = document.getElementById("tpFootCup");
+  if(foot) foot.textContent = `${FARTCUP_COINS.length} countries competing`;
 }
 
 // Per-derivative image cache (so we don't keep re-fetching the same pump.fun image_uri)
@@ -4212,6 +5388,8 @@ async function loadTop3Derivatives(){
 
   const rows = top.map(t => ({ sym: t.sym, img: imgOf(t), mcap: t.mcap }));
   renderTop3("top3-derivatives", rows, "Freshly minted — leaderboard fills as they trade.");
+  const foot = document.getElementById("tpFootDerivs");
+  if(foot) foot.textContent = `${all.length} derivatives spawned`;
 }
 
 // ===== Latest from FartForum =====
