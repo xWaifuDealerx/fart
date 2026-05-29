@@ -1,0 +1,19 @@
+{
+  "name": "fartprint-ecosystem",
+  "version": "1.0.0",
+  "description": "$FARTPRINT ecosystem — static site + Cloudflare Pages Functions",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler pages dev . --port 8788",
+    "deploy": "wrangler pages deploy ."
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.3",
+    "@solana/spl-token": "^0.4.8",
+    "bs58": "^5.0.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.78.0"
+  }
+}

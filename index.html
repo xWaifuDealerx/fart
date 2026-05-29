@@ -6,6 +6,15 @@
 <title>FARTPRINT — The Ecosystem</title>
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="apple-touch-icon" href="logo.png">
+<!-- ▼ Solana Saga / PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2ee06b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FARTPRINT">
+<script src="mwa-shim.js" defer></script>
+<!-- ▲ Solana Saga / PWA -->
 <meta name="description" content="The $FARTPRINT ecosystem. A constellation of crypto apps — Terminal, Clench, Gasbridge, Whiff, Methane, and more. Built for humans, agent-friendly, funded by trading fees on Solana. The printr has a fat ass.">
 <meta property="og:title" content="FARTPRINT — The Ecosystem">
 <meta property="og:description" content="One fat-ass printr. The cleanest hacker terminal in crypto, plus a roadmap of bridges, staking, alerts, AI agents, and more.">
@@ -1554,6 +1563,64 @@
     .idler-mod { padding: 22px 18px; }
   }
 
+  /* ===== WHITEPAPER CTA ===== */
+  .wp-cta-wrap{
+    margin-top: 56px;
+    display: flex; justify-content: center;
+  }
+  .wp-cta{
+    display: flex; align-items: center; gap: 18px;
+    width: 100%; max-width: 720px;
+    padding: 22px 26px;
+    border-radius: 20px;
+    text-decoration: none;
+    color: #fff;
+    background:
+      radial-gradient(220px 220px at 0% 0%, rgba(46,224,107,0.30), transparent 60%),
+      radial-gradient(220px 200px at 100% 100%, rgba(255,176,32,0.22), transparent 60%),
+      linear-gradient(135deg, #062614 0%, #0d3a22 60%, #16573a 100%);
+    border: 1px solid rgba(46,224,107,.30);
+    box-shadow: 0 16px 40px rgba(0,168,90,0.22);
+    transition: all 0.18s ease;
+  }
+  .wp-cta:hover{
+    transform: translateY(-2px);
+    box-shadow: 0 20px 56px rgba(0,168,90,0.32);
+    border-color: rgba(46,224,107,.55);
+  }
+  .wp-cta-icon{
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, var(--green-bright), var(--green));
+    box-shadow: 0 6px 16px rgba(46,224,107,0.42);
+    display: grid; place-items: center;
+    color: #04230f; flex-shrink: 0;
+  }
+  .wp-cta-icon svg{ width: 24px; height: 24px; }
+  .wp-cta-body{ display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+  .wp-cta-title{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 19px; font-weight: 900; letter-spacing: -0.3px;
+    color: #fff;
+  }
+  .wp-cta-sub{
+    color: rgba(255,255,255,.7);
+    font-size: 13px; font-weight: 500;
+  }
+  .wp-cta-go{
+    font-size: 26px; font-weight: 700;
+    color: var(--amber);
+    flex-shrink: 0;
+    transition: transform 0.18s ease;
+  }
+  .wp-cta:hover .wp-cta-go{ transform: translateX(4px); }
+  @media (max-width: 600px){
+    .wp-cta{ padding: 18px 20px; gap: 14px; }
+    .wp-cta-icon{ width: 44px; height: 44px; border-radius: 12px; }
+    .wp-cta-icon svg{ width: 20px; height: 20px; }
+    .wp-cta-title{ font-size: 16px; }
+    .wp-cta-sub{ font-size: 12px; }
+  }
+
   /* ===== APP STORE PRICE TAG (on app-cards) ===== */
   .app-card .price-tag{
     position: absolute;
@@ -3050,29 +3117,6 @@
     </div>
   </section>
 
-  <!-- MEME VAULT -->
-  <div class="section-header" id="memes">
-    <h2>Meme Vault</h2>
-    <a class="meta" href="fartmemes.html" style="color:var(--green); font-weight:600;">See all on FartMemes →</a>
-  </div>
-  <div class="meme-grid" id="memeGrid">
-    <a class="meme-card" href="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH444q_aQAAYvRh?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HHBINQLa0AAwcsc?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIQ9AgIa8AARYfi?format=jpg&name=medium" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIUBED3aIAA0vOF?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HH45laVaAAANvSI?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-    <a class="meme-card" href="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large"><img src="https://pbs.twimg.com/media/HIvA0uMbcAAjhXD?format=jpg&name=large" alt="$FARTPRINT meme" loading="lazy"></a>
-  </div>
-  <div style="display:flex;justify-content:center;margin-top:8px;">
-    <a href="fartmemes.html" class="apps-toggle" style="text-decoration:none;">Open the full gallery on FartMemes →</a>
-  </div>
-
-  <!-- MEME LIGHTBOX -->
-  <div class="meme-lb" id="memeLb">
-    <button class="meme-close" id="memeClose" aria-label="Close">×</button>
-    <img id="memeLbImg" src="" alt="$FARTPRINT meme">
-  </div>
-
   <!-- FOOTER -->
   <footer>
     <div class="left">
@@ -3080,6 +3124,7 @@
       <div class="quip">the printr has a phat ass 3~</div>
     </div>
     <div class="links">
+      <a href="whitepaper.html">Whitepaper</a>
       <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X</a>
       <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a>
       <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Solscan</a>
