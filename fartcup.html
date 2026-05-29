@@ -1712,20 +1712,35 @@ async function getTokenBalance(wallet, mint){
   }catch(_){ return 0; }
 }
 
-// Poll for the delta after a buy, then show how many tokens were received
+// Show the popup immediately, then poll for the delta and update the amount.
 async function showReceived(mint, ticker, code, before){
-  let received = 0;
-  for(let i = 0; i < 8; i++){
-    await new Promise(r => setTimeout(r, 2500));
-    const now = await getTokenBalance(FC.wallet, mint);
-    if(now > before + 1e-9){ received = now - before; break; }
-  }
+  // 1) Open the popup right away so the user gets instant feedback.
   const flag = $("recvFlag");
   flag.src = code ? `https://flagcdn.com/w160/${code}.png` : "";
   flag.style.display = code ? "" : "none";
-  $("recvAmt").textContent = received > 0 ? "+" + Math.round(received).toLocaleString() : "Bought!";
-  $("recvSub").textContent = "$" + ticker + (received > 0 ? " received" : " purchased");
+  $("recvAmt").textContent = "…";
+  $("recvSub").textContent = "Confirming $" + ticker + " purchase…";
   $("recvPop").classList.add("open");
+
+  // 2) Poll the chain quickly — first peek after 700ms, then every second.
+  // Stops as soon as the wallet shows the new tokens.
+  let received = 0;
+  await new Promise(r => setTimeout(r, 700));
+  for(let i = 0; i < 12; i++){
+    const now = await getTokenBalance(FC.wallet, mint);
+    if(now > before + 1e-9){ received = now - before; break; }
+    await new Promise(r => setTimeout(r, 1000));
+  }
+
+  // 3) Update the popup with the verified amount (whole tokens only).
+  if(received > 0){
+    $("recvAmt").textContent = "+" + Math.floor(received).toLocaleString();
+    $("recvSub").textContent = "$" + ticker + " received";
+  } else {
+    // Couldn't confirm via RPC — at least tell them the tx landed.
+    $("recvAmt").textContent = "Bought!";
+    $("recvSub").textContent = "$" + ticker + " purchased — check your wallet";
+  }
 }
 
 async function executeTrade(){
