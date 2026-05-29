@@ -1,61 +1,44 @@
 // ============================================================
-// sw.js — Service worker for the $FARTPRINT PWA
+// sw.js — KILL-SWITCH
 // ============================================================
-// Minimal, network-first strategy. We're a Solana ecosystem app —
-// almost every request needs the network for fresh on-chain data,
-// so we pass through fetches and only cache static shell files for
-// install-on-home-screen support.
+// The previous service worker intercepted every same-origin GET and
+// occasionally served stale / wrong content that interfered with the
+// Phantom wallet integration. This replacement does three things:
 //
-// Bumping CACHE_VERSION will purge old caches on next activate.
+//   1. Takes control immediately (skipWaiting + clients.claim).
+//   2. Deletes every cache the old SW created.
+//   3. Unregisters itself, then reloads any open client tabs once so
+//      they're no longer controlled by a service worker at all.
+//
+// After this lands, fresh visitors get no service worker, and any user
+// who had the old broken SW gets it auto-removed on their next visit.
 // ============================================================
 
-const CACHE_VERSION = "fp-v1";
-const APP_SHELL = [
-  "./",
-  "./index.html",
-  "./logo.png",
-  "./manifest.json",
-  "./mwa-shim.js",
-];
-
-self.addEventListener("install", (event) => {
-  // Pre-cache the shell so the app can launch from the home screen offline
-  event.waitUntil(
-    caches.open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL).catch(() => {}))
-      .then(() => self.skipWaiting())
-  );
-});
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)))
-    ).then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    // Wipe all caches
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    } catch (_) {}
+
+    // Take control so we can unregister
+    try { await self.clients.claim(); } catch (_) {}
+
+    // Unregister this SW
+    try { await self.registration.unregister(); } catch (_) {}
+
+    // Reload every controlled tab so they're no longer SW-controlled
+    try {
+      const clients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of clients) {
+        try { client.navigate(client.url); } catch (_) {}
+      }
+    } catch (_) {}
+  })());
 });
 
-self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  // Only handle GETs; never cache cross-origin RPC/API calls.
-  if (req.method !== "GET") return;
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-  // Don't cache API endpoints — always fresh on-chain state.
-  if (url.pathname.startsWith("/api/")) return;
-
-  // Network-first with cache fallback (so a tab that opens offline still
-  // gets the last-known HTML shell).
-  event.respondWith(
-    fetch(req)
-      .then((res) => {
-        // Don't pollute the cache with 4xx/5xx responses.
-        if (res && res.ok) {
-          const copy = res.clone();
-          caches.open(CACHE_VERSION).then((cache) => cache.put(req, copy).catch(()=>{}));
-        }
-        return res;
-      })
-      .catch(() => caches.match(req).then((cached) => cached || caches.match("./index.html")))
-  );
-});
+// Pass through every fetch — never intercept.
+self.addEventListener("fetch", () => {});

@@ -1,106 +1,91 @@
 // ============================================================
-// mwa-shim.js — Mobile Wallet Adapter / Phantom Mobile bridge
+// mwa-shim.js — Mobile wallet bridge (Phantom Mobile deep-link)
 // ============================================================
-// Loaded by every page in the $FARTPRINT ecosystem. Two jobs:
+// Two jobs:
 //
-//   1. On mobile browsers (Android Chrome, Solana Saga, iOS Safari) where
-//      `window.phantom.solana` doesn't exist, install a Phantom-shaped
-//      facade that, when `connect()` is called, deep-links the user into
-//      Phantom Mobile's in-app browser pointed at this very page.
-//      Inside Phantom Mobile, the real `window.phantom.solana` is
-//      injected by Phantom itself and every app continues working
-//      without any code changes.
+//   1. CLEAN UP — if an old service worker is registered (a previous
+//      version of this site shipped one that broke wallet flows), unregister
+//      it and clear all caches. Runs on every page load so stale SWs get
+//      auto-removed without any user action.
 //
-//   2. Register the service worker (`sw.js`) so the site becomes a
-//      proper Progressive Web App — installable on Solana Saga's home
-//      screen, with the right theme color, name, and icon from
-//      `manifest.json`.
+//   2. MOBILE WALLET BRIDGE — on mobile browsers (Android Chrome, Solana
+//      Saga, iOS Safari) where `window.phantom.solana` doesn't exist,
+//      install a Phantom-shaped facade. When the user clicks Connect, it
+//      deep-links into Phantom Mobile's in-app browser pointed at the
+//      current URL. Inside Phantom Mobile, the real provider is injected
+//      and every app keeps working unchanged.
 //
-// This file is a no-op on desktop (extension wallets keep working) and
-// inside Phantom Mobile's dApp browser (its injected provider wins).
-//
-// Wallet Standard / MWA-native wallets (e.g. installed on Solana
-// Mobile Stack) register themselves to `window.solana` automatically;
-// this shim does not touch them.
+// This file is a no-op on desktop and inside Phantom Mobile's dApp browser
+// (its injected provider wins over our facade).
 // ============================================================
 
 (function () {
   "use strict";
 
   // ────────────────────────────────────────────────────────────────
-  // PWA: register the service worker on every page that loads us.
+  // Clean up any old service worker (previous versions shipped one
+  // that intercepted requests and broke Phantom). Best-effort — never
+  // blocks anything else.
   // ────────────────────────────────────────────────────────────────
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", function () {
-      navigator.serviceWorker.register("sw.js").catch(function () {
-        // Ignore — service worker is optional. PWA install still works
-        // on hosts that don't allow SW (e.g. file://) but offline shell
-        // won't be cached.
-      });
-    });
+    try {
+      navigator.serviceWorker.getRegistrations()
+        .then(function (regs) {
+          regs.forEach(function (r) {
+            try { r.unregister(); } catch (_) {}
+          });
+        })
+        .catch(function () {});
+    } catch (_) {}
+    if (window.caches && caches.keys) {
+      try {
+        caches.keys()
+          .then(function (keys) { keys.forEach(function (k) { try { caches.delete(k); } catch (_) {} }); })
+          .catch(function () {});
+      } catch (_) {}
+    }
   }
 
   // ────────────────────────────────────────────────────────────────
-  // Wallet bridge: only relevant on mobile browsers.
+  // Mobile wallet bridge — only relevant on mobile browsers.
   // ────────────────────────────────────────────────────────────────
   var ua = (navigator.userAgent || "").toLowerCase();
-  var isMobile = /mobi|android|iphone|ipad|ipod|silk|kindle/.test(ua);
+  var isMobile = /mobi|android|iphone|ipod|silk|kindle/.test(ua);
   if (!isMobile) return;
 
-  // Defer until the document is interactive so existing apps can read
-  // `window.phantom.solana` synchronously and find our facade.
   function install() {
-    // Phantom (real, injected) wins over our facade.
+    // Real Phantom (injected by the extension or by Phantom Mobile's
+    // dApp browser) wins over our facade.
     if (window.phantom && window.phantom.solana) return;
     if (window.solana && window.solana.isPhantom) return;
 
-    // Build the deep link that opens Phantom Mobile pointed at this
-    // page's URL. Phantom's docs:
-    //   https://docs.phantom.app/developer-powertools/deeplinks#browse
     var here = window.location.href.split("#")[0];
     var ref  = window.location.origin;
     var deepLink =
       "https://phantom.app/ul/browse/" + encodeURIComponent(here) +
       "?ref=" + encodeURIComponent(ref);
 
-    // A Phantom-shaped facade. The only operation that actually does
-    // anything is `connect()`, which redirects the browser into
-    // Phantom Mobile's in-app browser at this URL. Once inside,
-    // Phantom injects the real provider and the rest of the app
-    // continues normally.
     var facade = {
       isPhantom: true,
-      isPhantomMobileShim: true,    // for any code that wants to detect us
+      isPhantomMobileShim: true,
       publicKey: null,
 
       connect: function () {
-        // Open Phantom Mobile, return a never-resolving promise so the
-        // caller doesn't try to use a null publicKey before navigation.
         try { window.location.assign(deepLink); }
         catch (e) { window.location.href = deepLink; }
         return new Promise(function () {});
       },
       disconnect: function () { return Promise.resolve(); },
-
-      // These should not be invoked in this state because connect()
-      // navigates away. We provide them so any optimistic call still
-      // surfaces a clear error message.
       signTransaction: function () {
-        return Promise.reject(new Error(
-          "Open this site in Phantom Mobile to sign transactions."
-        ));
+        return Promise.reject(new Error("Open this site in Phantom Mobile to sign transactions."));
       },
       signAndSendTransaction: function () {
-        return Promise.reject(new Error(
-          "Open this site in Phantom Mobile to send transactions."
-        ));
+        return Promise.reject(new Error("Open this site in Phantom Mobile to send transactions."));
       },
       signMessage: function () {
-        return Promise.reject(new Error(
-          "Open this site in Phantom Mobile to sign messages."
-        ));
+        return Promise.reject(new Error("Open this site in Phantom Mobile to sign messages."));
       },
-      on: function () {},
+      on:  function () {},
       off: function () {},
       request: function () {
         return Promise.reject(new Error("Open in Phantom Mobile to interact."));
@@ -110,14 +95,6 @@
     window.phantom = window.phantom || {};
     if (!window.phantom.solana) window.phantom.solana = facade;
     if (!window.solana)         window.solana         = facade;
-
-    // Soft hint for UI: dispatch a custom event so apps can show
-    // "Open in Phantom Mobile" labelling if they want to.
-    try {
-      window.dispatchEvent(new CustomEvent("fartprint-mobile-shim-ready", {
-        detail: { deepLink: deepLink }
-      }));
-    } catch (_) {}
   }
 
   if (document.readyState === "loading") {
