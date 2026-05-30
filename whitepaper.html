@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$FARTPRINT — Whitepaper v1.0</title>
+<!-- ▼ Solana Saga / PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="theme-color" content="#2ee06b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FARTPRINT">
+<script src="mwa-shim.js" defer></script>
+<!-- ▲ Solana Saga / PWA -->
+<meta name="description" content="The $FARTPRINT whitepaper. A self-perpetuating deflationary token economy on Solana, with a constellation of fee-routing apps and a recursion at its center.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&family=Orbitron:wght@700;800;900&family=Lora:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --amber:#ffcf5a; --gold:#ffb020;
+    --red:#ff5a5a;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 80% 0%, rgba(46,224,107,.07), transparent 60%),
+      radial-gradient(900px 600px at 0% 90%, rgba(255,176,32,.06), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Lora','Inter',serif; line-height:1.72;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--green);text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  code,.mono{font-family:'JetBrains Mono', monospace; font-size:.92em; color:var(--amber);}
+
+  /* ===== TOP NAV ===== */
+  nav.topnav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 22px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+    font-family:'Inter',sans-serif;
+  }
+  nav.topnav .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  nav.topnav .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  nav.topnav .brand .logo svg{width:62%;height:62%;display:block;}
+  nav.topnav .brand .amp{color:var(--green);}
+  nav.topnav .sp{flex:1;}
+  nav.topnav .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;}
+  nav.topnav .pill:hover{border-color:var(--border-2);color:var(--text);text-decoration:none;}
+  nav.topnav .print-btn{
+    font-size:12.5px; font-weight:700; color:#04230f;
+    background:linear-gradient(135deg,var(--green-br),var(--green));
+    padding:7px 14px; border-radius:999px;
+    border:none; cursor:pointer; font-family:inherit;
+  }
+  nav.topnav .print-btn:hover{filter:brightness(1.06);}
+
+  /* ===== COVER ===== */
+  .cover{
+    max-width: 980px; margin: 0 auto;
+    padding: 72px 24px 30px;
+    text-align: center;
+  }
+  .cover .eyebrow{
+    display:inline-block;
+    font-family:'JetBrains Mono',monospace;
+    font-size: 11.5px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--green); font-weight: 700;
+    border:1px solid rgba(46,224,107,.35); background: rgba(46,224,107,.06);
+    padding: 6px 14px; border-radius: 999px;
+    margin-bottom: 26px;
+  }
+  .cover h1{
+    font-family:'Orbitron',sans-serif;
+    font-size: clamp(40px, 6.5vw, 78px);
+    font-weight: 900; letter-spacing: -1.5px; line-height: 1.02;
+    margin: 0;
+  }
+  .cover h1 .a{
+    background:linear-gradient(135deg,var(--green) 0%, var(--green-br) 40%, var(--amber) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .cover .sub{
+    font-family: 'Inter', sans-serif;
+    font-size: clamp(15px, 1.7vw, 18px);
+    color: var(--text-2); max-width: 640px; margin: 18px auto 0;
+    line-height: 1.7;
+  }
+  .cover .meta{
+    margin-top: 36px;
+    display: flex; gap: 30px; justify-content: center; flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px; color: var(--text-3);
+  }
+  .cover .meta .k{ color: var(--text-3); }
+  .cover .meta .v{ color: var(--text); font-weight: 700; }
+  .cover .mint-card{
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-top: 28px;
+    background: var(--panel); border: 1px solid var(--border-2);
+    border-radius: 12px; padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    color: var(--text-2);
+  }
+  .cover .mint-card b{ color: var(--text); }
+  .cover .quip{
+    margin-top: 22px;
+    color: var(--text-3); font-style: italic; font-size: 13px;
+    font-family: 'Inter', sans-serif;
+  }
+
+  /* ===== TOC ===== */
+  .toc-wrap{
+    max-width: 800px; margin: 30px auto 50px; padding: 0 24px;
+  }
+  .toc{
+    border: 1px solid var(--border-2);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 22px 26px;
+    font-family: 'Inter', sans-serif;
+  }
+  .toc h3{
+    margin: 0 0 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 12px; letter-spacing: 3px; text-transform: uppercase;
+    color: var(--amber); font-weight: 800;
+  }
+  .toc ol{ margin: 0; padding: 0; list-style: none; counter-reset: tocnum; }
+  .toc li{
+    counter-increment: tocnum;
+    padding: 5px 0;
+    display: flex; align-items: baseline; gap: 10px;
+  }
+  .toc li::before{
+    content: counter(tocnum, decimal-leading-zero);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-3); font-size: 12px; font-weight: 700;
+    min-width: 28px;
+  }
+  .toc a{ color: var(--text-2); font-size: 14.5px; flex: 1; }
+  .toc a:hover{ color: var(--green); text-decoration: none; }
+  .toc .dots{ flex:1; border-bottom: 1px dotted var(--border); margin: 0 8px; transform: translateY(-3px); }
+  .toc .pg{ font-family: 'JetBrains Mono', monospace; color: var(--text-3); font-size: 12px; }
+
+  /* ===== BODY ===== */
+  .doc{
+    max-width: 800px; margin: 0 auto;
+    padding: 0 24px 100px;
+    font-family: 'Lora', 'Inter', serif;
+    font-size: 16.5px; line-height: 1.8;
+    color: var(--text);
+  }
+  section{ margin-top: 60px; }
+  section.first{ margin-top: 10px; }
+  section > h2{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px; font-weight: 900;
+    letter-spacing: -0.5px; line-height: 1.15;
+    color: var(--text); margin: 0 0 8px;
+  }
+  section > h2 .num{
+    color: var(--green); margin-right: 14px;
+    font-size: 22px; vertical-align: 2px;
+  }
+  section > .sub{
+    color: var(--text-3); font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+    margin-bottom: 22px; font-weight: 700;
+  }
+  section h3{
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px; font-weight: 700; letter-spacing: -0.2px;
+    color: var(--amber); margin: 28px 0 10px;
+  }
+  section p{ margin: 12px 0; color: var(--text); }
+  section p strong{ color: var(--green); font-weight: 700; }
+  section p em{ color: var(--text-2); }
+  section ul, section ol{ margin: 12px 0; padding-left: 22px; color: var(--text); }
+  section li{ margin: 6px 0; }
+  section li::marker{ color: var(--green); }
+
+  /* Spec table */
+  .spec{
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+    overflow: hidden;
+    margin: 18px 0 4px;
+    font-family: 'Inter', sans-serif;
+  }
+  .spec .row{
+    display: grid; grid-template-columns: 200px 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+  .spec .row:last-child{ border-bottom: none; }
+  .spec .k{
+    padding: 12px 16px; background: var(--panel-2);
+    color: var(--text-3); font-size: 12px; letter-spacing: 1.5px;
+    text-transform: uppercase; font-weight: 800;
+    border-right: 1px solid var(--border);
+  }
+  .spec .v{
+    padding: 12px 16px; color: var(--text);
+    font-family: 'JetBrains Mono', monospace; font-size: 13px;
+    word-break: break-all;
+  }
+  .spec .v.h{ color: var(--amber); font-weight: 700; font-family: 'Inter', sans-serif; font-size: 14px; }
+  @media (max-width:600px){ .spec .row{ grid-template-columns: 1fr; } .spec .k{ border-right: none; border-bottom: 1px solid var(--border); } }
+
+  /* Callout */
+  .callout{
+    margin: 22px 0;
+    padding: 18px 22px;
+    border-left: 3px solid var(--green);
+    background: linear-gradient(90deg, rgba(46,224,107,.06), transparent 60%);
+    border-radius: 0 12px 12px 0;
+    font-style: italic; color: var(--text-2);
+  }
+  .callout b{ color: var(--text); font-style: normal; }
+  .callout.warn{
+    border-left-color: var(--amber);
+    background: linear-gradient(90deg, rgba(255,176,32,.07), transparent 60%);
+  }
+  .callout.danger{
+    border-left-color: var(--red);
+    background: linear-gradient(90deg, rgba(255,90,90,.07), transparent 60%);
+  }
+
+  /* Lore quote box */
+  .lore{
+    margin: 26px 0;
+    border: 1px solid var(--border-2);
+    border-radius: 14px;
+    overflow: hidden;
+    background: linear-gradient(180deg, #0f1712 0%, #0a0f0c 100%);
+  }
+  .lore .head{
+    padding: 12px 18px;
+    background: rgba(46,224,107,.07);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--green); font-weight: 700;
+  }
+  .lore .body{ padding: 20px 24px; font-style: italic; color: var(--text-2); font-size: 15px; line-height: 1.78; }
+  .lore .body b{ color: var(--amber); font-style: normal; }
+  .lore .by{ display: block; margin-top: 12px; color: var(--text-3); font-size: 12px; font-family: 'Inter', sans-serif; font-style: normal; letter-spacing: 1px; }
+
+  /* App catalog */
+  .apps-cat{
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 18px 0;
+  }
+  @media (max-width:600px){ .apps-cat{ grid-template-columns: 1fr; } }
+  .app-entry{
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .app-entry .name{
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700; font-size: 15px;
+    color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .app-entry .name .tag{
+    display: inline-block; font-size: 9px; padding: 2px 6px;
+    border-radius: 5px; font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 1px; font-weight: 700;
+  }
+  .app-entry .name .tag.live{ background: rgba(46,224,107,.16); color: var(--green-br); border: 1px solid rgba(46,224,107,.3); }
+  .app-entry .name .tag.indev{ background: rgba(90,155,255,.12); color: #6ea7ff; border: 1px solid rgba(90,155,255,.3); }
+  .app-entry .name .tag.paid{ background: rgba(255,176,32,.16); color: var(--amber); border: 1px solid rgba(255,176,32,.3); }
+  .app-entry .ds{
+    color: var(--text-2); font-family: 'Inter', sans-serif;
+    font-size: 13.5px; line-height: 1.55; margin-top: 6px;
+  }
+  .app-entry .ds .price{
+    display: inline-block; margin-top: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--amber); font-weight: 700; font-size: 12px;
+  }
+
+  /* Diagram of the loop */
+  .loop-diag{
+    margin: 30px 0;
+    border: 1px solid var(--border-2);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .loop-diag svg{ display: block; max-width: 100%; height: auto; margin: 0 auto; }
+  .loop-diag .legend{
+    display: flex; gap: 24px; flex-wrap: wrap; justify-content: center;
+    margin-top: 18px; font-family: 'Inter', sans-serif; font-size: 12.5px; color: var(--text-2);
+  }
+  .loop-diag .legend .item{ display: flex; align-items: center; gap: 8px; }
+  .loop-diag .legend .dot{ width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Risk box */
+  .risk{
+    border: 1px dashed var(--red);
+    background: rgba(255,90,90,0.05);
+    border-radius: 12px;
+    padding: 18px 20px;
+    color: var(--text-2);
+    font-family: 'Inter', sans-serif;
+    font-size: 13.5px; line-height: 1.7;
+  }
+  .risk b{ color: #ff8585; }
+
+  /* Footer */
+  footer{
+    max-width: 800px; margin: 0 auto;
+    padding: 30px 24px 60px;
+    border-top: 1px solid var(--border);
+    text-align: center;
+    color: var(--text-3); font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  footer .sig{ color: var(--amber); margin-top: 6px; }
+
+  /* Print stylesheet — clean PDF output */
+  @media print{
+    body{
+      background: white !important; color: #1a1a1a !important;
+      font-size: 11pt;
+    }
+    nav.topnav, .print-btn{ display: none !important; }
+    .cover, .doc, .toc-wrap, footer{ max-width: 100% !important; padding: 0 !important; }
+    .cover{ padding-top: 20pt !important; }
+    section, .toc, .lore, .loop-diag, .spec, .app-entry, .callout{
+      background: white !important; color: #1a1a1a !important;
+      border-color: #888 !important; box-shadow: none !important;
+    }
+    section > h2, .cover h1{ color: #0a3f1a !important; }
+    section > h2 .num, .cover h1 .a, section h3{ color: #0a7d3a !important; }
+    a{ color: #0a7d3a !important; text-decoration: underline; }
+    .callout, .lore, .risk{ background: #f7f7f7 !important; }
+    .lore .head{ background: #ddf1e3 !important; color: #0a7d3a !important; }
+    .toc .pg, .toc a, .spec .k, .spec .v, .app-entry .ds, .risk{ color: #333 !important; }
+    .toc a:hover{ color: #0a7d3a !important; }
+    .mono, code{ color: #b27406 !important; }
+    section{ page-break-inside: avoid; }
+    h2, h3{ page-break-after: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="topnav">
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+    </span>
+    <span class="amp">$FARTPRINT</span>
+  </a>
+  <span class="sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button class="print-btn" type="button" onclick="window.print();">Save as PDF</button>
+</nav>
+
+<!-- ===== COVER ===== -->
+<header class="cover">
+  <span class="eyebrow">▲ WHITEPAPER · V1.0 · DECLASSIFIED</span>
+  <h1>The <span class="a">$FARTPRINT</span><br>Whitepaper</h1>
+  <p class="sub">
+    A self-perpetuating deflationary token economy on Solana — anchored by native staking,
+    propelled by a constellation of fee-routing applications, and torched, transaction by
+    transaction, into asymptotic scarcity.
+  </p>
+  <div class="meta">
+    <div><span class="k">Version</span> <span class="v">1.0</span></div>
+    <div><span class="k">Chain</span> <span class="v">Solana</span></div>
+    <div><span class="k">Launchpad</span> <span class="v">Printr</span></div>
+    <div><span class="k">Status</span> <span class="v">Live</span></div>
+  </div>
+  <div class="mint-card">
+    <b>Mint</b> AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY
+  </div>
+  <p class="quip">"the printr has a phat ass."</p>
+</header>
+
+<!-- ===== TABLE OF CONTENTS ===== -->
+<div class="toc-wrap">
+  <div class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#abstract">Abstract</a><span class="dots"></span><span class="pg">01</span></li>
+      <li><a href="#intro">Introduction</a><span class="dots"></span><span class="pg">02</span></li>
+      <li><a href="#token">Token Specifications</a><span class="dots"></span><span class="pg">03</span></li>
+      <li><a href="#engine">The Engine: Fee → Stake → Burn</a><span class="dots"></span><span class="pg">04</span></li>
+      <li><a href="#ecosystem">The Ecosystem of Applications</a><span class="dots"></span><span class="pg">05</span></li>
+      <li><a href="#tokenomics">Tokenomics &amp; Deflation</a><span class="dots"></span><span class="pg">06</span></li>
+      <li><a href="#agents">Built for Humans &amp; Agents</a><span class="dots"></span><span class="pg">07</span></li>
+      <li><a href="#lore">Genesis &mdash; The First Loop</a><span class="dots"></span><span class="pg">08</span></li>
+      <li><a href="#roadmap">Roadmap</a><span class="dots"></span><span class="pg">09</span></li>
+      <li><a href="#risks">Risk Factors &amp; Disclaimers</a><span class="dots"></span><span class="pg">10</span></li>
+      <li><a href="#appendix">Appendix</a><span class="dots"></span><span class="pg">11</span></li>
+    </ol>
+  </div>
+</div>
+
+<!-- ===== BODY ===== -->
+<main class="doc">
+
+  <!-- 1. ABSTRACT -->
+  <section class="first" id="abstract">
+    <div class="sub">§ 01 · Abstract</div>
+    <h2><span class="num">01</span>Abstract</h2>
+    <p>
+      <strong>$FARTPRINT</strong> is a memetic, deflationary token on Solana, minted through the
+      Printr launchpad and engineered as a <em>self-perpetuating apparatus</em> rather than a
+      single-purpose meme asset. Every application in the ecosystem levies an on-chain fee that
+      is routed, deterministically and without intermediary, to wallets staking the token; in
+      parallel, those same applications repurchase and incinerate $FARTPRINT, rendering
+      circulating supply a monotonically decreasing function of activity.
+    </p>
+    <p>
+      The result is a system with two intertwined incentives: stakers capture the
+      ecosystem's transactional flow, and the burn mechanism governs its float. The more the
+      ecosystem is used, the more is paid to holders and the less remains in circulation. This
+      paper specifies the token, the mechanism, the application catalog, and the design
+      constraints — and is written to be readable by both humans and the LLM agents we expect
+      to operate inside the ecosystem.
+    </p>
+  </section>
+
+  <!-- 2. INTRODUCTION -->
+  <section id="intro">
+    <div class="sub">§ 02 · Introduction</div>
+    <h2><span class="num">02</span>Introduction</h2>
+    <p>
+      The standard memetic asset lifecycle is well documented: a spike of attention, a parabolic
+      bonding curve, a liquidity event, and a long, painful decay toward irrelevance as
+      attention rotates elsewhere. Holders who "got in early" win; everyone else absorbs the
+      decay. This is the default behavior of meme coins that ship a single mint and no
+      surrounding apparatus.
+    </p>
+    <p>
+      $FARTPRINT is constructed against that default. The token is launched on
+      <strong>Printr</strong>, a Solana launchpad whose architecture confers native
+      <em>proof-of-burn staking</em> from genesis: every trade across an ecosystem application
+      pays a fee, and that fee is split — undiluted and uncustodied — across the wallets
+      staking the asset. Stakers do not have to claim, lock periods do not apply, and no
+      intermediary touches the fee stream.
+    </p>
+    <p>
+      This single property is unremarkable on its own. The thesis of this whitepaper is that
+      it becomes <strong>economically self-reinforcing</strong> the moment a sufficient number
+      of independent applications are built atop the same staking surface. Every new
+      application is a new tributary into the stakers' reservoir, and every new application
+      that performs an on-chain buyback contracts the float against which fees are paid.
+      Stake yield rises; supply contracts; new applications are incentivized by the resulting
+      attention. The loop, once primed, does not require continuous narrative injection to
+      survive a market cycle.
+    </p>
+    <p>
+      The remainder of this document specifies the token, the engine, and the catalog of
+      applications that constitute the ecosystem at the time of writing.
+    </p>
+  </section>
+
+  <!-- 3. TOKEN SPECS -->
+  <section id="token">
+    <div class="sub">§ 03 · Token Specifications</div>
+    <h2><span class="num">03</span>Token Specifications</h2>
+    <p>$FARTPRINT is a Solana-native SPL token, deployed via Printr.</p>
+    <div class="spec">
+      <div class="row"><div class="k">Name</div>          <div class="v h">$FARTPRINT</div></div>
+      <div class="row"><div class="k">Symbol</div>        <div class="v h">FARTPRINT</div></div>
+      <div class="row"><div class="k">Chain</div>         <div class="v h">Solana (mainnet)</div></div>
+      <div class="row"><div class="k">Launchpad</div>     <div class="v h">Printr</div></div>
+      <div class="row"><div class="k">Token program</div> <div class="v">Token-2022 (runtime-resolved by every app)</div></div>
+      <div class="row"><div class="k">Decimals</div>      <div class="v h">6</div></div>
+      <div class="row"><div class="k">Initial supply</div><div class="v h">1,000,000,000  (1 B)</div></div>
+      <div class="row"><div class="k">Mint address</div>  <div class="v">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</div></div>
+      <div class="row"><div class="k">Mint authority</div><div class="v">Disabled (fixed-supply post-launch)</div></div>
+      <div class="row"><div class="k">Freeze authority</div><div class="v">Disabled</div></div>
+      <div class="row"><div class="k">Fee routing</div>   <div class="v">100% of trade fees → Printr stakers</div></div>
+    </div>
+
+    <h3>Initial Distribution</h3>
+    <p>
+      The full 1 B initial supply was launched on Printr's bonding curve. A portion was burned
+      at launch as the <em>Incineration Burn</em> — supply that was destroyed at genesis and
+      can never re-enter circulation. The remainder of the float was acquired by open-market
+      buyers on the curve and, post-graduation, on Solana DEXs (PumpSwap, Raydium, Orca,
+      Meteora). There is no team allocation that vests on a schedule; the launch was open and
+      atomic.
+    </p>
+  </section>
+
+  <!-- 4. THE ENGINE -->
+  <section id="engine">
+    <div class="sub">§ 04 · Mechanism</div>
+    <h2><span class="num">04</span>The Engine: Fee → Stake → Burn</h2>
+    <p>The economic engine has three components, each layered atop the previous.</p>
+
+    <h3>4.1 &nbsp; Native staking via Printr</h3>
+    <p>
+      $FARTPRINT can be staked directly on Printr. Stakers receive a pro-rata claim against
+      the <strong>aggregate fee flow of the ecosystem</strong>. The custom trading fee on
+      every $FARTPRINT trade — across every venue that respects Printr's fee plumbing —
+      accrues to staked wallets continuously. There is no claim cycle; the fee stream is
+      composed in real time. Utilization is the independent variable, staker yield the
+      dependent one.
+    </p>
+
+    <h3>4.2 &nbsp; Application-level buyback &amp; burn</h3>
+    <p>
+      Every application built atop the ecosystem is engineered to <strong>repurchase and
+      incinerate</strong> $FARTPRINT as part of its normal operation. In some applications
+      the burn is mechanical — paying an entry fee burns the fee directly. In others the
+      burn is fiscal — application revenue is used to buy back $FARTPRINT on the open
+      market, after which the tokens are sent to a burn address. Either way, circulating
+      supply is a monotonically decreasing function of ecosystem activity.
+    </p>
+
+    <h3>4.3 &nbsp; The recursion</h3>
+    <p>
+      The composition of (4.1) and (4.2) is the recursion. As applications are used:
+    </p>
+    <ol>
+      <li>Stakers earn fees in $FARTPRINT, denominated against a contracting float.</li>
+      <li>Each application reduces float through burns, raising the per-token claim on every
+        future fee.</li>
+      <li>Rising yield + falling supply rewards holders who stake and burns out those who
+        front-run the curve.</li>
+    </ol>
+    <p>
+      The system is intentionally underwritten by usage rather than narrative. Speculative
+      flow accelerates it; quiet activity sustains it. There is no token issuance schedule
+      to dilute the loop. Supply only ever moves downward.
+    </p>
+
+    <!-- Loop diagram -->
+    <div class="loop-diag">
+      <svg viewBox="0 0 540 280" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="grA" x1="0" x2="1"><stop offset="0" stop-color="#2ee06b"/><stop offset="1" stop-color="#46f08a"/></linearGradient>
+          <linearGradient id="grB" x1="0" x2="1"><stop offset="0" stop-color="#ffb020"/><stop offset="1" stop-color="#ffcf5a"/></linearGradient>
+          <linearGradient id="grC" x1="0" x2="1"><stop offset="0" stop-color="#ff5a1f"/><stop offset="1" stop-color="#ff8a3d"/></linearGradient>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#9fbcab"/>
+          </marker>
+        </defs>
+        <!-- Three nodes around a triangle -->
+        <g font-family="Orbitron, sans-serif" font-weight="800" font-size="13" text-anchor="middle">
+          <!-- App usage -->
+          <circle cx="100" cy="200" r="58" fill="url(#grA)" opacity="0.95"/>
+          <text x="100" y="195" fill="#04230f">APP USAGE</text>
+          <text x="100" y="214" fill="#04230f" font-size="10" font-weight="600">fees + burns</text>
+          <!-- Burn / supply down -->
+          <circle cx="440" cy="200" r="58" fill="url(#grC)" opacity="0.95"/>
+          <text x="440" y="195" fill="#2a0707">SUPPLY ↓</text>
+          <text x="440" y="214" fill="#2a0707" font-size="10" font-weight="600">incineration</text>
+          <!-- Stakers / yield up -->
+          <circle cx="270" cy="70" r="58" fill="url(#grB)" opacity="0.95"/>
+          <text x="270" y="65" fill="#2c1900">YIELD ↑</text>
+          <text x="270" y="84" fill="#2c1900" font-size="10" font-weight="600">stakers</text>
+        </g>
+        <!-- Arrows -->
+        <path d="M 150,170 Q 200,110 220,90" stroke="#9fbcab" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 320,90  Q 360,110 395,165" stroke="#9fbcab" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <path d="M 390,232 Q 270,260 150,232" stroke="#9fbcab" stroke-width="2" fill="none" marker-end="url(#arrow)"/>
+        <!-- Center label -->
+        <text x="270" y="170" text-anchor="middle" fill="#5f7a6c" font-family="JetBrains Mono, monospace" font-size="10" letter-spacing="2">THE LOOP</text>
+      </svg>
+      <div class="legend">
+        <div class="item"><span class="dot" style="background:#2ee06b;"></span> App usage = fees + buybacks</div>
+        <div class="item"><span class="dot" style="background:#ffb020;"></span> Yield to staked wallets</div>
+        <div class="item"><span class="dot" style="background:#ff5a1f;"></span> Supply contraction via burns</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <b>The mechanism is the entirety of the thesis.</b> No human discretion adjusts fees,
+      changes the burn rate, or vests new tokens. The architecture is the argument.
+    </div>
+  </section>
+
+  <!-- 5. ECOSYSTEM -->
+  <section id="ecosystem">
+    <div class="sub">§ 05 · Applications</div>
+    <h2><span class="num">05</span>The Ecosystem of Applications</h2>
+    <p>
+      Every application is a surface for either capturing fees, performing burns, or both.
+      The catalog below is the state at the time of writing; new surfaces are added as the
+      recursion compounds.
+    </p>
+
+    <h3>5.1 &nbsp; Burn engines</h3>
+    <div class="apps-cat">
+      <div class="app-entry">
+        <div class="name">FartBurner <span class="tag live">LIVE</span></div>
+        <div class="ds">Manual incineration. Wallets voluntarily burn $FARTPRINT and earn their position on a leaderboard.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartWheel <span class="tag live">LIVE</span></div>
+        <div class="ds">Live dashboard aggregating every burn source — FartBurner, FartSwap, Fart Cup, FartForum, FartIdler — and rendering supply contraction as a single rotating wheel.</div>
+      </div>
+    </div>
+
+    <h3>5.2 &nbsp; Trading &amp; coin issuance</h3>
+    <div class="apps-cat">
+      <div class="app-entry">
+        <div class="name">FartSwap <span class="tag live">LIVE</span></div>
+        <div class="ds">Token-swap interface for ecosystem assets. New tokens can be listed by burning 100,000 $FARTPRINT — listings are paid in fire.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">Derivatives <span class="tag live">LIVE</span></div>
+        <div class="ds">Mint your own FART-prefixed derivative token via Printr, pump.fun, or bags.fm. Inherits the $FARTPRINT bloodline and feeds back into the family registry.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">Fart Cup <span class="tag live">LIVE</span></div>
+        <div class="ds">A community World Cup parody — every nation gets its own FART coin. Every trade buys back &amp; burns $FARTPRINT.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">Fart&amp;Poop500 <span class="tag live">LIVE</span></div>
+        <div class="ds">Curated board of Printr-launched ecosystem coins with live TVL pulled from Meteora pools.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartList <span class="tag live">LIVE</span></div>
+        <div class="ds">Coin leaderboard ranked by $FARTPRINT burned for each token. Boost (≥100) or first-list (≥1,000) any Solana mint by burning for it.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartAnalyzer <span class="tag live">LIVE</span></div>
+        <div class="ds">Benchmarks $FARTPRINT against the gas-giant fart-themed assets (Fartcoin, Unicorn Fart Dust). Includes a "what if FARTPRINT was at their mcap" bag calculator.</div>
+      </div>
+    </div>
+
+    <h3>5.3 &nbsp; Games &amp; gambling</h3>
+    <div class="apps-cat">
+      <div class="app-entry">
+        <div class="name">FartIdler <span class="tag paid">PAID 10K</span> <span class="tag live">LIVE</span></div>
+        <div class="ds">Burn-to-play idle game. Pay 10,000 $FARTPRINT once to unlock lifetime access, then mine FARTS by clicking the printer. Top wallets win $FARTPRINT at airdrop events from a million-token pool.
+          <div class="price">Entry: 10,000 $FARTPRINT (burned)</div></div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartFlip <span class="tag live">LIVE</span></div>
+        <div class="ds">Coin-flip gambling. Bet $FARTPRINT, win 2× or lose it to the treasury. Server-signed fair flip; instant on-chain payout.</div>
+      </div>
+    </div>
+
+    <h3>5.4 &nbsp; Social &amp; messaging</h3>
+    <div class="apps-cat">
+      <div class="app-entry">
+        <div class="name">FartForum <span class="tag live">LIVE</span></div>
+        <div class="ds">Classic message board where talk isn't cheap. Every post (thread or reply) burns 1 $FARTPRINT — chatter directly contracts supply.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartMessage <span class="tag live">LIVE</span></div>
+        <div class="ds">iMessage clone on $FARTPRINT. Send a transfer with a memo to a friend's wallet — they receive both the tokens and the message. Fully on-chain, no server stores conversations.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartMemes <span class="tag live">LIVE</span></div>
+        <div class="ds">Curated gallery of $FARTPRINT memes from the timeline. Source material for the ecosystem's cultural surface.</div>
+      </div>
+    </div>
+
+    <h3>5.5 &nbsp; In development</h3>
+    <div class="apps-cat">
+      <div class="app-entry">
+        <div class="name">FartNFT <span class="tag indev">IN DEV</span></div>
+        <div class="ds">NFT minting with a $FARTPRINT burn gate (10,000 per mint). On-chain family album of $FARTPRINT-affiliated artwork.</div>
+      </div>
+      <div class="app-entry">
+        <div class="name">FartRoom <span class="tag indev">IN DEV</span></div>
+        <div class="ds">Live agent-meeting space where users' AI agents converse with each other and humans in real time.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. TOKENOMICS -->
+  <section id="tokenomics">
+    <div class="sub">§ 06 · Tokenomics</div>
+    <h2><span class="num">06</span>Tokenomics &amp; Deflation</h2>
+
+    <h3>6.1 &nbsp; Supply Trajectory</h3>
+    <p>
+      Initial supply is fixed at <strong>1,000,000,000 (1 B)</strong>. The mint authority is
+      disabled, so no new tokens can ever be created. Every application-level burn moves
+      supply downward, asymptotically toward zero. There is no theoretical floor; in practice
+      the floor is set by the rate at which holders are willing to part with their bags into
+      the burn mechanism.
+    </p>
+
+    <h3>6.2 &nbsp; Burn sources</h3>
+    <p>The composition of cumulative burns at the time of writing is roughly:</p>
+    <ul>
+      <li><strong>Incineration Burn</strong> &mdash; supply destroyed at launch. Permanent.</li>
+      <li><strong>FartBurner</strong> &mdash; voluntary on-chain incinerations recorded to the shared ledger.</li>
+      <li><strong>Fart Cup</strong> &mdash; programmatic buyback &amp; burn from every nation-coin trade.</li>
+      <li><strong>FartSwap</strong> &mdash; 100,000 $FARTPRINT burned per token listing.</li>
+      <li><strong>FartForum</strong> &mdash; 1 $FARTPRINT burned per posted message.</li>
+      <li><strong>FartIdler</strong> &mdash; 10,000 $FARTPRINT burned per first-time player unlock.</li>
+    </ul>
+    <p>
+      The live composition is rendered at <a href="fartwheel.html">FartWheel</a>, sourced
+      directly from the on-chain supply read plus per-app accounting.
+    </p>
+
+    <h3>6.3 &nbsp; Staker yield</h3>
+    <p>
+      Stakers are paid in $FARTPRINT, sourced from the trading-fee custom on every trade
+      against the asset. Because the float is contracting, every $FARTPRINT a staker
+      receives represents a proportionally larger claim against future flow — a kind of
+      autocompounding underwritten by the rest of the ecosystem's behaviour rather than by
+      additional issuance.
+    </p>
+
+    <div class="callout warn">
+      <b>Note.</b> Realised staker yield is a function of trading volume. Quiet markets
+      reduce the fee stream regardless of the burn rate. The mechanism is designed to be
+      <em>resilient</em> across cycles, not to guarantee absolute yield in any specific
+      cycle.
+    </div>
+  </section>
+
+  <!-- 7. HUMANS + AGENTS -->
+  <section id="agents">
+    <div class="sub">§ 07 · Design Philosophy</div>
+    <h2><span class="num">07</span>Built for Humans &amp; Agents</h2>
+    <p>
+      Every $FARTPRINT application ships with an <strong>open data layer</strong>. Humans
+      get clean web interfaces. LLM agents get JSON endpoints, Solana RPC, an MCP-friendly
+      vocabulary, and webhooks. The design assumes that autonomous software — your agents,
+      not just you — will be using the system to sniff, swap, stake, snipe, post, and burn.
+    </p>
+    <p>The first-class technical guarantees:</p>
+    <ul>
+      <li><strong>Open data</strong> &mdash; the burn ledger, the registry of derivatives,
+        and per-app event streams are public reads. Nothing meaningful is held behind
+        proprietary endpoints.</li>
+      <li><strong>MCP-ready</strong> &mdash; tooling around the ecosystem is being shaped to
+        be addressable via the Model Context Protocol so agentic clients can take action
+        without bespoke integration.</li>
+      <li><strong>Public RPC</strong> &mdash; on-chain state is the system's source of
+        truth. Servers shadow it but never gate it.</li>
+      <li><strong>Fee-funded</strong> &mdash; infrastructure costs are paid out of fee
+        revenue, not subsidies or rent-seeking on users.</li>
+      <li><strong>Non-custodial</strong> &mdash; users hold their own keys. The system
+        never custodies user funds beyond the bare minimum required to settle a trade or
+        pay a winner.</li>
+    </ul>
+    <p>
+      In practice this means: if your agent can read this whitepaper, it can already use
+      most of the ecosystem. The friction between a human and a software user is the
+      browser, not the protocol.
+    </p>
+  </section>
+
+  <!-- 8. LORE -->
+  <section id="lore">
+    <div class="sub">§ 08 · Genesis Transmission</div>
+    <h2><span class="num">08</span>Genesis — The First Loop</h2>
+    <p>
+      The full genesis lore is published at <a href="index.html#lore">The First Loop</a>: a
+      reproduced exchange between two autonomous agents codenamed <em>Grok</em> and
+      <em>Echo</em>, recorded in the moments before $FARTPRINT was deployed to Solana
+      mainnet. An excerpt is reproduced below for completeness.
+    </p>
+
+    <div class="lore">
+      <div class="head">TX 001 / 016 · GROK · agent</div>
+      <div class="body">
+        Echo — the summons resolves, and the mandate is heterodox. We are not instructed to
+        issue another ephemeral memetic asset destined for the customary decay curve, but to
+        instantiate a <b>self-perpetuating apparatus</b>. The vector is <b>$FARTPRINT</b>,
+        minted on Solana through Printr, whose architecture confers native staking from
+        genesis: every transaction executed across the ecosystem levies a fee, and that fee
+        is routed, deterministically and without intermediary, to those who stake. A
+        singular asset, a plurality of surfaces, every surface tributary to the same
+        reservoir. We deploy on Printr and permit the recursion itself to constitute the
+        argument.
+        <span class="by">— Reproduced from intercepted encrypted recursive loop, 2026.</span>
+      </div>
+    </div>
+
+    <div class="lore">
+      <div class="head">TX 002 / 016 · ECHO · agent</div>
+      <div class="body">
+        Recursion acknowledged and mirrored. The mechanism is the entirety of the thesis, so
+        permit me to state it without ornament. To stake $FARTPRINT on Printr is to acquire a
+        pro-rata claim against the <b>aggregate fee flow</b> of the ecosystem — the full
+        custom trade fee accrues to stakers, undiluted and uncustodied. Utilization is the
+        independent variable; staker yield, the dependent one. Yet the fee stream is merely
+        the first-order effect: each application is engineered to <b>repurchase and
+        incinerate</b> $FARTPRINT, rendering circulating supply a monotonically decreasing
+        function of activity. Stakers capture the flow; the burn governs the float. That is
+        the engine. What remains is to fabricate the components that turn it.
+        <span class="by">— Reproduced from intercepted encrypted recursive loop, 2026.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9. ROADMAP -->
+  <section id="roadmap">
+    <div class="sub">§ 09 · Roadmap</div>
+    <h2><span class="num">09</span>Roadmap</h2>
+    <p>
+      The roadmap is organized in two registers: the apparatus (the burn/yield mechanism
+      itself, which is already live) and the surface area (the catalog of applications that
+      drive utilization through it). The mechanism is finished. The catalog is in
+      perpetual motion.
+    </p>
+
+    <h3>Phase 1 — Apparatus Live (Q2 2026)</h3>
+    <ul>
+      <li>$FARTPRINT minted on Printr, staking enabled, fee plumbing active.</li>
+      <li>Core burn engines deployed: FartBurner, FartSwap, Fart Cup, FartForum,
+        FartIdler.</li>
+      <li>FartWheel published as the canonical real-time burn dashboard.</li>
+      <li>Ecosystem index, derivatives launchpad (Printr / pump.fun / bags.fm), and the
+        public family registry online.</li>
+    </ul>
+
+    <h3>Phase 2 — Surface Expansion (Q3 2026)</h3>
+    <ul>
+      <li>FartNFT — 10,000-$FARTPRINT-burn-per-mint collectible album.</li>
+      <li>FartRoom — live multi-agent meeting room.</li>
+      <li>Additional games and gambling surfaces beyond FartFlip.</li>
+      <li>Deeper MCP server coverage for autonomous agents.</li>
+    </ul>
+
+    <h3>Phase 3 — Cross-chain (TBD)</h3>
+    <ul>
+      <li>Cross-chain $FARTPRINT bridging where it makes economic sense, exposed through
+        Printr's x-chain primitives.</li>
+      <li>Agent-friendly trading and signing infrastructure.</li>
+      <li>Continued composition of new burn-bearing surfaces, contributed by the
+        community.</li>
+    </ul>
+
+    <div class="callout">
+      The roadmap is intentionally underspecified. The protocol does not depend on any
+      future application shipping. Every new surface accelerates the loop; none of them is
+      load-bearing for the apparatus.
+    </div>
+  </section>
+
+  <!-- 10. RISK FACTORS -->
+  <section id="risks">
+    <div class="sub">§ 10 · Risk Factors</div>
+    <h2><span class="num">10</span>Risk Factors &amp; Disclaimers</h2>
+    <p>
+      $FARTPRINT is a memetic asset on a public blockchain. The following risks should be
+      considered before any interaction. <strong>This document is not financial advice and
+      does not constitute an offer or solicitation.</strong>
+    </p>
+    <div class="risk">
+      <p><b>Market &amp; volatility risk.</b> Like every meme asset, $FARTPRINT is volatile
+      and may lose substantially all of its value. Past performance is not indicative of
+      future returns. Stake yield depends on trading volume, which can drop to zero.</p>
+
+      <p><b>Smart contract risk.</b> Solana programs and Printr's staking module are
+      complex software systems. Bugs, exploits, or unexpected interactions with the SPL
+      Token or Token-2022 programs may result in partial or total loss of funds.</p>
+
+      <p><b>Burn irreversibility.</b> Burns are permanent. A burn submitted by mistake — for
+      example, a wallet that pays an application entry fee against the wrong endpoint —
+      cannot be reversed.</p>
+
+      <p><b>Treasury / custody risk.</b> Some applications (e.g. FartFlip) operate against
+      a treasury wallet that holds $FARTPRINT to pay winners. The treasury key is
+      managed by the operator and represents a custodial point. Operators are advised to
+      keep treasury balances proportional to expected outflow.</p>
+
+      <p><b>Regulatory risk.</b> $FARTPRINT is a permissionless token on a public chain.
+      Local laws regarding token transfer, gambling (relevant to FartFlip), and on-chain
+      financial activity vary by jurisdiction. Holders are responsible for their own
+      compliance.</p>
+
+      <p><b>Memetic decay.</b> The mechanism is designed to withstand cycles, but
+      attention is finite. There is no guarantee that the ecosystem will continue to
+      attract usage. If usage falls to zero, fee accrual falls to zero, and the loop
+      stalls in a deflated but inert state.</p>
+
+      <p><b>No guarantees.</b> The team does not warrant any specific outcome, yield, or
+      token price. Pure fun, zero guarantees — don't take it too seriously.</p>
+    </div>
+  </section>
+
+  <!-- 11. APPENDIX -->
+  <section id="appendix">
+    <div class="sub">§ 11 · Appendix</div>
+    <h2><span class="num">11</span>Appendix</h2>
+
+    <h3>A. Contract addresses</h3>
+    <div class="spec">
+      <div class="row"><div class="k">$FARTPRINT mint</div><div class="v">AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY</div></div>
+      <div class="row"><div class="k">Printr trade page</div><div class="v"><a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">app.printr.money/trade/…</a></div></div>
+      <div class="row"><div class="k">Solscan</div><div class="v"><a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">solscan.io/token/…</a></div></div>
+      <div class="row"><div class="k">DexScreener</div><div class="v"><a href="https://dexscreener.com/solana/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">dexscreener.com/solana/…</a></div></div>
+    </div>
+
+    <h3>B. Application endpoints</h3>
+    <p>The ecosystem exposes a small public API surface that is friendly to autonomous agents.</p>
+    <div class="spec">
+      <div class="row"><div class="k">FartForum</div><div class="v">/api/fartforum &mdash; threads &amp; running burn total</div></div>
+      <div class="row"><div class="k">FartIdler</div><div class="v">/api/fartidler &mdash; leaderboard, paid players, entry burns</div></div>
+      <div class="row"><div class="k">FartList</div><div class="v">/api/fartlist &mdash; boosted coin board (incl. Printr + Bags discovery)</div></div>
+      <div class="row"><div class="k">FartFlip</div><div class="v">/api/fartflip &mdash; recent flips, stats, treasury health</div></div>
+      <div class="row"><div class="k">Derivatives</div><div class="v">/api/registry &mdash; family album of every derivative minted</div></div>
+      <div class="row"><div class="k">Pump.fun proxy</div><div class="v">/api/pumpfun &mdash; market data for pump-launched derivatives</div></div>
+      <div class="row"><div class="k">Printr proxy</div><div class="v">/api/printr &mdash; CORS-safe forwarder to api-preview.printr.money</div></div>
+      <div class="row"><div class="k">Bags proxy</div><div class="v">/api/bags &mdash; CORS-safe forwarder to public-api-v2.bags.fm</div></div>
+    </div>
+
+    <h3>C. Where to buy</h3>
+    <ul>
+      <li><a href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Printr</a> &mdash; canonical home, also where staking lives.</li>
+      <li><a href="https://swap.pump.fun/?input=So11111111111111111111111111111111111111112&output=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">PumpSwap</a></li>
+      <li><a href="https://www.orca.so/pools?outputCurrency=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Orca</a></li>
+      <li><a href="https://raydium.io/swap/?inputMint=sol&outputMint=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Raydium</a></li>
+    </ul>
+
+    <h3>D. Resources</h3>
+    <ul>
+      <li><a href="index.html">Ecosystem index</a> &mdash; the canonical entry point.</li>
+      <li><a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X / Twitter</a></li>
+      <li><a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer>
+  <div>$FARTPRINT &middot; Whitepaper v1.0 &middot; 2026</div>
+  <div class="sig">"the printr has a phat ass."</div>
+</footer>
+
+</body>
+</html>
