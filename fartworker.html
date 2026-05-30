@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FartWorker · apply for a $FARTPRINT stake grant</title>
+<!-- ▼ Solana Saga / PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="logo.png">
+<meta name="theme-color" content="#2ee06b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FARTPRINT">
+<script src="mwa-shim.js" defer></script>
+<!-- ▲ Solana Saga / PWA -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0f0c; --panel:#0f1712; --panel-2:#13201a; --row:#101a14;
+    --border:#1d2c23; --border-2:#274234;
+    --text:#e8f5ee; --text-2:#9fbcab; --text-3:#5f7a6c;
+    --green:#2ee06b; --green-br:#46f08a; --green-dark:#0a7d3a;
+    --purple:#9b5cff; --red:#ff5a5a; --amber:#ffcf5a; --gold:#ffb020;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 80% -10%, rgba(46,224,107,.08), transparent 60%),
+      radial-gradient(900px 500px at 0% 110%, rgba(255,176,32,.05), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:'Inter',system-ui,sans-serif; line-height:1.55;
+    min-height:100vh; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--green); text-decoration:none;}
+  a:hover{text-decoration:underline;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  nav{
+    display:flex; align-items:center; gap:14px;
+    padding:12px 20px; border-bottom:1px solid var(--border);
+    background:rgba(10,15,12,.86); backdrop-filter:blur(10px);
+    position:sticky; top:0; z-index:40;
+  }
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.4px;}
+  .brand .logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#0a7d3a,#16a34a); box-shadow:0 4px 14px rgba(22,163,74,.3);}
+  .brand .logo svg{width:62%;height:62%;display:block;}
+  .brand .amp{color:var(--green);}
+  .nav-sp{flex:1;}
+  .pill{font-size:13px;color:var(--text-2);border:1px solid var(--border);border-radius:999px;padding:7px 13px;transition:.15s;background:transparent;cursor:pointer;font-family:inherit;}
+  .pill:hover{border-color:var(--border-2);color:var(--text);text-decoration:none;}
+  .wallet-btn{
+    font-weight:700;font-size:13.5px;border:none;cursor:pointer;border-radius:999px;
+    padding:9px 18px;color:#04230f;background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 4px 16px rgba(46,224,107,.32);transition:.15s;
+  }
+  .wallet-btn:hover{filter:brightness(1.06);transform:translateY(-1px);}
+  .wallet-btn.connected{background:var(--panel-2);color:var(--green);border:1px solid var(--border-2);box-shadow:none;}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:30px 18px 80px;}
+
+  .hero{margin-bottom:18px;}
+  .hero h1{margin:0;font-size:38px;font-weight:900;letter-spacing:-1px;font-family:'Orbitron',sans-serif;}
+  .hero h1 .a{
+    background:linear-gradient(135deg,var(--green),var(--amber) 70%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .hero .sub{color:var(--text-2);font-size:14.5px;margin-top:8px;max-width:760px;}
+  .hero .sub b{color:var(--amber);}
+
+  /* Stats row */
+  .stats-row{
+    display:grid; grid-template-columns: repeat(3,1fr); gap:12px; margin:20px 0 22px;
+  }
+  @media (max-width:680px){ .stats-row{ grid-template-columns:1fr; } }
+  .scard{
+    border:1px solid var(--border); border-radius:14px; padding:14px 18px;
+    background:var(--panel); box-shadow:var(--shadow);
+  }
+  .scard .lbl{ font-size:10.5px; letter-spacing:1.5px; text-transform:uppercase;
+    color:var(--text-3); font-weight:800; }
+  .scard .v{ font-family:'JetBrains Mono', monospace; font-weight:800; font-size:22px; color:var(--text); margin-top:4px; }
+  .scard .v.amber{ color:var(--amber); }
+  .scard .v.green{ color:var(--green); }
+  .scard .sub{ color:var(--text-3); font-size:12px; margin-top:3px; }
+
+  /* Section heading */
+  .sec-h{ display:flex; align-items:center; gap:12px; margin: 32px 0 12px; }
+  .sec-h h2{ margin:0; font-size:17px; font-weight:800; letter-spacing:-.3px; }
+  .sec-h .ct{ color:var(--text-3); font-size:12.5px; }
+  .sec-h .right{ margin-left:auto; font-size:11.5px; color:var(--text-3); }
+
+  /* Workers grid */
+  .workers-grid{
+    display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap:14px;
+  }
+  .worker-card{
+    border:1px solid var(--border-2); border-radius:16px;
+    background: linear-gradient(135deg, rgba(46,224,107,0.08), transparent 60%), var(--panel);
+    padding:18px 18px 16px;
+    box-shadow:var(--shadow);
+    position:relative; overflow:hidden;
+    transition:transform .15s ease, border-color .15s ease;
+  }
+  .worker-card:hover{ transform:translateY(-2px); border-color: var(--green); }
+  .worker-card .role-pill{
+    position:absolute; top:14px; right:14px;
+    font-family:'JetBrains Mono', monospace; font-size:9.5px; letter-spacing:1.4px;
+    color:var(--amber); background:rgba(255,207,90,.14); border:1px solid rgba(255,207,90,.30);
+    padding:3px 9px; border-radius:99px; font-weight:800; text-transform:uppercase;
+  }
+  .worker-card .x-handle{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:10px;
+  }
+  .worker-card .x-icon{
+    width:36px; height:36px; border-radius:50%;
+    background:linear-gradient(135deg,#000,#1a1a1a);
+    display:grid; place-items:center;
+    border:1px solid rgba(255,255,255,.10);
+    flex-shrink:0;
+  }
+  .worker-card .x-icon svg{ width:18px; height:18px; color:#fff; }
+  .worker-card .handle{
+    font-family:'Inter', sans-serif; font-weight:800; font-size:17px;
+    color:var(--text); letter-spacing:-.2px;
+  }
+  .worker-card .handle a{ color:var(--text); }
+  .worker-card .handle a:hover{ color:var(--green); text-decoration:none; }
+  .worker-card .pitch{
+    color:var(--text-2); font-size:13px; line-height:1.55;
+    margin: 6px 0 14px;
+    display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;
+  }
+  .worker-card .stake-row{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding-top:12px; border-top:1px dashed var(--border-2);
+  }
+  .worker-card .stake-col{ display:flex; flex-direction:column; gap:2px; }
+  .worker-card .stake-col .lbl{ font-size:9.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--text-3); font-weight:800; }
+  .worker-card .stake-col .v{ font-family:'JetBrains Mono', monospace; font-weight:800; font-size:15px; color:var(--green); }
+  .worker-card .stake-col .v.amber{ color:var(--amber); }
+  .worker-card .stake-row .links{ margin-left:auto; display:flex; gap:8px; }
+  .worker-card .stake-row .links a{
+    font-size:11px; font-weight:700; color:var(--text-3); border:1px solid var(--border-2);
+    border-radius:8px; padding:5px 9px;
+    transition: color .12s, border-color .12s;
+  }
+  .worker-card .stake-row .links a:hover{ color:var(--green); border-color:var(--green); text-decoration:none; }
+
+  /* How it works */
+  .how{
+    border:1px solid var(--border); border-radius:14px; background:var(--panel);
+    padding:18px 22px; margin-top:14px;
+    box-shadow:var(--shadow);
+  }
+  .how h3{
+    margin:0 0 12px; font-size:14px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--green); font-weight:800;
+  }
+  .how ol{ margin:0; padding-left:22px; color:var(--text-2); font-size:13.5px; line-height:1.7; }
+  .how ol li{ margin:6px 0; }
+  .how ol li b{ color:var(--text); }
+  .how .footnote{
+    margin-top:14px; padding:10px 14px; background:rgba(255,90,90,0.06); border:1px dashed rgba(255,90,90,.35);
+    border-radius:10px; color:#ff9b9b; font-size:12.5px; line-height:1.6;
+  }
+  .how .footnote b{ color:#ffbcbc; }
+
+  /* Apply form */
+  .apply{
+    border:1px solid var(--border-2); border-radius:16px;
+    background:linear-gradient(180deg, rgba(46,224,107,.06), transparent 50%), var(--panel);
+    padding:22px 24px;
+    box-shadow:var(--shadow);
+  }
+  .apply h3{
+    margin:0 0 6px; font-family:'Orbitron', sans-serif; font-size:20px; font-weight:900;
+    letter-spacing:-.3px;
+  }
+  .apply .h-sub{ color:var(--text-3); font-size:12.5px; margin-bottom:18px; }
+  .apply .field{ margin-bottom:14px; }
+  .apply label{
+    display:block; font-size:11px; letter-spacing:1.4px; text-transform:uppercase;
+    color:var(--text-3); font-weight:800; margin-bottom:6px;
+  }
+  .apply input[type=text], .apply textarea{
+    width:100%;
+    background:var(--panel-2); border:1px solid var(--border-2); color:var(--text);
+    border-radius:11px; padding:11px 14px; font-size:14px;
+    font-family:'Inter', sans-serif; line-height:1.5;
+  }
+  .apply input[type=text]:focus, .apply textarea:focus{ outline:none; border-color:var(--green); }
+  .apply textarea{ min-height:120px; resize:vertical; }
+  .apply .field .hint{ color:var(--text-3); font-size:11.5px; margin-top:5px; }
+  .apply .field .hint b{ color:var(--text-2); }
+  .apply .wallet-row{ display:flex; align-items:center; gap:10px; }
+  .apply .wallet-row .v{
+    flex:1;
+    font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--text);
+    padding:11px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:11px;
+  }
+  .apply .wallet-row .v.missing{ color:var(--text-3); font-style:italic; }
+  .apply .submit-row{
+    display:flex; align-items:center; gap:12px; margin-top:18px; flex-wrap:wrap;
+  }
+  .apply .submit{
+    border:none; cursor:pointer; border-radius:12px; padding:13px 22px;
+    color:#04230f; background:linear-gradient(135deg,var(--green-br),var(--green));
+    box-shadow:0 6px 20px rgba(46,224,107,.32);
+    font-weight:800; font-size:14px; letter-spacing:.3px; font-family:inherit;
+    transition: all .15s ease;
+  }
+  .apply .submit:hover:not(:disabled){ filter:brightness(1.06); transform:translateY(-1px); }
+  .apply .submit:disabled{ opacity:.5; cursor:not-allowed; filter:none; transform:none; }
+  .apply .status{ font-size:12.5px; color:var(--text-3); }
+  .apply .status.err{ color:#ff8a8a; }
+  .apply .status.ok{ color:var(--green); }
+
+  /* Pending list */
+  .pending-list{
+    border:1px solid var(--border); border-radius:14px;
+    background:var(--panel); box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .pending-row{
+    display:grid; grid-template-columns: minmax(150px, 1fr) 2fr auto auto;
+    align-items:center; gap:14px;
+    padding:14px 18px;
+    border-bottom:1px solid var(--border);
+  }
+  .pending-row:last-child{ border-bottom:none; }
+  .pending-row .who{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .pending-row .who .av{
+    width:28px; height:28px; border-radius:50%; background:linear-gradient(135deg,#000,#222);
+    display:grid; place-items:center; border:1px solid rgba(255,255,255,.10); flex-shrink:0;
+  }
+  .pending-row .who .av svg{ width:14px; height:14px; color:#fff; }
+  .pending-row .who .h{ font-weight:800; font-size:14px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pending-row .pitch{
+    font-size:13px; color:var(--text-2); line-height:1.5;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .pending-row .when{
+    font-family:'JetBrains Mono', monospace; font-size:11.5px; color:var(--text-3);
+  }
+  .pending-row .badge{
+    font-family:'JetBrains Mono', monospace; font-size:10.5px;
+    padding:3px 9px; border-radius:99px; font-weight:800; letter-spacing:1px;
+    text-transform:uppercase;
+  }
+  .pending-row .badge.pending{  background:rgba(255,207,90,.14); color:var(--amber); border:1px solid rgba(255,207,90,.30); }
+  .pending-row .badge.rejected{ background:rgba(255,90,90,.12);  color:#ff8a8a;       border:1px solid rgba(255,90,90,.28); }
+  .pending-empty{ padding:30px 16px; text-align:center; color:var(--text-3); font-size:13.5px; }
+
+  /* Toast */
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--panel-2); border:1px solid var(--border-2); color:var(--text);
+    padding:10px 18px; border-radius:99px; font-size:13.5px; font-weight:700;
+    box-shadow:var(--shadow); z-index:60; display:none; max-width:90%;
+  }
+  .toast.show{ display:block; animation: fadein .25s; }
+  @keyframes fadein{ from{ opacity:0; transform:translate(-50%, 8px); } to{ opacity:1; transform:translateX(-50%); } }
+
+  .info{ margin-top:24px; padding:14px 18px; border:1px dashed var(--border-2); border-radius:12px;
+    color:var(--text-3); font-size:12.5px; line-height:1.6; }
+  .info b{ color:var(--text-2); }
+
+  @media (max-width:640px){
+    .pending-row{ grid-template-columns: 1fr auto; gap:6px; }
+    .pending-row .pitch, .pending-row .when{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="brand">
+    <span class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 6L9 17l-5-5"/>
+      </svg>
+    </span>
+    FART<span class="amp">WORKER</span>
+  </a>
+  <span class="nav-sp"></span>
+  <a class="pill" href="index.html">&larr; Ecosystem</a>
+  <button id="walletBtn" class="wallet-btn" type="button">Connect Wallet</button>
+</nav>
+
+<div class="wrap">
+
+  <header class="hero">
+    <h1>The <span class="a">FartWorker</span> grant program</h1>
+    <p class="sub">
+      Get sent a <b>$FARTPRINT stake</b> for contributing to the ecosystem. The protocol decides
+      the size; tokens are deposited <b>staked via Printr</b> for up to <b>180 days</b>, so
+      grantees earn fees on the stake while their contribution plays out. Apply with your wallet
+      and your X handle &mdash; all submissions are public.
+    </p>
+  </header>
+
+  <div class="stats-row">
+    <div class="scard">
+      <div class="lbl">Workers Onboarded</div>
+      <div class="v green" id="statAccepted">—</div>
+      <div class="sub">accepted grants</div>
+    </div>
+    <div class="scard">
+      <div class="lbl">Total Granted</div>
+      <div class="v amber" id="statTotal">—</div>
+      <div class="sub">$FARTPRINT in stakes</div>
+    </div>
+    <div class="scard">
+      <div class="lbl">Pending Review</div>
+      <div class="v" id="statPending">—</div>
+      <div class="sub">applications in queue</div>
+    </div>
+  </div>
+
+  <!-- ACTIVE WORKERS -->
+  <div class="sec-h">
+    <h2>Active Workers</h2>
+    <span class="ct" id="ctActive"></span>
+    <span class="right">All grants are public · on-chain via Printr</span>
+  </div>
+  <div class="workers-grid" id="workersGrid"></div>
+
+  <!-- HOW IT WORKS -->
+  <div class="sec-h" style="margin-top:34px;">
+    <h2>How it works</h2>
+  </div>
+  <div class="how">
+    <h3>The grant flow</h3>
+    <ol>
+      <li><b>Apply.</b> Connect Phantom, enter your X handle, write a short pitch for what you'd contribute. Sign the application with your wallet to prove it's yours.</li>
+      <li><b>Review.</b> Every submission appears in the public queue. The protocol stewards review and decide whether to accept, what role you fit, and what amount you'll be sent.</li>
+      <li><b>Stake &amp; receive.</b> Accepted grants are <b>staked via Printr on your behalf</b>, locked for the agreed period (≤180 days). You earn fee revenue on the stake from day one.</li>
+      <li><b>Unstake.</b> When the lock period ends you can withdraw the principal or roll into a new stake. Fees you earn during the lock are yours to claim.</li>
+    </ol>
+    <div class="footnote">
+      <b>No guarantees.</b> Applying does not guarantee acceptance, an amount, or a role. The protocol can decline any submission for any reason or no reason at all. There is no obligation to act on, respond to, or hold any application. This is not employment, a security, or a promise of return.
+    </div>
+  </div>
+
+  <!-- APPLY -->
+  <div class="sec-h" style="margin-top:34px;">
+    <h2>Apply</h2>
+    <span class="ct">all fields are public</span>
+  </div>
+  <div class="apply">
+    <h3>Submit your application</h3>
+    <div class="h-sub">Phantom + X handle + a short pitch. Sign once with your wallet to prove ownership.</div>
+
+    <div class="field">
+      <label>Wallet</label>
+      <div class="wallet-row">
+        <div id="walletPreview" class="v missing">Connect Phantom (top right) to begin.</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="xHandle">Your X handle</label>
+      <input id="xHandle" type="text" placeholder="zoomkins232" maxlength="40" autocomplete="off">
+      <div class="hint">Without the <b>@</b>. Letters / numbers / underscores only.</div>
+    </div>
+
+    <div class="field">
+      <label for="pitch">What would you do as a Fart Worker?</label>
+      <textarea id="pitch" maxlength="800" placeholder="Describe your role — community, dev, design, content, scouting, agent ops, whatever. Be honest about scope and timeline. (30 chars min, 800 max)"></textarea>
+      <div class="hint"><span id="pitchCount">0</span> / 800 chars</div>
+    </div>
+
+    <div class="submit-row">
+      <button id="submitBtn" class="submit" type="button" disabled>Connect wallet first</button>
+      <span id="submitStatus" class="status"></span>
+    </div>
+  </div>
+
+  <!-- PENDING / REJECTED -->
+  <div class="sec-h" style="margin-top:34px;">
+    <h2>The Public Queue</h2>
+    <span class="ct" id="ctPending"></span>
+    <span class="right">All submissions are public</span>
+  </div>
+  <div class="pending-list" id="pendingList">
+    <div class="pending-empty">Loading applications…</div>
+  </div>
+
+  <div class="info">
+    <b>Reminder.</b> By submitting you agree your X handle, wallet, and pitch will be visible publicly on this page and may be quoted on the $FARTPRINT timeline. There are <b>no guarantees</b> of acceptance, no implied employment relationship, and no promise of monetary return. The protocol may reject or ignore any submission.
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { PublicKey } from "https://esm.sh/@solana/web3.js@1.95.3";
+
+const API = "/api/fartworker";
+
+const state = {
+  walletPk: null,
+  busy: false,
+};
+
+const $ = (id) => document.getElementById(id);
+function esc(s){ return String(s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function shortAddr(a){ return a ? (a.slice(0,4)+"…"+a.slice(-4)) : ""; }
+function fmtNum(n){
+  if (n == null || !isFinite(n)) return "0";
+  if (n >= 1e9) return (n/1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n/1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n/1e3).toFixed(2) + "K";
+  return Math.round(n).toLocaleString();
+}
+function ago(ts){
+  if (!ts) return "";
+  const d = Math.floor((Date.now() - ts) / 1000);
+  if (d < 60)    return d + "s ago";
+  if (d < 3600)  return Math.floor(d/60) + "m ago";
+  if (d < 86400) return Math.floor(d/3600) + "h ago";
+  return Math.floor(d/86400) + "d ago";
+}
+function toast(msg, kind){
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._h); toast._h = setTimeout(() => t.classList.remove("show"), 2400);
+}
+
+// ===== Phantom =====
+function getPhantom(){
+  const p = window.phantom && window.phantom.solana;
+  if (p && p.isPhantom) return p;
+  if (window.solana && window.solana.isPhantom) return window.solana;
+  return null;
+}
+async function connectWallet(){
+  const ph = getPhantom();
+  if (!ph) { alert("Phantom not found. Install from https://phantom.app"); return; }
+  try {
+    const res = await ph.connect();
+    state.walletPk = res.publicKey.toString();
+    localStorage.setItem("fw_trusted", "1");
+    paintWallet();
+    updateSubmit();
+  } catch (e) { console.warn(e); }
+}
+async function disconnectWallet(){
+  const ph = getPhantom();
+  try { if (ph && ph.disconnect) await ph.disconnect(); } catch (_){}
+  state.walletPk = null;
+  localStorage.removeItem("fw_trusted");
+  paintWallet();
+  updateSubmit();
+}
+async function tryAutoConnect(){
+  if (localStorage.getItem("fw_trusted") !== "1") return;
+  const ph = getPhantom();
+  if (!ph) return;
+  try {
+    const res = await ph.connect({ onlyIfTrusted: true });
+    state.walletPk = res.publicKey.toString();
+    paintWallet();
+    updateSubmit();
+  } catch (_) {}
+}
+function paintWallet(){
+  const b = $("walletBtn");
+  const prev = $("walletPreview");
+  if (state.walletPk) {
+    b.textContent = shortAddr(state.walletPk);
+    b.classList.add("connected");
+    b.onclick = disconnectWallet;
+    prev.classList.remove("missing");
+    prev.textContent = state.walletPk;
+  } else {
+    b.textContent = "Connect Wallet";
+    b.classList.remove("connected");
+    b.onclick = connectWallet;
+    prev.classList.add("missing");
+    prev.textContent = "Connect Phantom (top right) to begin.";
+  }
+}
+
+// ===== Form state =====
+$("pitch").addEventListener("input", () => {
+  $("pitchCount").textContent = $("pitch").value.length;
+  updateSubmit();
+});
+$("xHandle").addEventListener("input", updateSubmit);
+
+function updateSubmit(){
+  const btn = $("submitBtn");
+  const xh = $("xHandle").value.replace(/^@+/, "").trim();
+  const pitch = $("pitch").value.trim();
+  if (!state.walletPk) { btn.disabled = true; btn.textContent = "Connect wallet first"; return; }
+  if (xh.length < 2 || !/^[A-Za-z0-9_]+$/.test(xh)) { btn.disabled = true; btn.textContent = "Add your X handle"; return; }
+  if (pitch.length < 30) { btn.disabled = true; btn.textContent = "Write a pitch (≥30 chars)"; return; }
+  btn.disabled = false;
+  btn.textContent = "Sign & submit application";
+}
+
+// ===== Submit =====
+$("submitBtn").addEventListener("click", async () => {
+  if (state.busy) return;
+  if (!state.walletPk) { toast("Connect your wallet first."); return; }
+  const xh = $("xHandle").value.replace(/^@+/, "").trim();
+  const pitch = $("pitch").value.trim();
+  if (xh.length < 2 || pitch.length < 30) return;
+
+  const ph = getPhantom();
+  if (!ph) { toast("Phantom not found."); return; }
+
+  state.busy = true;
+  $("submitBtn").disabled = true;
+  $("submitBtn").textContent = "Signing…";
+  const statusEl = $("submitStatus");
+  statusEl.className = "status";
+  statusEl.textContent = "Sign the application message in Phantom…";
+
+  try {
+    const ts = Date.now();
+    const msg = [
+      "FartWorker grant application",
+      "Wallet: " + state.walletPk,
+      "X: @" + xh,
+      "Timestamp: " + new Date(ts).toISOString(),
+      "All submissions are public. No guarantee of acceptance.",
+    ].join("\n");
+    const encoded = new TextEncoder().encode(msg);
+    const result = await ph.signMessage(encoded, "utf8");
+    const sigBytes = result.signature || result;
+    // Convert to base64 for the wire
+    const b64 = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(sigBytes))));
+
+    statusEl.textContent = "Submitting…";
+
+    const r = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wallet: state.walletPk,
+        xHandle: xh,
+        pitch,
+        signature: b64,
+        signedMessage: msg,
+      }),
+    });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j || j.ok !== true) {
+      const err = (j && (j.message || j.error)) || "Submission failed.";
+      statusEl.className = "status err"; statusEl.textContent = err;
+      $("submitBtn").disabled = false;
+      $("submitBtn").textContent = "Try again";
+      state.busy = false;
+      return;
+    }
+    statusEl.className = "status ok"; statusEl.textContent = "Submitted — your application is in the public queue.";
+    $("submitBtn").textContent = "Submitted ✓";
+    $("pitch").value = "";
+    $("pitchCount").textContent = "0";
+    toast("Application submitted 🔥");
+    await loadAll();
+    setTimeout(() => { $("submitBtn").disabled = false; updateSubmit(); state.busy = false; }, 1200);
+  } catch (e) {
+    console.warn(e);
+    statusEl.className = "status err";
+    statusEl.textContent = (e && e.message) ? ("Sign failed: " + e.message) : "Sign failed.";
+    $("submitBtn").disabled = false;
+    $("submitBtn").textContent = "Try again";
+    state.busy = false;
+  }
+});
+
+// ===== Load & render =====
+async function loadAll(){
+  try {
+    const r = await fetch(API + "?t=" + Date.now());
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json();
+    const apps = j.applications || [];
+    const grants = j.grants || [];
+
+    $("statAccepted").textContent = (j.counts && j.counts.accepted) || grants.length;
+    $("statTotal").textContent    = fmtNum(j.totalGranted || 0) + " $FP";
+    $("statPending").textContent  = (j.counts && j.counts.pending) || 0;
+    $("ctActive").textContent  = grants.length ? `${grants.length} worker${grants.length===1?"":"s"}` : "";
+    $("ctPending").textContent = `${apps.filter(a=>a.status!=="accepted").length} in queue`;
+
+    renderWorkers(grants);
+    renderPending(apps.filter(a => a.status !== "accepted"));
+  } catch (e) {
+    console.warn("loadAll fail", e);
+  }
+}
+
+const X_ICON_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M18.244 2H21l-6.52 7.45L22 22h-6.802l-5.3-6.93L3.8 22H1l7-7.99L1.5 2h6.94l4.79 6.34L18.245 2zm-1.184 18.39h1.566L7.06 3.51H5.39L17.06 20.39z"/></svg>`;
+
+function renderWorkers(grants){
+  const el = $("workersGrid");
+  if (!grants.length) {
+    el.innerHTML = `<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--text-3);font-size:13.5px;border:1px dashed var(--border-2);border-radius:14px;">No accepted grants yet. Be the first!</div>`;
+    return;
+  }
+  el.innerHTML = grants.map(g => {
+    const role = g.role || "Worker";
+    const tx = g.printrStakeTx;
+    const printrLink = tx ? `<a href="https://solscan.io/tx/${esc(tx)}" target="_blank" rel="noopener" title="Printr stake tx">printr tx ↗</a>` : "";
+    const xLink = g.xHandle ? `<a href="https://x.com/${esc(g.xHandle)}" target="_blank" rel="noopener" title="X profile">x ↗</a>` : "";
+    return `
+      <div class="worker-card">
+        <span class="role-pill">${esc(role)}</span>
+        <div class="x-handle">
+          <span class="x-icon">${X_ICON_SVG}</span>
+          <span class="handle">
+            <a href="https://x.com/${esc(g.xHandle)}" target="_blank" rel="noopener">@${esc(g.xHandle)}</a>
+          </span>
+        </div>
+        <div class="pitch">${esc(g.pitch || "")}</div>
+        <div class="stake-row">
+          <div class="stake-col">
+            <div class="lbl">Grant</div>
+            <div class="v amber">${fmtNum(g.grantAmount || 0)} $FP</div>
+          </div>
+          <div class="stake-col">
+            <div class="lbl">Staked</div>
+            <div class="v">${g.stakeDays || "?"} days</div>
+          </div>
+          <div class="links">
+            ${xLink}
+            ${printrLink}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderPending(rows){
+  const el = $("pendingList");
+  if (!rows.length) {
+    el.innerHTML = `<div class="pending-empty">No pending applications yet — be the first to apply.</div>`;
+    return;
+  }
+  el.innerHTML = rows.map(a => {
+    const badge = a.status === "rejected" ? "rejected" : "pending";
+    return `
+      <div class="pending-row">
+        <div class="who">
+          <span class="av">${X_ICON_SVG}</span>
+          <span class="h"><a href="https://x.com/${esc(a.xHandle)}" target="_blank" rel="noopener" style="color:inherit;">@${esc(a.xHandle)}</a></span>
+        </div>
+        <div class="pitch">${esc(a.pitch || "")}</div>
+        <div class="when">${ago(a.ts)}</div>
+        <div class="badge ${badge}">${badge}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ===== Boot =====
+paintWallet();
+tryAutoConnect();
+loadAll();
+setInterval(loadAll, 30000);
+</script>
+
+</body>
+</html>

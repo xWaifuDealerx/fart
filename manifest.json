@@ -1,0 +1,49 @@
+{
+  "name": "$FARTPRINT Ecosystem",
+  "short_name": "FARTPRINT",
+  "description": "The $FARTPRINT crypto-meme ecosystem on Solana — a constellation of burn-bearing apps anchored by native staking on Printr.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0f0c",
+  "theme_color": "#2ee06b",
+  "lang": "en",
+  "categories": ["finance", "games", "social", "utilities"],
+  "icons": [
+    { "src": "logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "FartForum",
+      "short_name": "Forum",
+      "description": "Open the burn-to-post forum",
+      "url": "./fartforum.html",
+      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "FartIdler",
+      "short_name": "Idler",
+      "description": "Click the printer, mine FARTS",
+      "url": "./fartidler.html",
+      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "FartFlip",
+      "short_name": "Flip",
+      "description": "Coin flip · 2x or burn",
+      "url": "./fartflip.html",
+      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "FartMessage",
+      "short_name": "Message",
+      "description": "iMessage on $FARTPRINT",
+      "url": "./fartmessage.html",
+      "icons": [{ "src": "logo.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
+}
