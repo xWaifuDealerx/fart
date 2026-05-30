@@ -360,6 +360,13 @@
   .ticker .v.up { color: var(--green); }
   .ticker .v.down { color: var(--red); }
   .ticker .v.burn { color: var(--red); }
+  /* Match the gold-shine treatment used on the big % staked stat — same
+     gradient + halo, scaled down for the live-ticker chip. */
+  .ticker .v#t-staked {
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 38%, #f5b400 78%, #c98a00 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(255, 200, 60, 0.35));
+  }
   /* ===== CONTRACT BOX ===== */
   .ca-box {
     margin-top: 12px;
@@ -1507,10 +1514,15 @@
     font-size: 28px; font-weight: 800; color: white;
     line-height: 1.05; margin-top: 8px;
   }
+  /* Gold-shine on the big % staked number — warm, slightly glowing gradient
+     so it pops as the staking section's hero stat. Drop-shadow gives it
+     a soft halo without bleeding past the parent box. */
   .stake-stat.big .sv {
     font-size: clamp(48px, 5.5vw, 60px);
-    background: linear-gradient(135deg, #46f08a, #2ee06b);
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 38%, #f5b400 78%, #c98a00 100%);
     -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255, 200, 60, 0.40));
+    text-shadow: 0 1px 0 rgba(255, 220, 90, 0.18);
   }
   .stake-stat .sk2 {
     font-size: 11px; color: rgba(255,255,255,0.40); margin-top: 4px;
@@ -1927,10 +1939,15 @@
     box-shadow: 0 0 6px var(--green-glow);
     animation: pulse 2.5s infinite;
   }
+  /* Match the LIVE ON SOLANA pill: JetBrains Mono, uppercase, same
+     letter-spacing and weight, so the two sit visually balanced. */
   .wallet-btn {
     margin-left: 12px;
     background: var(--green); color: #fff; border: 0;
-    font-family: inherit; font-size: 12px; font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
     padding: 7px 16px; border-radius: 100px; cursor: pointer;
     transition: all 0.15s; vertical-align: middle;
   }
@@ -2931,7 +2948,7 @@
         </span>
         <span>Live on Solana</span>
       </span>
-      <button class="wallet-btn" id="navConnect">Connect Phantom</button>
+      <button class="wallet-btn" id="navConnect">Connect Wallet</button>
       <span class="wallet-pill" id="navWallet" style="display:none;">
         <span class="addr" id="navAddr"></span>
         <button class="wallet-dc" id="navDisconnect" title="Disconnect">⏻</button>
@@ -3867,6 +3884,10 @@
     <span class="meta">live on Solana DEXs</span>
   </div>
   <div class="buy-grid">
+    <a class="buy-card printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
+      <span class="buy-left"><img src="https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg" alt="" onerror="this.style.display='none'"><span class="buy-name">Printr</span></span>
+      <span class="buy-go">Trade ↗</span>
+    </a>
     <a class="buy-card pumpswap" href="https://swap.pump.fun/?input=So11111111111111111111111111111111111111112&output=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
       <span class="buy-left"><img src="https://hamzabenjeddi.com/wp-content/uploads/2025/06/pump.webp" alt="" onerror="this.style.display='none'"><span class="buy-name">PumpSwap</span></span>
       <span class="buy-go">Trade ↗</span>
@@ -3877,10 +3898,6 @@
     </a>
     <a class="buy-card raydium" href="https://raydium.io/swap/?inputMint=sol&outputMint=AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
       <span class="buy-left"><img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTK13dMUOeFWHak82jvWdezUipq5ZPOw4pVlw&s" alt="" onerror="this.style.display='none'"><span class="buy-name">Raydium</span></span>
-      <span class="buy-go">Trade ↗</span>
-    </a>
-    <a class="buy-card printr" href="https://app.printr.money/trade/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">
-      <span class="buy-left"><img src="https://cryptototem.com/wp-content/uploads/2026/04/Printr-logo.jpg" alt="" onerror="this.style.display='none'"><span class="buy-name">Printr</span></span>
       <span class="buy-go">Trade ↗</span>
     </a>
   </div>
@@ -4259,7 +4276,7 @@
         </div>
         <textarea class="pv-field" id="pvComment" maxlength="500" placeholder="Leave a comment (max 500 chars)…"></textarea>
         <button class="pv-submit" id="pvSubmit">Sign &amp; post review</button>
-        <div class="pv-msg" id="pvMsg">Connect Phantom (top right) to leave a review.</div>
+        <div class="pv-msg" id="pvMsg">Connect Wallet (top right) to leave a review.</div>
       </div>
 
       <div class="pv-list" id="pvList"></div>
@@ -4977,7 +4994,7 @@ function updatePvWriteState(){
   msg.className = "pv-msg";
   msg.textContent = Wallet.addr
     ? "Signed in as " + shortAddr(Wallet.addr) + " · pick stars, write a comment, then sign."
-    : "Connect Phantom (top right) to leave a review.";
+    : "Connect Wallet (top right) to leave a review.";
 }
 
 function paintPvStars(){ document.querySelectorAll("#pvStarPick .s").forEach(s => s.classList.toggle("on", Number(s.dataset.v) <= PV.stars)); }
@@ -5041,7 +5058,7 @@ function findCardByName(name){
 async function submitPvReview(){
   if(PV.busy) return;
   const m = $id("pvMsg");
-  if(!Wallet.addr){ await connectWallet(); if(!Wallet.addr){ m.textContent = "Connect Phantom to post a review."; m.className = "pv-msg err"; return; } }
+  if(!Wallet.addr){ await connectWallet(); if(!Wallet.addr){ m.textContent = "Connect a wallet to post a review."; m.className = "pv-msg err"; return; } }
   if(!(PV.stars >= 1 && PV.stars <= 5)){ m.textContent = "Pick a star rating first."; m.className = "pv-msg err"; return; }
   const phantom = Wallet.phantom || getPhantom();
   if(!phantom) return;
