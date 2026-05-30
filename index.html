@@ -126,6 +126,12 @@
     -moz-osx-font-smoothing: grayscale;
     min-height: 100vh;
     line-height: 1.5;
+    /* Kill the horizontal-drag white-edges effect on mobile: clamp the page
+       to viewport width so any stray wide element can never push the body
+       beyond the screen, and disable the horizontal rubber-band bounce. */
+    max-width: 100%;
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
   }
 
   body {
@@ -1034,7 +1040,7 @@
   .tp-list { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
   .tp-row {
     display: grid;
-    grid-template-columns: 32px 28px 1fr auto auto;
+    grid-template-columns: 32px 28px 1fr auto;
     align-items: center;
     gap: 10px;
     padding: 9px 12px;
@@ -1305,11 +1311,18 @@
     grid-template-columns: repeat(5, 1fr);
     gap: 14px;
     margin-top: 6px;
+    /* Don't let any single card's intrinsic content force the grid wider
+       than its container — phones with long app names ("FartAnalyzer ·
+       Compare · Live") were pushing the row past the viewport edge,
+       which is what produced the horizontal-drag white margins. */
+    min-width: 0;
   }
+  /* Belt-and-suspenders: keep the cells from refusing to shrink. */
+  .more-apps-list > .more-card { min-width: 0; }
   @media (max-width: 1100px){ .more-apps-list { grid-template-columns: repeat(4, 1fr); } }
-  @media (max-width: 900px){  .more-apps-list { grid-template-columns: repeat(3, 1fr); } }
-  @media (max-width: 640px){  .more-apps-list { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 420px){  .more-apps-list { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .more-apps-list { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 720px) { .more-apps-list { grid-template-columns: repeat(2, 1fr); gap: 10px; } }
+  @media (max-width: 480px) { .more-apps-list { grid-template-columns: 1fr; gap: 10px; } }
 
   .more-apps-list .more-card.hidden-rest { display: none; }
   .more-apps-list.expanded .more-card.hidden-rest { display: flex; }
@@ -1371,6 +1384,17 @@
     transition: transform 0.18s ease, color 0.18s ease;
   }
   .more-card:hover .em-arrow { color: var(--green); transform: translateX(3px); }
+
+  /* Phone-size tightening — the 2-col + 1-col layouts get crammed if the
+     desktop padding/gap stays. Tighten so the icon + text + arrow always
+     fit without the card hitting horizontal overflow on iPhone-class widths. */
+  @media (max-width: 720px){
+    .more-card { padding: 12px; gap: 10px; min-height: 58px; border-radius: 12px; }
+    .more-card .em-icon { width: 32px; height: 32px; border-radius: 9px; }
+    .more-card .em-icon svg { width: 16px; height: 16px; }
+    .more-card h4 { font-size: 13px; }
+    .more-card .mc-cat { font-size: 9.5px; letter-spacing: 0.5px; }
+  }
 
   .eco-rest { display: none; }
   .eco-rest.expanded { display: block; }
@@ -1514,6 +1538,30 @@
     box-shadow: 0 28px 60px rgba(0,0,0,0.45);
   }
   @media (max-width: 880px){ .burn-callout-v2 { grid-template-columns: 1fr; padding: 28px; } }
+  /* ── Phone-size tightening for the burn callout ────────────────────────
+     Two related problems on narrow screens (≤ ~560px):
+       1. The description paragraph and stats overflowed the panel padding.
+       2. The donut + legend (230px disc + 26px gap + ~110px legend = 366px
+          minimum) was wider than the device viewport, pushing the page
+          horizontally and showing white margins when the user dragged
+          left/right.
+     Fix: drop the padding, shrink the heading clamp, let the stats stack,
+     and switch .donut-wrap to a vertical column so the disc sits above
+     the legend instead of beside it. The disc itself also shrinks. */
+  @media (max-width: 560px){
+    .burn-callout-v2 { padding: 22px 18px; border-radius: 22px; gap: 22px; }
+    .burn-v2-left h2 { font-size: clamp(30px, 9vw, 42px); margin-bottom: 14px; }
+    .burn-v2-left p  { font-size: 13.5px; line-height: 1.55; max-width: 100%; margin-bottom: 18px; }
+    .burn-v2-stats   { grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+    .burn-v2-stat .sv{ font-size: 24px; }
+    .burn-v2-right   { padding: 18px 12px; min-height: 0; }
+    .burn-v2-right .right-label { left: 14px; top: 12px; }
+    .donut-wrap     { flex-direction: column; gap: 16px; align-items: center; }
+    .donut-disc     { width: 200px; height: 200px; }
+    .donut-center .val { font-size: 17px; }
+    .donut-legend   { flex-direction: column; gap: 7px; min-width: 0; width: 100%; max-width: 240px; }
+    .donut-legend .lg .lg-name { white-space: normal; }
+  }
 
   .burn-v2-eyebrow {
     display: inline-block;
@@ -2822,9 +2870,15 @@
     .featured-badges { justify-content: center; }
     .featured-actions { align-items: center; }
   }
+  /* Slightly looser breakpoint so all common phone widths (390–460px) get
+     the tighter horizontal padding — this also kills the last few pixels
+     of horizontal overflow that produced white margins on side-drag. */
+  @media (max-width: 560px) {
+    .wrap { padding: 36px 16px 60px; }
+  }
   @media (max-width: 460px) {
     .apps-grid { grid-template-columns: 1fr; }
-    .wrap { padding: 36px 18px 60px; }
+    .wrap { padding: 32px 14px 60px; }
     .ticker { grid-template-columns: 1fr; }
     .ticker .item { border-right: 0; border-bottom: 1px solid var(--border-light); }
     .ticker .item:nth-child(odd) { border-right: 0; }
@@ -3168,7 +3222,7 @@
       </span>
       <div class="mc-text">
         <h4>FartFlip</h4>
-        <div class="mc-cat">Gambling · Live</div>
+        <div class="mc-cat">Game · Live</div>
       </div>
       <span class="em-arrow">→</span>
     </a>
@@ -3459,7 +3513,7 @@
         </svg>
       </div>
       <h4>FartFlip</h4>
-      <div class="cat">Gambling · Coin Flip · 2x or burn</div>
+      <div class="cat">Game · Coin Flip · 2x or burn</div>
       <p>Heads or tails. Bet $FARTPRINT, win 2x or watch it burn. Fair 50/50 server-signed flip, instant on-chain payout from the house treasury. Don't bet the rent.</p>
       <div class="row-bottom">
         <span class="status-tag live"><span class="dot"></span>LIVE</span>
@@ -4421,13 +4475,40 @@ async function _mwComputeApp(app){
   if(app.mode === "idlerApi"){
     try {
       const r = await fetch(app.api + "?t=" + Date.now());
-      if(r.ok){ const j = await r.json(); return Number(j && j.entry && j.entry.totalBurned) || 0; }
+      if(r.ok){
+        const j = await r.json();
+        // /api/fartidler returns { entry: { totalBurned, paidPlayers, feeTokens } }
+        // Prefer totalBurned, but fall back to paidPlayers * feeTokens (or 10K)
+        // so that an entry that hasn't been re-tallied on the backend yet still
+        // shows up the moment the player count goes up.
+        const t = Number(j && j.entry && j.entry.totalBurned);
+        if(t > 0) return t;
+        const players = Number(j && j.entry && j.entry.paidPlayers) || 0;
+        const fee     = Number(j && j.entry && j.entry.feeTokens) || 10000;
+        return players * fee;
+      }
     } catch(_){}
     return 0;
   }
   if(app.mode === "incineration") return null; // computed below
   const recs = await _mwLoadRecords(app);
-  if(app.mode === "sum")   return recs.reduce((s, r) => s + (Number(r.a) || 0), 0);
+  if(app.mode === "sum"){
+    let total = recs.reduce((s, r) => s + (Number(r.a) || 0), 0);
+    // FartBurner: also merge the seeded wallet burns from burns.js (these
+    // don't have tx signatures, so they live in BURNER_SEEDS, not ntfy).
+    // Without this the donut showed ~0 even though ~175,860 had been burned.
+    if(app.key === "burner" && window.FartBurns && FartBurns.burnerTotal){
+      const seen = new Set(recs.map(r => r.tx));
+      try {
+        FartBurns.burnerRecords().forEach(s => {
+          if(!seen.has(s.tx)) total += Number(s.a) || 0;
+        });
+      } catch(_){
+        total += FartBurns.burnerTotal();
+      }
+    }
+    return total;
+  }
   if(app.mode === "count") return recs.length * (app.per || 0);
   return 0;
 }
@@ -5228,14 +5309,12 @@ function renderTop3(elId, rows, emptyMsg){
 
   listEl.innerHTML = rows.map((t, i) => {
     const rank = i + 1;
-    const code = String(t.sym || "").slice(0,3).toUpperCase();
     return `
       <div class="tp-row">
         <span class="tp-r r${rank}">#${rank}</span>
         <span class="tp-av">${t.img ? `<img src="${t.img}" alt="" onerror="this.parentNode.textContent='${escHtml((t.sym||'?').slice(0,2))}';this.remove();">` : escHtml((t.sym||'?').slice(0,2))}</span>
-        <span class="tp-nm">${escHtml(t.sym || '?')}<small>$${escHtml((t.sym||'').slice(0,8))}</small></span>
+        <span class="tp-nm">${escHtml(t.sym || '?')}</span>
         <span class="tp-price">${fmtMcapShort(t.mcap)}</span>
-        <span class="tp-pct">${escHtml(code)}</span>
       </div>
     `;
   }).join("");
@@ -5258,6 +5337,9 @@ async function fetchPumpMcap(c, caps){
     if(!r.ok) return;
     const j = await r.json();
     const v = Number(j?.usd_market_cap); if(v > 0 && caps) caps[c.ca] = v;
+    // pump.fun image_uri = the minted token's logo (the country flag with a fart
+    // on it). That's the only artwork we want on the podium / list — never the
+    // plain country flag from flagcdn.
     const img = j?.image_uri || j?.image || j?.imageUrl; if(img) _fcImg[c.ca] = img;
   }catch(_){}
 }
@@ -5277,12 +5359,18 @@ async function loadTop3FartCup(){
     const used = new Set(top.map(t => t.ca));
     top = top.concat(withCap.filter(r => !used.has(r.ca)).slice(0, 3 - top.length));
   }
-  // make sure the podium coins have their pump.fun image (fetch any we haven't yet)
+  // Force-fetch the pump.fun image_uri for every podium + list coin we don't
+  // already have cached — we never want to fall back to the plain country flag
+  // (flagcdn). The Fart Cup artwork on pump.fun is the *flag with a fart on
+  // it*, which is the whole joke; rendering the bare flag would defeat that.
   await runLimited(top.filter(c => !_fcImg[c.ca]), 5, (c) => fetchPumpMcap(c, null));
 
   const rows = top.map(c => ({
     sym: c.sym,
-    img: _fcImg[c.ca] || `https://flagcdn.com/w80/${c.code}.png`,
+    // Only the pump.fun image. If a coin truly couldn't be fetched, leave
+    // img undefined so the avatar slot falls through to the 2-letter
+    // initials placeholder — never the plain country flag.
+    img: _fcImg[c.ca] || null,
     mcap: c.mcap,
   }));
   renderTop3("top3-fartcup", rows, "Nation coins warming up — check back soon.");
