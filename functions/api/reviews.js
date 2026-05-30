@@ -1,100 +1,127 @@
 // ============================================================
-// functions/api/reviews.js — $FARTPRINT app review registry
+// api/reviews.js — $FARTPRINT app review registry
 // ============================================================
-//   GET  /api/reviews → { reviews: [...], count, backend }
-//   POST /api/reviews → body = { app, w, s, c, sig, msg, ts }
+// Stores Phantom-signed, per-app star ratings + comments.
+//
+//   GET  /api/reviews            → { reviews: [...], count: N, backend }
+//   POST /api/reviews            → body = one review record:
+//        { app, w, s, c, sig, msg, ts }
+//        app = app key (e.g. "fartcup"), w = wallet, s = 1..5 stars,
+//        c = comment, sig = base64 Phantom signature, msg = signed message,
+//        ts = timestamp.  One review per wallet per app (re-posting updates).
+//
+// Storage:
+//   • Vercel KV  — used automatically when KV_REST_API_URL + KV_REST_API_TOKEN
+//                  env vars exist. Permanent. Recommended.
+//   • ntfy.sh    — fallback when KV isn't configured (note: ~12h retention).
 // ============================================================
 
-const KV_KEY     = "fart_reviews";
+const KV_URL   = process.env.KV_REST_API_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+const KV_KEY   = "fart_reviews";
+
 const NTFY_TOPIC = "fartprint-app-reviews-v1-r4m8qz";
 const NTFY_BASE  = "https://ntfy.sh";
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+const hasKV = () => !!(KV_URL && KV_TOKEN);
+
+async function kv(command) {
+  const r = await fetch(KV_URL, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + KV_TOKEN, "Content-Type": "application/json" },
+    body: JSON.stringify(command),
+  });
+  let j = null;
+  try { j = await r.json(); } catch (_) {}
+  if (!r.ok) throw new Error("KV HTTP " + r.status + (j && j.error ? " — " + j.error : ""));
+  if (j && j.error) throw new Error("KV error — " + j.error);
+  return j ? j.result : null;
 }
 
-async function readBody(request) {
-  try { return await request.json(); } catch { return null; }
+async function readBody(req) {
+  if (req.body) {
+    if (typeof req.body === "object") return req.body;
+    if (typeof req.body === "string") { try { return JSON.parse(req.body); } catch (_) { return null; } }
+  }
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    return raw ? JSON.parse(raw) : null;
+  } catch (_) { return null; }
 }
 
-function makeKv(env) {
-  const hasKV = () => !!(env.KV_REST_API_URL && env.KV_REST_API_TOKEN);
-
-  async function kv(command) {
-    const r = await fetch(env.KV_REST_API_URL, {
-      method: "POST",
-      headers: { "Authorization": "Bearer " + env.KV_REST_API_TOKEN, "Content-Type": "application/json" },
-      body: JSON.stringify(command),
-    });
-    let j = null;
-    try { j = await r.json(); } catch (_) {}
-    if (!r.ok) throw new Error("KV HTTP " + r.status + (j && j.error ? " — " + j.error : ""));
-    if (j && j.error) throw new Error("KV error — " + j.error);
-    return j ? j.result : null;
+async function getReviews() {
+  if (hasKV()) {
+    const raw = await kv(["HVALS", KV_KEY]);
+    return (raw || [])
+      .map((s) => { try { return JSON.parse(s); } catch (_) { return null; } })
+      .filter(Boolean);
   }
-
-  async function getReviews() {
-    if (hasKV()) {
-      const raw = await kv(["HVALS", KV_KEY]);
-      return (raw || [])
-        .map((s) => { try { return JSON.parse(s); } catch (_) { return null; } })
-        .filter(Boolean);
-    }
-    const r = await fetch(`${NTFY_BASE}/${NTFY_TOPIC}/json?poll=1&since=all`);
-    if (!r.ok) return [];
-    const text = await r.text();
-    if (!text.trim()) return [];
-    const latest = new Map();
-    for (const line of text.trim().split("\n")) {
-      try {
-        const evt = JSON.parse(line);
-        if (evt.event === "message" && evt.message) {
-          try {
-            const rec = JSON.parse(evt.message);
-            if (rec && rec.app && rec.w) {
-              const k = rec.app + "|" + rec.w;
-              const prev = latest.get(k);
-              if (!prev || (rec.ts || 0) >= (prev.ts || 0)) latest.set(k, rec);
-            }
-          } catch (_) {}
-        }
-      } catch (_) {}
-    }
-    return [...latest.values()];
+  const r = await fetch(`${NTFY_BASE}/${NTFY_TOPIC}/json?poll=1&since=all`);
+  if (!r.ok) return [];
+  const text = await r.text();
+  if (!text.trim()) return [];
+  // ntfy keeps every event; collapse to the latest review per app+wallet.
+  const latest = new Map();
+  for (const line of text.trim().split("\n")) {
+    try {
+      const evt = JSON.parse(line);
+      if (evt.event === "message" && evt.message) {
+        try {
+          const rec = JSON.parse(evt.message);
+          if (rec && rec.app && rec.w) {
+            const k = rec.app + "|" + rec.w;
+            const prev = latest.get(k);
+            if (!prev || (rec.ts || 0) >= (prev.ts || 0)) latest.set(k, rec);
+          }
+        } catch (_) {}
+      }
+    } catch (_) {}
   }
-
-  async function putReview(rec) {
-    const field = String(rec.app) + "|" + String(rec.w);
-    if (hasKV()) {
-      await kv(["HSET", KV_KEY, field, JSON.stringify(rec)]);
-      return;
-    }
-    await fetch(`${NTFY_BASE}/${NTFY_TOPIC}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rec),
-    });
-  }
-
-  return { hasKV, getReviews, putReview };
+  return [...latest.values()];
 }
 
-export async function onRequest({ request, env }) {
-  const { hasKV, getReviews, putReview } = makeKv(env);
+async function putReview(rec) {
+  const field = String(rec.app) + "|" + String(rec.w);
+  if (hasKV()) {
+    await kv(["HSET", KV_KEY, field, JSON.stringify(rec)]);
+    return;
+  }
+  await fetch(`${NTFY_BASE}/${NTFY_TOPIC}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(rec),
+  });
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Cache-Control", "no-store");
+
+  if (req.method === "OPTIONS") { res.status(200).end(); return; }
 
   try {
-    if (request.method === "GET") {
+    if (req.method === "GET") {
       const reviews = await getReviews();
-      return json({ reviews, count: reviews.length, backend: hasKV() ? "kv" : "ntfy" });
+      res.status(200).json({ reviews, count: reviews.length, backend: hasKV() ? "kv" : "ntfy" });
+      return;
     }
 
-    if (request.method === "POST") {
-      const rec = await readBody(request);
-      if (!rec || typeof rec !== "object") return json({ ok: false, message: "Could not read JSON body." }, 400);
+    if (req.method === "POST") {
+      const rec = await readBody(req);
+      if (!rec || typeof rec !== "object") {
+        res.status(400).json({ ok: false, message: "Could not read JSON body." });
+        return;
+      }
       const stars = Number(rec.s);
       if (!rec.app || !rec.w || !(stars >= 1 && stars <= 5)) {
-        return json({ ok: false, message: "Record needs 'app', 'w', and 's' (1-5).", received: Object.keys(rec) }, 400);
+        res.status(400).json({ ok: false, message: "Record needs 'app', 'w', and 's' (1-5).", received: Object.keys(rec) });
+        return;
       }
+      // Trim comment to a sane size.
       const clean = {
         app: String(rec.app).slice(0, 40),
         w: String(rec.w).slice(0, 64),
@@ -106,11 +133,12 @@ export async function onRequest({ request, env }) {
       };
       await putReview(clean);
       const reviews = await getReviews();
-      return json({ ok: true, backend: hasKV() ? "kv" : "ntfy", count: reviews.length });
+      res.status(200).json({ ok: true, backend: hasKV() ? "kv" : "ntfy", count: reviews.length });
+      return;
     }
 
-    return json({ ok: false, message: "Use GET or POST." }, 405);
+    res.status(405).json({ ok: false, message: "Use GET or POST." });
   } catch (e) {
-    return json({ ok: false, message: String((e && e.message) || e) }, 500);
+    res.status(500).json({ ok: false, message: String((e && e.message) || e) });
   }
 }

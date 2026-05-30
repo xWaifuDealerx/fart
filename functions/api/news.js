@@ -1,17 +1,17 @@
 // ============================================================
-// functions/api/news.js — World Cup news feed (Google News RSS proxy)
+// api/news.js — World Cup news feed (Google News RSS proxy)
 // ============================================================
-//   GET /api/news → { items: [ { title, link, pubDate, source } ] }
+// Browsers can't read Google News RSS directly (CORS), so this runs
+// server-side, fetches the feed, and returns the latest headlines as
+// JSON for the Fart Cup sidebar.
+//
+//   GET /api/news  → { items: [ { title, link, pubDate, source } ] }
 // ============================================================
 
 const FEED_URL =
   "https://news.google.com/rss/search?q=" +
   encodeURIComponent("FIFA World Cup 2026") +
   "&hl=en-US&gl=US&ceid=US:en";
-
-function json(data, status = 200, extra = {}) {
-  return new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", ...extra } });
-}
 
 function decodeEntities(s) {
   return String(s || "")
@@ -32,13 +32,18 @@ function pick(block, tag) {
   return m ? m[1] : "";
 }
 
-export async function onRequest({ request }) {
-  if (request.method !== "GET") return json({ items: [], note: "Use GET." }, 405);
-  const cache = { "Cache-Control": "s-maxage=300, stale-while-revalidate=600" };
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // cache at the edge for a few minutes
+  res.setHeader("Cache-Control", "s-maxage=300, stale-while-revalidate=600");
+
+  if (req.method === "OPTIONS") { res.status(200).end(); return; }
 
   try {
     const r = await fetch(FEED_URL, { headers: { "User-Agent": "Mozilla/5.0 (compatible; FartCupBot/1.0)" } });
-    if (!r.ok) return json({ items: [], note: "feed HTTP " + r.status }, 200, cache);
+    if (!r.ok) { res.status(200).json({ items: [], note: "feed HTTP " + r.status }); return; }
     const xml = await r.text();
 
     const items = [];
@@ -51,8 +56,8 @@ export async function onRequest({ request }) {
       const source = decodeEntities(pick(block, "source"));
       if (title) items.push({ title, link, pubDate, source });
     }
-    return json({ items }, 200, cache);
+    res.status(200).json({ items });
   } catch (e) {
-    return json({ items: [], note: String((e && e.message) || e) });
+    res.status(200).json({ items: [], note: String((e && e.message) || e) });
   }
 }
