@@ -2887,7 +2887,6 @@
 
   <!-- HERO -->
   <header class="hero">
-    <div class="pre-title"><span class="sol-logo" aria-hidden="true"><svg viewBox="0 0 397.7 311.7" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="solGrad" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#00ffa3"/><stop offset="1" stop-color="#dc1fff"/></linearGradient></defs><path fill="url(#solGrad)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGrad)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1z"/><path fill="url(#solGrad)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1z"/></svg></span>LIVE ON SOLANA</div>
     <h1 class="brand">
       <span class="brand-logo" aria-label="$FARTPRINT logo">
         <!-- Drop logo.png into outputs to override; this SVG renders as fallback. -->
@@ -3622,9 +3621,6 @@
 
   </div>
 
-  <div class="apps-more">
-    <button class="apps-toggle" id="appsToggle">Show all apps</button>
-  </div>
 
   <!-- TOP PERFORMERS -->
   <div class="tp-header">
@@ -4747,37 +4743,54 @@ function applyAppView(){
   const limit = APPS_EXPANDED ? matching.length : APP_LIMIT;
   matching.slice(0, limit).forEach(c => { c.style.display = ''; });
 
-  const btn = document.getElementById('appsToggle');
-  if(btn){
-    if(matching.length > APP_LIMIT){
-      btn.parentElement.style.display = '';
-      btn.textContent = APPS_EXPANDED ? 'Show less' : ('Show all apps (' + matching.length + ')');
-    } else {
-      btn.parentElement.style.display = 'none';
-    }
-  }
-
-  // Sync the "VIEW ALL APPS (N)" count badge in the new ecosystem header.
-  const countEl = document.getElementById('ecoCount');
-  if(countEl) countEl.textContent = String(all.length);
+  // The old legacy "Show all apps" button (#appsToggle) was removed — the
+  // ecoExpandBtn / moreAppsViewAll / ecoCountBadge are the single source of
+  // truth now. The eco count badge is managed by _ecoSyncBtn().
 }
 
 // Clicking the VIEW ALL APPS badge or "Show all apps" button toggles the
-// expandable rest section (FartSwap / Fart&Poop500 / FartAnalyzer / Staking
-// / FartNFT / FartRoom — the apps below the featured flagship + 2x2 + 2 rows).
-function _ecoToggleRest(open){
-  const rest = document.getElementById('ecoRest');
+// More Apps list — revealing the .hidden-rest cards (FartList / FartWorker /
+// FartMemes / FartSwap / Fart&Poop500 / FartAnalyzer / Staking / FartNFT /
+// FartRoom — the rest of the ecosystem below the flagship + 2x2 + first row).
+function _ecoTotalAppsCount(){
+  // 1 flagship + 4 in the 2x2 + every .more-card (visible + hidden-rest).
+  const list = document.getElementById('moreAppsList');
+  const moreCount = list ? list.querySelectorAll('.more-card').length : 0;
+  return 1 + 4 + moreCount;
+}
+function _ecoSyncBtn(){
+  const list = document.getElementById('moreAppsList');
   const btn  = document.getElementById('ecoExpandBtn');
-  if(!rest) return;
-  const willOpen = (open == null) ? !rest.classList.contains('expanded') : open;
-  rest.classList.toggle('expanded', willOpen);
-  if(btn) btn.textContent = willOpen ? 'Show less ↑' : 'Show all apps ↓';
-  if(willOpen) rest.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  if(!btn) return;
+  const open = list && list.classList.contains('expanded');
+  const total = _ecoTotalAppsCount();
+  btn.textContent = open ? 'Show less ↑' : ('Show all apps (' + total + ') ↓');
+  // Keep the two count badges in sync with the real total too.
+  const ecoCount = document.getElementById('ecoCount');
+  if(ecoCount) ecoCount.textContent = String(total);
+  const moreAppsCount = document.getElementById('moreAppsCount');
+  if(moreAppsCount) moreAppsCount.textContent = String(total);
+  const restBadge = document.getElementById('moreAppsRestCount');
+  if(restBadge){
+    const hidden = list ? list.querySelectorAll('.more-card.hidden-rest').length : 0;
+    restBadge.textContent = open ? '' : ('+' + hidden);
+  }
+}
+function _ecoToggleRest(open){
+  const list = document.getElementById('moreAppsList');
+  if(!list) return;
+  const willOpen = (open == null) ? !list.classList.contains('expanded') : open;
+  list.classList.toggle('expanded', willOpen);
+  _ecoSyncBtn();
+  if(willOpen) list.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 document.addEventListener('click', (e) => {
-  if(e.target.closest('#ecoCountBadge')) { _ecoToggleRest(true); }
-  if(e.target.closest('#ecoExpandBtn'))  { _ecoToggleRest();     }
+  if(e.target.closest('#ecoCountBadge'))    { _ecoToggleRest(true); }
+  if(e.target.closest('#moreAppsViewAll'))  { _ecoToggleRest();     }
+  if(e.target.closest('#ecoExpandBtn'))     { _ecoToggleRest();     }
 });
+// Initial sync — set the count "(22)" on first paint.
+_ecoSyncBtn();
 
 // Filter chips
 document.querySelectorAll('.chip').forEach(chip => {
@@ -5197,14 +5210,12 @@ function renderTop3(elId, rows, emptyMsg){
 
   function podItem(t, rank){
     if(!t) return `<div class="pod-item pod-${rank}"><div class="pod-card"><div class="pod-rank">#${rank}</div><div class="pod-name" style="opacity:.5;">—</div></div></div>`;
-    const code = String(t.sym || "").slice(0,3).toUpperCase();
     const crown = rank === 1
       ? `<div class="pod-crown"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M5 16L3 7l5 4 4-7 4 7 5-4-2 9H5zm0 2h14v2H5v-2z"/></svg></div>`
       : "";
     return `
       <div class="pod-item pod-${rank}">
         ${crown}
-        <div class="pod-pos">${escHtml(code || "?")}</div>
         <div class="pod-card">
           <div class="pod-rank">#${rank}</div>
           <div class="pod-name">${escHtml(t.sym || "?")}</div>
