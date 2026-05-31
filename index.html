@@ -2364,7 +2364,7 @@
     .idler-mod { padding: 22px 18px; }
   }
 
-  /* ===== WHITEPAPER CTA ===== */
+  /* ===== FARTPAPER CTA ===== */
   .wp-cta-wrap{
     margin-top: 56px;
     display: flex; justify-content: center;
@@ -3902,8 +3902,13 @@
     </a>
   </div>
 
-  <!-- LATEST FROM FARTFORUM -->
-  <div class="forum-mod" id="forumMod">
+  <!-- LATEST FROM FARTFORUM — HIDDEN per design (same pattern as the idler
+       module below). The block stays in the DOM (display:none) so the JS
+       polling /api/fartforum keeps finding #forumList / #forumBurn and
+       doesn't throw. FartForum's burn count is still counted on the wheel
+       and the burn donut via _mwComputeApp's direct /api/fartforum fetch —
+       this just hides the on-index thread preview. -->
+  <div class="forum-mod" id="forumMod" style="display:none;" aria-hidden="true">
     <div class="forum-mod-head">
       <span class="icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -4238,7 +4243,7 @@
       <div class="quip">the printr has a phat ass 3~</div>
     </div>
     <div class="links">
-      <a href="whitepaper.html">Whitepaper</a>
+      <a href="whitepaper.html">Fartpaper</a>
       <a href="https://x.com/FART_PRINT" target="_blank" rel="noopener">X</a>
       <a href="https://t.me/FARTPRINT" target="_blank" rel="noopener">Telegram</a>
       <a href="https://solscan.io/token/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY" target="_blank" rel="noopener">Solscan</a>
