@@ -147,16 +147,27 @@ export async function onRequest({ request, env }) {
 
   try {
     const backend = hasKV() ? "kv" : "ntfy";
+    // Surface why a particular backend was chosen so it's obvious from the
+    // browser whether the Cloudflare KV env vars are set. After the Vercel→
+    // Cloudflare move, if these are missing we silently fall back to ntfy
+    // (12h retention), which makes every post older than 12h disappear.
+    const kvDiag = {
+      hasUrl:   !!(env && env.KV_REST_API_URL),
+      hasToken: !!(env && env.KV_REST_API_TOKEN),
+    };
     const url = new URL(request.url);
 
     if (request.method === "GET") {
-      const events = await getEvents();
+      let events = [];
+      let storeError = null;
+      try { events = await getEvents(); }
+      catch (e) { storeError = String((e && e.message) || e); }
       const { threads, burned } = reconstruct(events);
       const wantThread = url.searchParams.get("thread");
       if (wantThread) {
         const t = threads.find((x) => x.id === wantThread);
-        if (!t) return json({ ok: false, message: "Thread not found.", burned, backend }, 404);
-        return json({ ok: true, thread: { id: t.id, title: t.title, author: t.author, ts: t.ts }, posts: t.posts, burned, backend });
+        if (!t) return json({ ok: false, message: "Thread not found.", burned, backend, kvDiag, storeError }, 404);
+        return json({ ok: true, thread: { id: t.id, title: t.title, author: t.author, ts: t.ts }, posts: t.posts, burned, backend, kvDiag, storeError });
       }
       const list = threads
         .map((t) => ({
@@ -165,7 +176,7 @@ export async function onRequest({ request, env }) {
           preview: (t.posts[0] && t.posts[0].text ? String(t.posts[0].text).slice(0, 140) : ""),
         }))
         .sort((a, b) => (b.lastTs || 0) - (a.lastTs || 0));
-      return json({ ok: true, threads: list, burned, backend });
+      return json({ ok: true, threads: list, burned, backend, kvDiag, storeError });
     }
 
     if (request.method === "POST") {
