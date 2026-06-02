@@ -5393,6 +5393,22 @@ async function fetchPumpMcap(c, caps){
   }catch(_){}
 }
 
+// ── On-chain metadata fallback (server-side) ─────────────────────────
+// If pump.fun's API is being grumpy (rate-limited, 502'ing, behind their
+// Cloudflare challenge), we fall through to a server-side metadata
+// resolver that pulls the Metaplex metadata account directly from
+// Solana RPC and returns just the image URL. That endpoint uses
+// @solana/web3.js for correct PDA derivation — way more reliable than
+// inline PDA math, which has to handle off-curve bump checks.
+async function fetchTokenMetaImage(mint){
+  try {
+    const r = await fetch(`/api/token-image?mint=${mint}`);
+    if(!r.ok) return null;
+    const j = await r.json();
+    return j?.image || null;
+  } catch(_){ return null; }
+}
+
 async function loadTop3FartCup(){
   // Pass 1 — DexScreener gives us both caps AND images (info.imageUrl) for
   // every coin that has graduated to a real DEX. Most Fart Cup nations are
@@ -5418,11 +5434,23 @@ async function loadTop3FartCup(){
   // coins whose DexScreener profile happens to not have an imageUrl attached.
   await runLimited(top.filter(c => !_fcImg[c.ca]), 5, (c) => fetchPumpMcap(c, null));
 
+  // Pass 4 — on-chain metadata as the floor of the cascade. If pump.fun is
+  // straight-up blocked (their Cloudflare challenge gets aggressive during
+  // peak load), this server-side resolver pulls the Metaplex metadata
+  // account directly from Solana RPC + IPFS — no pump.fun involvement at
+  // all. Aggressive edge caching means repeat hits are basically free.
+  await runLimited(top.filter(c => !_fcImg[c.ca]), 5, async (c) => {
+    const img = await fetchTokenMetaImage(c.ca);
+    if(img) _fcImg[c.ca] = img;
+  });
+
   const rows = top.map(c => ({
     sym: c.sym,
-    // Pump.fun-or-DexScreener-minted artwork only (flag with a fart on it).
-    // If neither came through, leave img null so the avatar falls through
-    // to the 2-letter initials placeholder — never the plain country flag.
+    // pump.fun / DexScreener / on-chain metadata — first source that came
+    // through wins. If all three failed, leave img null so the avatar
+    // falls through to the 2-letter initials placeholder (never the plain
+    // country flag — the joke is "flag with a fart on it" so plain flag
+    // would defeat it).
     img: _fcImg[c.ca] || null,
     mcap: c.mcap,
   }));
