@@ -1265,7 +1265,10 @@
 // no embedded broker chrome, no external domain links.
 // ============================================================
 const ORDERLY_REST = "https://api-evm.orderly.org";
-const ORDERLY_WS   = "wss://ws-evm.orderly.org/ws/stream/public";
+// Orderly's public WebSocket requires an account_id segment in the URL —
+// the literal word "public" gets rejected. Any placeholder string works for
+// public-stream subscriptions; we use "0" as the conventional anonymous id.
+const ORDERLY_WS   = "wss://ws-evm.orderly.org/ws/stream/0";
 
 const $id = (id) => document.getElementById(id);
 
@@ -1411,47 +1414,76 @@ function setupChart(){
 }
 
 // ============================================================
-// WebSocket — order book + trades for the active symbol
+// Live data plumbing
 // ============================================================
+// Two channels feed the same paint functions:
+//
+//   1) WebSocket (preferred — true real-time): if Orderly's public stream
+//      connects, we subscribe to {symbol}@orderbook / @trade / @markprice
+//      and push updates as they land.
+//
+//   2) REST polling (always-on safety net): every 2s we hit Orderly's
+//      public market_trades + futures endpoints. This guarantees that
+//      even if the WebSocket can't connect (CORS, network, region-blocked),
+//      the order book + recent trades still light up.
+//
+// Polling for the order book happens via the orderbook REST endpoint as
+// well — Orderly exposes a snapshot you can fetch without auth at
+// /v1/public/orderbook/{symbol}.
+// ============================================================
+
+// ── WebSocket layer ──────────────────────────────────────────
 function wsConnect(){
   if(State.ws){ try{ State.ws.close(); }catch(_){} State.ws = null; State.wsSubs.clear(); }
-  const ws = new WebSocket(ORDERLY_WS);
+  let ws;
+  try { ws = new WebSocket(ORDERLY_WS); }
+  catch(e){ console.warn("[Orderly WS] could not construct", e); return; }
   State.ws = ws;
 
   ws.addEventListener("open", () => {
+    console.log("[Orderly WS] connected");
     wsSubscribe();
-    // keep-alive
-    setInterval(() => { if(ws.readyState === 1) ws.send(JSON.stringify({ event: "ping" })); }, 15000);
+    // keep-alive — Orderly will drop the connection if idle ~30s
+    setInterval(() => {
+      if(ws.readyState === 1) ws.send(JSON.stringify({ event: "ping" }));
+    }, 15000);
   });
   ws.addEventListener("message", (e) => {
     let m; try{ m = JSON.parse(e.data); }catch(_){ return; }
     if(m.event === "ping") { ws.send(JSON.stringify({ event: "pong" })); return; }
+    if(m.event === "subscribe" && m.success === false){
+      console.warn("[Orderly WS] subscribe rejected:", m);
+      return;
+    }
     if(!m.topic) return;
     if(m.topic.endsWith("@orderbook") || m.topic.endsWith("@orderbookupdate")){
       onOrderbook(m.data);
     } else if(m.topic.endsWith("@trade")){
       onTrade(m.data);
-    } else if(m.topic.endsWith("@markprice")){
+    } else if(m.topic.endsWith("@markprice") || m.topic.endsWith("@markprices")){
       onMarkPrice(m.data);
     }
   });
-  ws.addEventListener("close", () => {
-    setTimeout(wsConnect, 2500);
+  ws.addEventListener("error", (e) => console.warn("[Orderly WS] error", e));
+  ws.addEventListener("close", (e) => {
+    console.log("[Orderly WS] closed", e.code);
+    // Reconnect — capped backoff so we don't hammer if the endpoint is down
+    setTimeout(wsConnect, 3000);
   });
 }
 
 function wsSubscribe(){
   if(!State.ws || State.ws.readyState !== 1) return;
   const sym = State.symbol;
-  const send = (topic) => {
-    State.ws.send(JSON.stringify({ id: "sub-" + topic, event: "subscribe", topic }));
-    State.wsSubs.add(topic);
-  };
-  // Wipe old subs by sending unsubscribe; cheap because we just reload all data anyway
+  // Unsubscribe from any leftover topics from the previous symbol
   for(const t of State.wsSubs){
     State.ws.send(JSON.stringify({ id: "uns-" + t, event: "unsubscribe", topic: t }));
   }
   State.wsSubs.clear();
+  const send = (topic) => {
+    State.ws.send(JSON.stringify({ id: "sub-" + topic, event: "subscribe", topic }));
+    State.wsSubs.add(topic);
+  };
   send(sym + "@orderbook");
   send(sym + "@trade");
   send(sym + "@markprice");
@@ -1459,21 +1491,28 @@ function wsSubscribe(){
 
 function onOrderbook(data){
   if(!data) return;
-  const asks = (data.asks || []).slice(0, 12).map(x => ({ px: Number(x[0]), sz: Number(x[1]) }));
-  const bids = (data.bids || []).slice(0, 12).map(x => ({ px: Number(x[0]), sz: Number(x[1]) }));
-  State.asks = asks;
-  State.bids = bids;
+  // Orderly sends asks/bids as either arrays-of-arrays ([px, sz]) or
+  // arrays-of-objects ({price, quantity}) depending on which feed sent
+  // it. Normalise both shapes into our flat {px, sz} format.
+  const parseRow = (x) => {
+    if(Array.isArray(x))  return { px: Number(x[0]), sz: Number(x[1]) };
+    if(x && typeof x === "object") return { px: Number(x.price), sz: Number(x.quantity || x.size) };
+    return null;
+  };
+  State.asks = (data.asks || []).map(parseRow).filter(r => r && isFinite(r.px) && r.sz > 0).slice(0, 12);
+  State.bids = (data.bids || []).map(parseRow).filter(r => r && isFinite(r.px) && r.sz > 0).slice(0, 12);
   paintOrderbook();
 }
 
 function onTrade(d){
   if(!d) return;
   const t = {
-    px:   Number(d.price),
-    sz:   Number(d.size),
-    side: d.side, // BUY / SELL
+    px:   Number(d.price || d.executed_price),
+    sz:   Number(d.size  || d.executed_quantity),
+    side: d.side,
     ts:   Number(d.executed_timestamp || d.ts || Date.now()),
   };
+  if(!isFinite(t.px) || !(t.sz > 0)) return;
   State.trades.unshift(t);
   if(State.trades.length > 40) State.trades.pop();
   paintTrades();
@@ -1481,11 +1520,80 @@ function onTrade(d){
 
 function onMarkPrice(d){
   if(!d) return;
-  const mp = Number(d.price);
-  const m = State.marketsBySym[State.symbol];
-  if(m){ m.mark_price = mp; }
+  // markprice arrives either as a single object or an array of {symbol, price}
+  const rows = Array.isArray(d) ? d : [d];
+  for(const row of rows){
+    const sym = row.symbol || State.symbol;
+    const mp  = Number(row.price);
+    if(!isFinite(mp)) continue;
+    const m = State.marketsBySym[sym];
+    if(m) m.mark_price = mp;
+  }
   paintHeaderSymbol();
   paintStrip();
+}
+
+// ── REST polling fallback ────────────────────────────────────
+// Runs unconditionally so the panels always populate, even if the WS
+// can't reach the user (mobile networks, corporate proxies, etc.).
+let _restPollTimer = null;
+
+async function pollOrderbookRest(symbol){
+  try {
+    const r = await fetch(
+      ORDERLY_REST + "/v1/public/orderbook/" + symbol + "?max_level=12",
+      { cache: "no-store" }
+    );
+    if(!r.ok) return false;
+    const j = await r.json();
+    const data = (j && j.data) || j;
+    if(data && (data.asks || data.bids)){
+      // Only paint from REST if we haven't received WS data yet — WS is fresher
+      const fromWs = State.asks.length || State.bids.length;
+      if(!fromWs){ onOrderbook(data); }
+      return true;
+    }
+  } catch(e){ /* swallow — fall through to next poll */ }
+  return false;
+}
+
+async function pollTradesRest(symbol){
+  try {
+    const r = await fetch(
+      ORDERLY_REST + "/v1/public/market_trades?symbol=" + symbol + "&limit=40",
+      { cache: "no-store" }
+    );
+    if(!r.ok) return false;
+    const j = await r.json();
+    const rows = (j && j.data && j.data.rows) || (j && j.rows) || [];
+    if(!rows.length) return true;
+    // Only refresh from REST if WS hasn't pushed anything yet OR our list
+    // is older than ~10s — WS should keep this current normally.
+    const wsFresh = State.trades.length && (Date.now() - State.trades[0].ts < 10000);
+    if(wsFresh) return true;
+    State.trades = rows.slice(0, 40).map(t => ({
+      px:   Number(t.executed_price || t.price),
+      sz:   Number(t.executed_quantity || t.size),
+      side: t.side,
+      ts:   Number(t.executed_timestamp || t.ts || Date.now()),
+    })).filter(t => isFinite(t.px) && t.sz > 0);
+    paintTrades();
+    return true;
+  } catch(e){ /* swallow */ }
+  return false;
+}
+
+function startRestPolling(){
+  if(_restPollTimer) clearInterval(_restPollTimer);
+  const tick = async () => {
+    const sym = State.symbol;
+    await Promise.all([
+      pollOrderbookRest(sym),
+      pollTradesRest(sym),
+    ]);
+  };
+  tick();                          // immediate first fill
+  _restPollTimer = setInterval(tick, 2000);
 }
 
 // ============================================================
@@ -1643,6 +1751,14 @@ function switchSymbol(symbol){
   if(!symbol || symbol === State.symbol) { closeDropdown(); return; }
   State.symbol = symbol;
   State.bids = []; State.asks = []; State.trades = [];
+  // Render placeholders right away so the panels reflect the new symbol
+  $id("asksRows").innerHTML  = '<div class="chart-empty" style="position:static; padding: 12px;">Loading asks…</div>';
+  $id("bidsRows").innerHTML  = '<div class="chart-empty" style="position:static; padding: 12px;">Loading bids…</div>';
+  $id("tradesList").innerHTML = '<div class="chart-empty" style="position:static; padding: 20px;">Loading trades…</div>';
+  // Kick the REST poll immediately so the new symbol fills fast (the
+  // interval keeps going on its own 2s cadence in the background).
+  if(typeof pollOrderbookRest === "function") pollOrderbookRest(symbol);
+  if(typeof pollTradesRest    === "function") pollTradesRest(symbol);
   if(State.candleSeries){ State.candleSeries.setData([]); }
   $id("chartLoading").textContent = "Loading chart…";
   $id("chartLoading").style.display = "";
@@ -1927,7 +2043,8 @@ $id("walletBtn").addEventListener("click", (e) => {
   await loadMarkets();
   setupChart();
   await loadKline();
-  wsConnect();
+  wsConnect();           // try the real-time stream first
+  startRestPolling();    // always-on safety net for orderbook + trades
   recomputeSummary();
   setInterval(loadMarkets, 30000);
 })();
