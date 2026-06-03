@@ -1188,6 +1188,335 @@
     100% { transform: translate(-50%, -100%); opacity: 0; }
   }
 
+  /* ─── Leaderboard panel ─── */
+  .lb-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.70);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 52; padding: 20px;
+  }
+  .lb-bg.show { display: flex; }
+  .lb-card {
+    max-width: 540px; width: 100%; max-height: 86vh;
+    background: linear-gradient(180deg, rgba(15,32,18,0.97), rgba(8,18,11,0.97));
+    border: 2px solid rgba(255,214,77,0.36);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,214,77,0.15);
+  }
+  .lb-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255,214,77,0.18);
+  }
+  .lb-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 30px; letter-spacing: 2px;
+    background: linear-gradient(135deg, #fff1a8, #ffd64d, #f5b400);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(255,200,60,0.35));
+  }
+  .lb-head .refresh {
+    background: transparent;
+    border: 1px solid rgba(255,214,77,0.36);
+    color: #ffd64d;
+    padding: 6px 12px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: 8px;
+  }
+  .lb-head .refresh:hover { background: rgba(255,214,77,0.12); }
+  .lb-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 24px; cursor: pointer;
+    line-height: 1;
+  }
+  .lb-body {
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 40px 1fr auto auto;
+    align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(255,214,77,0.08);
+    transition: background 0.12s;
+  }
+  .lb-row:hover { background: rgba(255,214,77,0.04); }
+  .lb-row.you { background: rgba(46,224,107,0.10); }
+  .lb-row .rank {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 15px;
+    color: rgba(230,255,238,0.42);
+  }
+  .lb-row.r1 .rank { color: #ffd64d; text-shadow: 0 0 10px rgba(255,214,77,0.55); }
+  .lb-row.r2 .rank { color: #c0c8d6; text-shadow: 0 0 8px rgba(192,200,214,0.42); }
+  .lb-row.r3 .rank { color: #ff9d6b; text-shadow: 0 0 8px rgba(255,157,107,0.42); }
+  .lb-row .name {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13.5px;
+    color: #e6ffee;
+  }
+  .lb-row.you .name { color: #5ff09c; }
+  .lb-row .lv {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(230,255,238,0.55);
+  }
+  .lb-row .xp {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14px;
+    color: #ffd64d;
+    text-shadow: 0 0 8px rgba(255,214,77,0.35);
+  }
+  .lb-empty {
+    padding: 24px;
+    text-align: center;
+    color: rgba(230,255,238,0.42);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .lb-toggle-btn {
+    position: absolute;
+    top: 80px; right: 64px;
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(8,18,11,0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,214,77,0.24);
+    color: #ffd64d;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.15s;
+    z-index: 14;
+  }
+  .lb-toggle-btn:hover { border-color: #ffd64d; box-shadow: 0 0 16px rgba(255,214,77,0.30); }
+
+  /* ─── Deathmatch HUD ─── */
+  .dm-overlay {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 18;
+    display: none;
+  }
+  .dm-overlay.show { display: block; }
+  /* Crosshair */
+  .dm-overlay .crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 22px; height: 22px;
+    pointer-events: none;
+  }
+  .dm-overlay .crosshair::before,
+  .dm-overlay .crosshair::after {
+    content: "";
+    position: absolute;
+    background: rgba(255,90,77,0.85);
+    box-shadow: 0 0 8px rgba(255,90,77,0.85);
+  }
+  .dm-overlay .crosshair::before { left: 50%; top: 0; bottom: 0; width: 2px; transform: translateX(-50%); }
+  .dm-overlay .crosshair::after  { top: 50%; left: 0; right: 0; height: 2px; transform: translateY(-50%); }
+  .dm-overlay .dot {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #ff7a6e;
+    box-shadow: 0 0 6px #ff7a6e;
+  }
+  /* HP + kills top bar */
+  .dm-stats {
+    position: absolute;
+    top: 14px; left: 50%; transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: auto auto auto;
+    gap: 18px; align-items: center;
+    background: rgba(8,18,11,0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,90,77,0.36);
+    border-radius: 16px;
+    padding: 10px 22px;
+    box-shadow: 0 8px 26px rgba(0,0,0,0.42);
+  }
+  .dm-stat { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 90px; }
+  .dm-stat .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: rgba(230,255,238,0.55); font-weight: 800;
+  }
+  .dm-stat .val {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 22px;
+    color: #e6ffee;
+    line-height: 1;
+  }
+  .dm-stat .val.kills-you { color: #5ff09c; text-shadow: 0 0 12px rgba(95,240,156,0.55); }
+  .dm-stat .val.kills-opp { color: #ff7a6e; text-shadow: 0 0 12px rgba(255,122,110,0.55); }
+  .dm-stat .vs {
+    font-family: 'Bangers', sans-serif;
+    font-size: 30px;
+    background: linear-gradient(135deg, #5ff09c, #ff7a6e);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  /* HP bar (mine — bottom-left) */
+  .dm-hp {
+    position: absolute;
+    bottom: 26px; left: 26px;
+    width: 280px;
+    background: rgba(8,18,11,0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(46,224,107,0.30);
+    border-radius: 14px;
+    padding: 12px 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.40);
+  }
+  .dm-hp .row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: rgba(230,255,238,0.55);
+    margin-bottom: 6px;
+  }
+  .dm-hp .row b { color: #5ff09c; font-size: 14px; }
+  .dm-hp .bar {
+    height: 10px; border-radius: 6px;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(46,224,107,0.32);
+    overflow: hidden;
+  }
+  .dm-hp .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff5a4d, #ffd64d, #2ee06b);
+    transition: width 0.12s linear;
+    box-shadow: 0 0 12px rgba(46,224,107,0.45);
+  }
+  /* Weapon strip (bottom-right) */
+  .dm-weapons {
+    position: absolute;
+    bottom: 26px; right: 26px;
+    display: flex; flex-direction: column; gap: 8px;
+    background: rgba(8,18,11,0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,214,77,0.30);
+    border-radius: 14px;
+    padding: 12px 14px;
+  }
+  .dm-weapon {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    align-items: center; gap: 10px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(230,255,238,0.08);
+    transition: all 0.14s;
+  }
+  .dm-weapon.active {
+    background: linear-gradient(90deg, rgba(255,214,77,0.20), rgba(255,176,32,0.10));
+    border-color: #ffd64d;
+    box-shadow: 0 0 18px rgba(255,214,77,0.30);
+  }
+  .dm-weapon .ico { font-size: 18px; }
+  .dm-weapon .nm {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 12px;
+    color: #e6ffee;
+  }
+  .dm-weapon .key {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 800;
+    color: rgba(230,255,238,0.45);
+  }
+  .dm-tip {
+    position: absolute;
+    bottom: 168px; left: 50%; transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1px;
+    color: rgba(230,255,238,0.65);
+    background: rgba(8,18,11,0.70);
+    padding: 8px 16px;
+    border-radius: 99px;
+    border: 1px solid rgba(46,224,107,0.20);
+  }
+  /* Countdown + status */
+  .dm-banner {
+    position: absolute;
+    top: 38%; left: 50%; transform: translate(-50%, -50%);
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: clamp(70px, 14vw, 140px);
+    letter-spacing: 4px;
+    color: #fff;
+    text-align: center;
+    pointer-events: none;
+    text-shadow: 0 0 40px rgba(255,90,77,0.85), 0 6px 12px rgba(0,0,0,0.7);
+  }
+  .dm-banner.small {
+    font-size: clamp(28px, 5vw, 50px);
+    letter-spacing: 3px;
+  }
+  /* Arena prompt (waiting screen) */
+  .dm-waiting {
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(8,18,11,0.80);
+    border: 2px solid rgba(255,90,77,0.42);
+    border-radius: 20px;
+    padding: 28px 36px;
+    text-align: center;
+    pointer-events: auto;
+    box-shadow: 0 0 60px rgba(255,90,77,0.30);
+    max-width: 460px;
+  }
+  .dm-waiting h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 38px; letter-spacing: 2px;
+    background: linear-gradient(135deg, #ff7a6e, #ff5a4d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+  .dm-waiting p {
+    color: rgba(230,255,238,0.62);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; letter-spacing: 0.4px;
+    margin-bottom: 12px;
+  }
+  .dm-waiting .dot {
+    position: static;
+    display: inline-block;
+    width: 8px; height: 8px; margin-right: 6px;
+    background: #ff7a6e; border-radius: 50%;
+    animation: scanGlow 1.2s ease-in-out infinite;
+    transform: none;
+    box-shadow: 0 0 8px #ff7a6e;
+  }
+  .dm-waiting button {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(230,255,238,0.20);
+    color: rgba(230,255,238,0.65);
+    padding: 8px 16px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; margin-top: 6px;
+  }
+  @keyframes scanGlow { 0%,100%{opacity:0.55;} 50%{opacity:1;} }
+
   /* Header pill (small home link) */
   .home-pill {
     position: absolute;
@@ -1240,6 +1569,8 @@
 
   <!-- Inventory toggle button (top-right corner of the HUD) -->
   <button class="inv-toggle" id="invToggle" title="Inventory (I)">🎒</button>
+  <!-- Leaderboard toggle button -->
+  <button class="lb-toggle-btn" id="lbToggle" title="Leaderboard (L)">🏆</button>
 
   <div class="zone-tag neutral" id="zoneTag">NEUTRAL</div>
 
@@ -1312,6 +1643,49 @@
   </div>
 </div>
 
+<!-- ─── Deathmatch HUD overlay ─── -->
+<div class="dm-overlay" id="dmOverlay">
+  <div class="crosshair" id="dmCrosshair" style="display:none;"><div class="dot"></div></div>
+  <div class="dm-stats" id="dmStats" style="display:none;">
+    <div class="dm-stat"><span class="lbl">YOU</span><span class="val kills-you" id="dmKillsYou">0</span></div>
+    <div class="dm-stat"><span class="vs">VS</span></div>
+    <div class="dm-stat"><span class="lbl" id="dmOppLbl">OPP</span><span class="val kills-opp" id="dmKillsOpp">0</span></div>
+  </div>
+  <div class="dm-hp" id="dmHp" style="display:none;">
+    <div class="row"><span>HP</span><b id="dmHpVal">100</b></div>
+    <div class="bar"><div class="fill" id="dmHpFill" style="width:100%"></div></div>
+  </div>
+  <div class="dm-weapons" id="dmWeapons" style="display:none;">
+    <div class="dm-weapon active" data-w="0"><span class="ico">🔫</span><span class="nm">Pistol</span><span class="key">1</span></div>
+    <div class="dm-weapon" data-w="1"><span class="ico">🔫</span><span class="nm">SMG</span><span class="key">2</span></div>
+    <div class="dm-weapon" data-w="2"><span class="ico">💥</span><span class="nm">Shotgun</span><span class="key">3</span></div>
+  </div>
+  <div class="dm-tip" id="dmTip" style="display:none;">Click to shoot · Scroll to switch · 1/2/3 quick-pick</div>
+  <div class="dm-banner" id="dmBanner" style="display:none;"></div>
+  <div class="dm-waiting" id="dmWaiting" style="display:none;">
+    <h2>⚔ DEATHMATCH ARENA</h2>
+    <p><span class="dot"></span><span id="dmWaitingMsg">Waiting for an opponent to step in…</span></p>
+    <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins. Step outside the ring to leave.</p>
+    <button id="dmLeaveBtn">Leave arena</button>
+  </div>
+</div>
+
+<!-- ─── Leaderboard modal ─── -->
+<div class="lb-bg" id="lbBg">
+  <div class="lb-card">
+    <div class="lb-head">
+      <h2>🏆 LEADERBOARD</h2>
+      <div>
+        <button class="refresh" id="lbRefresh">↻ refresh</button>
+        <button class="close" id="lbClose">×</button>
+      </div>
+    </div>
+    <div class="lb-body" id="lbBody">
+      <div class="lb-empty">Loading global leaderboard…</div>
+    </div>
+  </div>
+</div>
+
 <!-- ─── Marketplace modal ─── -->
 <div class="market-bg" id="marketBg">
   <div class="market-card">
@@ -1320,13 +1694,13 @@
       <button class="close" id="marketClose">×</button>
     </div>
     <div class="market-tabs">
-      <button class="market-tab active" data-mtab="seeds">Buy Seeds</button>
+      <button class="market-tab active" data-mtab="seeds">Shop</button>
       <button class="market-tab" data-mtab="listings">Player Market</button>
       <button class="market-tab" data-mtab="sell">Sell Stuff</button>
     </div>
     <div class="market-body">
       <div class="market-pane" data-mpane="seeds">
-        <p style="color:rgba(230,255,238,0.55); font-size:12px; margin-bottom:14px;">Seeds from the printr's vault. Plant on your own plot.</p>
+        <p style="color:rgba(230,255,238,0.55); font-size:12px; margin-bottom:14px;">Seeds and tools from the printr's vault.</p>
         <div class="seeds-grid" id="seedsGrid"></div>
       </div>
       <div class="market-pane" data-mpane="listings" style="display:none;">
@@ -1502,6 +1876,25 @@ const ITEMS = {
     type:    "crop",
     isNFT:   false,
     suggestedPrice: 20,        // suggested player-market price
+  },
+  pickaxe: {
+    id:      "pickaxe",
+    name:    "Pickaxe",
+    icon:    "⛏",
+    color:   "#d4d4d4",
+    type:    "tool",
+    isNFT:   false,
+    marketPrice: 35,           // buy from market
+    suggestedPrice: 30,        // resell suggestion
+  },
+  iron_ore: {
+    id:      "iron_ore",
+    name:    "Iron Ore",
+    icon:    "🪨",
+    color:   "#a8a8b6",
+    type:    "ore",
+    isNFT:   false,
+    suggestedPrice: 14,
   },
 };
 
@@ -1775,6 +2168,36 @@ printer.position.set(0, 0, 0);
 scene.add(printer);
 
 // ─── World ──────────────────────────────────────────────────────
+// Land-plot locations + sizes are declared BEFORE the ground gets
+// built so we can flatten the ground at those positions during
+// generation. Without this, the rolling-hill noise would lift each
+// plot mesh off the surface or sink it into the surface depending
+// on where it landed.
+const PLOT_SIZE = 4;
+const PLOT_FLAT_RADIUS = PLOT_SIZE * 0.8;          // pure flat (y=0)
+const PLOT_FLAT_FALLOFF = PLOT_FLAT_RADIUS + 3.5;  // ramp back up to hills
+const PLOT_LOCATIONS = [
+  [  8,   0], [ -8,   2], [  4, -12], [ -10, -10],
+  [ 14,  18], [ -14,  14], [ 22, -22], [ -24,  -4],
+];
+// Returns a 0..1 multiplier to apply to the noise height — 0 means
+// "totally flat (y=0)", 1 means "untouched rolling hills". Anywhere
+// inside PLOT_FLAT_RADIUS of any plot center returns 0, then it
+// smoothly ramps back to 1 by PLOT_FLAT_FALLOFF.
+function plotFlattenFactor(x, z){
+  let lowest = 1.0;
+  for(const [px, pz] of PLOT_LOCATIONS){
+    const d = Math.hypot(x - px, z - pz);
+    if(d <= PLOT_FLAT_RADIUS) return 0;             // hard-flat zone
+    if(d < PLOT_FLAT_FALLOFF){
+      const t = (d - PLOT_FLAT_RADIUS) / (PLOT_FLAT_FALLOFF - PLOT_FLAT_RADIUS);
+      const f = t * t * (3 - 2 * t);                // smoothstep
+      if(f < lowest) lowest = f;
+    }
+  }
+  return lowest;
+}
+
 // Ground — large green plane with subtle checker via vertex colors
 function makeGround() {
   const size = 300;
@@ -1792,6 +2215,9 @@ function makeGround() {
     // Keep an open flat area near spawn so the printer doesn't get bumped
     const flatness = THREE.MathUtils.smoothstep(r, 4, 14);
     y *= flatness;
+    // ALSO flatten under every plot location so plots aren't half-buried
+    // or floating above the surface.
+    y *= plotFlattenFactor(x, z);
     pos.setY(i, y);
   }
   geo.computeVertexNormals();
@@ -1815,7 +2241,7 @@ function groundHeightAt(x, z){
   y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6;
   y += Math.sin(x * 0.12 + 0.5) * 0.3;
   const flatness = THREE.MathUtils.smoothstep(r, 4, 14);
-  return y * flatness;
+  return y * flatness * plotFlattenFactor(x, z);
 }
 
 // Grid overlay (subtle neon lines on the ground)
@@ -2008,13 +2434,10 @@ function makePrinterStation(x, z){
 // on their plots — the crop renders as a procedural plant that
 // grows through 3 stages over its `growMs` duration before becoming
 // harvestable. Plot ownership + crops sync across the room via ntfy.
-const Plots = [];                      // { id, x, z, w, h, mesh, signMesh, plantMesh, owner, ownerName, crop, plantedAt }
+const Plots = [];                      // { id, x, z, w, h, mesh, signMesh, plantMesh, owner, ownerName, crop, plantedAt, ownerLabel }
 const PLOT_PRICE = 50;
-const PLOT_SIZE  = 4;
-const PLOT_LOCATIONS = [
-  [  8,   0], [ -8,   2], [  4, -12], [ -10, -10],
-  [ 14,  18], [ -14,  14], [ 22, -22], [ -24,  -4],
-];
+// PLOT_SIZE + PLOT_LOCATIONS are declared earlier (before makeGround)
+// so the ground-flatten pass can use them — see top of World section.
 
 function buildPlotMesh(plot){
   const grp = new THREE.Group();
@@ -2133,14 +2556,60 @@ function initPlots(){
 }
 initPlots();
 
+// Render a name label as a CanvasTexture sprite — cheap to draw, easy
+// to update on owner change. Used for the floating "OWNED BY X" sign
+// above every owned plot. Color hints (green = you, gold = other) make
+// the world readable at a glance.
+function makeOwnerLabel(text, kind){
+  const cvs = document.createElement('canvas');
+  cvs.width = 360; cvs.height = 96;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = "rgba(8,18,11,0.78)";
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+  // Border
+  const bordC = kind === "self" ? "#5ff09c" : "#ffd64d";
+  ctx.strokeStyle = bordC; ctx.lineWidth = 4;
+  ctx.strokeRect(2, 2, cvs.width - 4, cvs.height - 4);
+  // Caption ("OWNED BY")
+  ctx.fillStyle = "rgba(230,255,238,0.55)";
+  ctx.font = "bold 18px 'JetBrains Mono', monospace";
+  ctx.textAlign = "center"; ctx.textBaseline = "top";
+  ctx.fillText(kind === "self" ? "YOUR PLOT" : "OWNED BY", cvs.width / 2, 14);
+  // Name
+  ctx.fillStyle = bordC;
+  ctx.font = "bold 30px 'Orbitron', sans-serif";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(text || "anon").slice(0, 16), cvs.width / 2, 62);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.anisotropy = 4;
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true });
+  const sprite = new THREE.Sprite(mat);
+  sprite.scale.set(3.4, 0.9, 1);
+  return sprite;
+}
+
 function plotStateChanged(plot){
   // Refresh the plot's visual based on its state — sign visible only
-  // when unowned, plant model swapped when growth stage changes.
+  // when unowned, owner-name label visible when owned, plant model
+  // swapped when growth stage changes.
   if(plot.signGroup){
     plot.signGroup.visible = !plot.owner;
   }
-  // Border tint when owned by you / others
-  // (we keep the dirt simple; ownership is shown via the absence of sign + sparkle when fully grown)
+  // Owner label — sits above the plot like a floating storefront banner
+  if(plot.ownerLabel){
+    plot.mesh.remove(plot.ownerLabel);
+    if(plot.ownerLabel.material?.map) plot.ownerLabel.material.map.dispose();
+    if(plot.ownerLabel.material) plot.ownerLabel.material.dispose();
+    plot.ownerLabel = null;
+  }
+  if(plot.owner){
+    const me = State.username || State.wallet || "guest";
+    const kind = (plot.owner === me) ? "self" : "other";
+    const sprite = makeOwnerLabel(plot.ownerName || "anon", kind);
+    sprite.position.set(0, 2.6, 0);
+    plot.ownerLabel = sprite;
+    plot.mesh.add(sprite);
+  }
   // Update plant
   while(plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
   if(plot.crop && ITEMS[plot.crop]){
@@ -2196,6 +2665,148 @@ function buildMarket(){
   scene.add(grp);
 }
 buildMarket();
+
+// ─── Deathmatch arena ───────────────────────────────────────────
+// A glowing red circle on the ground that signals "1v1 arena" — when
+// two players are inside the radius simultaneously, the match starts
+// after a 5-second countdown. First to 10 kills wins. The arena
+// geometry is purely cosmetic; matchmaking + scoring happens in the
+// deathmatch system block below.
+const ARENA_POS    = { x: 36, z: 36 };
+const ARENA_RADIUS = 12;
+function buildArena(){
+  const grp = new THREE.Group();
+  grp.position.set(ARENA_POS.x, 0, ARENA_POS.z);
+  // Outer ring
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(ARENA_RADIUS - 0.4, ARENA_RADIUS, 96),
+    new THREE.MeshBasicMaterial({ color: 0xff5a4d, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = 0.06;
+  grp.add(ring);
+  // Inner pulse disc
+  const fill = new THREE.Mesh(
+    new THREE.CircleGeometry(ARENA_RADIUS - 0.4, 64),
+    new THREE.MeshBasicMaterial({ color: 0xff5a4d, transparent: true, opacity: 0.06 })
+  );
+  fill.rotation.x = -Math.PI / 2;
+  fill.position.y = 0.05;
+  grp.add(fill);
+  // Center "X" marks
+  const crossMat = new THREE.MeshBasicMaterial({ color: 0xff7a6e, transparent: true, opacity: 0.5 });
+  const bar1 = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.3), crossMat);
+  bar1.rotation.x = -Math.PI / 2; bar1.position.y = 0.07;
+  const bar2 = bar1.clone(); bar2.rotation.z = Math.PI / 2;
+  grp.add(bar1); grp.add(bar2);
+  // Spire-like sign at the edge — a tall thin pillar
+  const pillar = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.18, 0.18, 5, 8),
+    new THREE.MeshStandardMaterial({ color: 0x2a0c0c, roughness: 0.6 })
+  );
+  pillar.position.set(-(ARENA_RADIUS - 1), 2.5, 0);
+  pillar.castShadow = true;
+  grp.add(pillar);
+  const banner = new THREE.Mesh(
+    new THREE.BoxGeometry(3.6, 1, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 1.0, roughness: 0.4 })
+  );
+  banner.position.set(-(ARENA_RADIUS - 1), 5.5, 0);
+  grp.add(banner);
+  // Column of red light over the arena center
+  const col = new THREE.Mesh(
+    new THREE.CylinderGeometry(ARENA_RADIUS - 1, ARENA_RADIUS, 8, 32, 1, true),
+    new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      uniforms: { uColor: { value: new THREE.Color(0xff5a4d) } },
+      vertexShader: "varying float vY; void main(){ vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
+      fragmentShader: "uniform vec3 uColor; varying float vY; void main(){ float t = 1.0 - clamp(vY / 8.0 + 0.5, 0.0, 1.0); gl_FragColor = vec4(uColor, t * 0.30); }",
+    })
+  );
+  col.position.y = 4;
+  grp.add(col);
+  // Red point light
+  const lt = new THREE.PointLight(0xff5a4d, 2.2, 30);
+  lt.position.y = 4;
+  grp.add(lt);
+  scene.add(grp);
+}
+buildArena();
+
+// ─── Ore deposits (mineable with a pickaxe) ─────────────────────
+// Procedural rock clusters scattered across the map. Mining one
+// destroys the cluster, gives the player +1 Iron Ore + 18 XP, and
+// schedules a respawn ~90 seconds later. Requires a pickaxe in
+// inventory — sold at the marketplace.
+const Ores = [];
+const ORE_RESPAWN_MS = 90_000;
+const ORE_INTERACT_RANGE = 3.0;
+const ORE_LOCATIONS = [
+  [ 30,  -6], [-32,  14], [ 42,  28], [-46,  -8],
+  [ 16,  50], [-18, -40], [ 50, -42], [-50,  44],
+];
+
+function buildOreDeposit(x, z){
+  const grp = new THREE.Group();
+  // Cluster of metallic crystals — 5 lumps of varied size + rotation
+  const baseColors = [0x9a9aa6, 0xb0b0bf, 0x808093];
+  for(let i = 0; i < 5; i++){
+    const sz = 0.45 + Math.random() * 0.55;
+    const lump = new THREE.Mesh(
+      new THREE.BoxGeometry(sz, sz, sz),
+      new THREE.MeshStandardMaterial({
+        color: baseColors[i % baseColors.length],
+        roughness: 0.35,
+        metalness: 0.85,
+        emissive: 0x222236,
+        emissiveIntensity: 0.18,
+        flatShading: true,
+      })
+    );
+    lump.position.set(
+      (Math.random() - 0.5) * 1.4,
+      sz / 2 + Math.random() * 0.25,
+      (Math.random() - 0.5) * 1.4
+    );
+    lump.rotation.set(Math.random() * 0.7, Math.random() * Math.PI * 2, Math.random() * 0.7);
+    lump.castShadow = true;
+    lump.receiveShadow = true;
+    grp.add(lump);
+  }
+  // Tiny blue sparkle to telegraph "interactable"
+  const spark = new THREE.PointLight(0x9bb3ff, 0.55, 6);
+  spark.position.y = 1.4;
+  grp.add(spark);
+  grp.position.set(x, groundHeightAt(x, z), z);
+  scene.add(grp);
+  return grp;
+}
+
+function initOres(){
+  ORE_LOCATIONS.forEach(([x, z], i) => {
+    const ore = {
+      id:       "ore_" + i,
+      x, z,
+      mesh:     null,
+      alive:    true,
+      minedAt:  0,
+    };
+    ore.mesh = buildOreDeposit(x, z);
+    Ores.push(ore);
+  });
+}
+initOres();
+
+function respawnDownedOres(){
+  const now = Date.now();
+  for(const o of Ores){
+    if(o.alive) continue;
+    if(now - o.minedAt > ORE_RESPAWN_MS){
+      o.alive = true;
+      o.mesh  = buildOreDeposit(o.x, o.z);
+    }
+  }
+}
 
 // ─── Paper mountains (white triangular cones) ───────────────────
 function makePaperMountain(x, z, scale){
@@ -2870,6 +3481,11 @@ function enterGame(){
   if(!window._fpBalanceTimer){
     window._fpBalanceTimer = setInterval(refreshFartprintBalance, 30_000);
   }
+  // Publish my score to the global leaderboard every 30s
+  publishScore();
+  if(!window._lbPublishTimer){
+    window._lbPublishTimer = setInterval(publishScore, 30_000);
+  }
 }
 
 document.getElementById('connectBtn').addEventListener('click', connectWallet);
@@ -3072,6 +3688,8 @@ function joinRoom(room, handle){
 
 function leaveRoom(){
   if(Net.mode === "solo") return;
+  // If we're mid-arena, tell the opponent we're bailing
+  if(typeof dmBroadcastLeave === "function") dmBroadcastLeave();
   if(Net.topicChat){
     // Best-effort leave notification — sendBeacon survives page navigation
     try {
@@ -3580,8 +4198,84 @@ window.addEventListener('keydown', e => {
     // fire the plot/market interact on key-down to avoid double-trigger.
     tryInteract();
   }
+  if(e.code === "KeyF"){ tryMineOre(); }
   if(e.code === "KeyI"){ toggleInventory(); e.preventDefault(); }
+  if(e.code === "KeyL"){ toggleLeaderboard(); e.preventDefault(); }
 });
+
+// =================================================================
+// ─── ORE MINING ─────────────────────────────────────────────────
+// =================================================================
+function findNearbyOre(){
+  let best = null, bestD = ORE_INTERACT_RANGE;
+  for(const o of Ores){
+    if(!o.alive) continue;
+    const d = Math.hypot(o.x - Player.pos.x, o.z - Player.pos.z);
+    if(d < bestD){ bestD = d; best = o; }
+  }
+  return best;
+}
+
+function tryMineOre(){
+  const ore = findNearbyOre();
+  if(!ore) return;
+  if(!State.inventory.pickaxe || State.inventory.pickaxe <= 0){
+    floater("⛏ Pickaxe required", "bad");
+    return;
+  }
+  ore.alive = false;
+  ore.minedAt = Date.now();
+  scene.remove(ore.mesh);
+  ore.mesh.traverse(o => {
+    if(o.geometry) o.geometry.dispose();
+    if(o.material){
+      if(Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+      else o.material.dispose();
+    }
+  });
+  ore.mesh = null;
+  addItem("iron_ore", 1);
+  State.xp += 18;
+  checkLevelUp();
+  floater("+1 🪨 Iron Ore  +18 XP", "good");
+  // Tiny mining sound — short pitched chunk via the audio context
+  const ctx = ensureAudio();
+  if(ctx){
+    const o = ctx.createOscillator();
+    o.type = "square";
+    o.frequency.setValueAtTime(140, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.25);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.18, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.32);
+  }
+  saveState(); updateHUD();
+  broadcastOre(ore.id);
+}
+
+// Update the plot prompt to also light up for nearby ore deposits.
+let nearbyOre = null;
+function updateOrePrompt(){
+  // The plot prompt is shared real estate — only show ore prompt if no
+  // plot or market is currently being pointed at (those take priority).
+  if(nearbyPlot || nearbyMarket) return;
+  const ore = findNearbyOre();
+  nearbyOre = ore;
+  if(!ore) return;
+  const prompt = document.getElementById('plotPrompt');
+  const title  = document.getElementById('plotPromptTitle');
+  const sub    = document.getElementById('plotPromptSub');
+  prompt.classList.add('show');
+  prompt.classList.remove('locked');
+  title.textContent = "🪨 Iron Ore Deposit";
+  if(State.inventory.pickaxe){
+    sub.innerHTML = `Press <kbd>F</kbd> to mine`;
+  } else {
+    sub.innerHTML = `Need a <b>⛏ Pickaxe</b> (35 💨 at market)`;
+  }
+}
 
 // =================================================================
 // ─── MARKETPLACE ────────────────────────────────────────────────
@@ -3590,6 +4284,7 @@ const Listings = [];                   // { id, sellerId, sellerName, item, qty,
 const _myListings = new Set();         // listing ids I created (so the "BUY" button gets disabled for my own)
 const SEED_SHOP = [
   { itemId: "weed_seed", desc: "Grows into a fat green bud over 60 seconds. Plant on your owned plot." },
+  { itemId: "pickaxe",   desc: "Required to mine ore deposits scattered around the world. Press F when standing on one." },
 ];
 
 function openMarket(){
@@ -3838,6 +4533,35 @@ handleRoomMessage = function(m){
     applySnapshot(m.snapshot);
     return;
   }
+  if(m.kind === "ore_mined"){
+    const ore = Ores.find(x => x.id === m.oreId);
+    if(!ore || !ore.alive) return;
+    ore.alive = false;
+    ore.minedAt = m.ts || Date.now();
+    if(ore.mesh){
+      scene.remove(ore.mesh);
+      ore.mesh.traverse(o => {
+        if(o.geometry) o.geometry.dispose();
+        if(o.material){
+          if(Array.isArray(o.material)) o.material.forEach(m2 => m2.dispose());
+          else o.material.dispose();
+        }
+      });
+      ore.mesh = null;
+    }
+    return;
+  }
+  if(m.kind === "score"){
+    // Cross-room peer score broadcasts also land in our room topic if
+    // someone in this room is publishing. Defer to the dedicated
+    // leaderboard handler.
+    if(window.handleScoreMessage) handleScoreMessage(m);
+    return;
+  }
+  if(m.kind && m.kind.startsWith("dm_")){
+    if(window.handleDmMessage) handleDmMessage(m);
+    return;
+  }
 };
 
 function showSaleToast(text){
@@ -3847,6 +4571,130 @@ function showSaleToast(text){
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
+
+// =================================================================
+// ─── GLOBAL LEADERBOARD ─────────────────────────────────────────
+// =================================================================
+// Every player publishes their score (level + raw XP + a derived total
+// XP across all levels) to a single global ntfy topic every 30s. Anyone
+// opening the leaderboard polls the topic with ?since=24h, aggregates by
+// username (latest wins), sorts by totalXp, and shows the top 50.
+//
+// totalXp formula = sum of all prior levels' XP needed + current XP.
+// Each level needs `100 * level` XP, so prior-level sum =
+//   100 * sum(k=1..level-1) k = 100 * (level-1) * level / 2.
+const LB_TOPIC = "fartworld-leaderboard-v1-pub";
+const LB_State = { rows: [], lastPublish: 0 };
+
+function totalXp(level, xp){
+  const prior = 100 * (level - 1) * level / 2;
+  return prior + xp;
+}
+
+async function publishScore(){
+  if(!State.username) return;
+  const now = Date.now();
+  if(now - LB_State.lastPublish < 25_000) return;     // throttle to ~30s
+  LB_State.lastPublish = now;
+  try {
+    await fetch(`https://ntfy.sh/${LB_TOPIC}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind:    "score",
+        name:    State.username,
+        level:   State.level,
+        xp:      State.xp,
+        totalXp: totalXp(State.level, State.xp),
+        credits: State.credits,
+        ts:      now,
+      }),
+    });
+  } catch(_){}
+}
+
+async function fetchLeaderboard(){
+  try {
+    const r = await fetch(`https://ntfy.sh/${LB_TOPIC}/json?poll=1&since=24h`);
+    if(!r.ok) return [];
+    const text = await r.text();
+    if(!text.trim()) return [];
+    const players = new Map();
+    for(const line of text.trim().split("\n")){
+      try {
+        const evt = JSON.parse(line);
+        if(evt.event !== "message" || !evt.message) continue;
+        const m = JSON.parse(evt.message);
+        if(m.kind !== "score" || !m.name) continue;
+        const cur = players.get(m.name);
+        if(!cur || (m.ts || 0) > (cur.ts || 0)) players.set(m.name, m);
+      } catch(_){}
+    }
+    // Include our own latest local score even before it's been published
+    if(State.username){
+      const me = players.get(State.username);
+      const myTotal = totalXp(State.level, State.xp);
+      if(!me || (me.totalXp || 0) < myTotal){
+        players.set(State.username, {
+          name: State.username, level: State.level, xp: State.xp,
+          totalXp: myTotal, credits: State.credits, ts: Date.now(),
+        });
+      }
+    }
+    return [...players.values()].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0)).slice(0, 50);
+  } catch(_){ return []; }
+}
+
+// Hook for in-room score messages — included by handleRoomMessage above
+// so cross-player score updates can be picked up immediately without
+// waiting for the leaderboard poll.
+window.handleScoreMessage = function(m){
+  // (no-op for now — leaderboard reads on open. Could maintain a live
+  // top-N panel here in the future.)
+};
+
+async function renderLeaderboard(){
+  const host = document.getElementById('lbBody');
+  host.innerHTML = '<div class="lb-empty">Loading global leaderboard…</div>';
+  const rows = await fetchLeaderboard();
+  LB_State.rows = rows;
+  if(!rows.length){
+    host.innerHTML = '<div class="lb-empty">No scores published yet. Earn XP — you\'ll show up.</div>';
+    return;
+  }
+  const me = State.username;
+  host.innerHTML = rows.map((r, i) => {
+    const rank = i + 1;
+    const cls  = (rank <= 3 ? "r" + rank : "") + (r.name === me ? " you" : "");
+    return `
+      <div class="lb-row ${cls}">
+        <span class="rank">#${rank}</span>
+        <div>
+          <div class="name">${escHtml(r.name)}</div>
+          <div class="lv">Lv ${r.level || 1}  ·  ${r.xp || 0} XP</div>
+        </div>
+        <span class="xp">${(r.totalXp || 0).toLocaleString()}</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(230,255,238,0.42);">💨 ${r.credits || 0}</span>
+      </div>
+    `;
+  }).join("");
+}
+
+function toggleLeaderboard(){
+  const bg = document.getElementById('lbBg');
+  if(bg.classList.contains('show')){
+    bg.classList.remove('show');
+  } else {
+    bg.classList.add('show');
+    renderLeaderboard();
+    publishScore();        // publish on open so my score is fresh
+  }
+}
+document.getElementById('lbToggle').addEventListener('click', toggleLeaderboard);
+document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lbBg').classList.remove('show'));
+document.getElementById('lbRefresh').addEventListener('click', () => { renderLeaderboard(); publishScore(); });
+document.getElementById('lbBg').addEventListener('click', (e) => {
+  if(e.target.id === "lbBg") document.getElementById('lbBg').classList.remove('show');
+});
 
 // =================================================================
 // ─── HOST WORLD-STATE PERSISTENCE ───────────────────────────────
@@ -3977,15 +4825,437 @@ hostRoom = async function(name, handle){
 };
 
 // =================================================================
+// ─── 1v1 DEATHMATCH ─────────────────────────────────────────────
+// =================================================================
+// A glowing red ring on the map (built earlier). Two players step in
+// → 5-second countdown → match. Three weapons cycled with the scroll
+// wheel or 1/2/3 keys, click to fire. Raycast against the opponent's
+// printer mesh for hit detection. HP starts at 100, kills counter
+// up to 10. Winner gets +200 XP, loser +30 XP.
+//
+// Network protocol (room topic):
+//   dm_join    { peerId, name }              — I'm in the ring, ready
+//   dm_leave   { peerId }                    — I left the ring
+//   dm_start   { players:[id1,id2], ts }     — both ready, countdown
+//   dm_shot    { peerId, weapon, ox,oy,oz, dx,dy,dz, ts } — I fired
+//   dm_hit     { attacker, victim, dmg, ts } — I was hit (victim broadcasts)
+//   dm_kill    { killer, victim, ts }        — victim died (victim broadcasts)
+//   dm_end     { winner, score, ts }         — match over
+const Dm = {
+  phase:        "off",       // off | waiting | countdown | active | ended
+  inRing:       false,
+  countdown:    0,
+  myHp:         100,
+  myKills:      0,
+  oppKills:     0,
+  oppId:        null,
+  oppName:      null,
+  weapon:       0,           // index into WEAPONS
+  lastShotAt:   0,
+  ringPeers:    new Map(),   // peerId → { name, lastSeen }
+  joinTimer:    null,
+  killGoal:     10,
+};
+const WEAPONS = [
+  { id: "pistol",  name: "Pistol",  dmg: 22, cooldown: 0.30, color: 0xffd64d, pellets: 1, spread: 0.005 },
+  { id: "smg",     name: "SMG",     dmg: 9,  cooldown: 0.08, color: 0x5ff09c, pellets: 1, spread: 0.02 },
+  { id: "shotgun", name: "Shotgun", dmg: 14, cooldown: 0.85, color: 0xff7a6e, pellets: 5, spread: 0.10 },
+];
+
+function isInArena(x, z){
+  return Math.hypot(x - ARENA_POS.x, z - ARENA_POS.z) <= ARENA_RADIUS;
+}
+
+function dmShowOverlay(){
+  document.getElementById('dmOverlay').classList.add('show');
+}
+function dmHideOverlay(){
+  document.getElementById('dmOverlay').classList.remove('show');
+}
+function dmSetMatchHud(on){
+  document.getElementById('dmCrosshair').style.display = on ? "" : "none";
+  document.getElementById('dmStats').style.display     = on ? "" : "none";
+  document.getElementById('dmHp').style.display        = on ? "" : "none";
+  document.getElementById('dmWeapons').style.display   = on ? "" : "none";
+  document.getElementById('dmTip').style.display       = on ? "" : "none";
+  document.getElementById('dmWaiting').style.display   = on ? "none" : "";
+}
+
+function dmAnnounce(text, small){
+  const b = document.getElementById('dmBanner');
+  b.style.display = "";
+  b.textContent = text;
+  b.classList.toggle('small', !!small);
+  clearTimeout(b._t);
+  b._t = setTimeout(() => { b.style.display = "none"; }, 1500);
+}
+
+function dmEnter(){
+  if(Net.mode === "solo"){
+    // Solo arena has no opponents — still let you peek inside, but
+    // tell them it's a multiplayer feature.
+    document.getElementById('dmWaitingMsg').textContent = "Solo mode — invite a friend to a room to fight.";
+    dmShowOverlay(); dmSetMatchHud(false);
+    Dm.phase = "waiting";
+    Dm.inRing = true;
+    return;
+  }
+  Dm.phase  = "waiting";
+  Dm.inRing = true;
+  document.getElementById('dmWaitingMsg').textContent = "Waiting for an opponent to step into the ring…";
+  dmShowOverlay(); dmSetMatchHud(false);
+  // Announce my presence to the room periodically
+  dmBroadcastJoin();
+  if(!Dm.joinTimer){
+    Dm.joinTimer = setInterval(dmBroadcastJoin, 2000);
+  }
+}
+function dmLeave(){
+  if(Dm.phase === "off") return;
+  dmBroadcastLeave();
+  Dm.phase  = "off";
+  Dm.inRing = false;
+  if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
+  Dm.ringPeers.clear();
+  dmHideOverlay();
+}
+document.getElementById('dmLeaveBtn').addEventListener('click', dmLeave);
+
+function dmBroadcastJoin(){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "dm_join", peerId: Net.peerId, name: Net.handle, ts: Date.now() }),
+    });
+  } catch(_){}
+}
+function dmBroadcastLeave(){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    navigator.sendBeacon(
+      `https://ntfy.sh/${Net.topicChat}`,
+      JSON.stringify({ kind: "dm_leave", peerId: Net.peerId, ts: Date.now() })
+    );
+  } catch(_){}
+}
+
+function dmStartCountdown(oppId, oppName){
+  Dm.phase = "countdown";
+  Dm.countdown = 5;
+  Dm.oppId    = oppId;
+  Dm.oppName  = oppName || "opponent";
+  document.getElementById('dmOppLbl').textContent = (oppName || "OPP").toUpperCase().slice(0, 10);
+  dmSetMatchHud(true);
+}
+
+function dmStartMatch(){
+  Dm.phase    = "active";
+  Dm.myHp     = 100;
+  Dm.myKills  = 0;
+  Dm.oppKills = 0;
+  Dm.weapon   = 0;
+  dmSetMatchHud(true);
+  dmRefreshHud();
+  dmSwitchWeapon(0);
+  // Teleport me to a corner of the arena, opponent to the opposite
+  const seed = Net.peerId < Dm.oppId ? 1 : -1;
+  Player.pos.x = ARENA_POS.x + seed * (ARENA_RADIUS - 2);
+  Player.pos.z = ARENA_POS.z + seed * (ARENA_RADIUS - 2);
+  // Face toward arena center
+  Player.yaw = Math.atan2(-seed * (ARENA_RADIUS - 2), -seed * (ARENA_RADIUS - 2));
+}
+
+function dmRefreshHud(){
+  document.getElementById('dmKillsYou').textContent = Dm.myKills;
+  document.getElementById('dmKillsOpp').textContent = Dm.oppKills;
+  document.getElementById('dmHpVal').textContent    = Math.max(0, Math.round(Dm.myHp));
+  document.getElementById('dmHpFill').style.width   = Math.max(0, Dm.myHp) + "%";
+}
+
+function dmSwitchWeapon(idx){
+  Dm.weapon = (idx + WEAPONS.length) % WEAPONS.length;
+  document.querySelectorAll('.dm-weapon').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.dm-weapon[data-w="${Dm.weapon}"]`)?.classList.add('active');
+}
+
+function dmCycleWeapon(dir){
+  if(Dm.phase !== "active") return;
+  dmSwitchWeapon(Dm.weapon + (dir > 0 ? 1 : -1));
+}
+
+function dmFire(){
+  if(Dm.phase !== "active") return;
+  const now = performance.now() / 1000;
+  const w = WEAPONS[Dm.weapon];
+  if(now - Dm.lastShotAt < w.cooldown) return;
+  Dm.lastShotAt = now;
+  // Fire from the camera position forward along view direction.
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  for(let i = 0; i < w.pellets; i++){
+    const dir = forward.clone();
+    if(w.spread > 0){
+      dir.x += (Math.random() - 0.5) * w.spread;
+      dir.y += (Math.random() - 0.5) * w.spread;
+      dir.z += (Math.random() - 0.5) * w.spread;
+      dir.normalize();
+    }
+    // Local hit check against opponent mesh
+    const opp = Net.peers.get(Dm.oppId);
+    if(opp && opp.mesh){
+      const raycaster = new THREE.Raycaster(camera.position, dir, 0, 80);
+      const hits = raycaster.intersectObject(opp.mesh, true);
+      if(hits.length){
+        dmBroadcastShot(dir, true);
+        dmBroadcastHit(Dm.oppId, w.dmg);
+      } else {
+        dmBroadcastShot(dir, false);
+      }
+    } else {
+      dmBroadcastShot(dir, false);
+    }
+  }
+  dmPlayShotSound(w);
+}
+
+function dmPlayShotSound(w){
+  const ctx = ensureAudio(); if(!ctx) return;
+  const o = ctx.createOscillator();
+  o.type = "square";
+  const startF = w.id === "shotgun" ? 110 : (w.id === "smg" ? 320 : 220);
+  o.frequency.setValueAtTime(startF, ctx.currentTime);
+  o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.12);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.18, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
+  o.connect(g); g.connect(ctx.destination);
+  o.start(); o.stop(ctx.currentTime + 0.16);
+}
+
+function dmBroadcastShot(dir, didHit){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "dm_shot", peerId: Net.peerId, weapon: WEAPONS[Dm.weapon].id,
+        ox: +camera.position.x.toFixed(2), oy: +camera.position.y.toFixed(2), oz: +camera.position.z.toFixed(2),
+        dx: +dir.x.toFixed(3), dy: +dir.y.toFixed(3), dz: +dir.z.toFixed(3),
+        hit: didHit, ts: Date.now(),
+      }),
+    });
+  } catch(_){}
+}
+function dmBroadcastHit(victimId, dmg){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "dm_hit", attacker: Net.peerId, victim: victimId, dmg, ts: Date.now() }),
+    });
+  } catch(_){}
+}
+function dmBroadcastKill(){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "dm_kill", killer: Dm.oppId, victim: Net.peerId, ts: Date.now() }),
+    });
+  } catch(_){}
+}
+function dmBroadcastEnd(winner){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "dm_end", winner, score: { [Net.peerId]: Dm.myKills, [Dm.oppId]: Dm.oppKills }, ts: Date.now(),
+      }),
+    });
+  } catch(_){}
+}
+
+window.handleDmMessage = function(m){
+  if(!m || !m.peerId === Net.peerId) {} // (no early return needed — handler dispatches per-kind)
+  switch(m.kind){
+    case "dm_join": {
+      if(m.peerId === Net.peerId) return;
+      Dm.ringPeers.set(m.peerId, { name: m.name, lastSeen: Date.now() });
+      // If I'm waiting AND there's now a 2nd player in the ring, start countdown
+      if(Dm.phase === "waiting"){
+        for(const [pid, p] of Dm.ringPeers){
+          if(pid === Net.peerId) continue;
+          dmStartCountdown(pid, p.name);
+          return;
+        }
+      }
+      break;
+    }
+    case "dm_leave": {
+      if(m.peerId === Net.peerId) return;
+      Dm.ringPeers.delete(m.peerId);
+      if(Dm.phase === "countdown" && m.peerId === Dm.oppId){
+        // Opponent left — back to waiting
+        Dm.phase = "waiting";
+        dmSetMatchHud(false);
+        document.getElementById('dmWaitingMsg').textContent = "Opponent left. Waiting for someone new…";
+      }
+      if(Dm.phase === "active" && m.peerId === Dm.oppId){
+        // Forfeit
+        dmEndMatch(Net.peerId);
+      }
+      break;
+    }
+    case "dm_hit": {
+      // Did someone shoot at me?
+      if(m.victim !== Net.peerId) return;
+      if(Dm.phase !== "active") return;
+      if(m.attacker !== Dm.oppId) return;
+      Dm.myHp = Math.max(0, Dm.myHp - Number(m.dmg || 0));
+      dmRefreshHud();
+      // Screen tint flash
+      const f = document.getElementById('flash');
+      f.classList.add('bad');
+      setTimeout(() => f.classList.remove('bad'), 80);
+      if(Dm.myHp <= 0){
+        dmBroadcastKill();
+        // Opponent +1 kill (we broadcast our death, opponent updates their own count)
+        respawnMe();
+      }
+      break;
+    }
+    case "dm_kill": {
+      // Opponent reported their own death, attribute the kill to whoever shot them
+      if(m.killer === Net.peerId && Dm.phase === "active"){
+        Dm.myKills += 1;
+        dmRefreshHud();
+        dmAnnounce("KILL", true);
+        if(Dm.myKills >= Dm.killGoal){
+          dmBroadcastEnd(Net.peerId);
+          dmEndMatch(Net.peerId);
+        }
+      } else if(m.victim === Net.peerId){
+        // Symmetric: opponent's screen counts the kill
+        Dm.oppKills += 1;
+        dmRefreshHud();
+      }
+      break;
+    }
+    case "dm_end": {
+      if(Dm.phase === "active" || Dm.phase === "countdown"){
+        dmEndMatch(m.winner);
+      }
+      break;
+    }
+  }
+};
+
+function respawnMe(){
+  Dm.myHp = 100;
+  dmRefreshHud();
+  // Tiny respawn flash + teleport to my corner
+  const seed = Net.peerId < (Dm.oppId || "") ? 1 : -1;
+  Player.pos.x = ARENA_POS.x + seed * (ARENA_RADIUS - 2);
+  Player.pos.z = ARENA_POS.z + seed * (ARENA_RADIUS - 2);
+  dmAnnounce("RESPAWN", true);
+}
+
+function dmEndMatch(winnerId){
+  Dm.phase = "ended";
+  const iWon = winnerId === Net.peerId;
+  const xpReward = iWon ? 200 : 30;
+  State.xp += xpReward;
+  if(iWon) State.credits += 50;
+  checkLevelUp();
+  saveState(); updateHUD();
+  dmAnnounce(iWon ? "VICTORY 🏆" : "DEFEAT 💀");
+  setTimeout(() => {
+    floater(`${iWon ? "WIN" : "LOSS"}  +${xpReward} XP${iWon ? "  +50 💨" : ""}`, iWon ? "good" : "bad");
+    dmHideOverlay();
+    Dm.phase = "off";
+    Dm.inRing = false;
+    if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
+    publishScore();
+  }, 1800);
+}
+
+// Tick the deathmatch state every frame (called from tickGameplaySystems)
+let _dmRingPromptShown = false;
+function tickDeathmatch(dt){
+  const inside = isInArena(Player.pos.x, Player.pos.z);
+
+  // Auto-enter / auto-leave based on player position
+  if(inside && Dm.phase === "off"){
+    dmEnter();
+  } else if(!inside && (Dm.phase === "waiting" || Dm.phase === "countdown")){
+    dmLeave();
+  }
+
+  // Countdown
+  if(Dm.phase === "countdown"){
+    Dm.countdown -= dt;
+    const sec = Math.ceil(Dm.countdown);
+    dmAnnounce(sec > 0 ? String(sec) : "FIGHT!");
+    if(Dm.countdown <= 0){ dmStartMatch(); }
+  }
+
+  // Cleanup stale ring peers (haven't broadcast in 4s)
+  const now = Date.now();
+  for(const [pid, p] of Dm.ringPeers){
+    if(now - p.lastSeen > 4000) Dm.ringPeers.delete(pid);
+  }
+
+  // While active, force the camera to lock behind the player (no orbit)
+  if(Dm.phase === "active"){
+    Cam.yaw = Player.yaw + Math.PI;   // camera straight behind player
+    Cam.pitch = 0.25;
+    Cam.distance = 6;
+  }
+}
+
+// Mouse click to fire (only during active match)
+canvas.addEventListener('mousedown', (e) => {
+  if(Dm.phase === "active"){ dmFire(); }
+});
+// SMG/auto fire while holding
+let _dmFireHold = false;
+window.addEventListener('mousedown', () => { _dmFireHold = true; });
+window.addEventListener('mouseup',   () => { _dmFireHold = false; });
+setInterval(() => {
+  if(_dmFireHold && Dm.phase === "active" && WEAPONS[Dm.weapon].id === "smg") dmFire();
+}, 60);
+
+// Mouse wheel cycles weapons during active match (overrides camera zoom)
+canvas.addEventListener('wheel', (e) => {
+  if(Dm.phase !== "active") return;
+  dmCycleWeapon(e.deltaY);
+  e.stopImmediatePropagation();
+  e.preventDefault();
+}, { passive: false, capture: true });
+
+// 1/2/3 keys jump to specific weapons
+window.addEventListener('keydown', e => {
+  if(isTypingInChat()) return;
+  if(Dm.phase !== "active") return;
+  if(e.code === "Digit1") dmSwitchWeapon(0);
+  if(e.code === "Digit2") dmSwitchWeapon(1);
+  if(e.code === "Digit3") dmSwitchWeapon(2);
+});
+
+// =================================================================
 // ─── GAME LOOP HOOKS ────────────────────────────────────────────
 // =================================================================
 let _plotPromptAcc = 0;
 let _plantGrowthAcc = 0;
+let _oreRespawnAcc = 0;
 function tickGameplaySystems(dt){
   _plotPromptAcc += dt;
   if(_plotPromptAcc > 0.15){    // 6Hz update is plenty
     _plotPromptAcc = 0;
     updatePlotPrompt();
+    updateOrePrompt();          // shows under the same prompt element
   }
   _plantGrowthAcc += dt;
   if(_plantGrowthAcc > 1){      // re-check plant growth stages every 1s
@@ -4001,6 +5271,27 @@ function tickGameplaySystems(dt){
       }
     }
   }
+  _oreRespawnAcc += dt;
+  if(_oreRespawnAcc > 5){       // check ore respawns every 5s
+    _oreRespawnAcc = 0;
+    respawnDownedOres();
+  }
+  // Deathmatch update is below — keep it in its own slot so it's easy to find
+  if(typeof tickDeathmatch === "function") tickDeathmatch(dt);
+}
+
+// Broadcast that an ore is currently mined-out so other players see it
+// disappear (and respawn later) at the same time.
+function broadcastOre(oreId){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "ore_mined", peerId: Net.peerId, oreId, ts: Date.now(),
+      }),
+    });
+  } catch(_){}
 }
 
 // ─── Game loop ──────────────────────────────────────────────────
