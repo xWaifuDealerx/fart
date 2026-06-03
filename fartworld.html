@@ -729,6 +729,465 @@
   }
   .name-tag.self { display: none; }
 
+  /* ─── Username modal (first-time, permanent) ─── */
+  .uname-bg {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at 50% 30%, rgba(46,224,107,0.20), rgba(10,20,8,0.97) 70%);
+    display: none; align-items: center; justify-content: center;
+    z-index: 60; padding: 20px;
+  }
+  .uname-bg.show { display: flex; }
+  .uname-card {
+    max-width: 460px; width: 100%;
+    background: linear-gradient(180deg, rgba(15,32,18,0.96), rgba(8,18,11,0.96));
+    border: 2px solid rgba(46,224,107,0.42);
+    border-radius: 22px;
+    padding: 34px 30px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55), 0 0 80px rgba(46,224,107,0.22);
+  }
+  .uname-card .eye {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+    color: #5ff09c; font-weight: 800;
+    margin-bottom: 10px;
+    text-shadow: 0 0 12px rgba(95,240,156,0.55);
+  }
+  .uname-card h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 40px; letter-spacing: 2px;
+    background: linear-gradient(135deg, #46f08a, #5ff09c);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .uname-card .sub {
+    color: rgba(230,255,238,0.62);
+    font-size: 13px; line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .uname-input {
+    width: 100%;
+    background: rgba(0,0,0,0.32);
+    border: 1px solid rgba(46,224,107,0.30);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: #e6ffee;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 18px;
+    letter-spacing: 0.6px;
+    text-align: center;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .uname-input:focus { outline: 0; border-color: #5ff09c; box-shadow: 0 0 0 3px rgba(46,224,107,0.18); }
+  .uname-warn {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 0.6px;
+    color: rgba(255,214,77,0.85);
+    margin-bottom: 18px;
+    line-height: 1.5;
+  }
+  .uname-warn b { color: #ffd64d; }
+  .uname-err {
+    color: #ff7a6e !important;
+    text-shadow: 0 0 6px rgba(255,90,77,0.40);
+  }
+  .uname-go {
+    width: 100%;
+    background: linear-gradient(135deg, #2ee06b, #5ff09c);
+    color: #00220e;
+    border: 0;
+    padding: 14px;
+    border-radius: 100px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.15s, filter 0.15s;
+    box-shadow: 0 12px 30px rgba(46,224,107,0.40);
+    animation: pulseGlow 1.8s ease-in-out infinite;
+  }
+  .uname-go:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.06); }
+
+  /* ─── $FARTPRINT balance pill in HUD ─── */
+  .hud-card.hud-fartprint {
+    background: linear-gradient(135deg, rgba(255,214,77,0.10), rgba(46,224,107,0.08));
+    border-color: rgba(255,214,77,0.32);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hud-card.hud-fartprint .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: rgba(255,214,77,0.75); font-weight: 800;
+  }
+  .hud-card.hud-fartprint .val {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px;
+    background: linear-gradient(135deg, #fff1a8, #ffd64d, #f5b400);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(255,200,60,0.35));
+  }
+
+  /* ─── Inventory panel (slide from right) ─── */
+  .inv-panel {
+    position: fixed;
+    top: 0; right: -360px;
+    width: 340px; height: 100vh;
+    background: linear-gradient(180deg, rgba(8,18,11,0.95), rgba(5,12,7,0.95));
+    border-left: 1px solid rgba(46,224,107,0.30);
+    box-shadow: -10px 0 40px rgba(0,0,0,0.40);
+    transition: right 0.28s ease;
+    z-index: 15;
+    display: flex; flex-direction: column;
+    pointer-events: auto;
+  }
+  .inv-panel.open { right: 0; }
+  .inv-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid rgba(46,224,107,0.18);
+  }
+  .inv-head h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px; letter-spacing: 1.2px;
+    color: #5ff09c;
+    text-shadow: 0 0 10px rgba(95,240,156,0.45);
+  }
+  .inv-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 22px; cursor: pointer;
+    line-height: 1;
+  }
+  .inv-head .close:hover { color: #ff7a6e; }
+  .inv-meta {
+    padding: 10px 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(230,255,238,0.55);
+    border-bottom: 1px solid rgba(46,224,107,0.12);
+  }
+  .inv-meta b { color: #ffd64d; }
+  .inv-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    padding: 14px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .inv-slot {
+    aspect-ratio: 1;
+    background: rgba(46,224,107,0.06);
+    border: 1px solid rgba(46,224,107,0.18);
+    border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 4px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+  }
+  .inv-slot:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; }
+  .inv-slot.empty { opacity: 0.32; cursor: default; }
+  .inv-slot.empty:hover { background: rgba(46,224,107,0.06); border-color: rgba(46,224,107,0.18); }
+  .inv-slot .icon {
+    font-size: 24px;
+    line-height: 1;
+    margin-bottom: 3px;
+    text-shadow: 0 0 8px currentColor;
+  }
+  .inv-slot .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.4px;
+    color: rgba(230,255,238,0.85); font-weight: 700;
+  }
+  .inv-slot .qty {
+    position: absolute;
+    bottom: 4px; right: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 11px;
+    color: #ffd64d;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  }
+  .inv-slot.nft .name { color: #c084fc; }
+
+  /* Inventory icon button (corner) */
+  .inv-toggle {
+    position: absolute;
+    top: 80px; right: 14px;
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: rgba(8,18,11,0.65);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(46,224,107,0.20);
+    color: #5ff09c;
+    font-size: 22px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.15s;
+    z-index: 14;
+  }
+  .inv-toggle:hover { border-color: #5ff09c; box-shadow: 0 0 16px rgba(46,224,107,0.30); }
+
+  /* ─── Plot interaction prompt ─── */
+  .plot-prompt {
+    position: absolute;
+    bottom: 240px; left: 50%; transform: translateX(-50%);
+    background: rgba(8,18,11,0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(46,224,107,0.36);
+    border-radius: 14px;
+    padding: 12px 18px;
+    pointer-events: none;
+    display: none;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.40), 0 0 30px rgba(46,224,107,0.18);
+    min-width: 220px;
+  }
+  .plot-prompt.show { display: block; }
+  .plot-prompt .title {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13px;
+    color: #5ff09c;
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+  .plot-prompt .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(230,255,238,0.65);
+    letter-spacing: 0.5px;
+  }
+  .plot-prompt .sub kbd {
+    display: inline-block;
+    background: rgba(46,224,107,0.20);
+    color: #5ff09c;
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(46,224,107,0.40);
+    font-weight: 800;
+  }
+  .plot-prompt.locked { border-color: rgba(255,90,77,0.36); }
+  .plot-prompt.locked .title { color: #ff7a6e; }
+
+  /* ─── Marketplace modal ─── */
+  .market-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.70);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 55; padding: 20px;
+  }
+  .market-bg.show { display: flex; }
+  .market-card {
+    max-width: 640px; width: 100%; max-height: 86vh;
+    background: linear-gradient(180deg, rgba(15,32,18,0.97), rgba(8,18,11,0.97));
+    border: 2px solid rgba(46,224,107,0.36);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(46,224,107,0.18);
+  }
+  .market-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(46,224,107,0.18);
+  }
+  .market-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 28px; letter-spacing: 2px;
+    background: linear-gradient(135deg, #46f08a, #ffd64d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .market-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 24px; cursor: pointer;
+    line-height: 1;
+  }
+  .market-tabs {
+    display: flex;
+    border-bottom: 1px solid rgba(46,224,107,0.12);
+  }
+  .market-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: rgba(230,255,238,0.55);
+    padding: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 12px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.14s;
+  }
+  .market-tab.active {
+    color: #5ff09c;
+    border-bottom-color: #5ff09c;
+    background: rgba(46,224,107,0.05);
+  }
+  .market-body {
+    overflow-y: auto;
+    padding: 18px 22px;
+    flex: 1;
+  }
+  .seeds-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .seed-card {
+    background: rgba(46,224,107,0.06);
+    border: 1px solid rgba(46,224,107,0.24);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .seed-card:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; }
+  .seed-card .ico {
+    font-size: 30px;
+    text-shadow: 0 0 12px currentColor;
+  }
+  .seed-card .info { flex: 1; }
+  .seed-card .nm {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 14px;
+    color: #e6ffee;
+  }
+  .seed-card .desc {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: rgba(230,255,238,0.55);
+    margin-top: 2px;
+  }
+  .seed-card .price {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 15px;
+    color: #ffd64d;
+    text-shadow: 0 0 8px rgba(255,214,77,0.40);
+  }
+
+  .listing-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto auto;
+    align-items: center; gap: 12px;
+    padding: 10px 14px;
+    background: rgba(46,224,107,0.04);
+    border: 1px solid rgba(46,224,107,0.16);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .listing-row .ico {
+    font-size: 22px;
+    text-shadow: 0 0 8px currentColor;
+    text-align: center;
+  }
+  .listing-row .nm {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13px;
+    color: #e6ffee;
+  }
+  .listing-row .seller {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: rgba(230,255,238,0.42);
+    margin-top: 2px;
+  }
+  .listing-row .price {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14px;
+    color: #ffd64d;
+  }
+  .listing-row .buy {
+    background: linear-gradient(135deg, #2ee06b, #5ff09c);
+    color: #00220e;
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .listing-row .buy.own {
+    background: transparent;
+    color: rgba(230,255,238,0.42);
+    border: 1px solid rgba(230,255,238,0.18);
+  }
+  .listing-empty {
+    padding: 24px;
+    text-align: center;
+    color: rgba(230,255,238,0.42);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .sell-row {
+    display: grid;
+    grid-template-columns: 36px 1fr 80px auto;
+    align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(46,224,107,0.04);
+    border: 1px solid rgba(46,224,107,0.16);
+    border-radius: 12px;
+    margin-bottom: 8px;
+  }
+  .sell-row input {
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(46,224,107,0.20);
+    border-radius: 8px;
+    padding: 6px 10px;
+    color: #e6ffee;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    text-align: right;
+    outline: 0;
+  }
+  .sell-row input:focus { border-color: #5ff09c; }
+  .sell-row .list-btn {
+    background: linear-gradient(135deg, #ffb020, #ffd64d);
+    color: #2a1d00;
+    border: 0;
+    padding: 7px 14px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 800; font-size: 11px;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  /* ─── Sale notification ─── */
+  .sale-toast {
+    position: fixed;
+    top: 100px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255,214,77,0.95), rgba(255,176,32,0.95));
+    color: #2a1d00;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14px;
+    letter-spacing: 1px;
+    box-shadow: 0 14px 36px rgba(255,180,40,0.55);
+    z-index: 30;
+    pointer-events: none;
+    animation: saleSlide 3.4s ease-out forwards;
+  }
+  @keyframes saleSlide {
+    0%   { transform: translate(-50%, -100%); opacity: 0; }
+    10%  { transform: translate(-50%, 0); opacity: 1; }
+    90%  { transform: translate(-50%, 0); opacity: 1; }
+    100% { transform: translate(-50%, -100%); opacity: 0; }
+  }
+
   /* Header pill (small home link) */
   .home-pill {
     position: absolute;
@@ -769,11 +1228,18 @@
       <span class="lbl">💨 $FART</span>
       <span id="hudCredits">0</span>
     </div>
+    <div class="hud-card hud-fartprint" id="hudFartprintCard" style="display:none;">
+      <span class="lbl">🖨 $FARTPRINT</span>
+      <span class="val" id="hudFartprint">—</span>
+    </div>
     <div class="hud-card hud-wallet">
       <span class="dot"></span>
       <span id="hudWallet">guest</span>
     </div>
   </div>
+
+  <!-- Inventory toggle button (top-right corner of the HUD) -->
+  <button class="inv-toggle" id="invToggle" title="Inventory (I)">🎒</button>
 
   <div class="zone-tag neutral" id="zoneTag">NEUTRAL</div>
 
@@ -811,6 +1277,68 @@
 
   <!-- Name-tag layer (CSS labels positioned over remote printers each frame) -->
   <div id="nameTags" style="position:absolute;inset:0;pointer-events:none;"></div>
+
+  <!-- Plot interaction prompt (shown when player is near a plot/market) -->
+  <div class="plot-prompt" id="plotPrompt">
+    <div class="title" id="plotPromptTitle">Plot</div>
+    <div class="sub" id="plotPromptSub">Press <kbd>E</kbd></div>
+  </div>
+
+  <!-- Inventory panel (slides in from right) -->
+  <div class="inv-panel" id="invPanel">
+    <div class="inv-head">
+      <h3>🎒 INVENTORY</h3>
+      <button class="close" id="invClose">×</button>
+    </div>
+    <div class="inv-meta" id="invMeta">0 / 16 slots used</div>
+    <div class="inv-grid" id="invGrid"></div>
+  </div>
+</div>
+
+<!-- ─── Username modal (one-time, permanent) ─── -->
+<div class="uname-bg" id="unameBg">
+  <div class="uname-card">
+    <span class="eye">▲ Pick your printer name</span>
+    <h2>WHO ARE YOU?</h2>
+    <p class="sub">
+      This is the name everyone in the FartWorld will know you by — on your printer,
+      in chat, on your plots, on your market listings.
+    </p>
+    <input class="uname-input" id="unameInput" type="text" placeholder="PRINTRKING" maxlength="20" autocomplete="off" spellcheck="false"/>
+    <div class="uname-warn" id="unameWarn">
+      <b>⚠ Permanent.</b> Once you pick it, this is your name forever.
+    </div>
+    <button class="uname-go" id="unameGo">Lock it in 💨</button>
+  </div>
+</div>
+
+<!-- ─── Marketplace modal ─── -->
+<div class="market-bg" id="marketBg">
+  <div class="market-card">
+    <div class="market-head">
+      <h2>🌿 MARKETPLACE</h2>
+      <button class="close" id="marketClose">×</button>
+    </div>
+    <div class="market-tabs">
+      <button class="market-tab active" data-mtab="seeds">Buy Seeds</button>
+      <button class="market-tab" data-mtab="listings">Player Market</button>
+      <button class="market-tab" data-mtab="sell">Sell Stuff</button>
+    </div>
+    <div class="market-body">
+      <div class="market-pane" data-mpane="seeds">
+        <p style="color:rgba(230,255,238,0.55); font-size:12px; margin-bottom:14px;">Seeds from the printr's vault. Plant on your own plot.</p>
+        <div class="seeds-grid" id="seedsGrid"></div>
+      </div>
+      <div class="market-pane" data-mpane="listings" style="display:none;">
+        <p style="color:rgba(230,255,238,0.55); font-size:12px; margin-bottom:14px;">Stuff other printers in this room have listed for sale.</p>
+        <div id="listingsList"></div>
+      </div>
+      <div class="market-pane" data-mpane="sell" style="display:none;">
+        <p style="color:rgba(230,255,238,0.55); font-size:12px; margin-bottom:14px;">List items from your inventory. Other players in the room can buy them.</p>
+        <div id="sellList"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- ─── Login overlay ─── -->
@@ -906,14 +1434,19 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 
 // ─── State ──────────────────────────────────────────────────────
 const State = {
-  wallet: null,
-  level: 1,
-  xp: 0,
-  credits: 0,
-  pagesPrinted: 0,
+  wallet:   null,
+  username: null,      // permanent once set
+  level:    1,
+  xp:       0,
+  credits:  50,        // start with 50 $FART so you can buy your first plot/seeds
+  pagesPrinted:       0,
   uniqueZonesVisited: new Set(),
-  cleanSeconds: 0,
-  totalFarts: 0,
+  cleanSeconds:       0,
+  totalFarts:         0,
+  // ── Inventory: keyed by item id → { qty }. Item metadata lives in ITEMS catalog.
+  inventory: {},
+  // ── Live wallet balance (read-only from RPC). Refreshed every 30s.
+  fartprintBalance: null,
 };
 const STORE_KEY = "fartworld_state_v1";
 
@@ -921,6 +1454,7 @@ function saveState(){
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify({
       wallet:   State.wallet,
+      username: State.username,
       level:    State.level,
       xp:       State.xp,
       credits:  State.credits,
@@ -928,6 +1462,7 @@ function saveState(){
       uniqueZonesVisited:  [...State.uniqueZonesVisited],
       cleanSeconds:        State.cleanSeconds,
       totalFarts:          State.totalFarts,
+      inventory:           State.inventory,
     }));
   } catch(_){}
 }
@@ -937,9 +1472,108 @@ function loadState(){
     if(!j) return;
     Object.assign(State, j);
     State.uniqueZonesVisited = new Set(j.uniqueZonesVisited || []);
+    if(!State.inventory) State.inventory = {};
+    if(State.credits == null) State.credits = 50;
   } catch(_){}
 }
 loadState();
+
+// ─── Item catalog ───────────────────────────────────────────────
+// Every farm-able / sellable item is registered here with display
+// metadata. NFT support is wired (isNFT flag) but no items use it yet —
+// when on-chain NFT items land later, they get added here too.
+const ITEMS = {
+  weed_seed: {
+    id:      "weed_seed",
+    name:    "Weed Seed",
+    icon:    "🌱",
+    color:   "#5ff09c",
+    type:    "seed",
+    isNFT:   false,
+    growMs:  60_000,           // 1 minute to fully grow
+    harvest: "weed",           // → harvest produces 1 weed
+    marketPrice: 8,            // shop price (seeds)
+  },
+  weed: {
+    id:      "weed",
+    name:    "Weed",
+    icon:    "🌿",
+    color:   "#46f08a",
+    type:    "crop",
+    isNFT:   false,
+    suggestedPrice: 20,        // suggested player-market price
+  },
+};
+
+function addItem(id, qty){
+  if(!ITEMS[id]) return;
+  State.inventory[id] = (State.inventory[id] || 0) + qty;
+  if(State.inventory[id] <= 0) delete State.inventory[id];
+  saveState();
+  if(window.renderInventory) renderInventory();
+}
+function takeItem(id, qty){
+  const have = State.inventory[id] || 0;
+  if(have < qty) return false;
+  State.inventory[id] = have - qty;
+  if(State.inventory[id] <= 0) delete State.inventory[id];
+  saveState();
+  if(window.renderInventory) renderInventory();
+  return true;
+}
+
+// ─── $FARTPRINT wallet balance via Solana RPC ───────────────────
+const FARTPRINT_MINT = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const FARTPRINT_RPCS = [
+  "https://api.mainnet-beta.solana.com",
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+];
+async function fetchFartprintBalance(walletAddr){
+  if(!walletAddr) return null;
+  for(const url of FARTPRINT_RPCS){
+    try {
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
+          params: [walletAddr, { mint: FARTPRINT_MINT }, { encoding: "jsonParsed" }],
+        }),
+      });
+      if(!r.ok) continue;
+      const j = await r.json();
+      const accs = j?.result?.value || [];
+      let total = 0;
+      for(const a of accs){
+        const ui = a?.account?.data?.parsed?.info?.tokenAmount?.uiAmount;
+        if(typeof ui === "number") total += ui;
+      }
+      return total;
+    } catch(_){ /* try next */ }
+  }
+  return null;
+}
+function fmtBalance(n){
+  if(n == null || !isFinite(n)) return "—";
+  if(n === 0)        return "0";
+  if(n < 1)          return n.toFixed(3);
+  if(n < 1_000)      return n.toFixed(0);
+  if(n < 1_000_000)  return (n / 1_000).toFixed(2) + "K";
+  if(n < 1_000_000_000) return (n / 1_000_000).toFixed(2) + "M";
+  return (n / 1_000_000_000).toFixed(2) + "B";
+}
+async function refreshFartprintBalance(){
+  if(!State.wallet) return;
+  const bal = await fetchFartprintBalance(State.wallet);
+  if(bal != null){
+    State.fartprintBalance = bal;
+    const card = document.getElementById('hudFartprintCard');
+    const val  = document.getElementById('hudFartprint');
+    if(card) card.style.display = "";
+    if(val)  val.textContent = fmtBalance(bal);
+  }
+}
 
 // XP needed for next level: 100 * level (so L2 = 100, L3 = 200, L4 = 300, etc.)
 function xpForLevel(lv){ return 100 * lv; }
@@ -1368,6 +2002,201 @@ function makePrinterStation(x, z){
   [3, 45], [-40, 35],
 ].forEach(([x,z]) => makePrinterStation(x, z));
 
+// ─── Land plots (buyable, farmable) ─────────────────────────────
+// Each plot is a brown square on the ground with a "FOR SALE" sign
+// when unowned. Buying claims it (50 $FART). Owners can plant crops
+// on their plots — the crop renders as a procedural plant that
+// grows through 3 stages over its `growMs` duration before becoming
+// harvestable. Plot ownership + crops sync across the room via ntfy.
+const Plots = [];                      // { id, x, z, w, h, mesh, signMesh, plantMesh, owner, ownerName, crop, plantedAt }
+const PLOT_PRICE = 50;
+const PLOT_SIZE  = 4;
+const PLOT_LOCATIONS = [
+  [  8,   0], [ -8,   2], [  4, -12], [ -10, -10],
+  [ 14,  18], [ -14,  14], [ 22, -22], [ -24,  -4],
+];
+
+function buildPlotMesh(plot){
+  const grp = new THREE.Group();
+  // Dirt patch (slightly raised)
+  const dirt = new THREE.Mesh(
+    new THREE.BoxGeometry(plot.w, 0.15, plot.h),
+    new THREE.MeshStandardMaterial({ color: 0x5d3a1f, roughness: 0.95 })
+  );
+  dirt.position.y = 0.08;
+  dirt.receiveShadow = true;
+  grp.add(dirt);
+  // Border (4 thin rails)
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x3c2410, roughness: 0.9 });
+  const halfW = plot.w / 2, halfH = plot.h / 2;
+  [[-halfW, 0, 0, plot.h], [halfW, 0, 0, plot.h], [0, 0, -halfH, plot.w], [0, 0, halfH, plot.w]].forEach((r, i) => {
+    const isXAxis = i >= 2;
+    const rail = new THREE.Mesh(
+      new THREE.BoxGeometry(isXAxis ? r[3] : 0.15, 0.18, isXAxis ? 0.15 : r[3]),
+      railMat
+    );
+    rail.position.set(r[0], 0.18, r[2]);
+    rail.castShadow = true;
+    grp.add(rail);
+  });
+  // For-sale sign (taller box with emissive top)
+  const sign = new THREE.Group();
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.4, 6), railMat);
+  post.position.y = 0.7;
+  sign.add(post);
+  const board = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 0.5, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffd64d, emissiveIntensity: 0.7, roughness: 0.5 })
+  );
+  board.position.set(0, 1.45, 0);
+  board.castShadow = true;
+  sign.add(board);
+  sign.position.set(-halfW + 0.4, 0, -halfH + 0.4);
+  grp.add(sign);
+  plot.signGroup = sign;
+  // Crop slot — added/removed dynamically
+  plot.plantGroup = new THREE.Group();
+  plot.plantGroup.position.y = 0.15;
+  grp.add(plot.plantGroup);
+  grp.position.set(plot.x, 0, plot.z);
+  scene.add(grp);
+  return grp;
+}
+
+// Procedural weed plant — 3 growth stages.
+// stage: 0 = sprout, 1 = mid, 2 = full bud
+function buildWeedPlant(stage){
+  const grp = new THREE.Group();
+  const stemMat = new THREE.MeshStandardMaterial({ color: 0x2a6a30, roughness: 0.7 });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0x46f08a, roughness: 0.6, emissive: 0x0e3a18, emissiveIntensity: 0.3 });
+  const budMat  = new THREE.MeshStandardMaterial({ color: 0x6fcc40, emissive: 0x46f08a, emissiveIntensity: 0.45, roughness: 0.5 });
+
+  const heights = [0.4, 1.0, 1.8];
+  const h = heights[Math.min(2, Math.max(0, stage))];
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, h, 6), stemMat);
+  stem.position.y = h / 2;
+  stem.castShadow = true;
+  grp.add(stem);
+
+  // Leaves (a few at different heights)
+  const leafCount = [2, 4, 6][stage] || 2;
+  for(let i = 0; i < leafCount; i++){
+    const leaf = new THREE.Mesh(
+      new THREE.SphereGeometry(0.18 + Math.random() * 0.08, 6, 4),
+      leafMat
+    );
+    leaf.scale.set(1.2, 0.4, 1.6);
+    const phi = (i / leafCount) * Math.PI * 2;
+    const layer = i / leafCount;
+    leaf.position.set(
+      Math.cos(phi) * 0.18,
+      0.15 + layer * (h - 0.2),
+      Math.sin(phi) * 0.18
+    );
+    leaf.rotation.y = phi;
+    leaf.rotation.z = -0.4;
+    leaf.castShadow = true;
+    grp.add(leaf);
+  }
+
+  // Bud — only at full growth
+  if(stage >= 2){
+    const bud = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), budMat);
+    bud.position.y = h + 0.05;
+    bud.scale.y = 1.4;
+    bud.castShadow = true;
+    grp.add(bud);
+    // Sparkle indicator
+    const sparkle = new THREE.PointLight(0x46f08a, 1.0, 4);
+    sparkle.position.y = h + 0.3;
+    grp.add(sparkle);
+  }
+
+  return grp;
+}
+
+function initPlots(){
+  PLOT_LOCATIONS.forEach(([x, z], i) => {
+    const p = {
+      id: "plot_" + i,
+      x, z,
+      w: PLOT_SIZE, h: PLOT_SIZE,
+      owner: null,
+      ownerName: null,
+      crop: null,
+      plantedAt: 0,
+      mesh: null,
+    };
+    p.mesh = buildPlotMesh(p);
+    Plots.push(p);
+  });
+}
+initPlots();
+
+function plotStateChanged(plot){
+  // Refresh the plot's visual based on its state — sign visible only
+  // when unowned, plant model swapped when growth stage changes.
+  if(plot.signGroup){
+    plot.signGroup.visible = !plot.owner;
+  }
+  // Border tint when owned by you / others
+  // (we keep the dirt simple; ownership is shown via the absence of sign + sparkle when fully grown)
+  // Update plant
+  while(plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
+  if(plot.crop && ITEMS[plot.crop]){
+    const item = ITEMS[plot.crop];
+    const t = Math.max(0, Math.min(1, (Date.now() - plot.plantedAt) / item.growMs));
+    const stage = t >= 1 ? 2 : t >= 0.5 ? 1 : 0;
+    plot.plantGroup.add(buildWeedPlant(stage));
+  }
+}
+
+// ─── Marketplace building ───────────────────────────────────────
+const MARKET_POS = { x: -22, z: -32 };
+const MARKET_RADIUS = 5;
+function buildMarket(){
+  const grp = new THREE.Group();
+  grp.position.set(MARKET_POS.x, 0, MARKET_POS.z);
+  // Stone-ish square building
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(5, 0.4, 5),
+    new THREE.MeshStandardMaterial({ color: 0x2c2620, roughness: 0.9 })
+  );
+  base.position.y = 0.2;
+  base.receiveShadow = true;
+  grp.add(base);
+  // Roof — orange (market vibes)
+  const roof = new THREE.Mesh(
+    new THREE.ConeGeometry(3.6, 2, 4),
+    new THREE.MeshStandardMaterial({ color: 0xff8a3d, emissive: 0xff5a1f, emissiveIntensity: 0.25, roughness: 0.7 })
+  );
+  roof.position.y = 3.6;
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  grp.add(roof);
+  // 4 pillars
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0xeeeeec, roughness: 0.7 });
+  [[-2, 2], [2, 2], [2, -2], [-2, -2]].forEach(([px, pz]) => {
+    const pl = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.6, 8), pillarMat);
+    pl.position.set(px, 1.7, pz);
+    pl.castShadow = true;
+    grp.add(pl);
+  });
+  // Sign
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(3.6, 0.8, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffd64d, emissiveIntensity: 1.0, roughness: 0.4 })
+  );
+  sign.position.set(0, 3.0, 2.5);
+  grp.add(sign);
+  // Glow
+  const pt = new THREE.PointLight(0xffd64d, 1.5, 14);
+  pt.position.y = 3;
+  grp.add(pt);
+  scene.add(grp);
+}
+buildMarket();
+
 // ─── Paper mountains (white triangular cones) ───────────────────
 function makePaperMountain(x, z, scale){
   const geo = new THREE.ConeGeometry(scale, scale * 1.7, 5, 1, false);
@@ -1762,9 +2591,7 @@ function updateHUD(){
   document.getElementById('hudXpMax').textContent   = xpForLevel(State.level);
   document.getElementById('hudXpFill').style.width  = Math.min(100, (State.xp / xpForLevel(State.level)) * 100) + "%";
   document.getElementById('hudCredits').textContent = State.credits;
-  document.getElementById('hudWallet').textContent  = State.wallet
-    ? (State.wallet.slice(0, 4) + "…" + State.wallet.slice(-4))
-    : "guest";
+  document.getElementById('hudWallet').textContent  = State.username || "guest";
   renderQuests();
   // Zone tag
   const tag = document.getElementById('zoneTag');
@@ -2009,20 +2836,21 @@ async function connectWallet(){
   } catch(e){ console.warn("Phantom connect failed", e); }
 }
 
-// Login → Lobby → Game flow.
-// enterLobby() reveals the host/join/solo picker.
-// enterGame()  hides the lobby + login and reveals the HUD.
-function enterLobby(){
+// Login → Username → Lobby → Game flow.
+// enterLobby() requires a permanent username first, then reveals the
+// host/join/solo picker. enterGame() hides everything else and reveals
+// the HUD. Once in-game, we kick off the wallet-balance fetcher loop.
+async function enterLobby(){
   document.getElementById('login').classList.add('hidden');
+  // ── Permanent-username gate ──
+  await requireUsername();
   document.getElementById('lobby').classList.add('show');
-  // Pre-fill display-name fields with the wallet short-address if available
-  const guess = State.wallet
-    ? (State.wallet.slice(0, 4) + "…" + State.wallet.slice(-4))
-    : "guest";
+  // The lobby's display-name fields used to take freeform input; now that
+  // username is permanent, lock them to the username and disable editing.
   const hh = document.getElementById('hostHandleInput');
   const jh = document.getElementById('joinHandleInput');
-  if(!hh.value) hh.value = guess;
-  if(!jh.value) jh.value = guess;
+  if(hh){ hh.value = State.username; hh.readOnly = true; hh.style.opacity = 0.7; }
+  if(jh){ jh.value = State.username; jh.readOnly = true; jh.style.opacity = 0.7; }
   // Start refreshing the rooms list so the Join tab is ready
   refreshRoomList();
 }
@@ -2030,10 +2858,18 @@ function enterLobby(){
 function enterGame(){
   document.getElementById('lobby').classList.remove('show');
   document.getElementById('hud').classList.remove('hidden');
+  // Force the network handle to the locked username
+  Net.handle = State.username || Net.handle;
   updateHUD();
+  renderInventory();
   // Resume audio context on first user gesture
   ensureAudio();
   if(audioCtx?.state === "suspended") audioCtx.resume().catch(()=>{});
+  // Start the FARTPRINT balance fetcher loop (no-op if wallet not connected)
+  refreshFartprintBalance();
+  if(!window._fpBalanceTimer){
+    window._fpBalanceTimer = setInterval(refreshFartprintBalance, 30_000);
+  }
 }
 
 document.getElementById('connectBtn').addEventListener('click', connectWallet);
@@ -2539,6 +3375,634 @@ document.getElementById('soloGoBtn').addEventListener('click', () => {
   enterGame();
 });
 
+// =================================================================
+// ─── USERNAME (permanent) ────────────────────────────────────────
+// =================================================================
+function requireUsername(){
+  if(State.username){ return Promise.resolve(); }
+  return new Promise((resolve) => {
+    const bg    = document.getElementById('unameBg');
+    const input = document.getElementById('unameInput');
+    const warn  = document.getElementById('unameWarn');
+    const go    = document.getElementById('unameGo');
+    bg.classList.add('show');
+    setTimeout(() => input.focus(), 60);
+    const submit = () => {
+      const name = (input.value || "").trim();
+      if(!name || name.length < 2){
+        warn.innerHTML = "<b>⚠ Too short.</b> Pick something at least 2 characters long.";
+        warn.classList.add('uname-err');
+        return;
+      }
+      if(name.length > 20){
+        warn.innerHTML = "<b>⚠ Too long.</b> Max 20 characters.";
+        warn.classList.add('uname-err');
+        return;
+      }
+      State.username = name;
+      saveState();
+      bg.classList.remove('show');
+      go.removeEventListener('click', submit);
+      input.removeEventListener('keydown', enterKey);
+      resolve();
+    };
+    const enterKey = (e) => { if(e.code === "Enter") submit(); };
+    go.addEventListener('click', submit);
+    input.addEventListener('keydown', enterKey);
+  });
+}
+
+// =================================================================
+// ─── INVENTORY UI ───────────────────────────────────────────────
+// =================================================================
+const INV_SLOTS = 16;
+
+function renderInventory(){
+  const grid = document.getElementById('invGrid');
+  const meta = document.getElementById('invMeta');
+  if(!grid) return;
+  const ids = Object.keys(State.inventory).filter(id => State.inventory[id] > 0);
+  const slots = [];
+  for(let i = 0; i < INV_SLOTS; i++){
+    const id = ids[i];
+    if(id){
+      const item = ITEMS[id];
+      if(!item){ slots.push(""); continue; }
+      slots.push(`
+        <div class="inv-slot ${item.isNFT ? 'nft' : ''}" data-id="${id}" title="${escHtml(item.name)}${item.isNFT ? ' · NFT' : ''}">
+          <div class="icon" style="color:${item.color};">${item.icon}</div>
+          <div class="name">${escHtml(item.name)}</div>
+          <div class="qty">×${State.inventory[id]}</div>
+        </div>
+      `);
+    } else {
+      slots.push('<div class="inv-slot empty"></div>');
+    }
+  }
+  grid.innerHTML = slots.join("");
+  meta.innerHTML = `${ids.length} / ${INV_SLOTS} slots used  ·  <b>${State.credits}</b> 💨 $FART`;
+}
+window.renderInventory = renderInventory;
+
+function openInventory(){ document.getElementById('invPanel').classList.add('open'); renderInventory(); }
+function closeInventory(){ document.getElementById('invPanel').classList.remove('open'); }
+function toggleInventory(){ document.getElementById('invPanel').classList.toggle('open'); renderInventory(); }
+document.getElementById('invToggle').addEventListener('click', toggleInventory);
+document.getElementById('invClose').addEventListener('click', closeInventory);
+
+// =================================================================
+// ─── PLOT INTERACTION ───────────────────────────────────────────
+// =================================================================
+let nearbyPlot   = null;
+let nearbyMarket = false;
+const PLOT_INTERACT_RANGE = 3.5;
+
+function findNearbyPlot(){
+  let best = null, bestD = PLOT_INTERACT_RANGE;
+  for(const p of Plots){
+    const d = Math.hypot(p.x - Player.pos.x, p.z - Player.pos.z);
+    if(d < bestD){ bestD = d; best = p; }
+  }
+  return best;
+}
+
+function updatePlotPrompt(){
+  const prompt = document.getElementById('plotPrompt');
+  const title  = document.getElementById('plotPromptTitle');
+  const sub    = document.getElementById('plotPromptSub');
+  const ownerId = State.username || State.wallet || "guest";
+
+  nearbyMarket = Math.hypot(Player.pos.x - MARKET_POS.x, Player.pos.z - MARKET_POS.z) < MARKET_RADIUS;
+  nearbyPlot   = nearbyMarket ? null : findNearbyPlot();
+
+  if(nearbyMarket){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🌿 MARKETPLACE";
+    sub.innerHTML = `Press <kbd>E</kbd> to enter`;
+    return;
+  }
+  if(!nearbyPlot){
+    prompt.classList.remove('show');
+    return;
+  }
+  prompt.classList.add('show');
+  prompt.classList.remove('locked');
+  if(!nearbyPlot.owner){
+    title.textContent = `🏷 Plot for sale`;
+    sub.innerHTML = `Press <kbd>E</kbd> to buy for <b>${PLOT_PRICE} 💨 $FART</b>`;
+  } else if(nearbyPlot.owner === ownerId){
+    if(!nearbyPlot.crop){
+      const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
+      if(seeds.length){
+        const seed = seeds[0];
+        title.textContent = `🌱 Your plot`;
+        sub.innerHTML = `Press <kbd>E</kbd> to plant <b>${ITEMS[seed].name}</b>`;
+      } else {
+        title.textContent = `🏡 Your plot`;
+        sub.innerHTML = `No seeds. Visit the <b>marketplace</b> first.`;
+      }
+    } else {
+      const item = ITEMS[nearbyPlot.crop];
+      const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
+      if(t >= 1){
+        title.textContent = `✨ Ready to harvest`;
+        sub.innerHTML = `Press <kbd>E</kbd> to pick the <b>${ITEMS[item.harvest].name}</b>`;
+      } else {
+        const sec = Math.ceil((1 - t) * item.growMs / 1000);
+        title.textContent = `🌿 Growing…`;
+        sub.innerHTML = `Ready in <b>${sec}s</b> (${Math.floor(t * 100)}%)`;
+      }
+    }
+  } else {
+    prompt.classList.add('locked');
+    title.textContent = `🔒 Owned by ${escHtml(nearbyPlot.ownerName || "another printer")}`;
+    sub.innerHTML = `Hands off.`;
+  }
+}
+
+function tryInteract(){
+  if(nearbyMarket){ openMarket(); return; }
+  if(!nearbyPlot) return;
+  const ownerId = State.username || State.wallet || "guest";
+  if(!nearbyPlot.owner){
+    // BUY
+    if(State.credits < PLOT_PRICE){
+      floater(`Need ${PLOT_PRICE} 💨 $FART`, "bad");
+      return;
+    }
+    State.credits -= PLOT_PRICE;
+    nearbyPlot.owner = ownerId;
+    nearbyPlot.ownerName = State.username || "anon";
+    plotStateChanged(nearbyPlot);
+    floater(`PLOT BOUGHT  -${PLOT_PRICE} 💨`, "good");
+    saveState(); updateHUD();
+    broadcastPlot(nearbyPlot);
+    return;
+  }
+  if(nearbyPlot.owner !== ownerId) return;
+  if(!nearbyPlot.crop){
+    // PLANT
+    const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
+    if(!seeds.length){ floater("No seeds in inventory", "bad"); return; }
+    const seed = seeds[0];
+    if(!takeItem(seed, 1)) return;
+    nearbyPlot.crop = ITEMS[seed].harvest;
+    nearbyPlot.plantedAt = Date.now();
+    plotStateChanged(nearbyPlot);
+    floater(`PLANTED  ${ITEMS[seed].name}`, "good");
+    State.xp += 5; checkLevelUp();
+    saveState(); updateHUD();
+    broadcastPlot(nearbyPlot);
+    return;
+  }
+  // HARVEST?
+  const item = ITEMS[nearbyPlot.crop];
+  const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
+  if(t >= 1){
+    addItem(nearbyPlot.crop, 1);
+    nearbyPlot.crop = null;
+    nearbyPlot.plantedAt = 0;
+    plotStateChanged(nearbyPlot);
+    floater(`+1 ${ITEMS[item.harvest || nearbyPlot.crop || ""]?.name || "crop"}  +20 XP`, "good");
+    State.xp += 20; checkLevelUp();
+    saveState(); updateHUD();
+    broadcastPlot(nearbyPlot);
+  }
+}
+
+// E key + mobile (E for desktop, the touch fart button doubles as interact when
+// near a plot OR you can tap the prompt — keep it simple here, just key)
+window.addEventListener('keydown', e => {
+  if(isTypingInChat()) return;
+  if(e.code === "KeyE"){
+    // Existing tryPrint handles holding-E at printer stations; we only
+    // fire the plot/market interact on key-down to avoid double-trigger.
+    tryInteract();
+  }
+  if(e.code === "KeyI"){ toggleInventory(); e.preventDefault(); }
+});
+
+// =================================================================
+// ─── MARKETPLACE ────────────────────────────────────────────────
+// =================================================================
+const Listings = [];                   // { id, sellerId, sellerName, item, qty, price, ts }
+const _myListings = new Set();         // listing ids I created (so the "BUY" button gets disabled for my own)
+const SEED_SHOP = [
+  { itemId: "weed_seed", desc: "Grows into a fat green bud over 60 seconds. Plant on your owned plot." },
+];
+
+function openMarket(){
+  document.getElementById('marketBg').classList.add('show');
+  renderSeedShop();
+  renderListings();
+  renderSellPane();
+}
+function closeMarket(){
+  document.getElementById('marketBg').classList.remove('show');
+}
+document.getElementById('marketClose').addEventListener('click', closeMarket);
+document.getElementById('marketBg').addEventListener('click', (e) => {
+  if(e.target.id === "marketBg") closeMarket();
+});
+document.querySelectorAll('.market-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.mtab;
+    document.querySelectorAll('.market-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.market-pane').forEach(p => p.style.display = "none");
+    btn.classList.add('active');
+    document.querySelector(`.market-pane[data-mpane="${t}"]`).style.display = "";
+  });
+});
+
+function renderSeedShop(){
+  const host = document.getElementById('seedsGrid');
+  host.innerHTML = SEED_SHOP.map(({itemId, desc}) => {
+    const item = ITEMS[itemId];
+    return `
+      <div class="seed-card" data-id="${itemId}">
+        <div class="ico" style="color:${item.color};">${item.icon}</div>
+        <div class="info">
+          <div class="nm">${item.name}</div>
+          <div class="desc">${desc}</div>
+        </div>
+        <div class="price">${item.marketPrice}💨</div>
+      </div>
+    `;
+  }).join("");
+  host.querySelectorAll('.seed-card').forEach(c => {
+    c.addEventListener('click', () => {
+      const id = c.dataset.id;
+      const item = ITEMS[id];
+      if(State.credits < item.marketPrice){
+        floater(`Need ${item.marketPrice} 💨 $FART`, "bad");
+        return;
+      }
+      State.credits -= item.marketPrice;
+      addItem(id, 1);
+      floater(`+1 ${item.name}  -${item.marketPrice} 💨`, "good");
+      saveState(); updateHUD();
+      renderInventory();
+    });
+  });
+}
+
+function renderListings(){
+  const host = document.getElementById('listingsList');
+  const ownerId = State.username || State.wallet || "guest";
+  // Show newest first
+  const live = Listings.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  if(!live.length){
+    host.innerHTML = '<div class="listing-empty">No one\'s listed anything yet. Be the first — switch to the SELL tab.</div>';
+    return;
+  }
+  host.innerHTML = live.map(L => {
+    const item = ITEMS[L.item];
+    if(!item) return "";
+    const own = L.sellerId === ownerId;
+    return `
+      <div class="listing-row" data-id="${escHtml(L.id)}">
+        <div class="ico" style="color:${item.color};">${item.icon}</div>
+        <div>
+          <div class="nm">${escHtml(item.name)} × ${L.qty}</div>
+          <div class="seller">by ${escHtml(L.sellerName || "anon")}</div>
+        </div>
+        <div class="price">${L.price}💨</div>
+        <button class="buy ${own ? 'own' : ''}" data-id="${escHtml(L.id)}">${own ? "yours" : "BUY"}</button>
+      </div>
+    `;
+  }).join("");
+  host.querySelectorAll('.buy:not(.own)').forEach(b => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = b.dataset.id;
+      buyListing(id);
+    });
+  });
+}
+
+function renderSellPane(){
+  const host = document.getElementById('sellList');
+  const sellable = Object.keys(State.inventory).filter(id => {
+    const item = ITEMS[id];
+    return item && State.inventory[id] > 0 && !item.isNFT;   // (NFTs separately later)
+  });
+  if(!sellable.length){
+    host.innerHTML = '<div class="listing-empty">Nothing in your inventory to sell. Farm something first.</div>';
+    return;
+  }
+  host.innerHTML = sellable.map(id => {
+    const item = ITEMS[id];
+    const have = State.inventory[id];
+    return `
+      <div class="sell-row" data-id="${id}">
+        <div class="ico" style="color:${item.color};">${item.icon}</div>
+        <div>
+          <div class="nm" style="font-family:Orbitron;font-weight:800;font-size:13px;color:#e6ffee;">${escHtml(item.name)}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(230,255,238,0.5);">have ${have}  ·  qty <input type="number" class="sell-qty" min="1" max="${have}" value="1" style="width:48px; padding:2px 6px; font-size:11px; margin-left:4px;"/></div>
+        </div>
+        <input type="number" class="sell-price" min="1" placeholder="${item.suggestedPrice || 10}" value="${item.suggestedPrice || 10}"/>
+        <button class="list-btn">LIST</button>
+      </div>
+    `;
+  }).join("");
+  host.querySelectorAll('.sell-row').forEach(row => {
+    const id = row.dataset.id;
+    const item = ITEMS[id];
+    row.querySelector('.list-btn').addEventListener('click', () => {
+      const qty   = Math.max(1, Math.min(Number(row.querySelector('.sell-qty').value)   || 1, State.inventory[id]));
+      const price = Math.max(1, Number(row.querySelector('.sell-price').value) || (item.suggestedPrice || 10));
+      if(!takeItem(id, qty)) return;
+      const listing = {
+        id:         "L_" + Math.random().toString(36).slice(2, 10),
+        sellerId:   State.username || State.wallet || "guest",
+        sellerName: State.username || "anon",
+        item:       id,
+        qty,
+        price,
+        ts:         Date.now(),
+      };
+      Listings.push(listing);
+      _myListings.add(listing.id);
+      floater(`LISTED  ${item.name} × ${qty}  ·  ${price}💨`, "good");
+      broadcastListing(listing);
+      renderListings();
+      renderSellPane();
+      updateHUD();
+    });
+  });
+}
+
+function buyListing(id){
+  const idx = Listings.findIndex(L => L.id === id);
+  if(idx < 0) return;
+  const L = Listings[idx];
+  const ownerId = State.username || State.wallet || "guest";
+  if(L.sellerId === ownerId) return;
+  if(State.credits < L.price){
+    floater(`Need ${L.price} 💨 $FART`, "bad");
+    return;
+  }
+  State.credits -= L.price;
+  addItem(L.item, L.qty);
+  Listings.splice(idx, 1);
+  floater(`BOUGHT ${ITEMS[L.item].name} × ${L.qty}  -${L.price}💨`, "good");
+  broadcastListingBuy(L.id, ownerId, State.username || "anon");
+  saveState(); updateHUD();
+  renderListings();
+}
+
+// =================================================================
+// ─── NETWORK — extra message kinds (plot, listing, snapshot) ────
+// =================================================================
+function broadcastPlot(plot){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "plot",
+        peerId: Net.peerId,
+        plotId: plot.id,
+        owner: plot.owner,
+        ownerName: plot.ownerName,
+        crop: plot.crop,
+        plantedAt: plot.plantedAt,
+        ts: Date.now(),
+      }),
+    });
+  } catch(_){}
+}
+function broadcastListing(listing){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "list", listing, ts: Date.now() }),
+    });
+  } catch(_){}
+}
+function broadcastListingBuy(listingId, buyerId, buyerName){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    fetch(`https://ntfy.sh/${Net.topicChat}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "list_buy", listingId, buyerId, buyerName, ts: Date.now() }),
+    });
+  } catch(_){}
+}
+
+// Patch handleRoomMessage with the new kinds (we wrap the existing one).
+const _originalHandleRoomMessage = handleRoomMessage;
+handleRoomMessage = function(m){
+  _originalHandleRoomMessage(m);
+  if(!m || !m.kind) return;
+  if(m.peerId === Net.peerId) return;
+
+  if(m.kind === "plot"){
+    const plot = Plots.find(p => p.id === m.plotId);
+    if(!plot) return;
+    plot.owner     = m.owner;
+    plot.ownerName = m.ownerName;
+    plot.crop      = m.crop;
+    plot.plantedAt = m.plantedAt;
+    plotStateChanged(plot);
+    return;
+  }
+  if(m.kind === "list"){
+    if(!m.listing) return;
+    if(Listings.find(L => L.id === m.listing.id)) return;
+    Listings.push(m.listing);
+    if(document.getElementById('marketBg').classList.contains('show')) renderListings();
+    return;
+  }
+  if(m.kind === "list_buy"){
+    const idx = Listings.findIndex(L => L.id === m.listingId);
+    if(idx < 0) return;
+    const L = Listings[idx];
+    Listings.splice(idx, 1);
+    // If I was the seller, the buyer's payment is credited locally
+    const ownerId = State.username || State.wallet || "guest";
+    if(L.sellerId === ownerId && _myListings.has(L.id)){
+      State.credits += L.price;
+      _myListings.delete(L.id);
+      saveState(); updateHUD();
+      showSaleToast(`${m.buyerName || "anon"} bought your ${ITEMS[L.item]?.name || "item"} for ${L.price} 💨`);
+    }
+    if(document.getElementById('marketBg').classList.contains('show')) renderListings();
+    return;
+  }
+  if(m.kind === "snapshot"){
+    if(Net.mode !== "join") return;   // only joiners restore from host snapshots
+    if(!m.snapshot) return;
+    applySnapshot(m.snapshot);
+    return;
+  }
+};
+
+function showSaleToast(text){
+  const t = document.createElement('div');
+  t.className = "sale-toast";
+  t.textContent = "💰 " + text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3400);
+}
+
+// =================================================================
+// ─── HOST WORLD-STATE PERSISTENCE ───────────────────────────────
+// =================================================================
+// The host broadcasts a snapshot to a dedicated ntfy topic every 30s,
+// plus on every change. When the same host re-launches the room, they
+// load the latest snapshot from this topic and restore plot owners,
+// crops, and active listings. Joining players also receive the most
+// recent snapshot on connect so they catch up to the room's current
+// state immediately instead of waiting for incremental events.
+function persistenceTopic(){
+  return Net.roomId ? `fartworld-state-${Net.roomId}-v1` : null;
+}
+function buildSnapshot(){
+  return {
+    ts: Date.now(),
+    host: Net.handle,
+    plots: Plots.map(p => ({
+      id: p.id, owner: p.owner, ownerName: p.ownerName, crop: p.crop, plantedAt: p.plantedAt,
+    })),
+    listings: Listings.slice(),
+  };
+}
+function applySnapshot(s){
+  if(!s) return;
+  if(Array.isArray(s.plots)){
+    for(const sp of s.plots){
+      const p = Plots.find(x => x.id === sp.id);
+      if(!p) continue;
+      p.owner = sp.owner;
+      p.ownerName = sp.ownerName;
+      p.crop = sp.crop;
+      p.plantedAt = sp.plantedAt;
+      plotStateChanged(p);
+    }
+  }
+  if(Array.isArray(s.listings)){
+    Listings.length = 0;
+    for(const L of s.listings) Listings.push(L);
+  }
+}
+async function publishSnapshot(){
+  const topic = persistenceTopic();
+  if(!topic || Net.mode !== "host") return;
+  try {
+    await fetch(`https://ntfy.sh/${topic}`, {
+      method: "POST",
+      body: JSON.stringify(buildSnapshot()),
+    });
+  } catch(_){}
+  // Also push a "snapshot" event into the room topic so any joiners
+  // already connected get the new state immediately.
+  if(Net.topicChat){
+    try {
+      await fetch(`https://ntfy.sh/${Net.topicChat}`, {
+        method: "POST",
+        body: JSON.stringify({ kind: "snapshot", peerId: Net.peerId, snapshot: buildSnapshot(), ts: Date.now() }),
+      });
+    } catch(_){}
+  }
+}
+async function loadLatestSnapshot(){
+  const topic = persistenceTopic();
+  if(!topic) return null;
+  try {
+    const r = await fetch(`https://ntfy.sh/${topic}/json?poll=1&since=24h`);
+    if(!r.ok) return null;
+    const text = await r.text();
+    if(!text.trim()) return null;
+    let best = null;
+    for(const line of text.trim().split("\n")){
+      try {
+        const evt = JSON.parse(line);
+        if(evt.event !== "message" || !evt.message) continue;
+        const s = JSON.parse(evt.message);
+        if(!best || (s.ts || 0) > (best.ts || 0)) best = s;
+      } catch(_){}
+    }
+    return best;
+  } catch(_){ return null; }
+}
+
+// When you re-host the same name → same room ID, you continue.
+// We use a localStorage map: roomName → roomId so the host's previous
+// room is recoverable across browser sessions.
+const HOST_ROOMS_KEY = "fartworld_host_rooms_v1";
+function getHostRoomId(name){
+  try {
+    const map = JSON.parse(localStorage.getItem(HOST_ROOMS_KEY) || "{}");
+    return map[name] || null;
+  } catch(_){ return null; }
+}
+function saveHostRoomId(name, id){
+  try {
+    const map = JSON.parse(localStorage.getItem(HOST_ROOMS_KEY) || "{}");
+    map[name] = id;
+    localStorage.setItem(HOST_ROOMS_KEY, JSON.stringify(map));
+  } catch(_){}
+}
+
+// Wrap the existing hostRoom so it reuses a previous room ID for this
+// room name (if any) and restores the latest snapshot.
+const _origHostRoom = hostRoom;
+hostRoom = async function(name, handle){
+  const existing = getHostRoomId(name);
+  if(existing){
+    Net.mode      = "host";
+    Net.roomId    = existing;
+    Net.roomName  = name;
+    Net.handle    = handle || "host";
+    Net.topicChat = `fartworld-room-${existing}-v1`;
+    startRoomConnection();
+    announceRoom();
+    Net.announceTimer = setInterval(announceRoom, 20000);
+  } else {
+    _origHostRoom(name, handle);
+    saveHostRoomId(name, Net.roomId);
+  }
+  // Pull last snapshot for this room and apply
+  const snap = await loadLatestSnapshot();
+  if(snap){
+    applySnapshot(snap);
+    addChat(null, `Restored room from snapshot (${new Date(snap.ts).toLocaleTimeString()}).`, true);
+  }
+  // Start periodic snapshot publishing
+  if(window._snapshotTimer) clearInterval(window._snapshotTimer);
+  window._snapshotTimer = setInterval(publishSnapshot, 30000);
+};
+
+// =================================================================
+// ─── GAME LOOP HOOKS ────────────────────────────────────────────
+// =================================================================
+let _plotPromptAcc = 0;
+let _plantGrowthAcc = 0;
+function tickGameplaySystems(dt){
+  _plotPromptAcc += dt;
+  if(_plotPromptAcc > 0.15){    // 6Hz update is plenty
+    _plotPromptAcc = 0;
+    updatePlotPrompt();
+  }
+  _plantGrowthAcc += dt;
+  if(_plantGrowthAcc > 1){      // re-check plant growth stages every 1s
+    _plantGrowthAcc = 0;
+    for(const p of Plots){
+      if(!p.crop) continue;
+      const item = ITEMS[p.crop];
+      const t = (Date.now() - p.plantedAt) / item.growMs;
+      const newStage = t >= 1 ? 2 : t >= 0.5 ? 1 : 0;
+      if(p._lastStage !== newStage){
+        p._lastStage = newStage;
+        plotStateChanged(p);
+      }
+    }
+  }
+}
+
 // ─── Game loop ──────────────────────────────────────────────────
 let lastTime = performance.now();
 function loop(now){
@@ -2565,6 +4029,7 @@ function loop(now){
   updateFartParticles(dt);
   updatePeers(dt);
   broadcastPos();
+  tickGameplaySystems(dt);
 
   // Light passive HUD refresh every few frames
   if(((now / 1000) | 0) !== ((lastTime / 1000 - dt) | 0)){
