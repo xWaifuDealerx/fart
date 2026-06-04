@@ -717,6 +717,24 @@
     .chat-body { height: 120px; font-size: 10.5px; }
   }
 
+  /* Cat hover tooltip — shows the cat's name when you hover over one */
+  .cat-tip {
+    position: absolute;
+    background: rgba(8,18,11,0.92);
+    border: 1px solid rgba(95,240,156,0.55);
+    border-radius: 14px;
+    padding: 5px 12px;
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 15px; letter-spacing: 1.5px;
+    color: #ffd64d;
+    pointer-events: none;
+    z-index: 12;
+    display: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 18px rgba(95,240,156,0.22);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  }
+  .cat-tip.show { display: block; }
+
   /* Name tag floating above remote players */
   .name-tag {
     position: absolute;
@@ -1552,6 +1570,640 @@
   }
   .gold-step.busy { animation: pulseGlow 1.6s ease-in-out infinite; }
 
+  /* ─── Bank modal (Silver ↔ Paper / Silver → Gold) ─── */
+  .bank-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 56; padding: 20px;
+  }
+  .bank-bg.show { display: flex; }
+  .bank-card {
+    max-width: 580px; width: 100%; max-height: 88vh;
+    background: linear-gradient(180deg, rgba(28,22,12,0.97), rgba(20,16,8,0.97));
+    border: 2px solid rgba(255,200,60,0.50);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(255,200,60,0.20);
+  }
+  .bank-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(255,200,60,0.18);
+    background: linear-gradient(90deg, rgba(255,200,60,0.10), transparent);
+  }
+  .bank-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 32px; letter-spacing: 2.5px;
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #f5b400 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255,200,60,0.50));
+  }
+  .bank-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 26px; cursor: pointer; line-height: 1;
+  }
+  .bank-body { padding: 22px 24px 26px; }
+  .bank-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .bank-stat {
+    background: rgba(255,200,60,0.06);
+    border: 1px solid rgba(255,200,60,0.20);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+  .bank-stat .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: rgba(255,200,60,0.6);
+    margin-bottom: 4px;
+  }
+  .bank-stat .val {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 18px;
+    color: #ffd64d;
+  }
+  .bank-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center; gap: 14px;
+    padding: 16px;
+    background: rgba(255,200,60,0.05);
+    border: 1px solid rgba(255,200,60,0.20);
+    border-radius: 14px;
+    margin-bottom: 12px;
+  }
+  .bank-row h3 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 15px;
+    color: #ffd64d;
+    margin-bottom: 4px;
+  }
+  .bank-row p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: rgba(230,255,238,0.6);
+    margin-bottom: 8px;
+  }
+  .bank-row .qty-row {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 4px;
+  }
+  .bank-row .qty-row input {
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(255,200,60,0.25);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #e6ffee;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    width: 110px;
+    text-align: right;
+    outline: 0;
+  }
+  .bank-row .qty-row .preview {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    color: rgba(230,255,238,0.65);
+  }
+  .bank-row button.go {
+    background: linear-gradient(135deg, #ffd64d, #ffae20);
+    color: #2a1d00;
+    border: 0;
+    padding: 11px 20px;
+    border-radius: 99px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 12px;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(255,200,60,0.36);
+    transition: transform 0.15s, filter 0.15s;
+  }
+  .bank-row button.go:hover { transform: translateY(-2px); filter: brightness(1.06); }
+  .bank-row button.go:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+  .bank-row .ico { font-size: 30px; text-align: center; width: 50px; }
+
+  /* ─── Hidden laundering room modal ─── */
+  .launder-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: none; align-items: center; justify-content: center;
+    z-index: 56; padding: 20px;
+  }
+  .launder-bg.show { display: flex; }
+  .launder-card {
+    max-width: 460px; width: 100%;
+    background: linear-gradient(180deg, rgba(28,12,12,0.97), rgba(20,8,8,0.97));
+    border: 2px solid rgba(255,90,77,0.45);
+    border-radius: 22px;
+    padding: 28px 30px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(255,90,77,0.18);
+  }
+  .launder-card h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 28px; letter-spacing: 2px;
+    color: #ff7a6e;
+    text-shadow: 0 0 14px rgba(255,90,77,0.55);
+    margin-bottom: 6px;
+  }
+  .launder-card p {
+    color: rgba(230,255,238,0.7);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.55;
+    margin-bottom: 14px;
+  }
+  .launder-card p b { color: #ff7a6e; }
+  .launder-card .row { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 12px 0; }
+  .launder-card input {
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(255,90,77,0.30);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: #e6ffee;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    width: 110px;
+    text-align: right;
+    outline: 0;
+  }
+  .launder-card button {
+    background: linear-gradient(135deg, #ff5a4d, #ff7a6e);
+    color: #fff;
+    border: 0;
+    padding: 11px 20px;
+    border-radius: 99px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 12px;
+    letter-spacing: 1.2px; text-transform: uppercase;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 6px;
+    box-shadow: 0 10px 20px rgba(255,90,77,0.36);
+  }
+  .launder-card .ghost {
+    background: transparent;
+    color: rgba(230,255,238,0.55);
+    border: 1px solid rgba(230,255,238,0.20);
+    box-shadow: none;
+    margin-top: 6px;
+  }
+
+  /* Compact HUD pills for paper + fake money (only render when > 0) */
+  .hud-card.hud-paper, .hud-card.hud-fake {
+    display: none;
+    align-items: center; gap: 6px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14px;
+  }
+  .hud-card.hud-paper.show, .hud-card.hud-fake.show { display: inline-flex; }
+  .hud-card.hud-paper {
+    background: linear-gradient(135deg, rgba(180,220,255,0.10), rgba(150,200,255,0.05));
+    border-color: rgba(180,220,255,0.30);
+    color: #d6e8ff;
+  }
+  .hud-card.hud-fake {
+    background: linear-gradient(135deg, rgba(255,90,77,0.10), rgba(255,180,77,0.04));
+    border-color: rgba(255,90,77,0.36);
+    color: #ff9c8a;
+    text-shadow: 0 0 6px rgba(255,122,110,0.5);
+  }
+  .hud-card.hud-paper .lbl, .hud-card.hud-fake .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.2px; text-transform: uppercase;
+    color: currentColor; opacity: 0.7; font-weight: 800;
+  }
+
+  /* ─── Poop House Exchange (FART&POOP500 trading desk) ─── */
+  .poop-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 55; padding: 20px;
+  }
+  .poop-bg.show { display: flex; }
+  .poop-card {
+    max-width: 720px; width: 100%; max-height: 88vh;
+    background: linear-gradient(180deg, rgba(36,22,8,0.97), rgba(20,12,4,0.97));
+    border: 2px solid rgba(180,128,48,0.50);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(180,128,48,0.22);
+  }
+  .poop-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(180,128,48,0.20);
+    background: linear-gradient(90deg, rgba(180,128,48,0.10), transparent);
+  }
+  .poop-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 32px; letter-spacing: 2.5px;
+    background: linear-gradient(135deg, #d6a062 0%, #b27538 50%, #8a5424 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(180,128,48,0.50));
+  }
+  .poop-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 26px; cursor: pointer; line-height: 1;
+  }
+  .poop-body { overflow-y: auto; padding: 22px 24px 28px; flex: 1; }
+  .poop-intro {
+    color: rgba(230,255,238,0.72); font-size: 13px; line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .poop-intro b { color: #d6a062; }
+  .poop-list { display: flex; flex-direction: column; gap: 10px; }
+  .poop-row {
+    display: grid;
+    grid-template-columns: 48px 1.2fr 1fr auto;
+    gap: 12px; align-items: center;
+    padding: 12px 14px;
+    background: rgba(180,128,48,0.06);
+    border: 1px solid rgba(180,128,48,0.22);
+    border-radius: 14px;
+    transition: all 0.15s;
+  }
+  .poop-row:hover { background: rgba(180,128,48,0.14); border-color: #d6a062; }
+  .poop-row .ico {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    background-size: cover; background-position: center;
+    background-color: rgba(255,255,255,0.06);
+    border: 1px solid rgba(180,128,48,0.36);
+    display: grid; place-items: center;
+    color: #d6a062;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 13px;
+  }
+  .poop-row .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .poop-row .sym {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14.5px;
+    background: linear-gradient(135deg, #fff1a8, #ffd64d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .poop-row .ca {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px; letter-spacing: 0.4px;
+    color: rgba(230,255,238,0.4);
+    cursor: pointer;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .poop-row .ca:hover { color: #d6a062; }
+  .poop-row .price-col { text-align: right; }
+  .poop-row .price {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 15px;
+    color: #e6ffee;
+  }
+  .poop-row .chg {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 700;
+    margin-top: 2px;
+  }
+  .poop-row .chg.up   { color: #5ff09c; }
+  .poop-row .chg.down { color: #ff7a6e; }
+  .poop-row .trade-btn {
+    background: linear-gradient(135deg, #b27538, #d6a062);
+    color: #2a1a04;
+    border: 0;
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 12px; letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    box-shadow: 0 8px 18px rgba(180,128,48,0.36);
+    transition: transform 0.15s, filter 0.15s;
+  }
+  .poop-row .trade-btn:hover { transform: translateY(-2px); filter: brightness(1.08); }
+  .poop-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(230,255,238,0.45);
+  }
+  .poop-foot .refresh {
+    background: transparent;
+    border: 1px solid rgba(180,128,48,0.30);
+    color: #d6a062;
+    padding: 6px 12px;
+    border-radius: 99px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px; font-weight: 800;
+    letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer;
+  }
+  .poop-foot .refresh:hover { background: rgba(180,128,48,0.12); }
+
+  /* ─── Fart Lab modal (coin foundry) ─── */
+  .lab-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 55; padding: 20px;
+  }
+  .lab-bg.show { display: flex; }
+  .lab-card {
+    max-width: 720px; width: 100%; max-height: 88vh;
+    background: linear-gradient(180deg, rgba(8,28,18,0.97), rgba(5,16,11,0.97));
+    border: 2px solid rgba(95,240,156,0.42);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(46,224,107,0.20);
+  }
+  .lab-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid rgba(95,240,156,0.18);
+    background: linear-gradient(90deg, rgba(46,224,107,0.10), transparent);
+  }
+  .lab-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 34px; letter-spacing: 2.4px;
+    background: linear-gradient(135deg, #46f08a 0%, #a0f0c2 50%, #5ff09c 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 14px rgba(95,240,156,0.55));
+  }
+  .lab-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 26px; cursor: pointer; line-height: 1;
+  }
+  .lab-tabs { display: flex; border-bottom: 1px solid rgba(95,240,156,0.12); }
+  .lab-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: rgba(230,255,238,0.55);
+    padding: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 12px; letter-spacing: 1.6px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.14s;
+  }
+  .lab-tab.active {
+    color: #5ff09c;
+    border-bottom-color: #5ff09c;
+    background: rgba(46,224,107,0.05);
+  }
+  .lab-body { overflow-y: auto; padding: 22px 24px 28px; flex: 1; }
+  .lab-intro {
+    color: rgba(230,255,238,0.7); font-size: 13px; line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .lab-intro b { color: #5ff09c; }
+  .lab-form { display: flex; flex-direction: column; gap: 14px; }
+  .lab-field label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: rgba(230,255,238,0.55); font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .lab-ticker-row {
+    display: flex; align-items: stretch;
+    border: 1px solid rgba(95,240,156,0.30);
+    border-radius: 12px;
+    overflow: hidden;
+    background: rgba(0,0,0,0.30);
+    transition: border-color 0.15s;
+  }
+  .lab-ticker-row:focus-within { border-color: #5ff09c; box-shadow: 0 0 0 3px rgba(46,224,107,0.18); }
+  .lab-ticker-row .prefix {
+    padding: 13px 16px;
+    background: linear-gradient(135deg, rgba(46,224,107,0.22), rgba(95,240,156,0.10));
+    color: #5ff09c;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px;
+    letter-spacing: 2px;
+    border-right: 1px solid rgba(95,240,156,0.20);
+  }
+  .lab-ticker-row input {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    padding: 13px 16px;
+    color: #e6ffee;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    outline: 0;
+  }
+  .lab-field input[type="text"], .lab-field input[type="url"], .lab-field textarea {
+    width: 100%;
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(95,240,156,0.20);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #e6ffee;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    outline: 0;
+    transition: all 0.15s;
+    resize: vertical;
+  }
+  .lab-field input:focus, .lab-field textarea:focus {
+    border-color: #5ff09c;
+    box-shadow: 0 0 0 3px rgba(46,224,107,0.18);
+  }
+  .lab-upload {
+    position: relative;
+    display: grid;
+    grid-template-columns: 72px 1fr auto;
+    align-items: center; gap: 14px;
+    padding: 12px 14px;
+    background: rgba(0,0,0,0.30);
+    border: 2px dashed rgba(95,240,156,0.36);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .lab-upload:hover { border-color: #5ff09c; background: rgba(46,224,107,0.06); }
+  .lab-upload.has-image { border-style: solid; border-color: #5ff09c; background: rgba(46,224,107,0.05); }
+  .lab-upload-preview {
+    width: 64px; height: 64px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(95,240,156,0.22);
+    display: grid; place-items: center;
+    color: #5ff09c;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 26px;
+    background-size: cover; background-position: center;
+    overflow: hidden;
+  }
+  .lab-upload-info { display: flex; flex-direction: column; gap: 2px; }
+  .lab-upload-info .hd {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13px;
+    color: #e6ffee;
+  }
+  .lab-upload-info .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    color: rgba(230,255,238,0.45);
+  }
+  .lab-upload-clear {
+    background: rgba(255,90,77,0.20);
+    border: 1px solid rgba(255,90,77,0.50);
+    color: #ff7a6e;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    transition: background 0.12s;
+  }
+  .lab-upload-clear:hover { background: rgba(255,90,77,0.36); }
+
+  .lab-preview {
+    display: grid;
+    grid-template-columns: 64px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: rgba(46,224,107,0.06);
+    border: 1px solid rgba(95,240,156,0.20);
+    border-radius: 12px;
+    margin: 6px 0 8px;
+  }
+  .lab-preview .img {
+    width: 56px; height: 56px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(95,240,156,0.24);
+    background-size: cover; background-position: center;
+    display: grid; place-items: center;
+    font-size: 26px;
+  }
+  .lab-preview .meta { display: flex; flex-direction: column; gap: 2px; }
+  .lab-preview .sym {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 18px;
+    background: linear-gradient(135deg, #5ff09c, #ffd64d);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .lab-preview .name {
+    color: rgba(230,255,238,0.85); font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .lab-preview .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 5px 10px; border-radius: 99px;
+    background: rgba(46,224,107,0.18);
+    color: #5ff09c;
+    border: 1px solid rgba(46,224,107,0.40);
+  }
+  .lab-go {
+    background: linear-gradient(135deg, #2ee06b, #5ff09c);
+    color: #00220e;
+    border: 0;
+    padding: 15px;
+    border-radius: 100px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 14px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 6px;
+    box-shadow: 0 14px 32px rgba(46,224,107,0.40);
+    transition: transform 0.15s, filter 0.15s;
+    animation: pulseGlow 1.8s ease-in-out infinite;
+  }
+  .lab-go:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.06); }
+  .lab-go:disabled { opacity: 0.5; cursor: not-allowed; transform: none; animation: none; filter: grayscale(0.4); }
+  .lab-status {
+    background: rgba(0,0,0,0.30);
+    border: 1px solid rgba(95,240,156,0.20);
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px; line-height: 1.55;
+    color: rgba(230,255,238,0.72);
+    margin-top: 8px;
+    display: none;
+  }
+  .lab-status.show { display: block; }
+  .lab-status.busy { animation: pulseGlow 1.6s ease-in-out infinite; }
+  .lab-status .err { color: #ff7a6e; }
+  .lab-status .ok  { color: #5ff09c; }
+  .lab-warning {
+    background: rgba(255,214,77,0.08);
+    border: 1px dashed rgba(255,214,77,0.36);
+    border-radius: 12px;
+    padding: 11px 15px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 1.55;
+    color: rgba(255,228,90,0.82);
+    margin-bottom: 6px;
+  }
+  .coin-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 10px;
+  }
+  .coin-card {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 10px; align-items: center;
+    padding: 10px 14px;
+    background: rgba(46,224,107,0.06);
+    border: 1px solid rgba(95,240,156,0.20);
+    border-radius: 12px;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s;
+  }
+  .coin-card:hover {
+    background: rgba(46,224,107,0.14);
+    border-color: #5ff09c;
+    transform: translateY(-2px);
+    box-shadow: 0 12px 22px rgba(0,0,0,0.30);
+  }
+  .coin-card .ico {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #2ee06b, #5ff09c);
+    display: grid; place-items: center;
+    color: #00220e; font-weight: 900;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    background-size: cover; background-position: center;
+  }
+  .coin-card .nm {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 800; font-size: 13.5px;
+    color: #e6ffee;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .coin-card .auth {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: rgba(230,255,238,0.42);
+    margin-top: 2px;
+  }
+
   /* ─── Leaderboard panel ─── */
   .lb-bg {
     position: fixed; inset: 0;
@@ -1925,6 +2577,14 @@
       <span class="lbl">🥇 GOLD</span>
       <span id="hudGold">0</span>
     </div>
+    <div class="hud-card hud-paper" id="hudPaperCard">
+      <span class="lbl">📄 PAPER</span>
+      <span id="hudPaper">0</span>
+    </div>
+    <div class="hud-card hud-fake" id="hudFakeCard">
+      <span class="lbl">🪙 FAKE</span>
+      <span id="hudFake">0</span>
+    </div>
     <div class="hud-card hud-fartprint" id="hudFartprintCard" style="display:none;">
       <span class="lbl">🖨 $FARTPRINT</span>
       <span class="val" id="hudFartprint">—</span>
@@ -1979,6 +2639,8 @@
   <div id="nameTags" style="position:absolute;inset:0;pointer-events:none;"></div>
   <!-- Chat bubble layer (Habbo-style speech bubbles above each printer) -->
   <div id="chatBubbles" style="position:absolute;inset:0;pointer-events:none;"></div>
+  <!-- Cat hover tooltip — name pops up when you point at one of the cats -->
+  <div class="cat-tip" id="catTip"></div>
 
   <!-- Plot interaction prompt (shown when player is near a plot/market) -->
   <div class="plot-prompt" id="plotPrompt">
@@ -2047,6 +2709,62 @@
   </div>
 </div>
 
+<!-- ─── Bank modal ─── -->
+<div class="bank-bg" id="bankBg">
+  <div class="bank-card">
+    <div class="bank-head">
+      <h2>🏦 BANK</h2>
+      <button class="close" id="bankClose">×</button>
+    </div>
+    <div class="bank-body">
+      <div class="bank-stats">
+        <div class="bank-stat"><div class="lbl">Silver</div><div class="val" id="bankSilver">0</div></div>
+        <div class="bank-stat"><div class="lbl">Paper</div><div class="val" id="bankPaper">0</div></div>
+        <div class="bank-stat"><div class="lbl">Gold</div><div class="val" id="bankGold">0</div></div>
+      </div>
+
+      <div class="bank-row">
+        <div>
+          <h3>Silver → Paper Bills</h3>
+          <p>1 🥈 Silver = <b>10 📄 Paper</b>. Lighter to carry around.</p>
+          <div class="qty-row">
+            <input id="bankPaperQty" type="number" min="1" placeholder="silver to convert"/>
+            <span class="preview" id="bankPaperPreview">→ 0 📄</span>
+          </div>
+        </div>
+        <button class="go" id="bankPaperGo">Convert</button>
+      </div>
+
+      <div class="bank-row">
+        <div>
+          <h3>Silver → Gold</h3>
+          <p>The brutal rate: <b>100,000 🥈 Silver per 🥇 Gold</b>. Minimum 0.01 Gold per purchase. Grind earned.</p>
+          <div class="qty-row">
+            <input id="bankGoldQty" type="number" min="0.01" step="0.01" placeholder="gold to buy"/>
+            <span class="preview" id="bankGoldPreview">→ 0 🥈</span>
+          </div>
+        </div>
+        <button class="go" id="bankGoldGo">Convert</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Hidden laundering room ─── -->
+<div class="launder-bg" id="launderBg">
+  <div class="launder-card">
+    <h2>🕵 LAUNDERING ROOM</h2>
+    <p>You found the back office. Exchange fake bills for real Silver at the criminal rate: <b>1 🪙 Fake → 0.3 🥈 Silver</b>. Cuts your wad in two-thirds but it's clean.</p>
+    <p style="margin-top:8px;">Holding <b id="launderFakeQty">0</b> fake bills · <b id="launderSilverQty">0</b> 🥈 Silver</p>
+    <div class="row">
+      <input id="launderInput" type="number" min="1" placeholder="fake bills"/>
+      <span class="preview" id="launderPreview" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(230,255,238,0.65);">→ 0 🥈</span>
+    </div>
+    <button id="launderGo">Launder it</button>
+    <button class="ghost" id="launderClose">Leave</button>
+  </div>
+</div>
+
 <!-- ─── Gold Vault modal (burn $FARTPRINT → Gold) ─── -->
 <div class="gold-bg" id="goldBg">
   <div class="gold-card">
@@ -2097,6 +2815,118 @@
         anywhere. Your wallet signs every burn. $FARTPRINT never touches a centralised account.
       </div>
       <div class="gold-step" id="goldStep" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Poop House Exchange — FART&POOP500 trading desk ─── -->
+<div class="poop-bg" id="poopBg">
+  <div class="poop-card">
+    <div class="poop-head">
+      <h2>💩 POOP HOUSE</h2>
+      <button class="close" id="poopClose">×</button>
+    </div>
+    <div class="poop-body">
+      <p class="poop-intro">
+        The <b>FART&amp;POOP500</b> — every graduated FART coin in one place.
+        Click <b>TRADE</b> on any row to open its pool on Meteora and swap.
+      </p>
+      <div class="poop-list" id="poopList">
+        <div style="text-align:center;padding:24px;color:rgba(230,255,238,0.42);font-family:'JetBrains Mono',monospace;font-size:12px;">Fetching live prices…</div>
+      </div>
+      <div class="poop-foot">
+        <span id="poopSync">live · last sync —</span>
+        <button class="refresh" id="poopRefresh">↻ refresh</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Fart Lab modal — coin foundry ─── -->
+<div class="lab-bg" id="labBg">
+  <div class="lab-card">
+    <div class="lab-head">
+      <h2>🧪 FART LAB</h2>
+      <button class="close" id="labClose">×</button>
+    </div>
+    <div class="lab-tabs">
+      <button class="lab-tab active" data-ltab="forge">Forge</button>
+      <button class="lab-tab" data-ltab="gallery">Gallery</button>
+    </div>
+    <div class="lab-body">
+
+      <!-- FORGE pane: design a new coin -->
+      <div class="lab-pane" data-lpane="forge">
+        <p class="lab-intro">
+          Mint a <b>FART-prefixed derivative</b> via the Printr deployment pipeline.
+          Every coin shares the bloodline — the ticker must start with <b>FART</b>,
+          everything after is yours.
+        </p>
+
+        <div class="lab-form">
+          <div class="lab-field">
+            <label>Ticker suffix</label>
+            <div class="lab-ticker-row">
+              <span class="prefix">FART</span>
+              <input id="labSuffix" type="text" placeholder="WORLD" maxlength="10" autocomplete="off" spellcheck="false"/>
+            </div>
+            <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.42);margin-top:6px;display:block;">A–Z only, up to 10 chars. Stamped onto the ticker after FART.</small>
+          </div>
+
+          <div class="lab-field">
+            <label>Coin name</label>
+            <input id="labName" type="text" placeholder="FartWorld Coin" maxlength="40" autocomplete="off"/>
+          </div>
+
+          <div class="lab-field">
+            <label>Coin image</label>
+            <div class="lab-upload" id="labUpload">
+              <input id="labImageFile" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden/>
+              <div class="lab-upload-preview" id="labUploadPreview">+</div>
+              <div class="lab-upload-info">
+                <div class="hd">Click to pick a square PNG / JPG</div>
+                <div class="meta" id="labUploadMeta">Max 4 MB · same flow as the Derivatives site</div>
+              </div>
+              <button type="button" class="lab-upload-clear" id="labImageClear" style="display:none;">×</button>
+            </div>
+          </div>
+
+          <div class="lab-field">
+            <label>Description (optional)</label>
+            <textarea id="labDesc" rows="2" maxlength="240" placeholder="The FartWorld native coin. Funded by farts."></textarea>
+          </div>
+
+          <div class="lab-preview">
+            <div class="img" id="labPreviewImg">🧪</div>
+            <div class="meta">
+              <div class="sym" id="labPreviewSym">FART…</div>
+              <div class="name" id="labPreviewName">— pick a name —</div>
+            </div>
+            <div class="pill">PRINTR</div>
+          </div>
+
+          <div class="lab-warning">
+            <b>⚠</b> Deploying mints a real Solana SPL token via Printr. Phantom will ask you to sign.
+            Use only your own art &amp; copy.
+          </div>
+
+          <button class="lab-go" id="labGoBtn" disabled>Mint on Printr 🚀</button>
+
+          <div class="lab-status" id="labStatus"></div>
+        </div>
+      </div>
+
+      <!-- GALLERY pane: every coin minted via FartWorld -->
+      <div class="lab-pane" data-lpane="gallery" style="display:none;">
+        <p class="lab-intro">
+          Coins minted from this Lab broadcast to the FART-coin registry.
+          Click any to trade on Printr.
+        </p>
+        <div class="coin-gallery" id="coinGallery">
+          <div style="grid-column:1/-1;text-align:center;padding:24px;color:rgba(230,255,238,0.42);font-family:'JetBrains Mono',monospace;font-size:12px;">Loading registry…</div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -2248,6 +3078,8 @@ const State = {
   // every visible label says "Silver" / 🥈.)
   credits:  50,        // start with 50 Silver so you can buy a plot or seeds
   gold:     0,         // premium currency, minted by burning $FARTPRINT
+  paper:    0,         // paper bills (Bank: 1 Silver = 10 Paper)
+  fakeMoney:0,         // counterfeit bills printed at printer stations (illegal!)
   pagesPrinted:       0,
   uniqueZonesVisited: new Set(),
   cleanSeconds:       0,
@@ -2274,6 +3106,8 @@ function saveState(){
       xp:       State.xp,
       credits:  State.credits,
       gold:     State.gold,
+      paper:    State.paper,
+      fakeMoney:State.fakeMoney,
       pagesPrinted:        State.pagesPrinted,
       uniqueZonesVisited:  [...State.uniqueZonesVisited],
       cleanSeconds:        State.cleanSeconds,
@@ -2296,6 +3130,8 @@ function loadState(){
     if(!State.tools)     State.tools = {};
     if(State.credits == null) State.credits = 50;
     if(State.gold == null)    State.gold = 0;
+    if(State.paper == null)   State.paper = 0;
+    if(State.fakeMoney == null) State.fakeMoney = 0;
     if(State.elo == null)     State.elo = 1000;
     if(State.dmWins == null)  State.dmWins = 0;
     if(State.dmLosses == null)State.dmLosses = 0;
@@ -2317,7 +3153,37 @@ const ITEMS = {
     isNFT:   false,
     growMs:  60 * 60 * 1000,   // 1 hour real-time to fully grow
     harvest: "weed",           // → harvest produces 1 weed
-    marketPrice: 25,           // shop price (more meaningful with 1-hour wait)
+    marketPrice: 250,          // premium crop — 10× the cost of carrots
+  },
+  carrot_seed: {
+    id:      "carrot_seed",
+    name:    "Carrot Seed",
+    icon:    "🥕",
+    color:   "#ff8a3d",
+    type:    "seed",
+    isNFT:   false,
+    growMs:  60 * 60 * 1000,   // also 1 hour
+    harvest: "carrot",
+    marketPrice: 25,           // entry-level crop (the old weed seed price)
+  },
+  carrot: {
+    id:      "carrot",
+    name:    "Carrot",
+    icon:    "🥕",
+    color:   "#ff8a3d",
+    type:    "crop",
+    isNFT:   false,
+    suggestedPrice: 40,
+  },
+  cat_food: {
+    id:      "cat_food",
+    name:    "Cat Food",
+    icon:    "🐟",
+    color:   "#9bdcff",
+    type:    "consumable",
+    isNFT:   false,
+    marketPrice: 18,
+    suggestedPrice: 14,
   },
   weed: {
     id:      "weed",
@@ -2637,6 +3503,12 @@ const WATER_LEVEL      = 0.0;
 const ISLAND_RADIUS    = 90;
 const ISLAND_FALLOFF   = 28;
 const WATER_DEPTH      = -6;
+// Mainland surfaces are LIFTED to this base height before any noise is
+// added — so the rolling-hills noise (~±0.9) can never dip a mainland
+// patch back below sea level. With BASE_GROUND = 1.2 the lowest spot
+// you can hit on dry land is +0.3 above water, comfortably wadeable
+// but never a puddle you get stuck in.
+const BASE_GROUND      = 1.2;
 // Returns a 0..1 multiplier — 1 inside the island, smoothing to 0 at
 // the shore. Combined with WATER_DEPTH below to sink the ground.
 function islandFalloff(r){
@@ -2677,37 +3549,77 @@ function plotFlattenFactor(x, z){
   return lowest;
 }
 
-// Ground — large green plane with subtle checker via vertex colors
+// Ground — large island plane with elevation-based vertex colors.
+// Deep underwater = dark teal; shallow underwater = murky tan; beach
+// just above water = sand; grass higher up. The result is a soft
+// gradient at the shore that reads as "beach" without needing a
+// separate decal ring (we removed that one — it looked artificial).
 function makeGround() {
   const size = 300;
-  const segs = 60;
+  const segs = 80;
   const geo = new THREE.PlaneGeometry(size, size, segs, segs);
   geo.rotateX(-Math.PI / 2);
-  // give it gentle rolling hills
-  const pos = geo.attributes.position;
+
+  const colDeep   = new THREE.Color(0x102026);  // far below water
+  const colShoreW = new THREE.Color(0x2a4540);  // shallow underwater
+  const colSand   = new THREE.Color(0xe6d2a0);  // dry beach
+  const colSandWet= new THREE.Color(0xc8b282);  // wet sand strip at the shore
+  const colGrass  = new THREE.Color(0x1f4a26);  // grassy interior
+  const colGrassH = new THREE.Color(0x2e6336);  // hilltop grass (slightly brighter)
+
+  const pos    = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+
   for(let i = 0; i < pos.count; i++){
     const x = pos.getX(i), z = pos.getZ(i);
     const r = Math.hypot(x, z);
-    let y = 0;
-    y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6;
-    y += Math.sin(x * 0.12 + 0.5) * 0.3;
-    // Keep an open flat area near spawn so the printer doesn't get bumped
+    // Same noise + dampening as groundHeightAt so the runtime sampler
+    // matches the geometry exactly (no see-through gaps).
+    let n = Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6
+          + Math.sin(x * 0.12 + 0.5) * 0.3;
     const flatness = THREE.MathUtils.smoothstep(r, 4, 14);
-    y *= flatness;
-    // ALSO flatten under every plot location so plots aren't half-buried
-    // or floating above the surface.
-    y *= plotFlattenFactor(x, z);
-    // Island shape — past the shore, ramp the ground down to WATER_DEPTH
-    // so the world looks like a real island instead of an infinite plane.
+    n *= flatness * plotFlattenFactor(x, z);
+    let y = BASE_GROUND + n;
     const isl = islandFalloff(r);
     y = y * isl + WATER_DEPTH * (1 - isl);
     pos.setY(i, y);
+
+    // Vertex color by elevation — a five-stop ramp keeps it varied.
+    let c;
+    if(y < -3.5){
+      c = colDeep;
+    } else if(y < -0.3){
+      // shallow underwater → murky tan
+      const t = THREE.MathUtils.smoothstep(y, -3.5, -0.3);
+      c = colDeep.clone().lerp(colShoreW, t);
+    } else if(y < 0.4){
+      // wet sand strip right at the waterline
+      const t = THREE.MathUtils.smoothstep(y, -0.3, 0.4);
+      c = colShoreW.clone().lerp(colSandWet, t);
+    } else if(y < 1.1){
+      // dry sand beach
+      const t = THREE.MathUtils.smoothstep(y, 0.4, 1.1);
+      c = colSandWet.clone().lerp(colSand, t);
+    } else if(y < 1.7){
+      // sand-to-grass blend
+      const t = THREE.MathUtils.smoothstep(y, 1.1, 1.7);
+      c = colSand.clone().lerp(colGrass, t);
+    } else {
+      // higher ground — brighter green at hilltops
+      const t = THREE.MathUtils.smoothstep(y, 1.7, 2.4);
+      c = colGrass.clone().lerp(colGrassH, t);
+    }
+    colors[i * 3 + 0] = c.r;
+    colors[i * 3 + 1] = c.g;
+    colors[i * 3 + 2] = c.b;
   }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
+
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x1a3a22,
-    roughness: 0.95,
-    metalness: 0.0,
+    vertexColors: true,
+    roughness:    0.95,
+    metalness:    0.0,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
@@ -2720,11 +3632,18 @@ scene.add(ground);
 // formula so we can sample analytically — beats raycasting every frame.
 function groundHeightAt(x, z){
   const r = Math.hypot(x, z);
-  let y = 0;
-  y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6;
-  y += Math.sin(x * 0.12 + 0.5) * 0.3;
+  // Noise component — same rolling-hills formula as before
+  let n = 0;
+  n += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6;
+  n += Math.sin(x * 0.12 + 0.5) * 0.3;
+  // Damp noise toward 0 near the spawn area + inside plots so those
+  // patches stay perfectly flat. (Was multiplying y directly, which
+  // drove it to 0 which is at water level — that caused the puddle.)
   const flatness = THREE.MathUtils.smoothstep(r, 4, 14);
-  y *= flatness * plotFlattenFactor(x, z);
+  n *= flatness * plotFlattenFactor(x, z);
+  // Mainland floor: BASE_GROUND + noise — always above water by design
+  let y = BASE_GROUND + n;
+  // Island falloff — outside the shore, sink to WATER_DEPTH
   const isl = islandFalloff(r);
   return y * isl + WATER_DEPTH * (1 - isl);
 }
@@ -2875,7 +3794,7 @@ makeZone("danger",  28,  -8, 5);
 const Printers = [];
 function makePrinterStation(x, z){
   const grp = new THREE.Group();
-  grp.position.set(x, 0, z);
+  grp.position.set(x, groundHeightAt(x, z), z);
   // Pedestal
   const pedestal = new THREE.Mesh(
     new THREE.CylinderGeometry(1.3, 1.6, 0.6, 16),
@@ -2968,7 +3887,10 @@ function buildPlotMesh(plot){
   plot.plantGroup = new THREE.Group();
   plot.plantGroup.position.y = 0.15;
   grp.add(plot.plantGroup);
-  grp.position.set(plot.x, 0, plot.z);
+  // Plots ride on top of the (already-flattened) terrain. Before the
+  // island-shape lift, this used y=0 — which was below sea level
+  // and made the dirt patches invisible.
+  grp.position.set(plot.x, BASE_GROUND, plot.z);
   scene.add(grp);
   return grp;
 }
@@ -3112,7 +4034,7 @@ const MARKET_POS = { x: -22, z: -32 };
 const MARKET_RADIUS = 5;
 function buildMarket(){
   const grp = new THREE.Group();
-  grp.position.set(MARKET_POS.x, 0, MARKET_POS.z);
+  grp.position.set(MARKET_POS.x, groundHeightAt(MARKET_POS.x, MARKET_POS.z), MARKET_POS.z);
   // Stone-ish square building
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(5, 0.4, 5),
@@ -3168,7 +4090,7 @@ const ARENA_RADIUS = 12;
 const ArenaRotors = { outer: null, inner: null, crystal: null, beams: null };
 function buildArena(){
   const grp = new THREE.Group();
-  grp.position.set(ARENA_POS.x, 0, ARENA_POS.z);
+  grp.position.set(ARENA_POS.x, groundHeightAt(ARENA_POS.x, ARENA_POS.z), ARENA_POS.z);
 
   // ── Raised stone base (1m tall platform) ──
   const base = new THREE.Mesh(
@@ -3408,11 +4330,16 @@ function makePaperMountain(x, z, scale){
 // ─── Ink rivers (low ribbon of dark blue) ───────────────────────
 function makeInkRiver(){
   const points = [];
-  for(let i = -100; i <= 100; i += 4){
-    points.push(new THREE.Vector3(i, 0.05, Math.sin(i * 0.05) * 6 - 35));
+  // Keep the river entirely on the island — sample a curve that stays
+  // well inside ISLAND_RADIUS so it doesn't visibly poke out into the
+  // ocean (where it used to look like a metallic stripe in the water).
+  // River sits just above the BASE_GROUND so it visually flows over the
+  // grass instead of being buried under it.
+  for(let i = -70; i <= 70; i += 4){
+    points.push(new THREE.Vector3(i, BASE_GROUND + 0.05, Math.sin(i * 0.05) * 5 - 35));
   }
   const curve = new THREE.CatmullRomCurve3(points);
-  const geo = new THREE.TubeGeometry(curve, 100, 1.6, 6, false);
+  const geo = new THREE.TubeGeometry(curve, 80, 1.4, 8, false);
   const mat = new THREE.MeshStandardMaterial({ color: 0x16243a, emissive: 0x0a1622, emissiveIntensity: 0.3, roughness: 0.3, metalness: 0.6 });
   const m = new THREE.Mesh(geo, mat);
   scene.add(m);
@@ -3702,7 +4629,14 @@ function animatePrinter(dt){
   animTime += dt;
   const ud = printer.userData;
 
-  if(Player.farting){
+  if(Player.boat){
+    // Riding in the boat — feet planted, no leg pendulum animation.
+    if(ud.legL) { ud.legL.rotation.x = 0; ud.legR.rotation.x = 0; }
+    if(ud.armL) { ud.armL.rotation.x = Math.sin(animTime * 1.6) * 0.05; ud.armR.rotation.x = -Math.sin(animTime * 1.6) * 0.05; }
+    // The boat already handles position.y — don't override here.
+    printer.scale.set(1, 1, 1);
+    printer.rotation.z = 0;
+  } else if(Player.farting){
     Player.fartTimer -= dt;
     if(Player.fartTimer <= 0) Player.farting = false;
     // Wobble + slight forward lean
@@ -3785,11 +4719,21 @@ function tryPrint(dt){
   if(!keys['KeyE']) { printHoldTime = 0; return; }
   printHoldTime += dt;
   if(printHoldTime > 0.55){
-    State.pagesPrinted++;
-    State.xp += 4;
-    State.credits += 1;
-    floater("+1 page  +4 XP", "good");
-    playPrintSound();
+    const counterfeit = keys['ShiftLeft'] || keys['ShiftRight'];
+    if(counterfeit){
+      // ── Print fake money. Highly illegal — cats can smell it (see
+      // tickFakeMoneyRisks below) and marketplace purchases trigger a
+      // 50/50 caught roll. Each press makes 1 fake bill.
+      State.fakeMoney = (State.fakeMoney || 0) + 1;
+      State.xp += 2;   // tiny XP for the hustle
+      floater("+1 🪙 Fake Bill (illegal!)", "bad");
+    } else {
+      State.pagesPrinted++;
+      State.xp += 4;
+      State.credits += 1;
+      floater("+1 page  +4 XP", "good");
+      playPrintSound();
+    }
     printHoldTime = 0;
     checkLevelUp();
     updateHUD();
@@ -3806,6 +4750,11 @@ function updateHUD(){
   document.getElementById('hudCredits').textContent = State.credits;
   const hudGold = document.getElementById('hudGold');
   if(hudGold) hudGold.textContent = State.gold;
+  // Paper + fake money pills appear only when you have any
+  const paperCard = document.getElementById('hudPaperCard');
+  const fakeCard  = document.getElementById('hudFakeCard');
+  if(paperCard){ paperCard.classList.toggle('show', (State.paper || 0) > 0); document.getElementById('hudPaper').textContent = State.paper || 0; }
+  if(fakeCard) { fakeCard.classList.toggle('show',  (State.fakeMoney || 0) > 0); document.getElementById('hudFake').textContent  = State.fakeMoney || 0; }
   document.getElementById('hudWallet').textContent  = State.username || "guest";
   renderQuests();
   // Zone tag
@@ -4874,7 +5823,7 @@ function sampleSurfaceY(x, z){
 const HOUSE_POS = { x: 0, z: -55 };
 function buildHouse(){
   const grp = new THREE.Group();
-  grp.position.set(HOUSE_POS.x, 0, HOUSE_POS.z);
+  grp.position.set(HOUSE_POS.x, groundHeightAt(HOUSE_POS.x, HOUSE_POS.z), HOUSE_POS.z);
   const floorH = 3.4;     // height between floors
   const W = 9, D = 9;     // footprint
   const wallMat  = new THREE.MeshStandardMaterial({ color: 0xe0d4b8, roughness: 0.82, side: THREE.DoubleSide });
@@ -5060,7 +6009,7 @@ const REFINERY_POS = { x: 42, z: 0 };
 const REFINERY_RADIUS = 4.5;
 function buildRefinery(){
   const grp = new THREE.Group();
-  grp.position.set(REFINERY_POS.x, 0, REFINERY_POS.z);
+  grp.position.set(REFINERY_POS.x, groundHeightAt(REFINERY_POS.x, REFINERY_POS.z), REFINERY_POS.z);
   // Foundation
   const base = new THREE.Mesh(
     new THREE.BoxGeometry(6, 0.6, 6),
@@ -5161,25 +6110,9 @@ function tickWater(dt){
   pos.needsUpdate = true;
 }
 
-// ── Sandy beach ring around the island for natural shoreline ──
-// (Same noise as the ground, just clipped to the falloff annulus,
-// painted in a warm sand color sitting *just* above WATER_LEVEL so
-// it reads as beach instead of grass at the waterline.)
-function buildBeachRing(){
-  const inner = ISLAND_RADIUS - 2;
-  const outer = ISLAND_RADIUS + ISLAND_FALLOFF * 0.65;
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(inner, outer, 96, 1),
-    new THREE.MeshStandardMaterial({
-      color: 0xe6d6a8, roughness: 0.9, side: THREE.DoubleSide,
-    })
-  );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = WATER_LEVEL + 0.04;
-  ring.receiveShadow = true;
-  scene.add(ring);
-}
-buildBeachRing();
+// (The standalone beach ring was removed — the sand color is now
+// painted directly onto the ground via vertex colors so the beach
+// follows the actual shore contour instead of being a flat decal.)
 
 // ── Day/Night cycle ──
 // 1 full real-time hour = 1 in-game day. Time runs 0..1 looping; we
@@ -5267,7 +6200,10 @@ const DOCK_POS    = { x: ISLAND_RADIUS - 6, z: 0 };
 const DOCK_RADIUS = 4.5;
 function buildDockAndShop(){
   const grp = new THREE.Group();
-  grp.position.set(DOCK_POS.x, 0, DOCK_POS.z);
+  // Inland end of the dock sits on the beach terrain; the dock planks
+  // ramp out from there over the water. We lift the whole group to
+  // ground height so the shop hut + dock entrance don't sink in.
+  grp.position.set(DOCK_POS.x, groundHeightAt(DOCK_POS.x, DOCK_POS.z), DOCK_POS.z);
   const woodMat   = new THREE.MeshStandardMaterial({ color: 0x6b4623, roughness: 0.88 });
   const woodMat2  = new THREE.MeshStandardMaterial({ color: 0x55351a, roughness: 0.85 });
   const shopWall  = new THREE.MeshStandardMaterial({ color: 0xd6b277, roughness: 0.75 });
@@ -5311,6 +6247,907 @@ function buildDockAndShop(){
   scene.add(grp);
 }
 buildDockAndShop();
+
+// ── Fart Lab — derivative coin foundry ──
+// A small chrome+glass research hut where players can mint a FART-prefixed
+// derivative coin via the same /api/printr pipeline the main Derivatives
+// app uses. Visible from far away thanks to the glowing test-tube spire
+// and beaker lighting.
+const LAB_POS    = { x: -48, z: 28 };
+const LAB_RADIUS = 5;
+function buildLab(){
+  const grp = new THREE.Group();
+  grp.position.set(LAB_POS.x, groundHeightAt(LAB_POS.x, LAB_POS.z), LAB_POS.z);
+  const baseMat = new THREE.MeshStandardMaterial({ color: 0x202b34, roughness: 0.6, metalness: 0.4 });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x6ed0d6, transparent: true, opacity: 0.45,
+    roughness: 0.1, metalness: 0.05, side: THREE.DoubleSide,
+  });
+  const tubeMat = new THREE.MeshStandardMaterial({
+    color: 0xa0f0c2, emissive: 0x46f08a, emissiveIntensity: 1.4, roughness: 0.3,
+  });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, roughness: 0.4, metalness: 0.7 });
+  const signMat = new THREE.MeshStandardMaterial({ color: 0x5ff09c, emissive: 0x5ff09c, emissiveIntensity: 1.3, roughness: 0.45 });
+
+  // Foundation pad
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(4.2, 4.5, 0.4, 12), baseMat);
+  pad.position.y = 0.2; pad.receiveShadow = true;
+  grp.add(pad);
+  // Glass cylinder room
+  const room = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 3.4, 24, 1, true), glassMat);
+  room.position.y = 2.1;
+  grp.add(room);
+  // Dome roof
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(3.6, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), baseMat);
+  dome.position.y = 3.8;
+  dome.castShadow = true;
+  grp.add(dome);
+  // Metal trim ring at the seam
+  const trim = new THREE.Mesh(new THREE.TorusGeometry(3.62, 0.12, 8, 32), trimMat);
+  trim.position.y = 3.82;
+  trim.rotation.x = Math.PI / 2;
+  grp.add(trim);
+  // Three giant test tubes/beakers around the perimeter, glowing green
+  const tubeGroup = new THREE.Group();
+  for(let i = 0; i < 3; i++){
+    const ang = (i / 3) * Math.PI * 2;
+    const tx = Math.cos(ang) * 3.0;
+    const tz = Math.sin(ang) * 3.0;
+    const stand = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.4, 0.6, 8), baseMat);
+    stand.position.set(tx, 0.7, tz);
+    grp.add(stand);
+    const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 1.6, 16), tubeMat);
+    tube.position.set(tx, 1.8, tz);
+    tube.castShadow = true;
+    tubeGroup.add(tube);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(0.30, 12, 12), trimMat);
+    cap.position.set(tx, 2.6, tz);
+    tubeGroup.add(cap);
+    const tubeLight = new THREE.PointLight(0x46f08a, 1.4, 12);
+    tubeLight.position.set(tx, 1.8, tz);
+    grp.add(tubeLight);
+  }
+  grp.add(tubeGroup);
+  // Antenna with glowing orb on top of dome
+  const antenna = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.4, 6), trimMat);
+  antenna.position.y = 5.4;
+  grp.add(antenna);
+  const orb = new THREE.Mesh(
+    new THREE.SphereGeometry(0.28, 16, 16),
+    new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 2.0, roughness: 0.3 })
+  );
+  orb.position.y = 6.2;
+  grp.add(orb);
+  // Floating "LAB" sign over the entrance
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.6, 0.18), signMat);
+  sign.position.set(0, 4.5, 4.0);
+  grp.add(sign);
+  // Front door panel
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 0.15), trimMat);
+  door.position.set(0, 1.5, 3.62);
+  grp.add(door);
+  // Inner platform — walkable surface so you can stand inside the lab
+  const innerFloor = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 3.4, 0.1, 16), baseMat);
+  innerFloor.position.y = 0.42;
+  grp.add(innerFloor);
+  WalkableSurfaces.push(innerFloor);
+  scene.add(grp);
+}
+buildLab();
+
+// ── Poop House Exchange — FART&POOP500 trading desk ──
+// Themed brown swirl-roofed shop. The signature "swirl" on top is a
+// stack of progressively smaller torus rings making the classic poop
+// silhouette. Walk in to trade the 6 graduated FART tokens.
+const POOP_POS    = { x: 50, z: -36 };
+const POOP_RADIUS = 5;
+function buildPoopHouse(){
+  const grp = new THREE.Group();
+  grp.position.set(POOP_POS.x, groundHeightAt(POOP_POS.x, POOP_POS.z), POOP_POS.z);
+  const matBase  = new THREE.MeshStandardMaterial({ color: 0x4a2c14, roughness: 0.86 });
+  const matWall  = new THREE.MeshStandardMaterial({ color: 0x6b3a18, roughness: 0.82 });
+  const matRim   = new THREE.MeshStandardMaterial({ color: 0x8a5a2a, roughness: 0.72 });
+  const matSwirl = new THREE.MeshStandardMaterial({ color: 0x6e3a14, roughness: 0.7, emissive: 0x3a1c08, emissiveIntensity: 0.25 });
+  const matSign  = new THREE.MeshStandardMaterial({ color: 0xc0a36c, emissive: 0xa67c3a, emissiveIntensity: 0.55, roughness: 0.5 });
+
+  // Foundation
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.4, 0.45, 14), matBase);
+  pad.position.y = 0.22;
+  pad.receiveShadow = true;
+  grp.add(pad);
+  // Round body (wider at bottom, narrower at top — like a poop base)
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.9, 2.6, 24), matWall);
+  body.position.y = 1.7;
+  body.castShadow = true; body.receiveShadow = true;
+  grp.add(body);
+  // Trim ring at the top of the body
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(3.62, 0.18, 8, 32), matRim);
+  rim.position.y = 3.0;
+  rim.rotation.x = Math.PI / 2;
+  grp.add(rim);
+  // Swirl on top — 4 stacked toruses each smaller than the last
+  const swirlSizes = [2.8, 2.1, 1.4, 0.75];
+  let cy = 3.4;
+  for(let i = 0; i < swirlSizes.length; i++){
+    const r = swirlSizes[i];
+    const tor = new THREE.Mesh(new THREE.TorusGeometry(r, 0.42, 10, 24), matSwirl);
+    tor.rotation.x = Math.PI / 2;
+    tor.position.y = cy;
+    tor.castShadow = true;
+    grp.add(tor);
+    cy += 0.75 - i * 0.1;
+  }
+  // Tip — small sphere on top
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.4, 12, 12), matSwirl);
+  tip.position.y = cy + 0.1;
+  grp.add(tip);
+  // Stink lines (3 thin yellow-green wiggly cones radiating from the tip)
+  const stinkMat = new THREE.MeshStandardMaterial({ color: 0xc0e02a, emissive: 0xc0e02a, emissiveIntensity: 0.9, roughness: 0.4 });
+  for(let i = 0; i < 3; i++){
+    const ang = (i / 3) * Math.PI * 2;
+    const stink = new THREE.Mesh(new THREE.ConeGeometry(0.08, 1.2, 6), stinkMat);
+    stink.position.set(Math.cos(ang) * 0.5, cy + 1.0, Math.sin(ang) * 0.5);
+    stink.rotation.z = Math.cos(ang) * 0.3;
+    grp.add(stink);
+  }
+  // Sign on the front
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.6, 0.18), matSign);
+  sign.position.set(0, 2.4, 4.0);
+  grp.add(sign);
+  // Door
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.0, 0.16), matBase);
+  door.position.set(0, 1.4, 3.9);
+  grp.add(door);
+  // Floor
+  const innerFloor = new THREE.Mesh(new THREE.CylinderGeometry(3.7, 3.7, 0.1, 16), matBase);
+  innerFloor.position.y = 0.42;
+  grp.add(innerFloor);
+  WalkableSurfaces.push(innerFloor);
+  // Lantern — warm light from above the sign
+  const lt = new THREE.PointLight(0xffae5a, 1.5, 16);
+  lt.position.set(0, 4, 3);
+  grp.add(lt);
+  scene.add(grp);
+}
+buildPoopHouse();
+
+// ── $FARTPRINT stats billboard ──
+// A free-standing LED-style sign near spawn showing live price, market
+// cap, 24h change, % staked, % burned. The screen is a CanvasTexture
+// so we can re-render text dynamically; refreshes every 30 seconds.
+const FP_STATS_POS = { x: -8, z: -16 };
+const FP_MINT_ADDR = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const FP_STAKED_ACC = "C5xkFqJqvSGzSDFDxoVCATD12dHhJ4XmxHKZkBmHmQjf"; // Printr staking program token account
+const FP_INITIAL_SUPPLY = 1e9;
+const FpStats = { price: null, mcap: null, ch24: null, stakedPct: null, burnedPct: null, mesh: null, ctx: null, texture: null };
+
+function buildFartprintBillboard(){
+  const grp = new THREE.Group();
+  const y = groundHeightAt(FP_STATS_POS.x, FP_STATS_POS.z);
+  grp.position.set(FP_STATS_POS.x, y, FP_STATS_POS.z);
+
+  // Two posts
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.7, metalness: 0.5 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x6a7280, roughness: 0.45, metalness: 0.7 });
+  for(const px of [-2.6, 2.6]){
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6.6, 0.4), postMat);
+    post.position.set(px, 3.3, 0);
+    post.castShadow = true;
+    grp.add(post);
+  }
+  // Screen frame — taller, to match the new vertical canvas
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(6.2, 6.3, 0.4), trimMat);
+  frame.position.set(0, 4.6, 0);
+  frame.castShadow = true;
+  grp.add(frame);
+  // Screen (CanvasTexture-driven, emissive so it glows at night).
+  // Tall aspect ratio because the stats are stacked vertically now.
+  const cvs = document.createElement('canvas');
+  cvs.width = 720; cvs.height = 760;
+  const ctx = cvs.getContext('2d');
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.anisotropy = 4;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  const screenMat = new THREE.MeshStandardMaterial({
+    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.2,
+    roughness: 0.5, metalness: 0.0,
+  });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.7), screenMat);
+  screen.position.set(0, 4.6, 0.22);
+  grp.add(screen);
+  FpStats.ctx = ctx;
+  FpStats.texture = tex;
+  FpStats.mesh = screen;
+  scene.add(grp);
+  renderFartprintBillboard();   // initial paint with placeholders
+}
+function fmtUsdFp(n){
+  if(n == null || !isFinite(n) || n <= 0) return "$—";
+  const v = Number(n);
+  if(v < 0.000001) return "$" + v.toExponential(2);
+  if(v < 0.01)     return "$" + v.toPrecision(3);
+  if(v < 1)        return "$" + v.toFixed(4);
+  if(v < 1e3)      return "$" + v.toFixed(2);
+  if(v < 1e6)      return "$" + (v / 1e3).toFixed(2) + "K";
+  if(v < 1e9)      return "$" + (v / 1e6).toFixed(2) + "M";
+  return "$" + (v / 1e9).toFixed(2) + "B";
+}
+function fmtPctFp(n){
+  if(n == null || !isFinite(n)) return "—";
+  return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+}
+function renderFartprintBillboard(){
+  const ctx = FpStats.ctx; if(!ctx) return;
+  const W = 720, H = 760;
+  // Background
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, "#04140a");
+  grad.addColorStop(1, "#091e10");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+  // Border
+  ctx.strokeStyle = "rgba(95,240,156,0.32)";
+  ctx.lineWidth = 8;
+  ctx.strokeRect(4, 4, W - 8, H - 8);
+  // Title
+  ctx.fillStyle = "#5ff09c";
+  ctx.font = "bold 48px 'Bangers', 'Orbitron', sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText("$FARTPRINT · LIVE", W / 2, 38);
+  // Underline
+  ctx.fillStyle = "rgba(95,240,156,0.36)";
+  ctx.fillRect(80, 100, W - 160, 3);
+
+  // All 5 stats stacked vertically — labels left, values right-aligned
+  // so a wide value ($12.34M) never collides with a wide label
+  // (PERCENTAGE STAKED).
+  const stats = [
+    { label: "PRICE",        value: fmtUsdFp(FpStats.price),                 color: "#e6ffee" },
+    { label: "MARKET CAP",   value: fmtUsdFp(FpStats.mcap),                  color: "#e6ffee" },
+    { label: "24H CHANGE",   value: fmtPctFp(FpStats.ch24),                  color: (FpStats.ch24 == null) ? "#a8b5a0" : (FpStats.ch24 >= 0 ? "#5ff09c" : "#ff7a6e") },
+    { label: "% STAKED",     value: (FpStats.stakedPct != null ? FpStats.stakedPct.toFixed(2) + "%" : "—"), color: "#ffd64d" },
+    { label: "% BURNED",     value: (FpStats.burnedPct != null ? FpStats.burnedPct.toFixed(2) + "%" : "—"), color: "#ff7a6e" },
+  ];
+  const rowH = 92;
+  const top  = 130;
+  stats.forEach((s, i) => {
+    const yy = top + i * rowH;
+    // Faint divider line between rows
+    if(i > 0){
+      ctx.fillStyle = "rgba(95,240,156,0.08)";
+      ctx.fillRect(60, yy - 14, W - 120, 2);
+    }
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = "bold 28px 'JetBrains Mono', monospace";
+    ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText(s.label, 60, yy + 4);
+    ctx.fillStyle = s.color;
+    ctx.font = "bold 56px 'Orbitron', sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(s.value, W - 60, yy);
+  });
+  ctx.textAlign = "center";
+  // Footer
+  ctx.fillStyle = "rgba(255,255,255,0.30)";
+  ctx.font = "bold 16px 'JetBrains Mono', monospace";
+  ctx.textAlign = "center";
+  ctx.fillText("LIVE · refreshes every 30s", W / 2, H - 38);
+
+  FpStats.texture.needsUpdate = true;
+}
+async function refreshFartprintStats(){
+  // ── Price + market cap + 24h change via DexScreener ──
+  try {
+    const r = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${FP_MINT_ADDR}`);
+    if(r.ok){
+      const j = await r.json();
+      let best = null;
+      for(const p of (j.pairs || [])){
+        const liq = p.liquidity?.usd || 0;
+        if(!best || liq > best.liq){
+          best = {
+            liq,
+            price: parseFloat(p.priceUsd) || 0,
+            mcap:  p.marketCap || p.fdv || 0,
+            ch24:  p.priceChange?.h24 ?? null,
+          };
+        }
+      }
+      if(best){
+        FpStats.price = best.price;
+        FpStats.mcap  = best.mcap;
+        FpStats.ch24  = best.ch24;
+      }
+    }
+  } catch(_){}
+  // ── % staked + % burned via Solana RPC ──
+  try {
+    const W3 = window.solanaWeb3;
+    if(W3){
+      const conn = new W3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+      // Current supply
+      const supplyRes = await conn.getTokenSupply(new W3.PublicKey(FP_MINT_ADDR)).catch(() => null);
+      const supplyUi = supplyRes?.value?.uiAmount;
+      if(supplyUi != null){
+        FpStats.burnedPct = Math.max(0, (FP_INITIAL_SUPPLY - supplyUi) / FP_INITIAL_SUPPLY * 100);
+      }
+      // Staked amount — sitting in the staking program's token account
+      try {
+        const stakedRes = await conn.getTokenAccountBalance(new W3.PublicKey(FP_STAKED_ACC));
+        const stakedUi = stakedRes?.value?.uiAmount;
+        if(stakedUi != null && supplyUi){
+          FpStats.stakedPct = (stakedUi / supplyUi) * 100;
+        }
+      } catch(_){}
+    }
+  } catch(_){}
+  renderFartprintBillboard();
+}
+buildFartprintBillboard();
+refreshFartprintStats();
+setInterval(refreshFartprintStats, 30000);
+
+// =================================================================
+// ─── CAT NPCs (Brrrish, Billy, Ket) ─────────────────────────────
+// =================================================================
+// Three little procedural cats wandering the island. They wander slowly
+// with random goals; when the player gets close, they either pause to
+// look (curious) or scamper away (skittish) — random per encounter.
+// Mouse-hovering a cat surfaces its name in a floating tooltip.
+const Cats = [];
+const CATS_SPEC = [
+  { id: "brrrish", name: "Brrrish", body: 0x111111, belly: 0x222222, ear:  0x111111, fat: 0.78 },
+  { id: "billy",   name: "Billy",   body: 0xe87d2a, belly: 0xfff0c8, ear:  0xe87d2a, fat: 1.25 },
+  { id: "ket",     name: "Ket",     body: 0xf8f8f0, belly: 0xffffff, ear:  0xf8f8f0, fat: 1.00, rightEar: 0x7a4a1a },
+];
+
+function buildCat(spec){
+  const grp = new THREE.Group();
+  const bodyMat  = new THREE.MeshStandardMaterial({ color: spec.body,  roughness: 0.85 });
+  const bellyMat = new THREE.MeshStandardMaterial({ color: spec.belly, roughness: 0.9 });
+  const earMat   = new THREE.MeshStandardMaterial({ color: spec.ear,   roughness: 0.85 });
+  const earRMat  = spec.rightEar ? new THREE.MeshStandardMaterial({ color: spec.rightEar, roughness: 0.85 }) : earMat;
+  const pinkMat  = new THREE.MeshStandardMaterial({ color: 0xffb0c8, roughness: 0.7 });
+  const eyeMat   = new THREE.MeshBasicMaterial({ color: 0x0c1f12 });
+
+  const fat = spec.fat || 1.0;
+
+  // Body — stretched sphere so it reads as a cat torso, scaled by fatness
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), bodyMat);
+  body.scale.set(fat * 1.05, 0.85, 1.55);
+  body.position.y = 0.32;
+  body.castShadow = true;
+  grp.add(body);
+  // Belly underside
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8), bellyMat);
+  belly.scale.set(fat * 0.95, 0.55, 1.35);
+  belly.position.set(0, 0.22, 0);
+  grp.add(belly);
+  // Head — slightly forward
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 14, 12), bodyMat);
+  head.position.set(0, 0.46, -0.42);
+  head.castShadow = true;
+  grp.add(head);
+  // Snout (lighter colored)
+  const snout = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 8), bellyMat);
+  snout.position.set(0, 0.42, -0.58);
+  snout.scale.set(1.2, 0.7, 1.0);
+  grp.add(snout);
+  // Tiny pink nose
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), pinkMat);
+  nose.position.set(0, 0.45, -0.65);
+  grp.add(nose);
+  // Eyes
+  for(const sx of [-0.08, 0.08]){
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.028, 8, 8), eyeMat);
+    eye.position.set(sx, 0.52, -0.58);
+    grp.add(eye);
+  }
+  // Ears (two triangular cones) — Ket gets a brown right ear (her side, which is screen-LEFT)
+  function ear(side, mat){
+    const e = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.18, 4), mat);
+    e.position.set(0.12 * side, 0.66, -0.38);
+    e.rotation.z = side * 0.18;
+    e.castShadow = true;
+    return e;
+  }
+  grp.add(ear(-1, earMat));   // her left (screen-right)
+  grp.add(ear( 1, earRMat));  // her right (screen-left) — brown for Ket
+  // 4 legs
+  function leg(sx, sz){
+    const l = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.28, 6), bodyMat);
+    l.position.set(sx, 0.14, sz);
+    l.castShadow = true;
+    return l;
+  }
+  const legs = [
+    leg(-0.16 * fat, -0.28),  // front-L
+    leg( 0.16 * fat, -0.28),  // front-R
+    leg(-0.16 * fat,  0.28),  // back-L
+    leg( 0.16 * fat,  0.28),  // back-R
+  ];
+  legs.forEach(l => grp.add(l));
+  // Tail — flexible 4-segment chain
+  const tailSegs = [];
+  let prev = new THREE.Vector3(0, 0.4, 0.42);
+  for(let i = 0; i < 4; i++){
+    const seg = new THREE.Mesh(new THREE.CylinderGeometry(0.05 - i * 0.008, 0.06 - i * 0.008, 0.16, 6), bodyMat);
+    seg.position.copy(prev);
+    seg.position.y += 0.04;
+    seg.position.z += 0.10;
+    seg.castShadow = true;
+    grp.add(seg);
+    tailSegs.push(seg);
+    prev = seg.position.clone();
+  }
+  // Mark every mesh in this group with a back-reference so the raycaster
+  // can identify "which cat did the ray hit?" via parent.userData.cat
+  grp.traverse(o => { if(o.isMesh) o.userData.catId = spec.id; });
+  return { mesh: grp, legs, tailSegs };
+}
+
+function spawnCat(spec){
+  const built = buildCat(spec);
+  scene.add(built.mesh);
+  // Random starting position somewhere on the island (away from spawn)
+  const ang = Math.random() * Math.PI * 2;
+  const dist = 20 + Math.random() * 50;
+  const x = Math.cos(ang) * dist;
+  const z = Math.sin(ang) * dist;
+  built.mesh.position.set(x, groundHeightAt(x, z), z);
+  const cat = {
+    ...spec,
+    mesh:      built.mesh,
+    legs:      built.legs,
+    tailSegs:  built.tailSegs,
+    x, z, yaw: Math.random() * Math.PI * 2,
+    goalX:     x, goalZ: z,
+    state:     "wander",       // wander | pause | flee
+    stateTimer: 0,
+    speed:      0,
+    animT:      Math.random() * 10,
+  };
+  Cats.push(cat);
+  return cat;
+}
+
+function pickNewWanderGoal(c){
+  // Pick a goal somewhere on the island, within ~25m of the cat's
+  // current position, and not in the deep water.
+  for(let i = 0; i < 12; i++){
+    const ang = Math.random() * Math.PI * 2;
+    const r   = 6 + Math.random() * 20;
+    const gx  = c.x + Math.cos(ang) * r;
+    const gz  = c.z + Math.sin(ang) * r;
+    if(Math.hypot(gx, gz) < ISLAND_RADIUS - 4 && groundHeightAt(gx, gz) > WATER_LEVEL + 0.1){
+      c.goalX = gx; c.goalZ = gz;
+      return;
+    }
+  }
+}
+
+CATS_SPEC.forEach(spawnCat);
+
+// ── Cat sniff detection ──
+// Holding fake money near a cat is a death sentence — they smell it.
+// Each cat does a sniff roll once every 4 seconds while you're within
+// 3.5m; on success, they steal everything (silver, paper, fake) the
+// same way getting busted at the market does.
+let _catSniffAcc = 0;
+function tickCatSniff(dt){
+  if((State.fakeMoney || 0) <= 0) return;
+  _catSniffAcc += dt;
+  if(_catSniffAcc < 4) return;
+  _catSniffAcc = 0;
+  for(const c of Cats){
+    const d = Math.hypot(c.x - Player.pos.x, c.z - Player.pos.z);
+    if(d < 3.5 && Math.random() < 0.40){
+      // Cat reacts — leap toward player briefly then steal
+      c.state = "flee"; c.stateTimer = 0.4;
+      counterfeitBusted(`${c.name} sniffed your fake bills`);
+      return;
+    }
+  }
+}
+
+function updateCats(dt){
+  for(const c of Cats){
+    c.animT += dt;
+    c.stateTimer -= dt;
+
+    // Player proximity check — within 5m, react
+    const dPlayer = Math.hypot(c.x - Player.pos.x, c.z - Player.pos.z);
+    if(c.state === "wander" && dPlayer < 5){
+      // 50/50 — stop and look, or scamper away
+      if(Math.random() > 0.5){
+        c.state = "pause";
+        c.stateTimer = 1.5 + Math.random() * 1.5;
+      } else {
+        c.state = "flee";
+        c.stateTimer = 3 + Math.random() * 2;
+        // Pick a flee goal in the opposite direction from the player
+        const ax = c.x - Player.pos.x;
+        const az = c.z - Player.pos.z;
+        const len = Math.hypot(ax, az) || 1;
+        c.goalX = c.x + (ax / len) * 12;
+        c.goalZ = c.z + (az / len) * 12;
+      }
+    }
+    // Resume wandering after the state timer expires
+    if(c.stateTimer <= 0 && c.state !== "wander"){
+      c.state = "wander";
+      pickNewWanderGoal(c);
+    }
+
+    // Movement
+    let targetSpeed = 0;
+    if(c.state === "wander") targetSpeed = 1.2;
+    else if(c.state === "flee") targetSpeed = 4.5;
+    else targetSpeed = 0;
+
+    c.speed += (targetSpeed - c.speed) * Math.min(1, 4 * dt);
+
+    if(c.speed > 0.05){
+      const dx = c.goalX - c.x;
+      const dz = c.goalZ - c.z;
+      const d  = Math.hypot(dx, dz);
+      if(d < 1.2 && c.state === "wander"){
+        pickNewWanderGoal(c);
+      } else {
+        const nx = dx / Math.max(0.001, d);
+        const nz = dz / Math.max(0.001, d);
+        c.x += nx * c.speed * dt;
+        c.z += nz * c.speed * dt;
+        // Smooth yaw toward movement direction.
+        // Cat head is at local -Z so we add π to make the head lead
+        // movement instead of the tail (cats were walking backwards).
+        const yawT = Math.atan2(nx, nz) + Math.PI;
+        let dy = yawT - c.yaw;
+        while(dy >  Math.PI) dy -= Math.PI * 2;
+        while(dy < -Math.PI) dy += Math.PI * 2;
+        c.yaw += dy * Math.min(1, 6 * dt);
+      }
+    }
+
+    // Apply position + walk animation
+    const y = groundHeightAt(c.x, c.z);
+    c.mesh.position.set(c.x, y, c.z);
+    c.mesh.rotation.y = c.yaw;
+    // Subtle body bob + leg pendulum scaled to speed
+    const bobAmp = Math.min(0.04, c.speed * 0.02);
+    c.mesh.position.y = y + Math.abs(Math.sin(c.animT * 10 * (1 + c.speed / 3))) * bobAmp;
+    if(c.legs){
+      const swing = Math.sin(c.animT * 10 * (1 + c.speed / 3)) * Math.min(0.5, c.speed * 0.18);
+      c.legs[0].rotation.x =  swing;        // front L
+      c.legs[3].rotation.x =  swing;        // back R (diagonal pair)
+      c.legs[1].rotation.x = -swing;        // front R
+      c.legs[2].rotation.x = -swing;        // back L
+    }
+    // Tail sway — alive even when standing still
+    if(c.tailSegs){
+      c.tailSegs.forEach((seg, i) => {
+        seg.rotation.x = Math.sin(c.animT * 2.4 + i * 0.6) * 0.16;
+        seg.rotation.y = Math.sin(c.animT * 1.6 + i * 0.4) * 0.10;
+      });
+    }
+  }
+}
+
+// =================================================================
+// ─── ADVERTISING BILLBOARDS — Telegram CTAs around the island ───
+// =================================================================
+function buildAdBillboard(x, z, yaw){
+  const grp = new THREE.Group();
+  const y0 = groundHeightAt(x, z);
+  grp.position.set(x, y0, z);
+  grp.rotation.y = yaw;
+
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x303843, roughness: 0.8 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0x5a6470, roughness: 0.55, metalness: 0.55 });
+  // Posts
+  for(const px of [-2.0, 2.0]){
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 4.6, 0.3), postMat);
+    post.position.set(px, 2.3, 0);
+    post.castShadow = true;
+    grp.add(post);
+  }
+  // Frame
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(4.8, 2.6, 0.3), trimMat);
+  frame.position.set(0, 3.4, 0);
+  frame.castShadow = true;
+  grp.add(frame);
+  // Canvas with the ad — Telegram blue background, logo + copy
+  const cvs = document.createElement('canvas');
+  cvs.width = 768; cvs.height = 420;
+  const ctx = cvs.getContext('2d');
+  // Background gradient (Telegram blue)
+  const grad = ctx.createLinearGradient(0, 0, 0, 420);
+  grad.addColorStop(0, "#1c8ad6");
+  grad.addColorStop(1, "#0e5a90");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 768, 420);
+  // Inner border
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 6;
+  ctx.strokeRect(8, 8, 752, 404);
+  // Telegram logo (paper-plane glyph) on the left
+  function paperPlane(cx, cy, r){
+    ctx.save();
+    ctx.translate(cx, cy);
+    // Disc background
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Plane silhouette
+    ctx.fillStyle = "#1c8ad6";
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.62,  r * 0.04);
+    ctx.lineTo( r * 0.62, -r * 0.58);
+    ctx.lineTo( r * 0.30,  r * 0.50);
+    ctx.lineTo( r * 0.05,  r * 0.16);
+    ctx.lineTo(-r * 0.62,  r * 0.04);
+    ctx.closePath();
+    ctx.fill();
+    // Wing crease
+    ctx.strokeStyle = "rgba(28,138,214,0.75)";
+    ctx.lineWidth = r * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.62, -r * 0.58);
+    ctx.lineTo(r * 0.05,  r * 0.16);
+    ctx.stroke();
+    ctx.restore();
+  }
+  paperPlane(110, 210, 84);
+  // Copy
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 56px 'Bangers', 'Orbitron', sans-serif";
+  ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.fillText("WANT TO ADVERTISE?", 230, 170);
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = "bold 28px 'JetBrains Mono', monospace";
+  ctx.fillText("Join the channel for info:", 230, 230);
+  ctx.fillStyle = "#fff7c5";
+  ctx.font = "bold 36px 'Orbitron', sans-serif";
+  ctx.fillText("t.me/FARTPRINT", 230, 290);
+  // Subtle bottom hint
+  ctx.fillStyle = "rgba(255,255,255,0.55)";
+  ctx.font = "bold 18px 'JetBrains Mono', monospace";
+  ctx.fillText("FARTWORLD · ECOSYSTEM", 230, 370);
+
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.anisotropy = 4;
+  const screenMat = new THREE.MeshStandardMaterial({
+    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.0,
+    roughness: 0.5, metalness: 0.0,
+  });
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.4), screenMat);
+  screen.position.set(0, 3.4, 0.17);
+  grp.add(screen);
+
+  scene.add(grp);
+}
+// 3 spots around the island, each angled to face spawn
+buildAdBillboard( 25, -42,  Math.PI * 0.95);
+buildAdBillboard(-42, -22,  Math.PI * 0.40);
+buildAdBillboard( 60,  30,  Math.PI * 1.55);
+
+// =================================================================
+// ─── BANK — Silver → Paper / Silver → Gold conversions ─────────
+// =================================================================
+const BANK_POS = { x: -22, z: -8 };
+const BANK_RADIUS = 4.5;
+const PAPER_PER_SILVER = 10;          // 1 silver → 10 paper bills
+const SILVER_PER_GOLD  = 100000;      // BRUTAL grind to convert silver to gold
+const GOLD_MIN_QTY     = 0.01;        // smallest gold purchase (so 1000 silver → 0.01 gold)
+
+function buildBank(){
+  const grp = new THREE.Group();
+  grp.position.set(BANK_POS.x, groundHeightAt(BANK_POS.x, BANK_POS.z), BANK_POS.z);
+  const colMat   = new THREE.MeshStandardMaterial({ color: 0xe8e3d2, roughness: 0.7 });
+  const baseMat  = new THREE.MeshStandardMaterial({ color: 0x847568, roughness: 0.85 });
+  const trimMat  = new THREE.MeshStandardMaterial({ color: 0x3c382e, roughness: 0.65, metalness: 0.4 });
+  const signMat  = new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffd64d, emissiveIntensity: 0.8, roughness: 0.45 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(7, 0.4, 5), baseMat);
+  base.position.y = 0.2;
+  base.castShadow = true; base.receiveShadow = true;
+  grp.add(base);
+  // 4 columns (classical bank look)
+  for(let i = 0; i < 4; i++){
+    const cx = -2.4 + i * 1.6;
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.38, 3.4, 12), colMat);
+    col.position.set(cx, 2.1, 2.0);
+    col.castShadow = true;
+    grp.add(col);
+  }
+  // Pediment (triangular top)
+  const ped = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.5, 5.2), colMat);
+  ped.position.set(0, 4.0, 0);
+  ped.castShadow = true;
+  grp.add(ped);
+  const pedTop = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.4, 3), trimMat);
+  pedTop.position.set(0, 4.95, 0);
+  pedTop.rotation.y = Math.PI / 2;
+  pedTop.castShadow = true;
+  grp.add(pedTop);
+  // Back wall
+  const back = new THREE.Mesh(new THREE.BoxGeometry(6.8, 3.6, 0.3), colMat);
+  back.position.set(0, 2.2, -2.3);
+  grp.add(back);
+  // Sign
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.6, 0.2), signMat);
+  sign.position.set(0, 3.5, 2.18);
+  grp.add(sign);
+  // Inner floor — walkable
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(6.6, 0.08, 4.6), baseMat);
+  floor.position.set(0, 0.45, 0);
+  grp.add(floor);
+  WalkableSurfaces.push(floor);
+  // Warm lantern
+  const lt = new THREE.PointLight(0xffd680, 1.6, 16);
+  lt.position.set(0, 3.2, 1.5);
+  grp.add(lt);
+  scene.add(grp);
+}
+buildBank();
+
+// =================================================================
+// ─── LAUNDERING ROOM at the 3-floor house ──────────────────────
+// =================================================================
+// Hidden corner of the house — when the player is on the top-floor
+// terrace, the secret laundering NPC offers to exchange fake bills
+// for real silver at a brutal 1 fake = 0.3 silver.
+const LAUNDER_POS = { x: HOUSE_POS.x + 2.5, z: HOUSE_POS.z + 2.0 };
+const LAUNDER_RADIUS  = 2.0;
+const LAUNDER_RATE    = 0.3;          // 1 fake → 0.3 silver
+
+// Hover detection — raycast against any cat mesh on mousemove and
+// show a CSS tooltip with the cat's name positioned at the cursor.
+const _catRaycaster = new THREE.Raycaster();
+const _catNDC = new THREE.Vector2();
+const _catTipEl = document.getElementById('catTip');
+window.addEventListener('mousemove', (e) => {
+  // Don't try to point at cats when a modal is over the viewport
+  if(document.querySelector('.gold-bg.show, .market-bg.show, .lb-bg.show, .inv-bg.show, .lab-bg.show, .poop-bg.show, .uname-bg.show')){
+    _catTipEl.classList.remove('show');
+    return;
+  }
+  _catNDC.x =  (e.clientX / innerWidth)  * 2 - 1;
+  _catNDC.y = -(e.clientY / innerHeight) * 2 + 1;
+  _catRaycaster.setFromCamera(_catNDC, camera);
+  const meshes = Cats.map(c => c.mesh);
+  const hits = _catRaycaster.intersectObjects(meshes, true);
+  if(hits.length){
+    let m = hits[0].object;
+    let catId = m.userData && m.userData.catId;
+    while(!catId && m.parent){ m = m.parent; catId = m.userData && m.userData.catId; }
+    const cat = Cats.find(c => c.id === catId);
+    if(cat){
+      _catTipEl.classList.add('show');
+      _catTipEl.textContent = cat.name;
+      _catTipEl.style.left = (e.clientX + 14) + "px";
+      _catTipEl.style.top  = (e.clientY - 30) + "px";
+      return;
+    }
+  }
+  _catTipEl.classList.remove('show');
+});
+
+// ── Beach decoration — palm trees + rocks scattered around the shore ──
+// Deterministic-feeling random scatter using a simple PRNG so the
+// arrangement is the same on every load. Trees and rocks are placed
+// JUST inside the shore band (where ground y sits between ~0.6 and
+// ~1.4) so they always plant on dry sand, not in water.
+function _seededRand(seed){
+  let s = seed | 0;
+  return function(){ s = (s * 9301 + 49297) | 0; return ((s >>> 0) % 100000) / 100000; };
+}
+function buildPalmTree(){
+  const grp = new THREE.Group();
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6b4a25, roughness: 0.92, flatShading: true });
+  const leafMat  = new THREE.MeshStandardMaterial({ color: 0x2c6a30, roughness: 0.7,  flatShading: true });
+  const coconutMat = new THREE.MeshStandardMaterial({ color: 0x4a2c12, roughness: 0.7 });
+  // Curved trunk — series of stacked tapered cylinders with a bit of lean
+  const trunkHeight = 4 + Math.random() * 1.6;
+  const segs = 6;
+  let lean = (Math.random() - 0.5) * 0.5;
+  for(let i = 0; i < segs; i++){
+    const seg = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16 + i*0.005, 0.22 - i*0.012, trunkHeight / segs + 0.04, 6),
+      trunkMat
+    );
+    const t = (i + 0.5) / segs;
+    seg.position.y = t * trunkHeight;
+    seg.position.x = lean * t * 0.7;
+    seg.rotation.z = -lean * 0.08;
+    seg.castShadow = true;
+    grp.add(seg);
+  }
+  // Crown: ~9 fronds radiating out. Each frond is a tapered cone laid
+  // sideways (much more organic than the old flat box fronds, which
+  // looked like green squares from any angle).
+  const crown = new THREE.Group();
+  crown.position.set(lean * 0.7, trunkHeight - 0.05, 0);
+  for(let i = 0; i < 9; i++){
+    const frond = new THREE.Mesh(
+      new THREE.ConeGeometry(0.28, 2.4, 5, 1, false),
+      leafMat
+    );
+    // Lay the cone sideways so the base is at the crown and the tip
+    // points outward and down for that "drooping palm leaf" silhouette.
+    frond.rotation.z = -Math.PI / 2;
+    frond.position.set(1.2, -0.05, 0);
+    frond.castShadow = true;
+    const f = new THREE.Group();
+    f.add(frond);
+    f.rotation.y = (i / 9) * Math.PI * 2 + (Math.random() - 0.5) * 0.2;
+    f.rotation.z = -0.38 - Math.random() * 0.18;
+    // Slight per-frond bend in the middle so they're not all identical
+    f.scale.y = 0.85 + Math.random() * 0.3;
+    crown.add(f);
+  }
+  grp.add(crown);
+  // Coconuts cluster under the crown
+  for(let i = 0; i < 3; i++){
+    const cn = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), coconutMat);
+    cn.position.set(lean * 0.7 + Math.cos(i * 2) * 0.18, trunkHeight - 0.3, Math.sin(i * 2) * 0.18);
+    cn.castShadow = true;
+    grp.add(cn);
+  }
+  return grp;
+}
+function buildBeachRock(){
+  const grp = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x6e6d6a, roughness: 0.9 });
+  const lumps = 2 + Math.floor(Math.random() * 3);
+  for(let i = 0; i < lumps; i++){
+    const sz = 0.5 + Math.random() * 0.7;
+    // Icosahedron with one subdivision = 80 triangles — looks like
+    // a smoothly weathered boulder instead of a sharp dice/dodecahedron.
+    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(sz, 1), mat);
+    // Squash vertically so they look "settled" instead of floating cubes
+    r.scale.set(1.0, 0.55 + Math.random() * 0.25, 1.0);
+    r.position.set(
+      (Math.random() - 0.5) * 0.8,
+      sz * 0.25,
+      (Math.random() - 0.5) * 0.8,
+    );
+    r.rotation.set(Math.random(), Math.random(), Math.random());
+    r.castShadow = true; r.receiveShadow = true;
+    grp.add(r);
+  }
+  return grp;
+}
+function buildBeachDecorations(){
+  const rng = _seededRand(13579);
+  // Try this many angular positions around the island; place a palm or
+  // rock at the first one that finds dry sand at the right elevation.
+  for(let i = 0; i < 80; i++){
+    const ang = rng() * Math.PI * 2;
+    // Sample radii from just outside the dock area inward looking for sand
+    let placed = false;
+    for(let rr = ISLAND_RADIUS + 6; rr > ISLAND_RADIUS - 8; rr -= 0.5){
+      const x = Math.cos(ang) * rr;
+      const z = Math.sin(ang) * rr;
+      // Don't drop a tree on top of the dock
+      if(Math.hypot(x - DOCK_POS.x, z - DOCK_POS.z) < 10) break;
+      const y = groundHeightAt(x, z);
+      if(y > 0.5 && y < 1.5){
+        const what = rng() > 0.35 ? buildPalmTree() : buildBeachRock();
+        what.position.set(x, y - 0.05, z);
+        what.rotation.y = rng() * Math.PI * 2;
+        scene.add(what);
+        placed = true;
+        break;
+      }
+    }
+    if(placed) continue;
+  }
+}
+buildBeachDecorations();
 
 // ── Procedural rowboat ──
 // Brown wooden hull + two darker planks across as seats + a couple of
@@ -5470,7 +7307,9 @@ function updateBoat(dt){
   Player.pos.z = b.z;
   Player.pos.y = WATER_LEVEL + 0.85 + bob;
   Player.yaw   = b.yaw;
-  Player.walking = forward !== 0;
+  // The printer is SITTING in the boat — legs shouldn't pendulum.
+  // animatePrinter() also checks Player.boat so it forces idle pose.
+  Player.walking = false;
   return true;
 }
 
@@ -5481,6 +7320,10 @@ let nearbyPlot     = null;
 let nearbyMarket   = false;
 let nearbyRefinery = false;
 let nearbyDock     = false;
+let nearbyLab      = false;
+let nearbyPoop     = false;
+let nearbyBank     = false;
+let nearbyLaunder  = false;
 let nearbyBoardable = null;
 const PLOT_INTERACT_RANGE = 3.5;
 
@@ -5500,10 +7343,14 @@ function updatePlotPrompt(){
   const ownerId = State.username || State.wallet || "guest";
 
   nearbyMarket    = Math.hypot(Player.pos.x - MARKET_POS.x,   Player.pos.z - MARKET_POS.z)   < MARKET_RADIUS;
-  nearbyRefinery  = !nearbyMarket && Math.hypot(Player.pos.x - REFINERY_POS.x, Player.pos.z - REFINERY_POS.z) < REFINERY_RADIUS;
-  nearbyDock      = !nearbyMarket && !nearbyRefinery && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
-  nearbyBoardable = (!nearbyMarket && !nearbyRefinery && !nearbyDock) ? findBoardableBoat() : null;
-  nearbyPlot      = (nearbyMarket || nearbyRefinery || nearbyDock || nearbyBoardable) ? null : findNearbyPlot();
+  nearbyBank      = !nearbyMarket && Math.hypot(Player.pos.x - BANK_POS.x, Player.pos.z - BANK_POS.z) < BANK_RADIUS;
+  nearbyLaunder   = !nearbyMarket && !nearbyBank && Math.hypot(Player.pos.x - LAUNDER_POS.x, Player.pos.z - LAUNDER_POS.z) < LAUNDER_RADIUS;
+  nearbyRefinery  = !nearbyMarket && !nearbyBank && !nearbyLaunder && Math.hypot(Player.pos.x - REFINERY_POS.x, Player.pos.z - REFINERY_POS.z) < REFINERY_RADIUS;
+  nearbyLab       = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && Math.hypot(Player.pos.x - LAB_POS.x, Player.pos.z - LAB_POS.z) < LAB_RADIUS;
+  nearbyPoop      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && Math.hypot(Player.pos.x - POOP_POS.x, Player.pos.z - POOP_POS.z) < POOP_RADIUS;
+  nearbyDock      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
+  nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock) ? findBoardableBoat() : null;
+  nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyBoardable) ? null : findNearbyPlot();
 
   // ── Boat-related prompts come first since they're the most actionable ──
   if(Player.boat){
@@ -5518,6 +7365,34 @@ function updatePlotPrompt(){
     prompt.classList.add('show');
     title.textContent = "⛵ Your boat";
     sub.innerHTML = `Press <kbd>E</kbd> to board`;
+    return;
+  }
+  if(nearbyBank){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🏦 BANK";
+    sub.innerHTML = `Press <kbd>E</kbd> · 🥈→📄 / 🥈→🥇`;
+    return;
+  }
+  if(nearbyLaunder){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🕵 LAUNDERING ROOM";
+    sub.innerHTML = `Press <kbd>E</kbd> to clean fake bills (bad rate)`;
+    return;
+  }
+  if(nearbyLab){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🧪 FART LAB";
+    sub.innerHTML = `Press <kbd>E</kbd> to forge a coin`;
+    return;
+  }
+  if(nearbyPoop){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "💩 POOP HOUSE";
+    sub.innerHTML = `Press <kbd>E</kbd> to trade <b>FART&P500</b>`;
     return;
   }
   if(nearbyDock){
@@ -5614,6 +7489,14 @@ function tryInteract(){
     floater("⛵ Boarded — WASD to sail · E to disembark", "good");
     return;
   }
+  // Bank
+  if(nearbyBank){ openBank(); return; }
+  // Hidden laundering room (top floor of the house)
+  if(nearbyLaunder){ openLaunder(); return; }
+  // Fart Lab — open coin foundry
+  if(nearbyLab){ openLab(); return; }
+  // Poop House — open FART&POOP500 trading desk
+  if(nearbyPoop){ openPoopHouse(); return; }
   // Boat shop interaction (dock)
   if(nearbyDock){
     if(State.credits < BOAT_PRICE){
@@ -5702,9 +7585,34 @@ window.addEventListener('keydown', e => {
     tryInteract();
   }
   if(e.code === "KeyF"){ tryMineOre(); }
+  if(e.code === "KeyG"){ tryFeedCat(); }
   if(e.code === "KeyI"){ toggleInventory(); e.preventDefault(); }
   if(e.code === "KeyL"){ toggleLeaderboard(); e.preventDefault(); }
 });
+
+// ── Feed a cat (G) ──
+// If the player is within 4m of a cat AND has cat_food in inventory,
+// pressing G gives the cat one. The cat stops to munch happily (forces
+// the pause state) and the player gets a nice XP nudge.
+function tryFeedCat(){
+  if(!State.inventory.cat_food || State.inventory.cat_food <= 0) return;
+  let nearest = null, bestD = 4;
+  for(const c of Cats){
+    const d = Math.hypot(c.x - Player.pos.x, c.z - Player.pos.z);
+    if(d < bestD){ bestD = d; nearest = c; }
+  }
+  if(!nearest) return;
+  takeItem("cat_food", 1);
+  State.xp += 35;
+  floater(`Fed ${nearest.name} 🐈 +35 XP`, "good");
+  showBuyToast(`${nearest.name} loved it! +35 XP`);
+  playPurchaseSound();
+  checkLevelUp();
+  // Make the cat stop and look at you (pause state) for ~3s
+  nearest.state = "pause";
+  nearest.stateTimer = 3.0;
+  saveState(); updateHUD();
+}
 
 // =================================================================
 // ─── ORE MINING ─────────────────────────────────────────────────
@@ -5800,7 +7708,7 @@ function updateOrePrompt(){
 // the 0.55s charge-up). Without this prompt, the print stations
 // were silent and a lot of players didn't know to hold E there.
 function updatePrinterStationPrompt(){
-  if(nearbyPlot || nearbyMarket || nearbyRefinery || nearbyOre) return;
+  if(nearbyPlot || nearbyMarket || nearbyRefinery || nearbyOre || nearbyBank || nearbyLaunder || nearbyLab || nearbyPoop || nearbyDock) return;
   if(!printerNear) return;
   const prompt = document.getElementById('plotPrompt');
   const title  = document.getElementById('plotPromptTitle');
@@ -5808,7 +7716,7 @@ function updatePrinterStationPrompt(){
   prompt.classList.add('show');
   prompt.classList.remove('locked');
   title.textContent = "🖨 Print Station";
-  sub.innerHTML = `Hold <kbd>E</kbd> to print a page (+1 page · +4 XP)`;
+  sub.innerHTML = `Hold <kbd>E</kbd> for pages · <kbd>Shift+E</kbd> for fake bills 🪙`;
 }
 
 // =================================================================
@@ -5817,8 +7725,10 @@ function updatePrinterStationPrompt(){
 const Listings = [];                   // { id, sellerId, sellerName, item, qty, price, ts }
 const _myListings = new Set();         // listing ids I created (so the "BUY" button gets disabled for my own)
 const SEED_SHOP = [
-  { itemId: "weed_seed", desc: "Grows into a fat green bud over 60 seconds. Plant on your owned plot." },
-  { itemId: "pickaxe",   desc: "Required to mine ore deposits scattered around the world. Press F when standing on one." },
+  { itemId: "carrot_seed", desc: "The starter crop. Grows in 1 hour into a juicy orange carrot." },
+  { itemId: "weed_seed",   desc: "Premium crop. 10× the seed cost but the harvest sells for double." },
+  { itemId: "pickaxe",     desc: "Required to mine ore deposits scattered around the world. Press F when standing on one." },
+  { itemId: "cat_food",    desc: "Brrrish, Billy and Ket love this. Feed a cat with G for XP." },
 ];
 
 function openMarket(){
@@ -5867,6 +7777,8 @@ function renderSeedShop(){
         floater(`Need ${item.marketPrice} 🥈 Silver`, "bad");
         return;
       }
+      // Counterfeit-on-the-premises bust roll
+      if(maybeMarketBust()) return;
       State.credits -= item.marketPrice;
       addItem(id, 1);
       floater(`+1 ${item.name}  -${item.marketPrice} 🥈`, "good");
@@ -5964,6 +7876,35 @@ function renderSellPane(){
   });
 }
 
+// ── Counterfeit punishment ──
+// Wipes Silver, Paper, and Fake — used by both the marketplace bust
+// roll AND the cat sniff event. Heavy on the floater so the player
+// always knows what just happened.
+function counterfeitBusted(reason){
+  const lost = (State.credits || 0) + (State.paper || 0) + (State.fakeMoney || 0);
+  State.credits = 0;
+  State.paper = 0;
+  State.fakeMoney = 0;
+  // Big red screen flash + canvas shake (reuses existing penalty FX)
+  triggerShame();
+  floater(`🚨 BUSTED · ${reason}`, "bad");
+  showBuyToast(`Lost ${lost} in coins, paper, and fakes`);
+  saveState(); updateHUD();
+  if(window.renderInventory) renderInventory();
+}
+
+// Check if any marketplace purchase should trigger a bust. Holding any
+// fake money is the crime — even if you pay in real silver, the staff
+// can smell counterfeits on you. 50% caught roll per purchase.
+function maybeMarketBust(){
+  if((State.fakeMoney || 0) <= 0) return false;
+  if(Math.random() < 0.5){
+    counterfeitBusted("market security spotted your fakes");
+    return true;
+  }
+  return false;
+}
+
 function buyListing(id){
   const idx = Listings.findIndex(L => L.id === id);
   if(idx < 0) return;
@@ -5974,6 +7915,7 @@ function buyListing(id){
     floater(`Need ${L.price} 🥈 Silver`, "bad");
     return;
   }
+  if(maybeMarketBust()) return;
   State.credits -= L.price;
   addItem(L.item, L.qty);
   Listings.splice(idx, 1);
@@ -6109,6 +8051,517 @@ function showSaleToast(text){
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
 }
+
+// =================================================================
+// ─── POOP HOUSE EXCHANGE — FART&POOP500 trading desk ────────────
+// =================================================================
+// Mirrors the token list from fartpoop500.html. Every coin shows its
+// live price + 24h change (DexScreener, with pump.fun fallback for
+// pre-graduation coins) and a TRADE button that opens its specific
+// Meteora pool. No TVL or Zap — just trade.
+const POOP_TOKENS = [
+  { sym: "FARTYD",   ca: "CnJk3UfUsHy5aSx6JBhoogLxmrcFhpsLP6xaUiGJbrrr", pool: "https://www.meteora.ag/dammv2/5xyWsWbcLYMrtznLSnkEqNv6g9bHUSbwsBx7v5X1JYKp" },
+  { sym: "FARTSUNG", ca: "BCwvw9XJCzA8WixpMH2tjQxePZRq92vu2PAyo78obrrr", pool: "https://www.meteora.ag/dammv2/9zLh2Bnw7r3ELF5n3raNRvYBjFgFTXvm56gXyHGMmxjw" },
+  { sym: "FARTMART", ca: "4MXy1b8txv4uDY3bCTmtJHJ7gFdZPd9h3oT7CktKbrrr", pool: "https://www.meteora.ag/dammv2/CiH9Abhmi9mNjcokq3zcPjYg6pYNVrNNZp85CnsCE9ZV" },
+  { sym: "FARTX",    ca: "ANVebgjHnUThghDZMACZtpbeFXDiiXmLwNby6c6Kbrrr", pool: "https://www.meteora.ag/dammv2/EYdRr8gnBEqBpLrCpMzgKzjyX3hDreVEL2dPL8STMK6V" },
+  { sym: "FARTSFT",  ca: "4A25VeiisiUeBDdYmsxMyM16kQu4EnGkqVESNcHrbrrr", pool: "https://www.meteora.ag/dammv2/AbU19bH6vQ7aYWo47a8a7XrKuu21xRVxi9p8uKyS6Y9A" },
+  { sym: "FARTBABA", ca: "CsRFu5QCzrKg6eq4WoGMr4dPdAWcM9mB6spfANeGbrrr", pool: "https://www.meteora.ag/dammv2/EUUoqygw4K4R6xN6nm9eC7TqG8DikE77jPT32K9ttEG1" },
+];
+const _poopData = {};   // ca → { price, ch24, image }
+
+function poopFmtPrice(n){
+  if(n == null || isNaN(n) || n <= 0) return "$—";
+  const v = Number(n);
+  if(v < 0.000001) return "$" + v.toExponential(2);
+  if(v < 1) return "$" + v.toPrecision(3);
+  return "$" + v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+function poopFmtChg(n){
+  if(n == null || isNaN(n)) return "—";
+  return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+}
+function poopShortCA(ca){ return ca.slice(0, 6) + "…" + ca.slice(-4); }
+
+async function poopFetchPrices(){
+  const mints = POOP_TOKENS.map(t => t.ca);
+  // DexScreener — graduated coins land here with rich data
+  try {
+    const url = "https://api.dexscreener.com/latest/dex/tokens/" + mints.join(",");
+    const r = await fetch(url);
+    if(r.ok){
+      const j = await r.json();
+      const seen = {};
+      for(const p of (j.pairs || [])){
+        const mint = p?.baseToken?.address; if(!mint) continue;
+        const liq  = p.liquidity?.usd || 0;
+        const cur  = seen[mint];
+        if(!cur || liq > cur.liq){
+          seen[mint] = {
+            liq,
+            price: parseFloat(p.priceUsd) || 0,
+            ch24:  p.priceChange?.h24 ?? null,
+            image: p.info?.imageUrl || null,
+          };
+        }
+      }
+      for(const m in seen){
+        _poopData[m] = Object.assign(_poopData[m] || {}, {
+          price: seen[m].price,
+          ch24:  seen[m].ch24,
+          image: seen[m].image || _poopData[m]?.image,
+        });
+      }
+    }
+  } catch(_){}
+  // pump.fun fallback for coins not on DexScreener yet
+  for(const t of POOP_TOKENS){
+    if(_poopData[t.ca] && _poopData[t.ca].price > 0) continue;
+    try {
+      const r = await fetch("/api/pumpfun?mint=" + t.ca);
+      if(!r.ok) continue;
+      const j = await r.json();
+      _poopData[t.ca] = Object.assign(_poopData[t.ca] || {}, {
+        price: Number(j?.usd_price) || (Number(j?.usd_market_cap) && Number(j?.total_supply) ? Number(j.usd_market_cap) / Number(j.total_supply) : 0),
+        ch24:  null,
+        image: j?.image_uri || _poopData[t.ca]?.image,
+      });
+    } catch(_){}
+  }
+}
+
+function renderPoopList(){
+  const host = document.getElementById('poopList');
+  if(!host) return;
+  host.innerHTML = POOP_TOKENS.map(t => {
+    const d = _poopData[t.ca] || {};
+    const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
+    const chgCls = d.ch24 == null ? "" : (d.ch24 >= 0 ? "up" : "down");
+    const chgArrow = d.ch24 == null ? "" : (d.ch24 >= 0 ? "▲ " : "▼ ");
+    return `
+      <div class="poop-row">
+        <div class="ico" ${img}>${d.image ? "" : t.sym.slice(0, 3)}</div>
+        <div class="meta">
+          <div class="sym">${escHtml(t.sym)}</div>
+          <div class="ca" data-ca="${t.ca}" title="Click to copy">${poopShortCA(t.ca)}</div>
+        </div>
+        <div class="price-col">
+          <div class="price">${poopFmtPrice(d.price)}</div>
+          <div class="chg ${chgCls}">${chgArrow}${poopFmtChg(d.ch24)}</div>
+        </div>
+        <a class="trade-btn" href="${t.pool}" target="_blank" rel="noopener">Trade</a>
+      </div>
+    `;
+  }).join("");
+  // Copy-CA click handlers
+  host.querySelectorAll('.ca').forEach(el => {
+    el.addEventListener('click', () => {
+      const ca = el.dataset.ca;
+      navigator.clipboard?.writeText(ca);
+      const orig = el.textContent;
+      el.textContent = "Copied!";
+      setTimeout(() => { el.textContent = orig; }, 1100);
+    });
+  });
+  document.getElementById('poopSync').textContent = "live · last sync " + new Date().toTimeString().slice(0, 8);
+}
+
+let _poopTimer = null;
+async function openPoopHouse(){
+  document.getElementById('poopBg').classList.add('show');
+  renderPoopList();    // render with whatever we have cached, then refresh
+  await poopFetchPrices();
+  renderPoopList();
+  if(!_poopTimer) _poopTimer = setInterval(async () => {
+    await poopFetchPrices();
+    renderPoopList();
+  }, 30000);
+}
+function closePoopHouse(){
+  document.getElementById('poopBg').classList.remove('show');
+  if(_poopTimer){ clearInterval(_poopTimer); _poopTimer = null; }
+}
+document.getElementById('poopClose').addEventListener('click', closePoopHouse);
+document.getElementById('poopBg').addEventListener('click', (e) => {
+  if(e.target.id === "poopBg") closePoopHouse();
+});
+document.getElementById('poopRefresh').addEventListener('click', async () => {
+  await poopFetchPrices();
+  renderPoopList();
+});
+
+// =================================================================
+// ─── FART LAB — derivative coin foundry ────────────────────────
+// =================================================================
+// Mirrors the Derivatives app's flow: validate ticker (FART_ prefix +
+// A–Z suffix up to 10 chars), then POST to /api/printr (the existing
+// Cloudflare-Pages proxy that holds the broker JWT). On success, we
+// broadcast a registry entry to a public ntfy topic so every player's
+// Lab Gallery sees the new coin immediately.
+const LAB_REGISTRY_TOPIC = "fartworld-fartcoins-v1-pub";
+const PRINTR_PROXY_URL   = "/api/printr";
+const PRINTR_SOL_CHAIN   = "solana";   // chain identifier on Printr
+
+function sanitizeSuffix(s){
+  return (s || "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 10);
+}
+function fullTicker(suffix){
+  return "FART" + sanitizeSuffix(suffix);
+}
+
+// ── Modal open/close ──
+function openLab(){
+  document.getElementById('labBg').classList.add('show');
+  labRenderPreview();
+  refreshCoinGallery();   // pre-warm gallery in the background
+}
+function closeLab(){ document.getElementById('labBg').classList.remove('show'); }
+document.getElementById('labClose').addEventListener('click', closeLab);
+document.getElementById('labBg').addEventListener('click', (e) => {
+  if(e.target.id === "labBg") closeLab();
+});
+document.querySelectorAll('.lab-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.ltab;
+    document.querySelectorAll('.lab-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.lab-pane').forEach(p => p.style.display = "none");
+    btn.classList.add('active');
+    document.querySelector(`.lab-pane[data-lpane="${t}"]`).style.display = "";
+    if(t === "gallery") refreshCoinGallery();
+  });
+});
+
+// ── Image upload state ──
+// We store the picked file plus a base64 data-URL for the preview and
+// to attach to the /api/printr deploy. The Derivatives site does the
+// same thing — upload first, then ship the metadata to Printr.
+const LabImg = { file: null, dataUrl: null };
+
+const labUploadEl  = document.getElementById('labUpload');
+const labFileInput = document.getElementById('labImageFile');
+const labClearBtn  = document.getElementById('labImageClear');
+const labPreview   = document.getElementById('labUploadPreview');
+const labMeta      = document.getElementById('labUploadMeta');
+
+labUploadEl.addEventListener('click', (e) => {
+  if(e.target === labClearBtn) return;
+  labFileInput.click();
+});
+labClearBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  LabImg.file = null; LabImg.dataUrl = null;
+  labFileInput.value = "";
+  labPreview.style.backgroundImage = "";
+  labPreview.textContent = "+";
+  labClearBtn.style.display = "none";
+  labUploadEl.classList.remove('has-image');
+  labMeta.textContent = "Max 4 MB · same flow as the Derivatives site";
+  labRenderPreview();
+});
+labFileInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if(!file) return;
+  if(file.size > 4 * 1024 * 1024){
+    labMeta.innerHTML = '<span style="color:#ff7a6e;">⚠ Max 4 MB — pick a smaller image.</span>';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    LabImg.file    = file;
+    LabImg.dataUrl = reader.result;
+    labPreview.style.backgroundImage = `url("${LabImg.dataUrl.replace(/"/g, '%22')}")`;
+    labPreview.textContent = "";
+    labClearBtn.style.display = "";
+    labUploadEl.classList.add('has-image');
+    const kb = (file.size / 1024).toFixed(0);
+    labMeta.textContent = `${file.name} · ${kb} KB`;
+    labRenderPreview();
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Live preview update + validation ──
+function labRenderPreview(){
+  const suffix = sanitizeSuffix(document.getElementById('labSuffix').value);
+  const name   = (document.getElementById('labName').value || "").trim();
+  document.getElementById('labPreviewSym').textContent  = suffix ? fullTicker(suffix) : "FART…";
+  document.getElementById('labPreviewName').textContent = name || "— pick a name —";
+  const imgEl = document.getElementById('labPreviewImg');
+  if(LabImg.dataUrl){
+    imgEl.style.backgroundImage = `url("${LabImg.dataUrl.replace(/"/g, '%22')}")`;
+    imgEl.textContent = "";
+  } else {
+    imgEl.style.backgroundImage = "";
+    imgEl.textContent = "🧪";
+  }
+  // Enable button only when ticker + name are present
+  document.getElementById('labGoBtn').disabled =
+    !(suffix.length >= 1 && suffix.length <= 10 && name.length >= 2);
+}
+["labSuffix", "labName", "labDesc"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    if(id === "labSuffix"){
+      // Force-uppercase + strip non-letters as user types
+      const clean = sanitizeSuffix(el.value);
+      if(clean !== el.value) el.value = clean;
+    }
+    labRenderPreview();
+  });
+});
+
+// ── Status helper ──
+function labStatus(text, kind, busy){
+  const el = document.getElementById('labStatus');
+  el.classList.add('show');
+  el.classList.toggle('busy', !!busy);
+  el.innerHTML = kind === "err"
+    ? `<span class="err">${escHtml(text)}</span>`
+    : kind === "ok"
+      ? `<span class="ok">${escHtml(text)}</span>`
+      : escHtml(text);
+}
+
+// ── Deploy ──
+// We POST to /api/printr (the existing proxy) with a payload similar to
+// the Derivatives app. The full Printr `/print` schema is complex and
+// covers Phantom signing + USDC funding; here we send the descriptor
+// and let Printr's flow take over. If your /api/printr proxy isn't
+// deployed, we fall back to opening derivatives.html with the fields
+// pre-filled so the user can launch from there.
+async function labDeploy(){
+  const suffix = sanitizeSuffix(document.getElementById('labSuffix').value);
+  const name   = (document.getElementById('labName').value || "").trim();
+  const desc   = (document.getElementById('labDesc').value  || "").trim();
+  const image  = LabImg.dataUrl || null;                // base64 data URL or null
+  const imageName = LabImg.file ? LabImg.file.name : null;
+  const imageType = LabImg.file ? LabImg.file.type : null;
+  const imageSize = LabImg.file ? LabImg.file.size : 0;
+  if(!suffix || !name){ labStatus("Add a ticker suffix and a coin name.", "err"); return; }
+  const ticker = fullTicker(suffix);
+
+  if(!State.wallet){
+    labStatus("Connect Phantom on the login screen first — minting requires a wallet signature.", "err");
+    return;
+  }
+
+  document.getElementById('labGoBtn').disabled = true;
+  labStatus(`Sending ${ticker} to the Printr deployment pipeline…`, "info", true);
+
+  // Optimistic registry broadcast — every other player sees the design
+  // appear in the gallery immediately. We embed the base64 image so the
+  // gallery card renders with the actual artwork. (ntfy.sh accepts the
+  // payload at any reasonable size; 4 MB cap on uploads enforced above.)
+  broadcastCoin({
+    ticker, name, image, desc,
+    chain:   PRINTR_SOL_CHAIN,
+    creator: State.username || State.wallet.slice(0,4) + "…" + State.wallet.slice(-4),
+    wallet:  State.wallet,
+    ts:      Date.now(),
+    status:  "queued",
+  });
+
+  try {
+    // Hand off to Printr's /print endpoint via our proxy. The proxy is
+    // the same one Derivatives uses — see functions/api/printr.js.
+    const resp = await fetch(PRINTR_PROXY_URL + "?path=" + encodeURIComponent("/print"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        symbol:         ticker,
+        name,
+        description:    desc,
+        // Image data is sent the same way the Derivatives uploader sends
+        // it — base64 data URL + original filename + MIME — so the
+        // /api/printr proxy can forward it to Printr's pump-create.
+        image_data:     image,
+        image_name:     imageName,
+        image_type:     imageType,
+        image_size:     imageSize,
+        chain:          PRINTR_SOL_CHAIN,
+        creator_wallet: State.wallet,
+        platform:       "printr",
+        source:         "fartworld-lab",
+      }),
+    });
+    if(!resp.ok){
+      const txt = await resp.text().catch(() => "");
+      throw new Error(`Printr proxy returned ${resp.status}. ${txt.slice(0, 240)}`);
+    }
+    const j = await resp.json().catch(() => ({}));
+    labStatus(`✅ ${ticker} sent to Printr (ref ${(j.token_id || j.id || "queued").toString().slice(0, 12)}). Trade page may take a minute to go live.`, "ok");
+    floater(`🚀 ${ticker} minted!`, "good");
+    playPurchaseSound();
+    // Re-broadcast as "deployed" so other players see the live state
+    broadcastCoin({
+      ticker, name, image, desc,
+      chain:    PRINTR_SOL_CHAIN,
+      creator:  State.username || "anon",
+      wallet:   State.wallet,
+      tokenId:  j.token_id || j.id || null,
+      ca:       j.contract_address || j.mint_address || null,
+      ts:       Date.now(),
+      status:   "deployed",
+    });
+    refreshCoinGallery();
+  } catch(e){
+    console.warn("[Lab] deploy failed", e);
+    // Fallback: open the full Derivatives app with values pre-filled
+    const url = `derivatives.html?prefill=${encodeURIComponent(JSON.stringify({ suffix, name, image, desc }))}`;
+    labStatus(
+      `❌ Couldn't reach Printr from the game (${(e && e.message) || e}). ` +
+      `Falling back to the Derivatives app — open <a href="${url}" target="_blank" style="color:#5ff09c;">Derivatives</a> to finish the deploy.`,
+      "err"
+    );
+  } finally {
+    document.getElementById('labGoBtn').disabled = false;
+  }
+}
+document.getElementById('labGoBtn').addEventListener('click', labDeploy);
+
+// ── Registry broadcast / fetch / render ──
+async function broadcastCoin(coin){
+  try {
+    await fetch(`https://ntfy.sh/${LAB_REGISTRY_TOPIC}`, {
+      method: "POST",
+      body: JSON.stringify({ kind: "fartcoin", ...coin, ts: coin.ts || Date.now() }),
+    });
+  } catch(_){}
+}
+
+async function fetchCoinRegistry(){
+  try {
+    const r = await fetch(`https://ntfy.sh/${LAB_REGISTRY_TOPIC}/json?poll=1&since=24h`);
+    if(!r.ok) return [];
+    const text = await r.text();
+    if(!text.trim()) return [];
+    // Dedupe by ticker, prefer most recent / "deployed" status
+    const coins = new Map();
+    for(const line of text.trim().split("\n")){
+      try {
+        const evt = JSON.parse(line);
+        if(evt.event !== "message" || !evt.message) continue;
+        const m = JSON.parse(evt.message);
+        if(m.kind !== "fartcoin" || !m.ticker) continue;
+        const cur = coins.get(m.ticker);
+        if(!cur || (m.ts || 0) > (cur.ts || 0) || (m.status === "deployed" && cur.status !== "deployed")){
+          coins.set(m.ticker, m);
+        }
+      } catch(_){}
+    }
+    return [...coins.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  } catch(_){ return []; }
+}
+
+async function refreshCoinGallery(){
+  const host = document.getElementById('coinGallery');
+  if(!host) return;
+  const coins = await fetchCoinRegistry();
+  if(!coins.length){
+    host.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:rgba(230,255,238,0.42);font-family:\'JetBrains Mono\',monospace;font-size:12px;">No FART coins minted yet from the Lab. Be the first.</div>';
+    return;
+  }
+  host.innerHTML = coins.map(c => {
+    const sym  = (c.ticker || "FART??").slice(0, 16);
+    const auth = c.creator || "anon";
+    const tradeUrl = c.ca
+      ? `https://app.printr.money/trade/${c.ca}`
+      : c.tokenId
+        ? `https://app.printr.money/trade/${c.tokenId}`
+        : `https://app.printr.money/`;
+    const bg = c.image ? `style="background-image:url('${c.image.replace(/'/g, '%27')}')"` : "";
+    return `
+      <a class="coin-card" href="${tradeUrl}" target="_blank" rel="noopener">
+        <div class="ico" ${bg}>${c.image ? "" : sym.slice(0, 3)}</div>
+        <div>
+          <div class="nm">${escHtml(sym)}</div>
+          <div class="auth">by ${escHtml(auth)}${c.status === "queued" ? " · queued" : ""}</div>
+        </div>
+      </a>
+    `;
+  }).join("");
+}
+
+// =================================================================
+// ─── BANK + LAUNDERING UI plumbing ──────────────────────────────
+// =================================================================
+function openBank(){
+  document.getElementById('bankBg').classList.add('show');
+  document.getElementById('bankSilver').textContent = State.credits;
+  document.getElementById('bankPaper').textContent  = State.paper || 0;
+  document.getElementById('bankGold').textContent   = (State.gold || 0);
+  document.getElementById('bankPaperQty').value = "";
+  document.getElementById('bankGoldQty').value = "";
+  document.getElementById('bankPaperPreview').textContent = "→ 0 📄";
+  document.getElementById('bankGoldPreview').textContent  = "→ 0 🥈";
+}
+function closeBank(){ document.getElementById('bankBg').classList.remove('show'); }
+document.getElementById('bankClose').addEventListener('click', closeBank);
+document.getElementById('bankBg').addEventListener('click', (e) => {
+  if(e.target.id === "bankBg") closeBank();
+});
+document.getElementById('bankPaperQty').addEventListener('input', (e) => {
+  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+  document.getElementById('bankPaperPreview').textContent = `→ ${n * PAPER_PER_SILVER} 📄`;
+});
+document.getElementById('bankGoldQty').addEventListener('input', (e) => {
+  const g = Math.max(0, Number(e.target.value) || 0);
+  document.getElementById('bankGoldPreview').textContent = `→ ${Math.round(g * SILVER_PER_GOLD).toLocaleString()} 🥈`;
+});
+document.getElementById('bankPaperGo').addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankPaperQty').value) || 0));
+  if(n <= 0){ floater("Enter a Silver amount", "bad"); return; }
+  if(State.credits < n){ floater(`Need ${n} 🥈 Silver`, "bad"); return; }
+  State.credits -= n;
+  State.paper = (State.paper || 0) + n * PAPER_PER_SILVER;
+  floater(`+${n * PAPER_PER_SILVER} 📄 Paper · -${n} 🥈`, "good");
+  showBuyToast(`Converted ${n} Silver → ${n * PAPER_PER_SILVER} Paper`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+document.getElementById('bankGoldGo').addEventListener('click', () => {
+  let g = Math.max(0, Number(document.getElementById('bankGoldQty').value) || 0);
+  // Round to nearest 0.01 so the UI matches the math
+  g = Math.round(g * 100) / 100;
+  if(g < GOLD_MIN_QTY){ floater(`Minimum ${GOLD_MIN_QTY} 🥇 Gold`, "bad"); return; }
+  const cost = Math.round(g * SILVER_PER_GOLD);
+  if(State.credits < cost){ floater(`Need ${cost.toLocaleString()} 🥈 Silver`, "bad"); return; }
+  State.credits -= cost;
+  State.gold = +((State.gold || 0) + g).toFixed(2);
+  floater(`+${g} 🥇 Gold · -${cost.toLocaleString()} 🥈`, "good");
+  showBuyToast(`Bought ${g} Gold for ${cost.toLocaleString()} Silver`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+
+// ── Launder modal ──
+function openLaunder(){
+  document.getElementById('launderBg').classList.add('show');
+  document.getElementById('launderFakeQty').textContent = State.fakeMoney || 0;
+  document.getElementById('launderSilverQty').textContent = State.credits || 0;
+  document.getElementById('launderInput').value = "";
+  document.getElementById('launderPreview').textContent = "→ 0 🥈";
+}
+function closeLaunder(){ document.getElementById('launderBg').classList.remove('show'); }
+document.getElementById('launderClose').addEventListener('click', closeLaunder);
+document.getElementById('launderBg').addEventListener('click', (e) => {
+  if(e.target.id === "launderBg") closeLaunder();
+});
+document.getElementById('launderInput').addEventListener('input', (e) => {
+  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+  document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * LAUNDER_RATE)} 🥈`;
+});
+document.getElementById('launderGo').addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('launderInput').value) || 0));
+  if(n <= 0){ floater("Enter a fake-bill amount", "bad"); return; }
+  if((State.fakeMoney || 0) < n){ floater("Not enough fake bills", "bad"); return; }
+  const silver = Math.floor(n * LAUNDER_RATE);
+  State.fakeMoney -= n;
+  State.credits   += silver;
+  floater(`Laundered ${n} 🪙 → +${silver} 🥈`, "good");
+  showBuyToast(`Laundered ${n} fake → ${silver} Silver`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openLaunder();
+});
 
 // =================================================================
 // ─── GOLD VAULT (burn $FARTPRINT → mint local Gold) ─────────────
@@ -7120,6 +9573,8 @@ function loop(now){
   if(typeof tickArenaLeaderboardOverlay === "function") tickArenaLeaderboardOverlay();
   tickWater(dt);
   tickDayNight(dt);
+  if(typeof updateCats === "function") updateCats(dt);
+  if(typeof tickCatSniff === "function") tickCatSniff(dt);
 
   // Light passive HUD refresh every few frames
   if(((now / 1000) | 0) !== ((lastTime / 1000 - dt) | 0)){
