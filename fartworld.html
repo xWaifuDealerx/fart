@@ -5281,21 +5281,77 @@ async function announceRoom(){
 }
 
 // ── Room session lifecycle ───────────────────────────────────────
-function startRoomConnection(){
-  Net.peerId = "p_" + Math.random().toString(36).slice(2, 10);
-  // SSE for instant message delivery
+// Dual-track delivery: SSE for instant messages + a 1.5s polling fallback
+// so positions still arrive when SSE silently fails (corp proxies, mobile
+// background tabs, ntfy.sh edge hiccups). De-duplication via message id
+// keeps the same message from being processed by both channels.
+let _seenMsgIds = new Set();
+let _pollTimer  = null;
+function rememberMsgId(id){
+  if(!id) return false;
+  if(_seenMsgIds.has(id)) return false;
+  _seenMsgIds.add(id);
+  if(_seenMsgIds.size > 500){
+    // Trim oldest entries — Set preserves insertion order, so just rebuild
+    _seenMsgIds = new Set([..._seenMsgIds].slice(-300));
+  }
+  return true;
+}
+
+function openSse(){
+  if(!Net.topicChat) return;
+  try { if(Net.sse) Net.sse.close(); } catch(_){}
   try {
     Net.sse = new EventSource(`https://ntfy.sh/${Net.topicChat}/sse`);
+    Net.sse.onopen    = () => console.log("[FartWorld] SSE open:", Net.topicChat);
     Net.sse.onmessage = (e) => {
       try {
         const evt = JSON.parse(e.data);
         if(evt.event !== "message" || !evt.message) return;
+        if(!rememberMsgId(evt.id)) return;
         const m = JSON.parse(evt.message);
         handleRoomMessage(m);
       } catch(_){}
     };
-    Net.sse.onerror = () => { /* ntfy keeps the connection alive automatically */ };
+    Net.sse.onerror = () => {
+      // EventSource auto-retries, but if the server actively closes (404 etc)
+      // we won't recover. Re-open after a short delay as belt-and-braces.
+      console.warn("[FartWorld] SSE error — will retry");
+      setTimeout(() => { if(Net.mode !== "solo") openSse(); }, 4000);
+    };
   } catch(e){ console.warn("[FartWorld] SSE failed", e); }
+}
+
+// Polling fallback — pulls the last ~10s of chat-topic messages every 1.5s
+// and dedupes via the SSE/poll shared id set. Catches anything SSE missed.
+async function pollChatTopic(){
+  if(Net.mode === "solo" || !Net.topicChat) return;
+  try {
+    const r = await fetch(`https://ntfy.sh/${Net.topicChat}/json?poll=1&since=10s`, { cache: "no-store" });
+    if(!r.ok) return;
+    const text = await r.text();
+    if(!text.trim()) return;
+    for(const line of text.trim().split("\n")){
+      try {
+        const evt = JSON.parse(line);
+        if(evt.event !== "message" || !evt.message) continue;
+        if(!rememberMsgId(evt.id)) continue;
+        const m = JSON.parse(evt.message);
+        handleRoomMessage(m);
+      } catch(_){}
+    }
+  } catch(_){}
+}
+
+function startRoomConnection(){
+  Net.peerId = "p_" + Math.random().toString(36).slice(2, 10);
+  _seenMsgIds = new Set();   // fresh dedup window per session
+
+  openSse();
+  // Belt-and-braces polling: catches anything SSE missed and keeps the
+  // game responsive even on networks that strip Server-Sent Events.
+  if(_pollTimer) clearInterval(_pollTimer);
+  _pollTimer = setInterval(pollChatTopic, 1500);
 
   // Chat panel ON
   document.getElementById('chatPanel').style.display = "";
@@ -5304,6 +5360,7 @@ function startRoomConnection(){
   if(Net.mode === "host"){
     addChat(null, `Share the room ID with friends: ${Net.roomId}`, true);
   }
+  console.log("[FartWorld] room session:", Net.mode, Net.topicChat, "peerId:", Net.peerId);
 }
 
 function hostRoom(name, handle){
@@ -5349,6 +5406,8 @@ function leaveRoom(){
   }
   if(Net.sse){ try { Net.sse.close(); } catch(_){} Net.sse = null; }
   if(Net.announceTimer){ clearInterval(Net.announceTimer); Net.announceTimer = null; }
+  if(_pollTimer){ clearInterval(_pollTimer); _pollTimer = null; }
+  _seenMsgIds = new Set();
   Net.mode = "solo";
 }
 window.addEventListener('beforeunload', leaveRoom);
