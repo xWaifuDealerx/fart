@@ -4055,8 +4055,16 @@ async function enterLobby(){
   const jh = document.getElementById('joinHandleInput');
   if(hh){ hh.value = State.username; hh.readOnly = true; hh.style.opacity = 0.7; }
   if(jh){ jh.value = State.username; jh.readOnly = true; jh.style.opacity = 0.7; }
-  // Start refreshing the rooms list so the Join tab is ready
+  // Start refreshing the rooms list so the Join tab is ready, and
+  // auto-poll it every ~5s so newly-hosted rooms show up without
+  // the user needing to click "Refresh" — that's the #1 reason
+  // "I can't find my friend's room" gets reported.
   refreshRoomList();
+  startJoinAutoRefresh();
+  // Default lobby tab is "Host" — only count Join as active when the
+  // user clicks into it. The interval still runs but no-ops while
+  // _joinTabActive is false, then kicks back in the moment they switch.
+  _joinTabActive = false;
 }
 
 function enterGame(){
@@ -4193,9 +4201,18 @@ function escHtml(s){
 }
 
 // ── Room directory (list / announce) ─────────────────────────────
+// We use ntfy's server-supplied `time` field (Unix seconds) as the
+// authoritative "when was this posted" timestamp rather than the
+// host's local clock. Clock skew between two devices (very common
+// across phones/laptops) was making fresh host broadcasts look "too
+// old" to a joiner whose clock ran ahead by ~60s+. ntfy's `time` is
+// the same on both sides because it's stamped by the server.
 async function listRooms(){
   try {
-    const r = await fetch(`https://ntfy.sh/${Net.topicDir}/json?poll=1&since=120s`);
+    // Pull from ntfy's edge — wider window so we tolerate background-tab
+    // throttling on the host's side (browsers slow setInterval to ~1/min
+    // when the host tab loses focus).
+    const r = await fetch(`https://ntfy.sh/${Net.topicDir}/json?poll=1&since=10m`);
     if(!r.ok) return [];
     const text = await r.text();
     if(!text.trim()) return [];
@@ -4206,12 +4223,19 @@ async function listRooms(){
         if(evt.event !== "message" || !evt.message) continue;
         const m = JSON.parse(evt.message);
         if(m.kind !== "alive" || !m.id) continue;
+        // Stamp this message with the SERVER time (ms), overriding the
+        // host's Date.now() so cross-device clock skew can't filter us
+        // out. ntfy `time` is Unix seconds.
+        m._srvMs = (Number(evt.time) || 0) * 1000;
         const cur = rooms.get(m.id);
-        if(!cur || m.ts > cur.ts) rooms.set(m.id, m);
+        if(!cur || (m._srvMs || 0) > (cur._srvMs || 0)) rooms.set(m.id, m);
       } catch(_){}
     }
-    const now = Date.now();
-    return [...rooms.values()].filter(rm => now - rm.ts < 60000);
+    // Consider a room "live" if its latest alive-message landed on
+    // ntfy within the last 5 minutes — generous enough to ride out
+    // background-tab throttling without showing zombie rooms forever.
+    const nowSrv = Date.now();   // local clock is fine for the *width* of the window
+    return [...rooms.values()].filter(rm => nowSrv - (rm._srvMs || 0) < 5 * 60 * 1000);
   } catch(_){ return []; }
 }
 
@@ -4265,8 +4289,14 @@ function hostRoom(name, handle){
   Net.handle    = handle || "host";
   Net.topicChat = `fartworld-room-${Net.roomId}-v1`;
   startRoomConnection();
+  // Announce immediately + every 10s. Was 20s, which gave background-tab
+  // throttling room to push broadcasts past the joiner's "alive" filter.
+  // Three immediate-burst announces on host so the room shows up almost
+  // instantly on the joiner's side even if their poll arrived early.
   announceRoom();
-  Net.announceTimer = setInterval(announceRoom, 20000);
+  setTimeout(announceRoom, 1500);
+  setTimeout(announceRoom, 4000);
+  Net.announceTimer = setInterval(announceRoom, 10000);
 }
 
 function joinRoom(room, handle){
@@ -4533,6 +4563,21 @@ document.getElementById('chatHead').addEventListener('click', () => {
 });
 
 // ── Lobby wiring ─────────────────────────────────────────────────
+// Track whether the Join tab is currently active so we can auto-poll
+// the rooms list every ~5s while it is — without that, the joiner had
+// to manually click "Refresh" and most people didn't realise they had to.
+let _joinTabActive = false;
+let _joinPollTimer = null;
+function startJoinAutoRefresh(){
+  if(_joinPollTimer) return;
+  _joinPollTimer = setInterval(() => {
+    if(_joinTabActive) refreshRoomList();
+  }, 5000);
+}
+function stopJoinAutoRefresh(){
+  if(_joinPollTimer){ clearInterval(_joinPollTimer); _joinPollTimer = null; }
+}
+
 document.querySelectorAll('.lobby-tab').forEach(btn => {
   btn.addEventListener('click', () => {
     const tab = btn.dataset.tab;
@@ -4540,7 +4585,11 @@ document.querySelectorAll('.lobby-tab').forEach(btn => {
     document.querySelectorAll('.lobby-pane').forEach(p => p.classList.remove('show'));
     btn.classList.add('active');
     document.querySelector(`.lobby-pane[data-pane="${tab}"]`).classList.add('show');
-    if(tab === "join") refreshRoomList();
+    _joinTabActive = (tab === "join");
+    if(_joinTabActive){
+      refreshRoomList();
+      startJoinAutoRefresh();
+    }
   });
 });
 
@@ -5987,7 +6036,9 @@ hostRoom = async function(name, handle){
     Net.topicChat = `fartworld-room-${existing}-v1`;
     startRoomConnection();
     announceRoom();
-    Net.announceTimer = setInterval(announceRoom, 20000);
+    setTimeout(announceRoom, 1500);
+    setTimeout(announceRoom, 4000);
+    Net.announceTimer = setInterval(announceRoom, 10000);
   } else {
     _origHostRoom(name, handle);
     saveHostRoomId(name, Net.roomId);
