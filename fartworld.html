@@ -3094,6 +3094,10 @@ const State = {
   elo:      1000,
   dmWins:   0,
   dmLosses: 0,
+  // ── Fart Cup flag wearables
+  claimedFlags: new Set(),   // Set<countryCode> of flags the player has claimed
+  flagImages:   {},          // countryCode → image URL (cached so we don't refetch on every load)
+  wornFlag:     null,        // currently worn flag country code, or null
 };
 const STORE_KEY = "fartworld_state_v1";
 
@@ -3117,6 +3121,9 @@ function saveState(){
       elo:                 State.elo,
       dmWins:              State.dmWins,
       dmLosses:            State.dmLosses,
+      claimedFlags:        [...(State.claimedFlags || [])],   // Set → array
+      flagImages:          State.flagImages || {},
+      wornFlag:            State.wornFlag || null,
     }));
   } catch(_){}
 }
@@ -3135,6 +3142,10 @@ function loadState(){
     if(State.elo == null)     State.elo = 1000;
     if(State.dmWins == null)  State.dmWins = 0;
     if(State.dmLosses == null)State.dmLosses = 0;
+    // Fart Cup flag persistence — claimedFlags serialises as array
+    State.claimedFlags = new Set(Array.isArray(j.claimedFlags) ? j.claimedFlags : []);
+    if(!State.flagImages) State.flagImages = {};
+    if(State.wornFlag === undefined) State.wornFlag = null;
   } catch(_){}
 }
 loadState();
@@ -3529,7 +3540,10 @@ const PLOT_FLAT_RADIUS = PLOT_SIZE * 0.8;          // pure flat (y=0)
 const PLOT_FLAT_FALLOFF = PLOT_FLAT_RADIUS + 3.5;  // ramp back up to hills
 const PLOT_LOCATIONS = [
   [  8,   0], [ -8,   2], [  4, -12], [ -10, -10],
-  [ 14,  18], [ -14,  14], [ 22, -22], [ -24,  -4],
+  [ 14,  18], [ -14,  14], [ 22, -22], [ -32,  50],
+  // Last plot used to be at [-24, -4] but it overlapped the bank at
+  // (-22, -8) — the FOR SALE sign was clipping the columns. Relocated
+  // to the NW corner where it has plenty of breathing room.
 ];
 // Returns a 0..1 multiplier to apply to the noise height — 0 means
 // "totally flat (y=0)", 1 means "untouched rolling hills". Anywhere
@@ -3782,7 +3796,10 @@ function makeZone(type, x, z, radius){
   return id;
 }
 makeZone("safe",  18,  10, 6);
-makeZone("safe", -20,  -8, 5.5);
+// The safe zone used to be at (-20, -8) but that's smack on top of
+// the bank — you can't have a "fart freely" green ring blowing
+// straight through the marble columns. Moved to open ground.
+makeZone("safe",  -5,  45, 5.5);
 makeZone("safe",   8,  35, 6.5);
 makeZone("safe", -35,  22, 5);
 makeZone("safe",  30, -28, 6);
@@ -6935,6 +6952,109 @@ buildAdBillboard(-42, -22,  Math.PI * 0.40);
 buildAdBillboard( 60,  30,  Math.PI * 1.55);
 
 // =================================================================
+// ─── FOOTBALL STATUE — Fart Cup tribune ─────────────────────────
+// =================================================================
+// Standalone marble plinth topped with a soccer ball. Walk within
+// FOOTBALL_RADIUS and the Fart Cup modal opens — two tabs, one for
+// trading the 48 national FART tokens, one for claiming flag
+// wearables when you hold ≥100K of a given country's coin.
+const FOOTBALL_POS    = { x: -15, z: -45 };   // between Market and House — clear ground
+const FOOTBALL_RADIUS = 4.5;
+
+function _makeSoccerBallTexture(){
+  const cvs = document.createElement('canvas');
+  cvs.width = 512; cvs.height = 256;
+  const ctx = cvs.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cvs.width, cvs.height);
+  // Black pentagon stamps in a hex grid — looks like the classic ball
+  // when wrapped onto a sphere
+  ctx.fillStyle = '#101010';
+  const drawPent = (cx, cy, r) => {
+    ctx.beginPath();
+    for(let i = 0; i < 5; i++){
+      const a = -Math.PI/2 + (i / 5) * Math.PI * 2;
+      const x = cx + Math.cos(a) * r;
+      const y = cy + Math.sin(a) * r;
+      if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  };
+  const cols = 8, rows = 4;
+  const dx = cvs.width / cols, dy = cvs.height / rows;
+  for(let r = 0; r < rows; r++){
+    for(let c = 0; c < cols; c++){
+      const x = c * dx + dx/2 + (r % 2 ? dx/2 : 0);
+      const y = r * dy + dy/2;
+      drawPent(x, y, 18);
+    }
+  }
+  return new THREE.CanvasTexture(cvs);
+}
+
+function buildFootballStatue(){
+  const grp = new THREE.Group();
+  grp.position.set(FOOTBALL_POS.x, groundHeightAt(FOOTBALL_POS.x, FOOTBALL_POS.z), FOOTBALL_POS.z);
+  // Stone base
+  const baseMat   = new THREE.MeshStandardMaterial({ color: 0x6e6a60, roughness: 0.92 });
+  const marbleMat = new THREE.MeshStandardMaterial({ color: 0xeae6d8, roughness: 0.55, metalness: 0.1 });
+  const plaqueMat = new THREE.MeshStandardMaterial({ color: 0xb27538, roughness: 0.4,  metalness: 0.65 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.4, 2.4), baseMat);
+  base.position.y = 0.2;
+  base.castShadow = true; base.receiveShadow = true;
+  grp.add(base);
+  // Marble plinth
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.95, 1.8, 14), marbleMat);
+  plinth.position.y = 1.3;
+  plinth.castShadow = true; plinth.receiveShadow = true;
+  grp.add(plinth);
+  // Decorative cap ring
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.95, 0.85, 0.18, 14), plaqueMat);
+  cap.position.y = 2.27;
+  grp.add(cap);
+  // Soccer ball (white + black pentagons)
+  const ballMat = new THREE.MeshStandardMaterial({
+    map: _makeSoccerBallTexture(),
+    color: 0xffffff,
+    roughness: 0.4,
+    metalness: 0.05,
+  });
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.95, 28, 22), ballMat);
+  ball.position.y = 3.45;
+  ball.castShadow = true;
+  grp.add(ball);
+  // Plaque "FART CUP" on the front of the plinth
+  const plaqueCvs = document.createElement('canvas');
+  plaqueCvs.width = 512; plaqueCvs.height = 256;
+  const pctx = plaqueCvs.getContext('2d');
+  pctx.fillStyle = '#b27538'; pctx.fillRect(0,0,512,256);
+  pctx.strokeStyle = '#fff2c2'; pctx.lineWidth = 6;
+  pctx.strokeRect(12, 12, 488, 232);
+  pctx.fillStyle = '#fff2c2';
+  pctx.font = '900 78px "Bangers", "Orbitron", sans-serif';
+  pctx.textAlign = 'center'; pctx.textBaseline = 'middle';
+  pctx.fillText('FART CUP', 256, 100);
+  pctx.font = '700 30px "Orbitron", sans-serif';
+  pctx.fillText('48 NATIONS · ONE BLOODLINE', 256, 178);
+  const plaqueTex = new THREE.CanvasTexture(plaqueCvs);
+  const plaque = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.7), new THREE.MeshBasicMaterial({ map: plaqueTex }));
+  plaque.position.set(0, 1.3, 0.97);
+  grp.add(plaque);
+  // Warm spotlight
+  const lt = new THREE.PointLight(0xffe4a8, 1.4, 14);
+  lt.position.set(0, 3.4, 0);
+  grp.add(lt);
+  // Spinning ball anim handle
+  grp.userData.ball = ball;
+  scene.add(grp);
+  FootballStatue = grp;
+}
+let FootballStatue = null;
+buildFootballStatue();
+
+// =================================================================
 // ─── BANK — Silver → Paper / Silver → Gold conversions ─────────
 // =================================================================
 const BANK_POS = { x: -22, z: -8 };
@@ -7324,6 +7444,7 @@ let nearbyLab      = false;
 let nearbyPoop     = false;
 let nearbyBank     = false;
 let nearbyLaunder  = false;
+let nearbyFootball = false;
 let nearbyBoardable = null;
 const PLOT_INTERACT_RANGE = 3.5;
 
@@ -7349,8 +7470,9 @@ function updatePlotPrompt(){
   nearbyLab       = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && Math.hypot(Player.pos.x - LAB_POS.x, Player.pos.z - LAB_POS.z) < LAB_RADIUS;
   nearbyPoop      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && Math.hypot(Player.pos.x - POOP_POS.x, Player.pos.z - POOP_POS.z) < POOP_RADIUS;
   nearbyDock      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
-  nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock) ? findBoardableBoat() : null;
-  nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyBoardable) ? null : findNearbyPlot();
+  nearbyFootball  = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && Math.hypot(Player.pos.x - FOOTBALL_POS.x, Player.pos.z - FOOTBALL_POS.z) < FOOTBALL_RADIUS;
+  nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball) ? findBoardableBoat() : null;
+  nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyFootball || nearbyBoardable) ? null : findNearbyPlot();
 
   // ── Boat-related prompts come first since they're the most actionable ──
   if(Player.boat){
@@ -7393,6 +7515,13 @@ function updatePlotPrompt(){
     prompt.classList.add('show');
     title.textContent = "💩 POOP HOUSE";
     sub.innerHTML = `Press <kbd>E</kbd> to trade <b>FART&P500</b>`;
+    return;
+  }
+  if(nearbyFootball){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "⚽ FART CUP";
+    sub.innerHTML = `Press <kbd>E</kbd> to trade nation coins · claim flag wearables`;
     return;
   }
   if(nearbyDock){
@@ -7497,6 +7626,8 @@ function tryInteract(){
   if(nearbyLab){ openLab(); return; }
   // Poop House — open FART&POOP500 trading desk
   if(nearbyPoop){ openPoopHouse(); return; }
+  // Football statue — open Fart Cup window
+  if(nearbyFootball){ openFartCup(); return; }
   // Boat shop interaction (dock)
   if(nearbyDock){
     if(State.credits < BOAT_PRICE){
@@ -9591,6 +9722,609 @@ setInterval(updateHUD, 1000);
 
 // First HUD render
 updateHUD();
+
+// =================================================================
+// ─── FOOTBALL SPIN + WORN-FLAG BOOT ─────────────────────────────
+// =================================================================
+// The main game loop already calls `updateCats(dt)`. We monkey-patch
+// it to ALSO spin the football statue's ball each frame and restore
+// any worn-flag paper texture on first frame (printer is built by then).
+// Classic-script function declarations create a global property, so
+// reassigning the global identifier rebinds what the loop sees.
+const _origUpdateCats = updateCats;
+updateCats = function(dt){
+  _origUpdateCats(dt);
+  if(typeof FootballStatue !== "undefined" && FootballStatue && FootballStatue.userData?.ball){
+    FootballStatue.userData.ball.rotation.y += dt * 0.6;
+    FootballStatue.userData.ball.rotation.x += dt * 0.25;
+  }
+  if(!window._wornFlagBooted){
+    window._wornFlagBooted = true;
+    try { applyWornFlagPaper(); } catch(_){}
+  }
+};
+
+// =================================================================
+// ─── FART CUP — football statue UI: trade nation coins + claim flags
+// =================================================================
+const FARTCUP_COINS = [
+  { sym:"FARTAUS", code:"au", ca:"4kamBpKBuWaotT4W22x99CuFWi1b5CBS4KpY3Nrbpump" },
+  { sym:"FARTIRN", code:"ir", ca:"8DHDgVf3Z5Qj7HTgvaoyxcnFENvDoC367EkSeaYFpump" },
+  { sym:"FARTIRQ", code:"iq", ca:"8aPK6Pzrz1UwX24izCocdrnKt9uujXeYBaprh4iwpump" },
+  { sym:"FARTJPN", code:"jp", ca:"F92RKZcmMP1K5Nm4hRMCiHDC6E4QQH3oHrioLyxkpump" },
+  { sym:"FARTJOR", code:"jo", ca:"3JNa1mH6KvsQSe3XrMYrhPwXFmhSexywT8Yqs6TCpump" },
+  { sym:"FARTQAT", code:"qa", ca:"9484kbWatciZtAEGQWF4na3ZbgGhCBn3yEFCwqqCpump" },
+  { sym:"FARTUZB", code:"uz", ca:"Aqo71vtBSoEh7q3vpRi6KFVgWt6o2yPL1kBdbavXpump" },
+  { sym:"FARTGER", code:"de", ca:"3sPgkRsx5eDDPksajReBL1RS3PQdGBjj2WDh2EYopump" },
+  { sym:"FARTKSA", code:"sa", ca:"8tQ5cuDRBm8QrHAwJ1n61jTV6Qix65QebPkTfZ7Epump" },
+  { sym:"FARTKOR", code:"kr", ca:"9MJ9HwX9oH5uTKN9AVfiMLS4G3rp89E7fvjMAdJBpump" },
+  { sym:"FARTALG", code:"dz", ca:"3KBCdDjAFBdeGDZ7F7nZ9Ag1R1NVd25gRzrTc3pfpump" },
+  { sym:"FARTCPV", code:"cv", ca:"DaHFTkxkeXkShAX8qvUr2goD1PrRSa3fBc3emLpApump" },
+  { sym:"FARTCOD", code:"cd", ca:"6q8wZk4ttRPNPjX2AH88pUd5oVYXv9vuz2MzeEHvpump" },
+  { sym:"FARTEGY", code:"eg", ca:"Ae8CqTevg8A7ourVQ3L5B9wJ8ofW7rb3jsT83i2Xpump" },
+  { sym:"FARTGHA", code:"gh", ca:"668etZ2VZyV8okF74B5t7XdpyhQ3Rz3GHVvF1tyXpump" },
+  { sym:"FARTMAR", code:"ma", ca:"DvNooNwGGBXSEKSo8SMrj9rSJKDDWegqsM5vGVNFpump" },
+  { sym:"FARTSEN", code:"sn", ca:"75eo5xF4yz8xyCEGaW5Vg6475rM3degUVLgXNpzdpump" },
+  { sym:"FARTCIV", code:"ci", ca:"6pQJ1yzhjp2cx2eWDN5wkP5RHRZh6gm7u5wJehcVpump" },
+  { sym:"FARTESP", code:"es", ca:"6k8VvWQPYwiL4Pnbkr53KmfJDC2J4E5mtN8qMPPMpump" },
+  { sym:"FARTBRA", code:"br", ca:"GLpukFRRvJggzhPxPapTy7wraPZaE8VkYCb3RkAbpump" },
+  { sym:"FARTFRA", code:"fr", ca:"HgyngmReZJZPd4gHDjEx54rnQZWMMNYwb5RrRvsppump" },
+  { sym:"FARTNOR", code:"no", ca:"6g3oW3K8PvNVTh6R2sHudBEwq4Xrr2a8zM3gueXUpump" },
+  { sym:"FARTTUR", code:"tr",     ca:"BWz5wMZj1ui9ipiLbNxF6hLURpniwNuup9a9Ftskpump" },
+  { sym:"FARTSUI", code:"ch",     ca:"CdvqL71EzQM8a2i71RqvYgAQ921rf8wyLLmqm75Vpump" },
+  { sym:"FARTSWE", code:"se",     ca:"GWruYEd3318ENjeRv8LRYaS2rAfRz92jYDTkrGeSpump" },
+  { sym:"FARTSCO", code:"gb-sct", ca:"3qxeh1JVHS2ewDt2GnoBMtmZ1974eH9yKPsuVDRZpump" },
+  { sym:"FARTPOR", code:"pt",     ca:"88gqcJEZPNm37dKNVAfHTSVtn1MGoW8yLF5hCHr8pump" },
+  { sym:"FARTNED", code:"nl",     ca:"8K65cs6wL3Wq41yTF5GM8u2scKbaSMtTZ9ZaF64Zpump" },
+  { sym:"FARTENG", code:"gb-eng", ca:"8HTgMPZ7UZBKMiyoiUoboWBGoBpGraUqZRsUvXiYpump" },
+  { sym:"FARTPAR", code:"py", ca:"8NABeziptreVD1p3chNjTgwwC3ZBaMg5G2TUeMq3pump" },
+  { sym:"FARTCRO", code:"hr", ca:"AaxX9Yzavai7DWVvefBC8wvAGGSs1WPZhRqois4Tpump" },
+  { sym:"FARTBEL", code:"be", ca:"2bURNXDzeV6YbRvpcL4WAvTWxUCSb6EtVKi9N9CLpump" },
+  { sym:"FARTAUT", code:"at", ca:"5HMB6RG4P3ur2wBmoF9ti5ZsQvaV9BvG3DUQFK3Ppump" },
+  { sym:"FARTNZL", code:"nz", ca:"95FU117dd6s8QRJHqDCdfonxWSi2SZpQ4kaMYn57pump" },
+  { sym:"FARTURU", code:"uy", ca:"6W9CUECPQeQh9jNVUY54UZDPzApW57X33PZd83fhpump" },
+  { sym:"FARTCOL", code:"co", ca:"7ws9Rts7o8qWzn9r13C8XFo9GWPBDahdFjXoA74gpump" },
+  { sym:"FARTUSA", code:"us", ca:"BKSpHNaYuiKePyDHGcvzSzA31sSjoLxYWo2e7A5Npump" },
+  { sym:"FARTECU", code:"ec", ca:"FVsKgTaSsZkHQhryfmXiT2GD6FQueVD5ktDb5wTopump" },
+  { sym:"FARTCZE", code:"cz", ca:"BaUDFKutxAbHiq1o2ocxyindoc5nyRELyZCspc81pump" },
+  { sym:"FARTBIH", code:"ba", ca:"C1TGpFiTex5YKgKxCfJTPDo5TTd7RR27Ts6bx59Gpump" },
+  { sym:"FARTMEX", code:"mx", ca:"EXhnmpdNr7aFeggMrWVYssQZ56jepx8zsgeXiaK2pump" },
+  { sym:"FARTCAN", code:"ca", ca:"BfpTdR2J5cREH5hL1GLHBRM4Z5d3w3AUZ1ZWnKGdpump" },
+  { sym:"FARTTUN", code:"tn", ca:"9USgK2EHrE2vENGT1W3PRb2r8pzcpF9bmNvNMxmXpump" },
+  { sym:"FARTRSA", code:"za", ca:"5HXp1icLEgS5MeL2u6LwJe6VGyvEvtJmVGnfnFeRpump" },
+  { sym:"FARTHAI", code:"ht", ca:"BTv3VLwQFFTddTtSCkCSEbbxm39FMdF96gxDTQEGpump" },
+  { sym:"FARTCUW", code:"cw", ca:"3Bt2iEbToDjjadSfENfG4vbaYMdP7BSmoCf2qGCKpump" },
+  { sym:"FARTPAN", code:"pa", ca:"AVxahdmtVjUJwRCaiJhdztBt7rY5tQnxDRfgc1e2pump" },
+  { sym:"FARTARG", code:"ar", ca:"wqEyyAk72oohRtNfpwBen85TV89ZFYBXBZ6uttXpump" },
+];
+const FLAG_CLAIM_THRESHOLD = 100000;     // hold ≥100K of a country's token to claim
+const _fcData = {};   // ca → { price, ch24, image, balance }
+let _fcCurrentTab = "trade";
+
+// Country code → flag emoji (e.g. 'us' → 🇺🇸). Custom for England/Scotland.
+function flagEmoji(code){
+  if(code === "gb-eng") return "🏴󠁧󠁢󠁥󠁮󠁧󠁿";
+  if(code === "gb-sct") return "🏴󠁧󠁢󠁳󠁣󠁴󠁿";
+  const cc = (code || "").toUpperCase();
+  if(cc.length !== 2) return "🏳";
+  return cc.replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+}
+
+function fcFmtPrice(n){
+  if(n == null || isNaN(n) || n <= 0) return "$—";
+  const v = Number(n);
+  if(v < 0.000001) return "$" + v.toExponential(2);
+  if(v < 1) return "$" + v.toPrecision(3);
+  return "$" + v.toLocaleString(undefined, { maximumFractionDigits: 4 });
+}
+function fcFmtChg(n){
+  if(n == null || isNaN(n)) return "—";
+  return (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+}
+function fcFmtBal(n){
+  if(n == null || isNaN(n)) return "—";
+  if(n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if(n >= 1e3) return (n / 1e3).toFixed(2) + "K";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+async function fcFetchPrices(){
+  const mints = FARTCUP_COINS.map(c => c.ca);
+  try {
+    for(let i = 0; i < mints.length; i += 30){
+      const batch = mints.slice(i, i + 30);
+      const r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + batch.join(","));
+      if(!r.ok) continue;
+      const j = await r.json();
+      const seen = {};
+      for(const p of (j.pairs || [])){
+        const mint = p?.baseToken?.address; if(!mint) continue;
+        const liq  = p.liquidity?.usd || 0;
+        const cur  = seen[mint];
+        if(!cur || liq > cur.liq){
+          seen[mint] = {
+            liq, price: parseFloat(p.priceUsd) || 0,
+            ch24: p.priceChange?.h24 ?? null,
+            image: p.info?.imageUrl || null,
+          };
+        }
+      }
+      for(const m in seen){
+        _fcData[m] = Object.assign(_fcData[m] || {}, {
+          price: seen[m].price,
+          ch24:  seen[m].ch24,
+          image: seen[m].image || _fcData[m]?.image,
+        });
+      }
+    }
+  } catch(_){}
+  // pump.fun fallback for unraduated coins — fire-and-forget
+  for(const c of FARTCUP_COINS){
+    if(_fcData[c.ca]?.image) continue;
+    fetch("/api/pumpfun?mint=" + c.ca)
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if(!j) return;
+        _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, {
+          price: _fcData[c.ca]?.price || Number(j?.usd_price) || 0,
+          ch24:  _fcData[c.ca]?.ch24 ?? null,
+          image: j?.image_uri || _fcData[c.ca]?.image,
+        });
+        if(j?.image_uri && State.flagImages) State.flagImages[c.code] = j.image_uri;
+        if(document.getElementById('fcBg')?.classList.contains('show')){
+          if(_fcCurrentTab === "trade") fcRenderTrade(); else fcRenderClaim();
+        }
+      }).catch(()=>{});
+  }
+  // Cache flag images by country code for the wearable swap
+  for(const c of FARTCUP_COINS){
+    const img = _fcData[c.ca]?.image;
+    if(img && State.flagImages) State.flagImages[c.code] = img;
+  }
+  saveState();
+}
+
+async function fcFetchBalances(){
+  if(!State.wallet) return;
+  try {
+    const TOKEN_PROG = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+    const r = await fetch("https://api.mainnet-beta.solana.com", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
+        params: [State.wallet, { programId: TOKEN_PROG }, { encoding: "jsonParsed" }],
+      }),
+    });
+    if(!r.ok) return;
+    const j = await r.json();
+    const accs = j?.result?.value || [];
+    const mintToBal = {};
+    for(const a of accs){
+      try {
+        const info = a.account.data.parsed.info;
+        const mint = info.mint;
+        const amt  = Number(info.tokenAmount.uiAmount) || 0;
+        if(amt > 0) mintToBal[mint] = (mintToBal[mint] || 0) + amt;
+      } catch(_){}
+    }
+    for(const c of FARTCUP_COINS){
+      const b = mintToBal[c.ca] || 0;
+      _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, { balance: b });
+    }
+  } catch(_){}
+}
+
+function fcRenderTrade(){
+  const host = document.getElementById('fcTradeList');
+  if(!host) return;
+  host.innerHTML = FARTCUP_COINS.map(c => {
+    const d = _fcData[c.ca] || {};
+    const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
+    const chgCls = d.ch24 == null ? "" : (d.ch24 >= 0 ? "up" : "down");
+    const chgArrow = d.ch24 == null ? "" : (d.ch24 >= 0 ? "▲ " : "▼ ");
+    const tradeUrl = `https://pump.fun/coin/${c.ca}`;
+    return `
+      <div class="fc-row">
+        <div class="ico" ${img}>${d.image ? "" : flagEmoji(c.code)}</div>
+        <div class="meta">
+          <div class="sym">${escHtml(c.sym)}</div>
+          <div class="flag">${flagEmoji(c.code)} <span style="opacity:.6">${c.code.toUpperCase()}</span></div>
+        </div>
+        <div class="price-col">
+          <div class="price">${fcFmtPrice(d.price)}</div>
+          <div class="chg ${chgCls}">${chgArrow}${fcFmtChg(d.ch24)}</div>
+        </div>
+        <a class="trade-btn" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>
+      </div>
+    `;
+  }).join("");
+}
+
+function fcRenderClaim(){
+  const host = document.getElementById('fcClaimList');
+  if(!host) return;
+  const claimed = State.claimedFlags || new Set();
+  const walletConn = !!State.wallet;
+  host.innerHTML = FARTCUP_COINS.map(c => {
+    const d = _fcData[c.ca] || {};
+    const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
+    const bal = d.balance;
+    const claimedThis = claimed.has(c.code);
+    let action = "";
+    if(claimedThis){
+      action = `<button class="fc-claim-btn done" disabled>✓ CLAIMED</button>`;
+    } else if(!walletConn){
+      action = `<button class="fc-claim-btn locked" disabled>Connect wallet</button>`;
+    } else if(bal == null){
+      action = `<button class="fc-claim-btn locked" disabled>Checking…</button>`;
+    } else if(bal < FLAG_CLAIM_THRESHOLD){
+      action = `<button class="fc-claim-btn locked" disabled>Need 100K</button>`;
+    } else {
+      action = `<button class="fc-claim-btn go" data-code="${c.code}" data-sym="${c.sym}">🏁 CLAIM FLAG</button>`;
+    }
+    return `
+      <div class="fc-row claim">
+        <div class="ico" ${img}>${d.image ? "" : flagEmoji(c.code)}</div>
+        <div class="meta">
+          <div class="sym">${escHtml(c.sym)}</div>
+          <div class="flag">${flagEmoji(c.code)} <span style="opacity:.6">${c.code.toUpperCase()}</span></div>
+        </div>
+        <div class="bal-col">
+          <div class="bal-lbl">YOUR HOLD</div>
+          <div class="bal">${bal == null ? "—" : fcFmtBal(bal)}</div>
+        </div>
+        ${action}
+      </div>
+    `;
+  }).join("");
+  host.querySelectorAll('.fc-claim-btn.go').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const coin = FARTCUP_COINS.find(c => c.code === btn.dataset.code);
+      if(coin) claimFlag(coin);
+    });
+  });
+}
+
+function ensureFlagItem(coin){
+  const id = "flag_" + coin.code;
+  if(ITEMS[id]) return id;
+  ITEMS[id] = {
+    id,
+    name:    `Flag · ${coin.sym}`,
+    icon:    flagEmoji(coin.code),
+    color:   "#ffd64d",
+    type:    "wearable",
+    isNFT:   true,
+    coinSym: coin.sym,
+    code:    coin.code,
+    image:   _fcData[coin.ca]?.image || State.flagImages?.[coin.code] || null,
+  };
+  return id;
+}
+
+function claimFlag(coin){
+  if(!State.claimedFlags) State.claimedFlags = new Set();
+  if(State.claimedFlags.has(coin.code)){
+    floater("Already claimed!", "bad"); return;
+  }
+  const bal = _fcData[coin.ca]?.balance || 0;
+  if(bal < FLAG_CLAIM_THRESHOLD){
+    floater(`Need ${FLAG_CLAIM_THRESHOLD.toLocaleString()} ${coin.sym}`, "bad"); return;
+  }
+  State.claimedFlags.add(coin.code);
+  const id = ensureFlagItem(coin);
+  addItem(id, 1);
+  State.xp += 50;
+  if(typeof checkLevelUp === "function") checkLevelUp();
+  saveState();
+  floater(`🏁 ${coin.sym} flag claimed!`, "good");
+  if(typeof showBuyToast === "function") showBuyToast(`🏁 ${coin.sym} flag claimed — wear it from your inventory`);
+  if(typeof playPurchaseSound === "function") playPurchaseSound();
+  fcRenderClaim();
+  if(window.renderInventory) renderInventory();
+}
+
+async function openFartCup(){
+  document.getElementById('fcBg').classList.add('show');
+  _fcCurrentTab = "trade";
+  document.querySelectorAll('.fc-tab').forEach(t => t.classList.toggle('active', t.dataset.fctab === "trade"));
+  document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === "trade" ? "" : "none");
+  fcRenderTrade();
+  fcRenderClaim();
+  await fcFetchPrices();
+  fcRenderTrade();
+  await fcFetchBalances();
+  fcRenderClaim();
+  if(!window._fcPriceTimer) window._fcPriceTimer = setInterval(async () => {
+    await fcFetchPrices(); fcRenderTrade();
+  }, 30000);
+}
+function closeFartCup(){
+  document.getElementById('fcBg').classList.remove('show');
+  if(window._fcPriceTimer){ clearInterval(window._fcPriceTimer); window._fcPriceTimer = null; }
+}
+
+// =================================================================
+// ─── PRINTER PAPER TEXTURE SWAP (flag wearable) ─────────────────
+// =================================================================
+function applyWornFlagPaper(){
+  const root = (typeof printer !== "undefined") ? printer : null;
+  if(!root || !root.userData) return;
+  const paperGrp = root.userData.paperGrp;
+  if(!paperGrp || !paperGrp.children[0]) return;
+  const paper = paperGrp.children[0];
+  const code = State.wornFlag;
+  if(!code){
+    // Restore plain white
+    if(paper.material.map){ paper.material.map.dispose?.(); paper.material.map = null; }
+    paper.material.color.setHex(0xffffff);
+    paper.material.needsUpdate = true;
+    return;
+  }
+  const url = State.flagImages?.[code];
+  const setCanvasFallback = () => {
+    const cvs = document.createElement('canvas');
+    cvs.width = 256; cvs.height = 200;
+    const ctx = cvs.getContext('2d');
+    ctx.fillStyle = '#ffd64d'; ctx.fillRect(0, 0, 256, 200);
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = '900 80px "Bangers", "Orbitron", sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(code.toUpperCase(), 128, 100);
+    const tex = new THREE.CanvasTexture(cvs);
+    if(paper.material.map) paper.material.map.dispose?.();
+    paper.material.map = tex;
+    paper.material.color.setHex(0xffffff);
+    paper.material.needsUpdate = true;
+  };
+  if(!url){ setCanvasFallback(); return; }
+  new THREE.TextureLoader().load(url, (tex) => {
+    if("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
+    if(paper.material.map) paper.material.map.dispose?.();
+    paper.material.map = tex;
+    paper.material.color.setHex(0xffffff);
+    paper.material.needsUpdate = true;
+  }, undefined, setCanvasFallback);
+}
+
+function toggleWearFlag(itemId){
+  const item = ITEMS[itemId];
+  if(!item || item.type !== "wearable") return;
+  if(State.wornFlag === item.code){
+    State.wornFlag = null;
+    floater("Removed flag", "good");
+  } else {
+    State.wornFlag = item.code;
+    floater(`🏁 Wearing ${item.coinSym || item.name}`, "good");
+  }
+  applyWornFlagPaper();
+  saveState();
+  if(window.renderInventory) renderInventory();
+}
+
+// Wrap renderInventory to decorate wearables with the WEARING badge + click
+// handler. We reassign the module binding (function decls are mutable in
+// modules) and re-mirror it onto window so older `if(window.renderInventory)`
+// guards continue to pick up the wrapped version.
+const _origRenderInventory = renderInventory;
+renderInventory = function(){
+  _origRenderInventory();
+  const grid = document.getElementById('invGrid');
+  if(!grid) return;
+  grid.querySelectorAll('.inv-slot[data-id]').forEach(el => {
+    const id = el.dataset.id;
+    const item = ITEMS[id];
+    if(!item || item.type !== "wearable") return;
+    el.classList.add('wearable');
+    if(State.wornFlag === item.code){
+      el.classList.add('worn');
+      if(!el.querySelector('.wear-badge')){
+        const b = document.createElement('div');
+        b.className = 'wear-badge';
+        b.textContent = "WEARING";
+        el.appendChild(b);
+      }
+    } else {
+      el.classList.remove('worn');
+      el.querySelector('.wear-badge')?.remove();
+    }
+    if(!el._wearWired){
+      el._wearWired = true;
+      el.addEventListener('click', () => toggleWearFlag(id));
+    }
+    el.style.cursor = "pointer";
+    el.title = item.name + " · click to " + (State.wornFlag === item.code ? "remove" : "wear");
+  });
+};
+window.renderInventory = renderInventory;
+
+// Re-register flag items on boot for anything previously claimed
+(function bootRehydrateFlags(){
+  if(!State.claimedFlags || !State.claimedFlags.size) return;
+  for(const code of State.claimedFlags){
+    const coin = FARTCUP_COINS.find(c => c.code === code);
+    if(coin) ensureFlagItem(coin);
+  }
+})();
+
+// =================================================================
+// ─── FART CUP CSS + MODAL HTML (injected) ───────────────────────
+// =================================================================
+const _fcStyle = document.createElement('style');
+_fcStyle.textContent = `
+.fc-bg {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  display: none; align-items: center; justify-content: center;
+  z-index: 56; padding: 20px;
+}
+.fc-bg.show { display: flex; }
+.fc-card {
+  max-width: 760px; width: 100%; max-height: 90vh;
+  background: linear-gradient(180deg, rgba(8,28,18,0.97), rgba(5,16,11,0.97));
+  border: 2px solid rgba(255,214,77,0.42);
+  border-radius: 22px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(255,214,77,0.22);
+}
+.fc-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255,214,77,0.20);
+  background: linear-gradient(90deg, rgba(255,214,77,0.10), transparent);
+}
+.fc-head h2 {
+  font-family: 'Bangers', 'Orbitron', sans-serif;
+  font-size: 34px; letter-spacing: 2.4px;
+  background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #b27538 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 14px rgba(255,214,77,0.55));
+}
+.fc-head .close { background: transparent; border: 0; color: rgba(230,255,238,0.55); font-size: 26px; cursor: pointer; line-height: 1; }
+.fc-tabs { display: flex; border-bottom: 1px solid rgba(255,214,77,0.16); }
+.fc-tab {
+  flex: 1; background: transparent; border: 0;
+  color: rgba(230,255,238,0.55); padding: 14px;
+  font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 12px;
+  letter-spacing: 1.6px; text-transform: uppercase; cursor: pointer;
+  border-bottom: 2px solid transparent; transition: all 0.14s;
+}
+.fc-tab.active { color: #ffd64d; border-bottom-color: #ffd64d; background: rgba(255,214,77,0.06); }
+.fc-body { overflow-y: auto; padding: 18px 22px 26px; flex: 1; }
+.fc-intro { color: rgba(230,255,238,0.72); font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
+.fc-intro b { color: #ffd64d; }
+.fc-list { display: flex; flex-direction: column; gap: 8px; }
+.fc-row {
+  display: grid;
+  grid-template-columns: 44px 1.1fr 1fr auto;
+  gap: 12px; align-items: center;
+  padding: 10px 12px;
+  background: rgba(255,214,77,0.05);
+  border: 1px solid rgba(255,214,77,0.18);
+  border-radius: 12px;
+}
+.fc-row:hover { background: rgba(255,214,77,0.12); border-color: #ffd64d; }
+.fc-row.claim { grid-template-columns: 44px 1.1fr 0.9fr auto; }
+.fc-row .ico {
+  width: 44px; height: 44px; border-radius: 10px;
+  background-size: cover; background-position: center;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,214,77,0.30);
+  display: grid; place-items: center; font-size: 22px;
+}
+.fc-row .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fc-row .sym {
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13.5px;
+  background: linear-gradient(135deg, #fff1a8, #ffd64d);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.fc-row .flag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(230,255,238,0.65); }
+.fc-row .price-col { text-align: right; }
+.fc-row .price { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; }
+.fc-row .chg { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; margin-top: 2px; }
+.fc-row .chg.up   { color: #5ff09c; }
+.fc-row .chg.down { color: #ff7a6e; }
+.fc-row .bal-col { text-align: right; }
+.fc-row .bal-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.1px; color: rgba(230,255,238,0.45); text-transform: uppercase; }
+.fc-row .bal { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; margin-top: 2px; }
+.fc-row .trade-btn {
+  background: linear-gradient(135deg, #b27538, #ffd64d); color: #2a1a04;
+  border: 0; padding: 8px 14px; border-radius: 100px;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 11px;
+  letter-spacing: 1.1px; text-transform: uppercase; cursor: pointer;
+  text-decoration: none; box-shadow: 0 6px 14px rgba(180,128,48,0.34);
+  transition: transform 0.15s, filter 0.15s;
+}
+.fc-row .trade-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.fc-claim-btn {
+  border: 0; padding: 8px 14px; border-radius: 100px;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 11px;
+  letter-spacing: 1.1px; text-transform: uppercase; cursor: pointer;
+  transition: transform 0.14s, filter 0.14s;
+}
+.fc-claim-btn.go {
+  background: linear-gradient(135deg, #46f08a, #5ff09c); color: #042913;
+  box-shadow: 0 6px 14px rgba(95,240,156,0.36);
+}
+.fc-claim-btn.go:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.fc-claim-btn.locked, .fc-claim-btn.done {
+  background: rgba(255,214,77,0.10); color: rgba(230,255,238,0.4);
+  cursor: not-allowed;
+}
+.fc-claim-btn.done { background: rgba(95,240,156,0.18); color: #5ff09c; }
+.fc-foot {
+  margin-top: 14px;
+  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+  color: rgba(230,255,238,0.45); text-align: center;
+}
+.inv-slot { position: relative; }
+.inv-slot.wearable { box-shadow: inset 0 0 0 1px rgba(255,214,77,0.45); }
+.inv-slot.wearable.worn { box-shadow: inset 0 0 0 2px #ffd64d, 0 0 18px rgba(255,214,77,0.35); }
+.inv-slot .wear-badge {
+  position: absolute; top: 4px; right: 4px;
+  background: linear-gradient(135deg, #ffd64d, #fff1a8); color: #2a1a04;
+  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 8px;
+  letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px;
+  pointer-events: none;
+}
+`;
+document.head.appendChild(_fcStyle);
+
+const _fcModalEl = document.createElement('div');
+_fcModalEl.innerHTML = `
+<div class="fc-bg" id="fcBg">
+  <div class="fc-card">
+    <div class="fc-head">
+      <h2>⚽ FART CUP</h2>
+      <button class="close" id="fcClose">×</button>
+    </div>
+    <div class="fc-tabs">
+      <button class="fc-tab active" data-fctab="trade">Trade Nation Coins</button>
+      <button class="fc-tab" data-fctab="claim">Claim Flags</button>
+    </div>
+    <div class="fc-body">
+      <div class="fc-pane" data-fcpane="trade">
+        <p class="fc-intro">
+          The 48 national FART tokens — every flag in the cup. Click <b>Trade</b>
+          on any row to swap on pump.fun. Prices stream live from DexScreener.
+        </p>
+        <div class="fc-list" id="fcTradeList"></div>
+      </div>
+      <div class="fc-pane" data-fcpane="claim" style="display:none;">
+        <p class="fc-intro">
+          Hold <b>${FLAG_CLAIM_THRESHOLD.toLocaleString()}</b> of any country's FART token
+          to claim its flag as a permanent wearable. <b>One per country, no burn required —</b>
+          just hold and claim. Wear it from your inventory to swap your printer's paper for the flag.
+        </p>
+        <div class="fc-list" id="fcClaimList"></div>
+        <div class="fc-foot">Flags are forever. Selling the tokens after claiming does not revoke them.</div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+document.body.appendChild(_fcModalEl.firstElementChild);
+document.getElementById('fcClose').addEventListener('click', closeFartCup);
+document.getElementById('fcBg').addEventListener('click', (e) => {
+  if(e.target.id === "fcBg") closeFartCup();
+});
+document.querySelectorAll('.fc-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const t = btn.dataset.fctab;
+    _fcCurrentTab = t;
+    document.querySelectorAll('.fc-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === t ? "" : "none");
+    if(t === "trade") fcRenderTrade(); else fcRenderClaim();
+  });
+});
+
+// Pre-warm prices + images in the background so wearables get the right art
+// even if the player never opens the Fart Cup window first.
+fcFetchPrices();
+
 </script>
 </body>
 </html>
