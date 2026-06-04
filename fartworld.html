@@ -2618,6 +2618,16 @@ const printer = buildPrinter();
 printer.position.set(0, 0, 0);
 scene.add(printer);
 
+// ─── Walkable surfaces registry (raycast targets for player Y) ──
+// MUST be declared before any world building runs — buildArena() and
+// other constructors push their floor meshes here. If this `const`
+// gets declared later, those push() calls throw a TDZ ReferenceError
+// at module init and the whole script aborts (login buttons stop
+// working because their event listeners never attach).
+const WalkableSurfaces = [];
+const _floorRay  = new THREE.Raycaster();
+const _floorDown = new THREE.Vector3(0, -1, 0);
+
 // ─── World ──────────────────────────────────────────────────────
 // Land-plot locations + sizes are declared BEFORE the ground gets
 // built so we can flatten the ground at those positions during
@@ -4732,14 +4742,11 @@ function updateChatBubbles(){
 }
 
 // =================================================================
-// ─── 3-FLOOR HOUSE + HOLLYWOOD SIGN + REFINERY + ARENA REBUILD ──
+// ─── 3-FLOOR HOUSE + HOLLYWOOD SIGN + REFINERY ──────────────────
 // =================================================================
-// Walkable surfaces collection — anything we add here gets considered
-// when sampling the player's Y position via raycast. Empty by default;
-// the house's floors and the refinery's deck get pushed in.
-const WalkableSurfaces = [];
-const _floorRay = new THREE.Raycaster();
-const _floorDown = new THREE.Vector3(0, -1, 0);
+// (WalkableSurfaces + raycaster are declared at the top of the script
+// — they need to exist BEFORE buildArena() and other early-init
+// constructors push their floor meshes.)
 function sampleSurfaceY(x, z){
   _floorRay.set(new THREE.Vector3(x, 40, z), _floorDown);
   const hits = _floorRay.intersectObjects(WalkableSurfaces, false);
