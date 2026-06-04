@@ -3915,6 +3915,21 @@ window.addEventListener('keyup', e => {
   keys[e.code] = false;
 });
 
+// Clicking the canvas hands focus back to the game so the keyboard
+// works again — otherwise a stuck-focused chat input or any other
+// text field silently blocks WASD / Space / E etc. via isTypingInChat().
+canvas.addEventListener('mousedown', () => {
+  const a = document.activeElement;
+  if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) a.blur();
+});
+// Escape always blurs the chat (or any) input so you can return to play.
+window.addEventListener('keydown', (e) => {
+  if(e.code === "Escape"){
+    const a = document.activeElement;
+    if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) a.blur();
+  }
+});
+
 // Mouse look — drag anywhere on the canvas
 let mouseDown = false;
 let lastX = 0, lastY = 0;
@@ -5257,7 +5272,7 @@ let nearbyOre = null;
 function updateOrePrompt(){
   // The plot prompt is shared real estate — only show ore prompt if no
   // plot or market is currently being pointed at (those take priority).
-  if(nearbyPlot || nearbyMarket) return;
+  if(nearbyPlot || nearbyMarket || nearbyRefinery) return;
   const ore = findNearbyOre();
   nearbyOre = ore;
   if(!ore) return;
@@ -5272,6 +5287,22 @@ function updateOrePrompt(){
   } else {
     sub.innerHTML = `Need a <b>⛏ Pickaxe</b> (35 🥈 at market)`;
   }
+}
+
+// Printer-station prompt — fires when you're standing on a print
+// station. Holding E prints a page (the existing tryPrint(dt) handles
+// the 0.55s charge-up). Without this prompt, the print stations
+// were silent and a lot of players didn't know to hold E there.
+function updatePrinterStationPrompt(){
+  if(nearbyPlot || nearbyMarket || nearbyRefinery || nearbyOre) return;
+  if(!printerNear) return;
+  const prompt = document.getElementById('plotPrompt');
+  const title  = document.getElementById('plotPromptTitle');
+  const sub    = document.getElementById('plotPromptSub');
+  prompt.classList.add('show');
+  prompt.classList.remove('locked');
+  title.textContent = "🖨 Print Station";
+  sub.innerHTML = `Hold <kbd>E</kbd> to print a page (+1 page · +4 XP)`;
 }
 
 // =================================================================
@@ -6509,7 +6540,8 @@ function tickGameplaySystems(dt){
   if(_plotPromptAcc > 0.15){    // 6Hz update is plenty
     _plotPromptAcc = 0;
     updatePlotPrompt();
-    updateOrePrompt();          // shows under the same prompt element
+    updateOrePrompt();              // shows under the same prompt element
+    updatePrinterStationPrompt();   // also under the same prompt element
   }
   _plantGrowthAcc += dt;
   if(_plantGrowthAcc > 1){      // re-check plant growth stages every 1s
