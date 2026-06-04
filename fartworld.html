@@ -28,6 +28,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Orbitron:wght@700;800;900&family=Bangers&display=swap" rel="stylesheet">
 
+<!-- Solana web3.js — required for the "burn $FARTPRINT to mint Gold" flow -->
+<script src="https://unpkg.com/@solana/web3.js@1.95.3/lib/index.iife.min.js"></script>
+
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -145,8 +148,12 @@
     position: absolute;
     top: 14px; left: 14px; right: 14px;
     display: grid;
-    grid-template-columns: 1fr auto auto;
-    gap: 12px; align-items: start;
+    grid-template-columns: 1fr auto auto auto auto;
+    gap: 10px; align-items: start;
+  }
+  @media (max-width: 900px) {
+    .hud-top { grid-template-columns: 1fr auto auto; }
+    .hud-top .hud-fartprint { display: none !important; }
   }
   .hud-card {
     background: rgba(8,18,11,0.65);
@@ -809,6 +816,32 @@
   }
   .uname-go:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.06); }
 
+  /* ─── Gold balance pill in HUD ─── */
+  .hud-card.hud-gold {
+    background: linear-gradient(135deg, rgba(255,180,30,0.16), rgba(255,214,77,0.10));
+    border-color: rgba(255,200,60,0.36);
+    color: #ffd64d;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .hud-card.hud-gold:hover {
+    border-color: #ffd64d;
+    box-shadow: 0 0 18px rgba(255,200,60,0.36);
+  }
+  .hud-card.hud-gold .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.4px; text-transform: uppercase;
+    color: rgba(255,200,60,0.75); font-weight: 800;
+  }
+  .hud-card.hud-gold #hudGold {
+    background: linear-gradient(135deg, #fff1a8, #ffd64d, #f5b400);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(255,200,60,0.45));
+  }
+
   /* ─── $FARTPRINT balance pill in HUD ─── */
   .hud-card.hud-fartprint {
     background: linear-gradient(135deg, rgba(255,214,77,0.10), rgba(46,224,107,0.08));
@@ -1164,6 +1197,163 @@
     cursor: pointer;
   }
 
+  /* ─── Buy confirmation toast ─── */
+  .buy-toast {
+    position: fixed;
+    top: 100px; left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(46,224,107,0.95), rgba(95,240,156,0.95));
+    color: #00220e;
+    padding: 14px 24px;
+    border-radius: 14px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 13px;
+    letter-spacing: 1px;
+    box-shadow: 0 14px 36px rgba(46,224,107,0.55);
+    z-index: 30;
+    pointer-events: none;
+    animation: saleSlide 2.6s ease-out forwards;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .buy-toast .ico { font-size: 22px; }
+
+  /* ─── Chat bubble above printers (Habbo-style) ─── */
+  .chat-bubble {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    background: rgba(8,18,11,0.92);
+    border: 1px solid rgba(95,240,156,0.55);
+    border-radius: 14px;
+    padding: 7px 14px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: #e6ffee;
+    pointer-events: none;
+    z-index: 9;
+    max-width: 260px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 28px rgba(46,224,107,0.22);
+    animation: bubblePop 0.22s ease-out;
+  }
+  .chat-bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -8px; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid rgba(95,240,156,0.55);
+  }
+  .chat-bubble .from {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 0.8px;
+    color: #5ff09c; font-weight: 800;
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+  @keyframes bubblePop {
+    0%   { transform: translate(-50%, -90%) scale(0.6); opacity: 0; }
+    100% { transform: translate(-50%, -100%) scale(1.0); opacity: 1; }
+  }
+
+  /* ─── Inventory redesign — centered grid modal ─── */
+  .inv-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.72);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 54; padding: 20px;
+  }
+  .inv-bg.show { display: flex; }
+  .inv-card {
+    max-width: 720px; width: 100%; max-height: 88vh;
+    background: linear-gradient(180deg, rgba(15,32,18,0.97), rgba(8,18,11,0.97));
+    border: 2px solid rgba(46,224,107,0.36);
+    border-radius: 22px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(46,224,107,0.18);
+  }
+  .inv-card .inv-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(46,224,107,0.18);
+  }
+  .inv-card h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 30px; letter-spacing: 2px;
+    background: linear-gradient(135deg, #46f08a, #5ff09c);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .inv-card .stats-row {
+    display: flex; gap: 14px; align-items: center;
+    padding: 12px 22px;
+    border-bottom: 1px solid rgba(46,224,107,0.08);
+    background: rgba(46,224,107,0.04);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(230,255,238,0.65);
+  }
+  .inv-card .stats-row .stat { display: flex; align-items: center; gap: 6px; }
+  .inv-card .stats-row b { color: #e6ffee; font-weight: 800; font-size: 13px; }
+  .inv-card .stats-row .silver b { color: #c0c8d6; }
+  .inv-card .stats-row .gold b   { color: #ffd64d; }
+  .inv-grid-modal {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    align-content: start;
+  }
+  @media (max-width: 720px) { .inv-grid-modal { grid-template-columns: repeat(4, 1fr); padding: 14px; } }
+  .inv-grid-modal .inv-slot {
+    aspect-ratio: 1;
+    background: rgba(46,224,107,0.06);
+    border: 1px solid rgba(46,224,107,0.18);
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 6px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    min-height: 92px;
+  }
+  .inv-grid-modal .inv-slot:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.30); }
+  .inv-grid-modal .inv-slot.empty { opacity: 0.32; cursor: default; }
+  .inv-grid-modal .inv-slot.empty:hover { background: rgba(46,224,107,0.06); border-color: rgba(46,224,107,0.18); transform: none; box-shadow: none; }
+  .inv-grid-modal .inv-slot .icon { font-size: 32px; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 10px currentColor; }
+  .inv-grid-modal .inv-slot .name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.4px;
+    color: rgba(230,255,238,0.85); font-weight: 700;
+  }
+  .inv-grid-modal .inv-slot .qty {
+    position: absolute; bottom: 6px; right: 8px;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 13px;
+    color: #ffd64d;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+  }
+  .inv-grid-modal .inv-slot.nft .name { color: #c084fc; }
+  .inv-grid-modal .inv-slot .dur {
+    position: absolute; bottom: 6px; left: 6px; right: 6px;
+    height: 4px; border-radius: 2px;
+    background: rgba(255,90,77,0.18);
+    overflow: hidden;
+    border: 1px solid rgba(255,90,77,0.36);
+  }
+  .inv-grid-modal .inv-slot .dur .fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff5a4d, #ffd64d, #5ff09c);
+  }
+
   /* ─── Sale notification ─── */
   .sale-toast {
     position: fixed;
@@ -1187,6 +1377,180 @@
     90%  { transform: translate(-50%, 0); opacity: 1; }
     100% { transform: translate(-50%, -100%); opacity: 0; }
   }
+
+  /* ─── Gold Vault modal ─── */
+  .gold-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: none; align-items: center; justify-content: center;
+    z-index: 56; padding: 20px;
+  }
+  .gold-bg.show { display: flex; }
+  .gold-card {
+    max-width: 640px; width: 100%; max-height: 90vh;
+    background: linear-gradient(180deg, rgba(32,22,8,0.96), rgba(20,14,5,0.96));
+    border: 2px solid rgba(255,200,60,0.50);
+    border-radius: 24px;
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 100px rgba(255,200,60,0.30);
+  }
+  .gold-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255,214,77,0.18);
+    background: linear-gradient(90deg, rgba(255,200,60,0.10), transparent);
+  }
+  .gold-head h2 {
+    font-family: 'Bangers', 'Orbitron', sans-serif;
+    font-size: 34px; letter-spacing: 3px;
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #f5b400 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 12px rgba(255,200,60,0.50));
+  }
+  .gold-head .close {
+    background: transparent; border: 0;
+    color: rgba(230,255,238,0.55);
+    font-size: 28px; cursor: pointer; line-height: 1;
+  }
+  .gold-body { overflow-y: auto; padding: 22px 24px 28px; }
+  .gold-balance {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 20px; margin-bottom: 16px;
+    background: linear-gradient(135deg, rgba(255,200,60,0.10), rgba(255,176,32,0.04));
+    border: 1px solid rgba(255,214,77,0.28);
+    border-radius: 14px;
+  }
+  .gold-balance .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase;
+    color: rgba(255,214,77,0.55); font-weight: 800;
+    margin-bottom: 4px;
+  }
+  .gold-balance .big {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 28px;
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #f5b400 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255,200,60,0.45));
+  }
+  .gold-balance .fp-balance {
+    text-align: right;
+  }
+  .gold-balance .fp-balance .lbl { color: rgba(46,224,107,0.7); }
+  .gold-balance .fp-balance .big {
+    background: linear-gradient(135deg, #46f08a, #5ff09c);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 8px rgba(46,224,107,0.45));
+  }
+  .gold-intro {
+    color: rgba(230,255,238,0.72);
+    font-size: 13px; line-height: 1.6;
+    margin-bottom: 18px;
+  }
+  .gold-intro b { color: #ffd64d; }
+  .gold-section-h {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 13px; letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #ff5a4d;
+    text-shadow: 0 0 12px rgba(255,90,77,0.55);
+    margin: 14px 0 10px;
+  }
+  .gold-tiers {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 600px) { .gold-tiers { grid-template-columns: 1fr; } }
+  .gold-tier {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255,176,32,0.06), rgba(0,0,0,0.32));
+    border: 1px solid rgba(255,214,77,0.32);
+    border-radius: 14px;
+    padding: 18px 14px 16px;
+    text-align: center;
+    cursor: pointer;
+    color: #e6ffee;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+  }
+  .gold-tier:hover {
+    transform: translateY(-2px);
+    border-color: #ffd64d;
+    box-shadow: 0 12px 28px rgba(255,200,60,0.30), 0 0 30px rgba(255,200,60,0.18);
+  }
+  .gold-tier.featured {
+    background: linear-gradient(180deg, rgba(255,214,77,0.18), rgba(0,0,0,0.30));
+    border-color: #ffd64d;
+    box-shadow: 0 0 24px rgba(255,200,60,0.30);
+  }
+  .gold-tier .badge {
+    position: absolute;
+    top: -10px; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, #ff5a4d, #ff7a6e);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.2px;
+    font-weight: 900;
+    padding: 3px 10px;
+    border-radius: 99px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    box-shadow: 0 6px 14px rgba(255,90,77,0.40);
+  }
+  .gold-tier .badge.gold {
+    background: linear-gradient(135deg, #ffd64d, #ffb020);
+    color: #2a1d00;
+  }
+  .gold-tier .burn {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 16px;
+    color: #ff7a6e;
+    text-shadow: 0 0 10px rgba(255,90,77,0.45);
+    margin-bottom: 4px;
+  }
+  .gold-tier .burn .sub {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; letter-spacing: 1.2px;
+    color: rgba(255,122,110,0.65); font-weight: 800;
+    margin-top: 2px;
+    text-transform: uppercase;
+  }
+  .gold-tier .arrow {
+    font-size: 18px; color: rgba(230,255,238,0.45);
+    margin: 8px 0;
+  }
+  .gold-tier .reward {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900; font-size: 24px;
+    background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #f5b400 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 10px rgba(255,200,60,0.55));
+  }
+  .gold-warning {
+    background: rgba(255,90,77,0.10);
+    border: 1px dashed rgba(255,90,77,0.40);
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; line-height: 1.55;
+    color: #ff9d8d;
+    letter-spacing: 0.4px;
+  }
+  .gold-warning b { color: #ff7a6e; }
+  .gold-step {
+    background: rgba(255,200,60,0.06);
+    border: 1px solid rgba(255,200,60,0.20);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-top: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px; line-height: 1.55;
+    color: rgba(230,255,238,0.72);
+  }
+  .gold-step.busy { animation: pulseGlow 1.6s ease-in-out infinite; }
 
   /* ─── Leaderboard panel ─── */
   .lb-bg {
@@ -1554,8 +1918,12 @@
       </div>
     </div>
     <div class="hud-card hud-credits">
-      <span class="lbl">💨 $FART</span>
+      <span class="lbl">🥈 SILVER</span>
       <span id="hudCredits">0</span>
+    </div>
+    <div class="hud-card hud-gold" id="hudGoldCard">
+      <span class="lbl">🥇 GOLD</span>
+      <span id="hudGold">0</span>
     </div>
     <div class="hud-card hud-fartprint" id="hudFartprintCard" style="display:none;">
       <span class="lbl">🖨 $FARTPRINT</span>
@@ -1593,8 +1961,9 @@
   </div>
   <button class="touch-fart" id="touchFart">FART 💨</button>
 
-  <!-- Chat panel — visible only in multiplayer rooms -->
-  <div class="chat-panel collapsed" id="chatPanel" style="display:none;">
+  <!-- Chat panel — visible in multiplayer rooms (uncollapsed so you can
+       always read messages without clicking) -->
+  <div class="chat-panel" id="chatPanel" style="display:none;">
     <div class="chat-head" id="chatHead">
       <span>💬 Chat</span>
       <span class="room" id="chatRoomLabel"></span>
@@ -1608,6 +1977,8 @@
 
   <!-- Name-tag layer (CSS labels positioned over remote printers each frame) -->
   <div id="nameTags" style="position:absolute;inset:0;pointer-events:none;"></div>
+  <!-- Chat bubble layer (Habbo-style speech bubbles above each printer) -->
+  <div id="chatBubbles" style="position:absolute;inset:0;pointer-events:none;"></div>
 
   <!-- Plot interaction prompt (shown when player is near a plot/market) -->
   <div class="plot-prompt" id="plotPrompt">
@@ -1615,14 +1986,20 @@
     <div class="sub" id="plotPromptSub">Press <kbd>E</kbd></div>
   </div>
 
-  <!-- Inventory panel (slides in from right) -->
-  <div class="inv-panel" id="invPanel">
-    <div class="inv-head">
-      <h3>🎒 INVENTORY</h3>
-      <button class="close" id="invClose">×</button>
+  <!-- Inventory modal (centered, larger grid — replaces old right-sidebar) -->
+  <div class="inv-bg" id="invBg">
+    <div class="inv-card">
+      <div class="inv-head">
+        <h2>🎒 INVENTORY</h2>
+        <button class="close" id="invClose" style="background:transparent;border:0;color:rgba(230,255,238,0.55);font-size:24px;cursor:pointer;line-height:1;">×</button>
+      </div>
+      <div class="stats-row">
+        <div class="stat silver">🥈 <b id="invSilver">0</b> Silver</div>
+        <div class="stat gold">🥇 <b id="invGold">0</b> Gold</div>
+        <div class="stat" style="margin-left:auto;"><b id="invSlots">0/24</b> slots</div>
+      </div>
+      <div class="inv-grid-modal" id="invGrid"></div>
     </div>
-    <div class="inv-meta" id="invMeta">0 / 16 slots used</div>
-    <div class="inv-grid" id="invGrid"></div>
   </div>
 </div>
 
@@ -1667,6 +2044,60 @@
     <p><span class="dot"></span><span id="dmWaitingMsg">Waiting for an opponent to step in…</span></p>
     <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins. Step outside the ring to leave.</p>
     <button id="dmLeaveBtn">Leave arena</button>
+  </div>
+</div>
+
+<!-- ─── Gold Vault modal (burn $FARTPRINT → Gold) ─── -->
+<div class="gold-bg" id="goldBg">
+  <div class="gold-card">
+    <div class="gold-head">
+      <h2>🥇 GOLD VAULT</h2>
+      <button class="close" id="goldClose">×</button>
+    </div>
+    <div class="gold-body">
+      <div class="gold-balance">
+        <div>
+          <div class="lbl">Your Gold</div>
+          <div class="big" id="goldBalanceLg">0</div>
+        </div>
+        <div class="fp-balance">
+          <div class="lbl">Wallet $FARTPRINT</div>
+          <div class="big" id="goldFpBalance">—</div>
+        </div>
+      </div>
+      <p class="gold-intro">
+        Gold is the premium currency. <b>1 GOLD = 10,000 $FARTPRINT burned on-chain.</b>
+        Gold prices never go down — only up. Burning permanently removes those tokens
+        from circulation, which tightens the supply for every Silver-earner in the game.
+      </p>
+
+      <div class="gold-section-h">🔥 Burn $FARTPRINT for Gold</div>
+      <div class="gold-tiers">
+        <button class="gold-tier" data-burn="10000" data-gold="1">
+          <div class="burn">10,000<span class="sub">$FARTPRINT</span></div>
+          <div class="arrow">↓</div>
+          <div class="reward">🥇 1</div>
+        </button>
+        <button class="gold-tier featured" data-burn="50000" data-gold="6">
+          <div class="badge">+20% BONUS</div>
+          <div class="burn">50,000<span class="sub">$FARTPRINT</span></div>
+          <div class="arrow">↓</div>
+          <div class="reward">🥇 6</div>
+        </button>
+        <button class="gold-tier" data-burn="250000" data-gold="35">
+          <div class="badge gold">+40% BONUS</div>
+          <div class="burn">250,000<span class="sub">$FARTPRINT</span></div>
+          <div class="arrow">↓</div>
+          <div class="reward">🥇 35</div>
+        </button>
+      </div>
+
+      <div class="gold-warning">
+        <b>⚠ PERMANENT.</b> Burning is irreversible — tokens are destroyed on Solana, not refunded
+        anywhere. Your wallet signs every burn. $FARTPRINT never touches a centralised account.
+      </div>
+      <div class="gold-step" id="goldStep" style="display:none;"></div>
+    </div>
   </div>
 </div>
 
@@ -1812,15 +2243,25 @@ const State = {
   username: null,      // permanent once set
   level:    1,
   xp:       0,
-  credits:  50,        // start with 50 $FART so you can buy your first plot/seeds
+  // `credits` is the SILVER balance — in-game currency earned from playing.
+  // (Field name kept as "credits" internally so save files still load, but
+  // every visible label says "Silver" / 🥈.)
+  credits:  50,        // start with 50 Silver so you can buy a plot or seeds
+  gold:     0,         // premium currency, minted by burning $FARTPRINT
   pagesPrinted:       0,
   uniqueZonesVisited: new Set(),
   cleanSeconds:       0,
   totalFarts:         0,
   // ── Inventory: keyed by item id → { qty }. Item metadata lives in ITEMS catalog.
   inventory: {},
+  // ── Per-item tool state (durability, etc.) keyed by item id.
+  tools:    {},        // { pickaxe: { durability: 100 } } — 0–100
   // ── Live wallet balance (read-only from RPC). Refreshed every 30s.
   fartprintBalance: null,
+  // ── Deathmatch ELO (multiplayer)
+  elo:      1000,
+  dmWins:   0,
+  dmLosses: 0,
 };
 const STORE_KEY = "fartworld_state_v1";
 
@@ -1832,11 +2273,16 @@ function saveState(){
       level:    State.level,
       xp:       State.xp,
       credits:  State.credits,
+      gold:     State.gold,
       pagesPrinted:        State.pagesPrinted,
       uniqueZonesVisited:  [...State.uniqueZonesVisited],
       cleanSeconds:        State.cleanSeconds,
       totalFarts:          State.totalFarts,
       inventory:           State.inventory,
+      tools:               State.tools,
+      elo:                 State.elo,
+      dmWins:              State.dmWins,
+      dmLosses:            State.dmLosses,
     }));
   } catch(_){}
 }
@@ -1847,7 +2293,12 @@ function loadState(){
     Object.assign(State, j);
     State.uniqueZonesVisited = new Set(j.uniqueZonesVisited || []);
     if(!State.inventory) State.inventory = {};
+    if(!State.tools)     State.tools = {};
     if(State.credits == null) State.credits = 50;
+    if(State.gold == null)    State.gold = 0;
+    if(State.elo == null)     State.elo = 1000;
+    if(State.dmWins == null)  State.dmWins = 0;
+    if(State.dmLosses == null)State.dmLosses = 0;
   } catch(_){}
 }
 loadState();
@@ -1864,9 +2315,9 @@ const ITEMS = {
     color:   "#5ff09c",
     type:    "seed",
     isNFT:   false,
-    growMs:  60_000,           // 1 minute to fully grow
+    growMs:  60 * 60 * 1000,   // 1 hour real-time to fully grow
     harvest: "weed",           // → harvest produces 1 weed
-    marketPrice: 8,            // shop price (seeds)
+    marketPrice: 25,           // shop price (more meaningful with 1-hour wait)
   },
   weed: {
     id:      "weed",
@@ -1875,7 +2326,7 @@ const ITEMS = {
     color:   "#46f08a",
     type:    "crop",
     isNFT:   false,
-    suggestedPrice: 20,        // suggested player-market price
+    suggestedPrice: 80,        // suggested player-market price (60min grow → ~80 Silver)
   },
   pickaxe: {
     id:      "pickaxe",
@@ -2423,9 +2874,11 @@ function makePrinterStation(x, z){
   Printers.push({ x, z, mesh: grp });
   return grp;
 }
+// Printer-station positions chosen so none overlap the 8 plot footprints
+// (PLOT_LOCATIONS) — every coordinate here is ≥10 units from every plot.
 [
-  [12, -12], [-12, 6], [20, 30], [-26, -16],
-  [3, 45], [-40, 35],
+  [ 28,  -8], [-32,   4], [ 20,  32], [-34, -22],
+  [  3,  48], [-44,  38],
 ].forEach(([x,z]) => makePrinterStation(x, z));
 
 // ─── Land plots (buyable, farmable) ─────────────────────────────
@@ -2674,64 +3127,160 @@ buildMarket();
 // deathmatch system block below.
 const ARENA_POS    = { x: 36, z: 36 };
 const ARENA_RADIUS = 12;
+// Dramatic deathmatch arena — multi-layered glow, rotating outer ring,
+// floor grid, 6 tall pillars with neon caps, an orbiting "MK ARENA"
+// sign frame, central crystal, and beams of light shooting outward.
+// Much more visually distinct from the small flat red danger-zone rings.
+const ArenaRotors = { outer: null, inner: null, crystal: null, beams: null };
 function buildArena(){
   const grp = new THREE.Group();
   grp.position.set(ARENA_POS.x, 0, ARENA_POS.z);
-  // Outer ring
-  const ring = new THREE.Mesh(
-    new THREE.RingGeometry(ARENA_RADIUS - 0.4, ARENA_RADIUS, 96),
-    new THREE.MeshBasicMaterial({ color: 0xff5a4d, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+
+  // ── Raised stone base (1m tall platform) ──
+  const base = new THREE.Mesh(
+    new THREE.CylinderGeometry(ARENA_RADIUS + 0.3, ARENA_RADIUS + 0.8, 1, 64),
+    new THREE.MeshStandardMaterial({ color: 0x141014, roughness: 0.92, metalness: 0.05 })
   );
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.y = 0.06;
-  grp.add(ring);
-  // Inner pulse disc
-  const fill = new THREE.Mesh(
-    new THREE.CircleGeometry(ARENA_RADIUS - 0.4, 64),
-    new THREE.MeshBasicMaterial({ color: 0xff5a4d, transparent: true, opacity: 0.06 })
+  base.position.y = 0.5;
+  base.receiveShadow = true; base.castShadow = true;
+  grp.add(base);
+  WalkableSurfaces.push(base);
+  // Floor grid texture (additive lines)
+  const grid = new THREE.Mesh(
+    new THREE.CircleGeometry(ARENA_RADIUS, 64),
+    new THREE.MeshBasicMaterial({ color: 0xff5a4d, transparent: true, opacity: 0.14 })
   );
-  fill.rotation.x = -Math.PI / 2;
-  fill.position.y = 0.05;
-  grp.add(fill);
-  // Center "X" marks
-  const crossMat = new THREE.MeshBasicMaterial({ color: 0xff7a6e, transparent: true, opacity: 0.5 });
-  const bar1 = new THREE.Mesh(new THREE.PlaneGeometry(8, 0.3), crossMat);
-  bar1.rotation.x = -Math.PI / 2; bar1.position.y = 0.07;
-  const bar2 = bar1.clone(); bar2.rotation.z = Math.PI / 2;
-  grp.add(bar1); grp.add(bar2);
-  // Spire-like sign at the edge — a tall thin pillar
-  const pillar = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.18, 0.18, 5, 8),
-    new THREE.MeshStandardMaterial({ color: 0x2a0c0c, roughness: 0.6 })
+  grid.rotation.x = -Math.PI / 2;
+  grid.position.y = 1.005;
+  grp.add(grid);
+  // Bright outer rim
+  const rim = new THREE.Mesh(
+    new THREE.RingGeometry(ARENA_RADIUS - 0.3, ARENA_RADIUS + 0.1, 96),
+    new THREE.MeshBasicMaterial({ color: 0xff7a6e, transparent: true, opacity: 0.95, side: THREE.DoubleSide })
   );
-  pillar.position.set(-(ARENA_RADIUS - 1), 2.5, 0);
-  pillar.castShadow = true;
-  grp.add(pillar);
-  const banner = new THREE.Mesh(
-    new THREE.BoxGeometry(3.6, 1, 0.18),
-    new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 1.0, roughness: 0.4 })
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 1.02;
+  grp.add(rim);
+
+  // ── Rotating outer "shock" ring (glowing arcs) ──
+  const outer = new THREE.Group();
+  for(let i = 0; i < 6; i++){
+    const arc = new THREE.Mesh(
+      new THREE.RingGeometry(ARENA_RADIUS + 0.8, ARENA_RADIUS + 1.2, 32, 1, (i / 6) * Math.PI * 2, Math.PI * 2 / 12),
+      new THREE.MeshBasicMaterial({ color: 0xff3a2a, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    );
+    arc.rotation.x = -Math.PI / 2;
+    outer.add(arc);
+  }
+  outer.position.y = 1.03;
+  grp.add(outer);
+  ArenaRotors.outer = outer;
+
+  // ── Rotating inner glowing ring (slower, opposite direction) ──
+  const inner = new THREE.Group();
+  for(let i = 0; i < 8; i++){
+    const seg = new THREE.Mesh(
+      new THREE.RingGeometry(ARENA_RADIUS - 1.5, ARENA_RADIUS - 1.0, 32, 1, (i / 8) * Math.PI * 2, Math.PI * 2 / 16),
+      new THREE.MeshBasicMaterial({ color: 0xffd64d, transparent: true, opacity: 0.85, side: THREE.DoubleSide })
+    );
+    seg.rotation.x = -Math.PI / 2;
+    inner.add(seg);
+  }
+  inner.position.y = 1.04;
+  grp.add(inner);
+  ArenaRotors.inner = inner;
+
+  // ── 6 tall pillars around the perimeter, with glowing caps ──
+  const pillarMat = new THREE.MeshStandardMaterial({ color: 0x18080a, roughness: 0.55, metalness: 0.45 });
+  for(let i = 0; i < 6; i++){
+    const ang = (i / 6) * Math.PI * 2;
+    const px = Math.cos(ang) * (ARENA_RADIUS + 0.4);
+    const pz = Math.sin(ang) * (ARENA_RADIUS + 0.4);
+    const pillar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.42, 0.55, 7.5, 8),
+      pillarMat
+    );
+    pillar.position.set(px, 4.75, pz);
+    pillar.castShadow = true;
+    grp.add(pillar);
+    const cap = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.65),
+      new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 2.0, roughness: 0.35 })
+    );
+    cap.position.set(px, 8.4, pz);
+    grp.add(cap);
+    const capLt = new THREE.PointLight(0xff5a4d, 1.6, 12);
+    capLt.position.set(px, 8.4, pz);
+    grp.add(capLt);
+  }
+
+  // ── Central spinning crystal ──
+  const crystal = new THREE.Mesh(
+    new THREE.OctahedronGeometry(1.2, 0),
+    new THREE.MeshStandardMaterial({ color: 0xff3a2a, emissive: 0xff5a4d, emissiveIntensity: 1.4, roughness: 0.25, metalness: 0.4, flatShading: true })
   );
-  banner.position.set(-(ARENA_RADIUS - 1), 5.5, 0);
-  grp.add(banner);
-  // Column of red light over the arena center
+  crystal.position.y = 3.8;
+  grp.add(crystal);
+  ArenaRotors.crystal = crystal;
+  const crystalLt = new THREE.PointLight(0xff3a2a, 3.2, 22);
+  crystalLt.position.y = 3.8;
+  grp.add(crystalLt);
+
+  // ── Beams shooting outward (4 thin glowing planes) ──
+  const beams = new THREE.Group();
+  for(let i = 0; i < 4; i++){
+    const beam = new THREE.Mesh(
+      new THREE.PlaneGeometry(ARENA_RADIUS * 2.4, 0.4),
+      new THREE.MeshBasicMaterial({ color: 0xffd64d, transparent: true, opacity: 0.18, side: THREE.DoubleSide })
+    );
+    beam.rotation.x = -Math.PI / 2;
+    beam.rotation.z = (i / 4) * Math.PI;
+    beam.position.y = 1.07;
+    beams.add(beam);
+  }
+  grp.add(beams);
+  ArenaRotors.beams = beams;
+
+  // ── Sky-stabbing column of red volumetric light ──
   const col = new THREE.Mesh(
-    new THREE.CylinderGeometry(ARENA_RADIUS - 1, ARENA_RADIUS, 8, 32, 1, true),
+    new THREE.CylinderGeometry(ARENA_RADIUS - 1, ARENA_RADIUS + 1, 18, 32, 1, true),
     new THREE.ShaderMaterial({
       transparent: true, depthWrite: false, side: THREE.DoubleSide,
-      uniforms: { uColor: { value: new THREE.Color(0xff5a4d) } },
+      uniforms: { uColor: { value: new THREE.Color(0xff3a2a) } },
       vertexShader: "varying float vY; void main(){ vY = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }",
-      fragmentShader: "uniform vec3 uColor; varying float vY; void main(){ float t = 1.0 - clamp(vY / 8.0 + 0.5, 0.0, 1.0); gl_FragColor = vec4(uColor, t * 0.30); }",
+      fragmentShader: "uniform vec3 uColor; varying float vY; void main(){ float t = 1.0 - clamp(vY / 18.0 + 0.5, 0.0, 1.0); gl_FragColor = vec4(uColor, t * 0.32); }",
     })
   );
-  col.position.y = 4;
+  col.position.y = 9;
   grp.add(col);
-  // Red point light
-  const lt = new THREE.PointLight(0xff5a4d, 2.2, 30);
-  lt.position.y = 4;
-  grp.add(lt);
+
+  // ── Big neon arch sign on the front (where players walk in) ──
+  const archMat = new THREE.MeshStandardMaterial({ color: 0x1a0808, roughness: 0.6 });
+  const left = new THREE.Mesh(new THREE.BoxGeometry(0.5, 6, 0.5), archMat);
+  left.position.set(-3.4, 3, ARENA_RADIUS + 0.4); left.castShadow = true; grp.add(left);
+  const right = left.clone(); right.position.x = 3.4; grp.add(right);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.6, 0.5), archMat);
+  top.position.set(0, 6, ARENA_RADIUS + 0.4); top.castShadow = true; grp.add(top);
+  const archSign = new THREE.Mesh(
+    new THREE.BoxGeometry(6.4, 1.4, 0.25),
+    new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 2.4, roughness: 0.35 })
+  );
+  archSign.position.set(0, 5, ARENA_RADIUS + 0.45);
+  grp.add(archSign);
+
   scene.add(grp);
 }
 buildArena();
+
+// Rotate the arena rings + spin the crystal every frame
+function tickArenaVisuals(dt){
+  if(ArenaRotors.outer)   ArenaRotors.outer.rotation.y   += dt * 0.6;
+  if(ArenaRotors.inner)   ArenaRotors.inner.rotation.y   -= dt * 0.9;
+  if(ArenaRotors.beams)   ArenaRotors.beams.rotation.y   += dt * 0.3;
+  if(ArenaRotors.crystal){
+    ArenaRotors.crystal.rotation.y += dt * 1.2;
+    ArenaRotors.crystal.rotation.x = Math.sin(performance.now() * 0.001) * 0.1;
+  }
+}
 
 // ─── Ore deposits (mineable with a pickaxe) ─────────────────────
 // Procedural rock clusters scattered across the map. Mining one
@@ -2912,14 +3461,14 @@ function tryFart(){
     State.xp += gainedXp;
     State.credits += gainedCredits;
     State.cleanSeconds += 5;   // safe farts count as "clean"
-    floater(`+${gainedXp} XP   +${gainedCredits} 💨FART`, "good");
+    floater(`+${gainedXp} XP   +${gainedCredits} 🥈 Silver`, "good");
     checkLevelUp();
   } else if(Player.zone === "danger"){
     const lostCredits = Math.min(State.credits, 8);
     State.credits -= lostCredits;
     State.cleanSeconds = 0;
     triggerShame();
-    floater(`-${lostCredits} 💨FART  · BAD FART`, "bad");
+    floater(`-${lostCredits} 🥈 Silver  · BAD FART`, "bad");
   } else {
     // Neutral — tiny XP nibble
     State.xp += 3;
@@ -3081,6 +3630,23 @@ function playLevelUpSound(){
     o.stop(ctx.currentTime + i * 0.12 + 0.4);
   });
 }
+// Quick "ka-ching" purchase confirmation (used by both shop + market buys)
+function playPurchaseSound(){
+  const ctx = ensureAudio(); if(!ctx) return;
+  const notes = [523.25, 783.99, 1046.50];
+  notes.forEach((f, i) => {
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.value = f;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.05);
+    g.gain.exponentialRampToValueAtTime(0.18, ctx.currentTime + i * 0.05 + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.05 + 0.22);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(ctx.currentTime + i * 0.05);
+    o.stop(ctx.currentTime + i * 0.05 + 0.25);
+  });
+}
 function playPrintSound(){
   const ctx = ensureAudio(); if(!ctx) return;
   const o = ctx.createOscillator();
@@ -3202,6 +3768,8 @@ function updateHUD(){
   document.getElementById('hudXpMax').textContent   = xpForLevel(State.level);
   document.getElementById('hudXpFill').style.width  = Math.min(100, (State.xp / xpForLevel(State.level)) * 100) + "%";
   document.getElementById('hudCredits').textContent = State.credits;
+  const hudGold = document.getElementById('hudGold');
+  if(hudGold) hudGold.textContent = State.gold;
   document.getElementById('hudWallet').textContent  = State.username || "guest";
   renderQuests();
   // Zone tag
@@ -3295,7 +3863,7 @@ function renderQuests(){
       State.xp += q.reward.xp;
       State.credits += q.reward.credits;
       setTimeout(() => {
-        floater(`QUEST DONE  +${q.reward.xp} XP  +${q.reward.credits} 💨FART`, "good");
+        floater(`QUEST DONE  +${q.reward.xp} XP  +${q.reward.credits} 🥈 Silver`, "good");
         playLevelUpSound();
         checkLevelUp();
         saveState();
@@ -3308,7 +3876,7 @@ function renderQuests(){
         <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
         <div class="meta">
           <span>${Math.min(p, q.target)} / ${q.target}</span>
-          <span>+${q.reward.xp} XP · +${q.reward.credits} 💨</span>
+          <span>+${q.reward.xp} XP · +${q.reward.credits} 🥈</span>
         </div>
       </div>
     `;
@@ -3544,9 +4112,8 @@ function updateMovement(dt){
     Player.yaw += diff * Math.min(1, 15 * dt);
   }
 
-  // Sample ground height
-  const gy = groundHeightAt(Player.pos.x, Player.pos.z);
-  Player.pos.y = gy;
+  // Sample ground OR walkable surface (house floors, stairs, refinery, arena)
+  Player.pos.y = sampleSurfaceY(Player.pos.x, Player.pos.z);
 }
 
 // =================================================================
@@ -3712,6 +4279,8 @@ function handleRoomMessage(m){
 
   if(m.kind === "chat"){
     addChat(m.name || "anon", m.text || "", false);
+    // Habbo-style bubble above the speaker's printer (3s or until next)
+    if(typeof setChatBubble === "function") setChatBubble(m.peerId, m.text || "");
     return;
   }
   if(m.kind === "pos"){
@@ -3801,8 +4370,10 @@ async function sendChat(text){
   text = (text || "").trim();
   if(!text) return;
   if(text.length > 200) text = text.slice(0, 200);
+  // Always show my own bubble above the printer (works in solo too)
+  setChatBubble("self", text);
   if(Net.mode === "solo"){
-    addChat(null, "You're in solo mode — no one's listening.", true);
+    addChat(null, "You're in solo mode — no one's listening (but your printer still says it).", true);
     return;
   }
   addChat(Net.handle, text, false, true);
@@ -4035,22 +4606,33 @@ function requireUsername(){
 // =================================================================
 const INV_SLOTS = 16;
 
+const INV_SLOTS_V2 = 24;
+
 function renderInventory(){
   const grid = document.getElementById('invGrid');
-  const meta = document.getElementById('invMeta');
   if(!grid) return;
   const ids = Object.keys(State.inventory).filter(id => State.inventory[id] > 0);
   const slots = [];
-  for(let i = 0; i < INV_SLOTS; i++){
+  const count = Math.max(INV_SLOTS_V2, ids.length);   // grow if you have a ton of items
+  for(let i = 0; i < count; i++){
     const id = ids[i];
     if(id){
       const item = ITEMS[id];
-      if(!item){ slots.push(""); continue; }
+      if(!item){ slots.push('<div class="inv-slot empty"></div>'); continue; }
+      // Per-tool durability bar (used by pickaxe etc.)
+      let durBar = "";
+      if(item.type === "tool"){
+        const tool = State.tools[id] || { durability: 100 };
+        const pct = Math.max(0, Math.min(100, tool.durability));
+        durBar = `<div class="dur"><div class="fill" style="width:${pct}%"></div></div>`;
+      }
+      const label = item.isNFT ? `${item.name} · NFT` : item.name;
       slots.push(`
-        <div class="inv-slot ${item.isNFT ? 'nft' : ''}" data-id="${id}" title="${escHtml(item.name)}${item.isNFT ? ' · NFT' : ''}">
+        <div class="inv-slot ${item.isNFT ? 'nft' : ''}" data-id="${id}" title="${escHtml(label)}">
           <div class="icon" style="color:${item.color};">${item.icon}</div>
           <div class="name">${escHtml(item.name)}</div>
           <div class="qty">×${State.inventory[id]}</div>
+          ${durBar}
         </div>
       `);
     } else {
@@ -4058,21 +4640,372 @@ function renderInventory(){
     }
   }
   grid.innerHTML = slots.join("");
-  meta.innerHTML = `${ids.length} / ${INV_SLOTS} slots used  ·  <b>${State.credits}</b> 💨 $FART`;
+  const used = ids.length;
+  const max  = Math.max(INV_SLOTS_V2, used);
+  const inv1 = document.getElementById('invSilver'); if(inv1) inv1.textContent = State.credits;
+  const inv2 = document.getElementById('invGold');   if(inv2) inv2.textContent = State.gold;
+  const inv3 = document.getElementById('invSlots');  if(inv3) inv3.textContent = `${used}/${max}`;
 }
 window.renderInventory = renderInventory;
 
-function openInventory(){ document.getElementById('invPanel').classList.add('open'); renderInventory(); }
-function closeInventory(){ document.getElementById('invPanel').classList.remove('open'); }
-function toggleInventory(){ document.getElementById('invPanel').classList.toggle('open'); renderInventory(); }
+function openInventory(){
+  const bg = document.getElementById('invBg');
+  if(bg){ bg.classList.add('show'); }
+  renderInventory();
+}
+function closeInventory(){ document.getElementById('invBg')?.classList.remove('show'); }
+function toggleInventory(){
+  const bg = document.getElementById('invBg');
+  if(!bg) return;
+  if(bg.classList.contains('show')) closeInventory(); else openInventory();
+}
 document.getElementById('invToggle').addEventListener('click', toggleInventory);
 document.getElementById('invClose').addEventListener('click', closeInventory);
+document.getElementById('invBg').addEventListener('click', (e) => {
+  if(e.target.id === "invBg") closeInventory();
+});
+
+// =================================================================
+// ─── BUY TOAST + CHAT BUBBLES (Habbo-style) ─────────────────────
+// =================================================================
+function showBuyToast(text){
+  const t = document.createElement('div');
+  t.className = "buy-toast";
+  t.innerHTML = `<span class="ico">✅</span><span>${escHtml(text)}</span>`;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2600);
+}
+
+// Per-printer chat bubble. The bubble lives in #chatBubbles as a CSS
+// element and gets repositioned every frame via world-to-screen
+// projection (similar to the name tags). 3 seconds OR until next msg
+// from the same speaker.
+const ChatBubbles = new Map();    // peerId → { el, text, expires }
+function setChatBubble(peerId, text){
+  let entry = ChatBubbles.get(peerId);
+  if(!entry){
+    const el = document.createElement('div');
+    el.className = 'chat-bubble';
+    document.getElementById('chatBubbles').appendChild(el);
+    entry = { el, expires: 0, text: "" };
+    ChatBubbles.set(peerId, entry);
+  }
+  entry.text = text;
+  entry.expires = Date.now() + 3000;
+  // Anim refresh — re-trigger animation by toggling
+  entry.el.style.animation = 'none';
+  entry.el.offsetHeight;   // force reflow
+  entry.el.style.animation = '';
+  entry.el.textContent = text;
+}
+const _bubbleProj = new THREE.Vector3();
+function updateChatBubbles(){
+  const now = Date.now();
+  for(const [peerId, b] of ChatBubbles){
+    if(now > b.expires){
+      b.el.remove();
+      ChatBubbles.delete(peerId);
+      continue;
+    }
+    // Find the printer mesh — peers or self
+    let mesh;
+    if(peerId === "self"){
+      mesh = printer;
+    } else {
+      const p = Net.peers.get(peerId);
+      if(!p){ b.el.remove(); ChatBubbles.delete(peerId); continue; }
+      mesh = p.mesh;
+    }
+    if(!mesh) continue;
+    _bubbleProj.set(mesh.position.x, mesh.position.y + 2.8, mesh.position.z);
+    _bubbleProj.project(camera);
+    if(_bubbleProj.z < 1 && _bubbleProj.z > -1){
+      const sx = (_bubbleProj.x * 0.5 + 0.5) * innerWidth;
+      const sy = (-_bubbleProj.y * 0.5 + 0.5) * innerHeight;
+      b.el.style.left = sx + "px";
+      b.el.style.top  = sy + "px";
+      b.el.style.display = "";
+    } else {
+      b.el.style.display = "none";
+    }
+  }
+}
+
+// =================================================================
+// ─── 3-FLOOR HOUSE + HOLLYWOOD SIGN + REFINERY + ARENA REBUILD ──
+// =================================================================
+// Walkable surfaces collection — anything we add here gets considered
+// when sampling the player's Y position via raycast. Empty by default;
+// the house's floors and the refinery's deck get pushed in.
+const WalkableSurfaces = [];
+const _floorRay = new THREE.Raycaster();
+const _floorDown = new THREE.Vector3(0, -1, 0);
+function sampleSurfaceY(x, z){
+  _floorRay.set(new THREE.Vector3(x, 40, z), _floorDown);
+  const hits = _floorRay.intersectObjects(WalkableSurfaces, false);
+  if(hits.length){
+    // Pick the highest surface at or below "current player y + 1.6" —
+    // 1.6 = printer's eye-level, so you can step UP by half a meter
+    // (stair-step) but you don't get yanked up onto a roof.
+    const ceil = Player.pos.y + 1.6;
+    let best = null;
+    for(const h of hits){
+      if(h.point.y <= ceil){
+        if(!best || h.point.y > best.point.y) best = h;
+      }
+    }
+    if(best) return best.point.y;
+  }
+  return groundHeightAt(x, z);
+}
+
+// ── 3-floor house ──
+const HOUSE_POS = { x: 0, z: -55 };
+function buildHouse(){
+  const grp = new THREE.Group();
+  grp.position.set(HOUSE_POS.x, 0, HOUSE_POS.z);
+  const floorH = 3.4;     // height between floors
+  const W = 9, D = 9;     // footprint
+  const wallMat  = new THREE.MeshStandardMaterial({ color: 0xe0d4b8, roughness: 0.82, side: THREE.DoubleSide });
+  const beamMat  = new THREE.MeshStandardMaterial({ color: 0x4a2e16, roughness: 0.85 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x6e4b30, roughness: 0.7 });
+  const railMat  = new THREE.MeshStandardMaterial({ color: 0x2e1908, roughness: 0.7 });
+  const roofMat  = new THREE.MeshStandardMaterial({ color: 0x8b2e1f, roughness: 0.6 });
+
+  function makeFloor(y, isRoof){
+    const fg = new THREE.Group();
+    fg.position.y = y;
+    // Floor slab (walkable)
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(W, 0.3, D), floorMat);
+    slab.receiveShadow = true; slab.castShadow = true;
+    fg.add(slab);
+    if(!isRoof) WalkableSurfaces.push(slab);
+    // Walls (4 sides) with a doorway gap on the front side of floor 0
+    function makeWall(x, z, w, h, d, hasDoor){
+      if(hasDoor){
+        const left = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 0.8, h, d), wallMat);
+        left.position.set(x - (w/4 + 0.4), h/2, z);
+        left.receiveShadow = true; left.castShadow = true;
+        fg.add(left);
+        const right = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 0.8, h, d), wallMat);
+        right.position.set(x + (w/4 + 0.4), h/2, z);
+        right.receiveShadow = true; right.castShadow = true;
+        fg.add(right);
+        const lintel = new THREE.Mesh(new THREE.BoxGeometry(w, h - 2.4, d), wallMat);
+        lintel.position.set(x, h - (h - 2.4)/2, z);
+        fg.add(lintel);
+      } else {
+        const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+        wall.position.set(x, h/2, z);
+        wall.receiveShadow = true; wall.castShadow = true;
+        fg.add(wall);
+      }
+    }
+    if(!isRoof){
+      const wallH = floorH - 0.3;
+      makeWall(0, -D/2 + 0.15, W, wallH, 0.3, y === 0);   // front (door on ground floor)
+      makeWall(0,  D/2 - 0.15, W, wallH, 0.3, false);     // back
+      makeWall(-W/2 + 0.15, 0, 0.3, wallH, D, false);     // left
+      makeWall( W/2 - 0.15, 0, 0.3, wallH, D, false);     // right
+    } else {
+      // Pitched roof — two angled boards
+      const r1 = new THREE.Mesh(new THREE.BoxGeometry(W + 1, 0.25, D / 2 + 0.6), roofMat);
+      r1.position.set(0, 1.5, -D/4);
+      r1.rotation.x = -0.45;
+      r1.castShadow = true;
+      fg.add(r1);
+      const r2 = r1.clone();
+      r2.position.set(0, 1.5, D/4);
+      r2.rotation.x = 0.45;
+      fg.add(r2);
+    }
+    return fg;
+  }
+  grp.add(makeFloor(0));
+  grp.add(makeFloor(floorH));
+  grp.add(makeFloor(floorH * 2));
+  grp.add(makeFloor(floorH * 3, true));     // pitched roof on top
+
+  // Stairs — two simple flights, switchback style, on the right side of the building.
+  // Each step is a thin block; the player auto-climbs via the surface raycast.
+  function makeStairs(y0, y1, direction){
+    const stairsCount = 8;
+    const stairD = (floorH - 0.4) / stairsCount;
+    for(let i = 0; i < stairsCount; i++){
+      const step = new THREE.Mesh(
+        new THREE.BoxGeometry(2.4, 0.25, 0.7),
+        floorMat
+      );
+      const t = i + 0.5;
+      step.position.set(direction * 1.8, y0 + 0.3 + (i + 1) * stairD, D/2 - 1 - t * 0.7);
+      step.receiveShadow = true; step.castShadow = true;
+      grp.add(step);
+      WalkableSurfaces.push(step);
+    }
+  }
+  makeStairs(0,            floorH,      1);
+  makeStairs(floorH,       floorH * 2, -1);
+  makeStairs(floorH * 2,   floorH * 3,  1);
+
+  // Roof terrace — a top floor walkable surface (you can stand on the roof)
+  const terrace = new THREE.Mesh(new THREE.BoxGeometry(W - 0.5, 0.15, D - 0.5), floorMat);
+  terrace.position.y = floorH * 3 + 0.08;
+  terrace.receiveShadow = true;
+  grp.add(terrace);
+  WalkableSurfaces.push(terrace);
+
+  // Roof railing (4 thin rails)
+  const railH = 0.7;
+  [[-W/2 + 0.25, 0, 0.15, D - 0.5], [W/2 - 0.25, 0, 0.15, D - 0.5],
+   [0, -D/2 + 0.25, W - 0.5, 0.15], [0, D/2 - 0.25, W - 0.5, 0.15]].forEach(([x, z, w, d]) => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(w, railH, d), railMat);
+    rail.position.set(x, floorH * 3 + railH/2 + 0.18, z);
+    grp.add(rail);
+  });
+
+  // House sign at the front
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(2.6, 0.6, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffd64d, emissiveIntensity: 0.7, roughness: 0.45 })
+  );
+  sign.position.set(0, floorH - 0.6, -D/2 - 0.18);
+  grp.add(sign);
+
+  scene.add(grp);
+}
+buildHouse();
+
+// ── Hollywood-style $FARTPRINT sign on a distant hill ──
+function buildHollywoodSign(){
+  const grp = new THREE.Group();
+  // Position far back on a synthetic hill (north)
+  grp.position.set(0, 0, -160);
+  // Mound under the letters
+  const mound = new THREE.Mesh(
+    new THREE.ConeGeometry(70, 22, 14, 1, false),
+    new THREE.MeshStandardMaterial({ color: 0x2c5232, roughness: 0.95, flatShading: true })
+  );
+  mound.position.y = 11;
+  mound.castShadow = false;
+  mound.receiveShadow = true;
+  grp.add(mound);
+
+  // Letters — chunky blocks spelling "$FARTPRINT" set on the mound's
+  // forward slope. Each letter is a procedural box composition.
+  const letters = "$FARTPRINT".split("");
+  const letterW = 5.2;
+  const letterH = 8;
+  const startX = -((letters.length - 1) * letterW) / 2;
+  const baseY  = 18;
+  const baseZ  = 25;
+  const letterMat = new THREE.MeshStandardMaterial({ color: 0xf6f6f0, roughness: 0.75 });
+  const supportMat = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.85 });
+
+  letters.forEach((ch, i) => {
+    const lg = new THREE.Group();
+    lg.position.set(startX + i * letterW, baseY, baseZ);
+    // Each letter = box(es) arranged to look vaguely like the character.
+    // We use a simple "thick uppercase" approximation.
+    drawLetter(lg, ch, letterMat);
+    // Support struts behind each letter
+    for(let s = -1; s <= 1; s += 2){
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.25, letterH * 1.05, 0.25), supportMat);
+      strut.position.set(s * (letterW * 0.35), 0, 0.25);
+      strut.rotation.x = 0.2;
+      lg.add(strut);
+    }
+    lg.scale.y = 1;
+    grp.add(lg);
+  });
+
+  scene.add(grp);
+}
+function drawLetter(g, ch, mat){
+  // Letter sizing
+  const W = 4, H = 8, T = 0.7;
+  function bar(x, y, w, h, rot){
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, T), mat);
+    m.position.set(x, y, 0);
+    if(rot) m.rotation.z = rot;
+    m.castShadow = true;
+    g.add(m);
+  }
+  switch(ch){
+    case "$": bar(0, 0, 0.9, H * 1.05); bar(0, H/2 - 0.6, W * 0.9, 1); bar(0, 0, W * 0.9, 1); bar(0, -H/2 + 0.6, W * 0.9, 1); bar(-W/2 + 0.6, H/4, 1, H/2 - 0.6); bar(W/2 - 0.6, -H/4, 1, H/2 - 0.6); break;
+    case "F": bar(-W/2 + 0.6, 0, 1, H); bar(0, H/2 - 0.6, W, 1); bar(0, 0, W * 0.8, 1); break;
+    case "A": bar(-W/2 + 0.6, -0.4, 1, H * 0.95, 0.18); bar(W/2 - 0.6, -0.4, 1, H * 0.95, -0.18); bar(0, H/2 - 0.6, W * 0.9, 1); bar(0, 0, W * 0.6, 1); break;
+    case "R": bar(-W/2 + 0.6, 0, 1, H); bar(0, H/2 - 0.6, W * 0.9, 1); bar(0, 0, W * 0.7, 1); bar(W/2 - 0.6, H/4, 1, H/2 - 0.6); bar(0.7, -H/4, 1, H/2 + 0.4, 0.5); break;
+    case "T": bar(0, H/2 - 0.6, W, 1); bar(0, -0.2, 1, H - 1.2); break;
+    case "P": bar(-W/2 + 0.6, 0, 1, H); bar(0, H/2 - 0.6, W * 0.9, 1); bar(0, 0.6, W * 0.8, 1); bar(W/2 - 0.6, H/4 + 0.3, 1, H/2 - 1.2); break;
+    case "I": bar(0, 0, 1, H); bar(0, H/2 - 0.6, W * 0.5, 1); bar(0, -H/2 + 0.6, W * 0.5, 1); break;
+    case "N": bar(-W/2 + 0.6, 0, 1, H); bar(W/2 - 0.6, 0, 1, H); bar(0, 0, 1, H, 0.35); break;
+    default:  bar(0, 0, W * 0.8, H); break;
+  }
+}
+buildHollywoodSign();
+
+// ── Refinery building (sharpen tools to restore durability) ──
+const REFINERY_POS = { x: 42, z: 0 };
+const REFINERY_RADIUS = 4.5;
+function buildRefinery(){
+  const grp = new THREE.Group();
+  grp.position.set(REFINERY_POS.x, 0, REFINERY_POS.z);
+  // Foundation
+  const base = new THREE.Mesh(
+    new THREE.BoxGeometry(6, 0.6, 6),
+    new THREE.MeshStandardMaterial({ color: 0x2c2018, roughness: 0.85 })
+  );
+  base.position.y = 0.3; base.receiveShadow = true;
+  grp.add(base);
+  // Forge body
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(3.4, 2.6, 3),
+    new THREE.MeshStandardMaterial({ color: 0x4a3424, roughness: 0.8 })
+  );
+  body.position.y = 1.95; body.castShadow = true;
+  grp.add(body);
+  // Glowing fire mouth
+  const fire = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 0.9, 0.4),
+    new THREE.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0xff5a1f, emissiveIntensity: 1.6, roughness: 0.4 })
+  );
+  fire.position.set(0, 1.4, 1.55);
+  grp.add(fire);
+  // Chimney
+  const stack = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5, 0.6, 3.4, 8),
+    new THREE.MeshStandardMaterial({ color: 0x3a2c20, roughness: 0.85 })
+  );
+  stack.position.set(0, 4.4, 0); stack.castShadow = true;
+  grp.add(stack);
+  // Smoke puff (subtle)
+  const smoke = new THREE.Mesh(
+    new THREE.SphereGeometry(0.9, 12, 12),
+    new THREE.MeshStandardMaterial({ color: 0x554a40, emissive: 0x111111, roughness: 0.9 })
+  );
+  smoke.position.set(0, 6.4, 0);
+  grp.add(smoke);
+  // Sign
+  const sign = new THREE.Mesh(
+    new THREE.BoxGeometry(3.6, 0.6, 0.18),
+    new THREE.MeshStandardMaterial({ color: 0xff8a3d, emissive: 0xff5a1f, emissiveIntensity: 0.9, roughness: 0.45 })
+  );
+  sign.position.set(0, 4.2, 1.7);
+  grp.add(sign);
+  // Light
+  const lt = new THREE.PointLight(0xff5a1f, 2.0, 16);
+  lt.position.set(0, 2, 2);
+  grp.add(lt);
+  scene.add(grp);
+}
+buildRefinery();
 
 // =================================================================
 // ─── PLOT INTERACTION ───────────────────────────────────────────
 // =================================================================
-let nearbyPlot   = null;
-let nearbyMarket = false;
+let nearbyPlot     = null;
+let nearbyMarket   = false;
+let nearbyRefinery = false;
 const PLOT_INTERACT_RANGE = 3.5;
 
 function findNearbyPlot(){
@@ -4090,14 +5023,34 @@ function updatePlotPrompt(){
   const sub    = document.getElementById('plotPromptSub');
   const ownerId = State.username || State.wallet || "guest";
 
-  nearbyMarket = Math.hypot(Player.pos.x - MARKET_POS.x, Player.pos.z - MARKET_POS.z) < MARKET_RADIUS;
-  nearbyPlot   = nearbyMarket ? null : findNearbyPlot();
+  nearbyMarket   = Math.hypot(Player.pos.x - MARKET_POS.x,   Player.pos.z - MARKET_POS.z)   < MARKET_RADIUS;
+  nearbyRefinery = !nearbyMarket && Math.hypot(Player.pos.x - REFINERY_POS.x, Player.pos.z - REFINERY_POS.z) < REFINERY_RADIUS;
+  nearbyPlot     = (nearbyMarket || nearbyRefinery) ? null : findNearbyPlot();
 
   if(nearbyMarket){
     prompt.classList.remove('locked');
     prompt.classList.add('show');
     title.textContent = "🌿 MARKETPLACE";
     sub.innerHTML = `Press <kbd>E</kbd> to enter`;
+    return;
+  }
+  if(nearbyRefinery){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    const dur = State.tools.pickaxe?.durability ?? 100;
+    const has = (State.inventory.pickaxe || 0) > 0;
+    if(!has){
+      title.textContent = "🔥 REFINERY";
+      sub.innerHTML = `Need a <b>⛏ Pickaxe</b> to sharpen`;
+      prompt.classList.add('locked');
+    } else if(dur >= 100){
+      title.textContent = "🔥 REFINERY";
+      sub.innerHTML = `Pickaxe is sharp (${dur}%) — come back when it dulls`;
+    } else {
+      const cost = sharpenCost(dur);
+      title.textContent = `🔥 REFINERY · ⛏ ${dur}%`;
+      sub.innerHTML = `Press <kbd>E</kbd> to sharpen for <b>${cost} 🥈</b>`;
+    }
     return;
   }
   if(!nearbyPlot){
@@ -4108,7 +5061,7 @@ function updatePlotPrompt(){
   prompt.classList.remove('locked');
   if(!nearbyPlot.owner){
     title.textContent = `🏷 Plot for sale`;
-    sub.innerHTML = `Press <kbd>E</kbd> to buy for <b>${PLOT_PRICE} 💨 $FART</b>`;
+    sub.innerHTML = `Press <kbd>E</kbd> to buy for <b>${PLOT_PRICE} 🥈 Silver</b>`;
   } else if(nearbyPlot.owner === ownerId){
     if(!nearbyPlot.crop){
       const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
@@ -4139,21 +5092,43 @@ function updatePlotPrompt(){
   }
 }
 
+function sharpenCost(durability){
+  // Cheaper when only slightly dull (10–25), pricier from heavy wear
+  const missing = 100 - durability;
+  return Math.max(5, Math.round(missing * 0.6));
+}
+
 function tryInteract(){
   if(nearbyMarket){ openMarket(); return; }
+  if(nearbyRefinery){
+    if(!State.inventory.pickaxe){ floater("No pickaxe", "bad"); return; }
+    const dur = State.tools.pickaxe?.durability ?? 100;
+    if(dur >= 100){ floater("Pickaxe is already sharp", "bad"); return; }
+    const cost = sharpenCost(dur);
+    if(State.credits < cost){ floater(`Need ${cost} 🥈 Silver`, "bad"); return; }
+    State.credits -= cost;
+    if(!State.tools.pickaxe) State.tools.pickaxe = { durability: 100 };
+    State.tools.pickaxe.durability = 100;
+    State.xp += 5;
+    floater(`⛏ Sharpened to 100%  -${cost} 🥈`, "good");
+    showBuyToast(`Pickaxe sharpened · 100% durability · -${cost} 🥈 Silver`);
+    playPurchaseSound();
+    saveState(); updateHUD(); renderInventory();
+    return;
+  }
   if(!nearbyPlot) return;
   const ownerId = State.username || State.wallet || "guest";
   if(!nearbyPlot.owner){
     // BUY
     if(State.credits < PLOT_PRICE){
-      floater(`Need ${PLOT_PRICE} 💨 $FART`, "bad");
+      floater(`Need ${PLOT_PRICE} 🥈 Silver`, "bad");
       return;
     }
     State.credits -= PLOT_PRICE;
     nearbyPlot.owner = ownerId;
     nearbyPlot.ownerName = State.username || "anon";
     plotStateChanged(nearbyPlot);
-    floater(`PLOT BOUGHT  -${PLOT_PRICE} 💨`, "good");
+    floater(`PLOT BOUGHT  -${PLOT_PRICE} 🥈`, "good");
     saveState(); updateHUD();
     broadcastPlot(nearbyPlot);
     return;
@@ -4223,6 +5198,16 @@ function tryMineOre(){
     floater("⛏ Pickaxe required", "bad");
     return;
   }
+  // Ensure the pickaxe has a durability record (defaults to 100 = fresh)
+  if(!State.tools.pickaxe) State.tools.pickaxe = { durability: 100 };
+  const dur = State.tools.pickaxe.durability;
+  // Yield curve: dur 100 → 1 ore always. dur 50 → 50% chance of ore. dur 0 → never.
+  // Plus a small floor at higher durability so it always feels productive.
+  const yieldChance = Math.max(0.05, dur / 100);
+  const gotOre = Math.random() < yieldChance;
+  // Each swing burns 6 durability
+  State.tools.pickaxe.durability = Math.max(0, dur - 6);
+
   ore.alive = false;
   ore.minedAt = Date.now();
   scene.remove(ore.mesh);
@@ -4234,10 +5219,15 @@ function tryMineOre(){
     }
   });
   ore.mesh = null;
-  addItem("iron_ore", 1);
-  State.xp += 18;
+  if(gotOre){
+    addItem("iron_ore", 1);
+    State.xp += 18;
+    floater(`+1 🪨 Iron Ore  +18 XP  ⛏ ${State.tools.pickaxe.durability}%`, "good");
+  } else {
+    State.xp += 4;
+    floater(`Ore crumbled! ⛏ dull (${State.tools.pickaxe.durability}%) — sharpen at refinery`, "bad");
+  }
   checkLevelUp();
-  floater("+1 🪨 Iron Ore  +18 XP", "good");
   // Tiny mining sound — short pitched chunk via the audio context
   const ctx = ensureAudio();
   if(ctx){
@@ -4273,7 +5263,7 @@ function updateOrePrompt(){
   if(State.inventory.pickaxe){
     sub.innerHTML = `Press <kbd>F</kbd> to mine`;
   } else {
-    sub.innerHTML = `Need a <b>⛏ Pickaxe</b> (35 💨 at market)`;
+    sub.innerHTML = `Need a <b>⛏ Pickaxe</b> (35 🥈 at market)`;
   }
 }
 
@@ -4321,7 +5311,7 @@ function renderSeedShop(){
           <div class="nm">${item.name}</div>
           <div class="desc">${desc}</div>
         </div>
-        <div class="price">${item.marketPrice}💨</div>
+        <div class="price">${item.marketPrice}🥈</div>
       </div>
     `;
   }).join("");
@@ -4330,12 +5320,14 @@ function renderSeedShop(){
       const id = c.dataset.id;
       const item = ITEMS[id];
       if(State.credits < item.marketPrice){
-        floater(`Need ${item.marketPrice} 💨 $FART`, "bad");
+        floater(`Need ${item.marketPrice} 🥈 Silver`, "bad");
         return;
       }
       State.credits -= item.marketPrice;
       addItem(id, 1);
-      floater(`+1 ${item.name}  -${item.marketPrice} 💨`, "good");
+      floater(`+1 ${item.name}  -${item.marketPrice} 🥈`, "good");
+      showBuyToast(`Bought 1 ${item.name} · -${item.marketPrice} 🥈 Silver`);
+      playPurchaseSound();
       saveState(); updateHUD();
       renderInventory();
     });
@@ -4362,7 +5354,7 @@ function renderListings(){
           <div class="nm">${escHtml(item.name)} × ${L.qty}</div>
           <div class="seller">by ${escHtml(L.sellerName || "anon")}</div>
         </div>
-        <div class="price">${L.price}💨</div>
+        <div class="price">${L.price}🥈</div>
         <button class="buy ${own ? 'own' : ''}" data-id="${escHtml(L.id)}">${own ? "yours" : "BUY"}</button>
       </div>
     `;
@@ -4419,7 +5411,7 @@ function renderSellPane(){
       };
       Listings.push(listing);
       _myListings.add(listing.id);
-      floater(`LISTED  ${item.name} × ${qty}  ·  ${price}💨`, "good");
+      floater(`LISTED  ${item.name} × ${qty}  ·  ${price}🥈`, "good");
       broadcastListing(listing);
       renderListings();
       renderSellPane();
@@ -4435,13 +5427,15 @@ function buyListing(id){
   const ownerId = State.username || State.wallet || "guest";
   if(L.sellerId === ownerId) return;
   if(State.credits < L.price){
-    floater(`Need ${L.price} 💨 $FART`, "bad");
+    floater(`Need ${L.price} 🥈 Silver`, "bad");
     return;
   }
   State.credits -= L.price;
   addItem(L.item, L.qty);
   Listings.splice(idx, 1);
-  floater(`BOUGHT ${ITEMS[L.item].name} × ${L.qty}  -${L.price}💨`, "good");
+  floater(`BOUGHT ${ITEMS[L.item].name} × ${L.qty}  -${L.price}🥈`, "good");
+  showBuyToast(`Bought ${L.qty} × ${ITEMS[L.item].name} · -${L.price} 🥈 Silver`);
+  playPurchaseSound();
   broadcastListingBuy(L.id, ownerId, State.username || "anon");
   saveState(); updateHUD();
   renderListings();
@@ -4522,7 +5516,7 @@ handleRoomMessage = function(m){
       State.credits += L.price;
       _myListings.delete(L.id);
       saveState(); updateHUD();
-      showSaleToast(`${m.buyerName || "anon"} bought your ${ITEMS[L.item]?.name || "item"} for ${L.price} 💨`);
+      showSaleToast(`${m.buyerName || "anon"} bought your ${ITEMS[L.item]?.name || "item"} for ${L.price} 🥈`);
     }
     if(document.getElementById('marketBg').classList.contains('show')) renderListings();
     return;
@@ -4570,6 +5564,153 @@ function showSaleToast(text){
   t.textContent = "💰 " + text;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3400);
+}
+
+// =================================================================
+// ─── GOLD VAULT (burn $FARTPRINT → mint local Gold) ─────────────
+// =================================================================
+// Three tiers — base rate is 10K $FARTPRINT = 1 GOLD, with bonus
+// multipliers on the larger tiers. The burn is signed by the user's
+// Phantom wallet via a standard SPL Token burnChecked instruction.
+// Once Solana confirms the transaction, we credit the user's local
+// Gold balance and save state. If the transaction fails or the user
+// rejects, nothing changes — credits are tied to on-chain truth.
+const FP_MINT_STR        = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+const FP_DECIMALS        = 6;
+const TOKEN_PROGRAM_ID   = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN_2022_ID      = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const ASSOC_TOKEN_PROG   = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+
+function openGoldVault(){
+  document.getElementById('goldBg').classList.add('show');
+  document.getElementById('goldBalanceLg').textContent = State.gold;
+  document.getElementById('goldFpBalance').textContent = fmtBalance(State.fartprintBalance);
+  document.getElementById('goldStep').style.display = "none";
+  refreshFartprintBalance().then(() => {
+    document.getElementById('goldFpBalance').textContent = fmtBalance(State.fartprintBalance);
+  });
+}
+function closeGoldVault(){
+  document.getElementById('goldBg').classList.remove('show');
+}
+document.getElementById('goldClose').addEventListener('click', closeGoldVault);
+document.getElementById('goldBg').addEventListener('click', (e) => {
+  if(e.target.id === "goldBg") closeGoldVault();
+});
+document.getElementById('hudGoldCard').addEventListener('click', openGoldVault);
+
+document.querySelectorAll('.gold-tier').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const burn = Number(btn.dataset.burn);
+    const gold = Number(btn.dataset.gold);
+    confirmGoldBurn(burn, gold);
+  });
+});
+
+function setGoldStep(text, busy){
+  const el = document.getElementById('goldStep');
+  el.style.display = "";
+  el.textContent = text;
+  el.classList.toggle('busy', !!busy);
+}
+
+async function confirmGoldBurn(burnAmount, goldAmount){
+  if(!State.wallet){
+    setGoldStep("Connect Phantom on the login screen first — burning requires your wallet signature.");
+    return;
+  }
+  if(!window.solanaWeb3){
+    setGoldStep("Solana library still loading… try again in a moment.");
+    return;
+  }
+  // Pre-flight balance check
+  await refreshFartprintBalance();
+  if((State.fartprintBalance || 0) < burnAmount){
+    setGoldStep(`Wallet only has ${fmtBalance(State.fartprintBalance)} $FARTPRINT — need at least ${burnAmount.toLocaleString()}.`);
+    return;
+  }
+  if(!confirm(
+    `Burn ${burnAmount.toLocaleString()} $FARTPRINT forever to mint ${goldAmount} 🥇 GOLD?\n\n` +
+    `This is permanent. Phantom will ask you to sign.`
+  )) return;
+
+  setGoldStep(`Building burn transaction for ${burnAmount.toLocaleString()} $FARTPRINT…`, true);
+  try {
+    const sig = await burnFartprint(burnAmount);
+    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). +${goldAmount} 🥇 GOLD added.`);
+    State.gold += goldAmount;
+    saveState();
+    updateHUD();
+    document.getElementById('goldBalanceLg').textContent = State.gold;
+    floater(`+${goldAmount} 🥇 GOLD`, "good");
+    playPurchaseSound();
+    refreshFartprintBalance();
+  } catch(e){
+    console.warn("[Gold] burn failed", e);
+    setGoldStep(`❌ Burn failed: ${(e && e.message) || e}. Nothing was deducted.`);
+  }
+}
+
+// Resolve which token program owns the mint (legacy SPL vs Token-2022),
+// because the burnChecked instruction layout / program-id differ, and a
+// stale assumption will produce an InvalidAccountData error at signing.
+async function _resolveMintProgram(conn){
+  const mintPk = new solanaWeb3.PublicKey(FP_MINT_STR);
+  const info = await conn.getAccountInfo(mintPk);
+  if(!info) throw new Error("Mint account not found.");
+  return info.owner.toBase58() === TOKEN_2022_ID ? TOKEN_2022_ID : TOKEN_PROGRAM_ID;
+}
+
+async function burnFartprint(uiAmount){
+  const W3 = window.solanaWeb3;
+  if(!W3) throw new Error("solana web3 not loaded");
+  const phantom = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
+  if(!phantom) throw new Error("Phantom not detected");
+
+  const conn = new W3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
+  const tokenProgramStr = await _resolveMintProgram(conn);
+
+  const owner       = new W3.PublicKey(State.wallet);
+  const mint        = new W3.PublicKey(FP_MINT_STR);
+  const tokenProg   = new W3.PublicKey(tokenProgramStr);
+  const assocProg   = new W3.PublicKey(ASSOC_TOKEN_PROG);
+  const [ata]       = W3.PublicKey.findProgramAddressSync(
+    [owner.toBuffer(), tokenProg.toBuffer(), mint.toBuffer()],
+    assocProg
+  );
+
+  // BurnChecked (instruction 15): u64 amount LE + u8 decimals
+  const rawAmount = BigInt(uiAmount) * (10n ** BigInt(FP_DECIMALS));
+  const data = new Uint8Array(10);
+  data[0] = 15;
+  let x = rawAmount;
+  for(let i = 0; i < 8; i++){ data[1 + i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = FP_DECIMALS;
+
+  const ix = new W3.TransactionInstruction({
+    programId: tokenProg,
+    keys: [
+      { pubkey: ata,   isSigner: false, isWritable: true },
+      { pubkey: mint,  isSigner: false, isWritable: true },
+      { pubkey: owner, isSigner: true,  isWritable: false },
+    ],
+    data,
+  });
+
+  const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+  const msg = new W3.TransactionMessage({
+    payerKey: owner,
+    recentBlockhash: blockhash,
+    instructions: [ix],
+  }).compileToV0Message();
+  const tx = new W3.VersionedTransaction(msg);
+
+  const res = await phantom.signAndSendTransaction(tx);
+  const sig = res?.signature || res;
+  try {
+    await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+  } catch(_){}
+  return sig;
 }
 
 // =================================================================
@@ -4673,7 +5814,7 @@ async function renderLeaderboard(){
           <div class="lv">Lv ${r.level || 1}  ·  ${r.xp || 0} XP</div>
         </div>
         <span class="xp">${(r.totalXp || 0).toLocaleString()}</span>
-        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(230,255,238,0.42);">💨 ${r.credits || 0}</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(230,255,238,0.42);">🥈 ${r.credits || 0}</span>
       </div>
     `;
   }).join("");
@@ -5167,19 +6308,125 @@ function dmEndMatch(winnerId){
   const iWon = winnerId === Net.peerId;
   const xpReward = iWon ? 200 : 30;
   State.xp += xpReward;
-  if(iWon) State.credits += 50;
+  if(iWon){ State.credits += 50; State.dmWins++; } else { State.dmLosses++; }
+  // ELO update — fixed K-factor 32, opponent assumed ~equal at this stage
+  // (we don't reliably know their rating). A simple ±20 keeps it readable.
+  if(iWon){ State.elo += 20; } else { State.elo = Math.max(100, State.elo - 18); }
   checkLevelUp();
   saveState(); updateHUD();
   dmAnnounce(iWon ? "VICTORY 🏆" : "DEFEAT 💀");
   setTimeout(() => {
-    floater(`${iWon ? "WIN" : "LOSS"}  +${xpReward} XP${iWon ? "  +50 💨" : ""}`, iWon ? "good" : "bad");
+    floater(`${iWon ? "WIN" : "LOSS"}  +${xpReward} XP${iWon ? "  +50 🥈" : ""}  ·  ELO ${State.elo}`, iWon ? "good" : "bad");
     dmHideOverlay();
     Dm.phase = "off";
     Dm.inRing = false;
     if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
     publishScore();
+    publishEloRecord();
   }, 1800);
 }
+
+// =================================================================
+// ─── DM / ELO LEADERBOARD ───────────────────────────────────────
+// =================================================================
+const DM_LB_TOPIC = "fartworld-dm-elo-v1-pub";
+async function publishEloRecord(){
+  if(!State.username) return;
+  try {
+    await fetch(`https://ntfy.sh/${DM_LB_TOPIC}`, {
+      method: "POST",
+      body: JSON.stringify({
+        kind: "elo", name: State.username, elo: State.elo,
+        wins: State.dmWins, losses: State.dmLosses, ts: Date.now(),
+      }),
+    });
+  } catch(_){}
+}
+async function fetchEloLeaderboard(){
+  try {
+    const r = await fetch(`https://ntfy.sh/${DM_LB_TOPIC}/json?poll=1&since=72h`);
+    if(!r.ok) return [];
+    const text = await r.text();
+    if(!text.trim()) return [];
+    const players = new Map();
+    for(const line of text.trim().split("\n")){
+      try {
+        const evt = JSON.parse(line);
+        if(evt.event !== "message" || !evt.message) continue;
+        const m = JSON.parse(evt.message);
+        if(m.kind !== "elo" || !m.name) continue;
+        const cur = players.get(m.name);
+        if(!cur || (m.ts || 0) > (cur.ts || 0)) players.set(m.name, m);
+      } catch(_){}
+    }
+    if(State.username){
+      players.set(State.username, {
+        name: State.username, elo: State.elo,
+        wins: State.dmWins, losses: State.dmLosses, ts: Date.now(),
+      });
+    }
+    return [...players.values()].sort((a, b) => (b.elo || 0) - (a.elo || 0)).slice(0, 10);
+  } catch(_){ return []; }
+}
+
+// CSS overlay that shows the top-10 ELO leaderboard, positioned in 3D
+// next to the arena via projection. Refreshes every 20s.
+let _arenaLbBoard = null;
+const _arenaLbProj = new THREE.Vector3();
+function ensureArenaLbBoard(){
+  if(_arenaLbBoard) return _arenaLbBoard;
+  const el = document.createElement('div');
+  el.style.cssText = `
+    position: absolute; transform: translate(-50%, -100%);
+    background: rgba(8,18,11,0.86); border: 2px solid rgba(255,90,77,0.50);
+    border-radius: 12px; padding: 10px 14px; pointer-events: none;
+    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    color: #e6ffee; min-width: 230px; max-width: 260px; z-index: 9;
+    box-shadow: 0 10px 26px rgba(0,0,0,0.55), 0 0 32px rgba(255,90,77,0.30);
+  `;
+  el.innerHTML = '<div style="font-family:Bangers;letter-spacing:2px;font-size:16px;text-align:center;background:linear-gradient(135deg,#ff7a6e,#ffd64d);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;">🏆 ARENA TOP 10</div><div id="arenaLbRows">loading…</div>';
+  document.getElementById('chatBubbles').parentElement.appendChild(el);
+  _arenaLbBoard = el;
+  return el;
+}
+async function refreshArenaLb(){
+  ensureArenaLbBoard();
+  const rows = await fetchEloLeaderboard();
+  const host = document.getElementById('arenaLbRows');
+  if(!host) return;
+  if(!rows.length){
+    host.innerHTML = '<div style="color:rgba(230,255,238,0.4);text-align:center;padding:8px 0;">No matches recorded yet</div>';
+    return;
+  }
+  host.innerHTML = rows.map((r, i) => {
+    const me = r.name === State.username;
+    return `<div style="display:grid;grid-template-columns:18px 1fr auto auto;gap:8px;padding:3px 0;${me ? 'background:rgba(46,224,107,0.10);border-radius:4px;' : ''}">
+      <span style="color:${i===0?'#ffd64d':i===1?'#c0c8d6':i===2?'#ff9d6b':'rgba(230,255,238,0.42)'};font-weight:800;text-align:center;">${i+1}</span>
+      <span style="color:${me ? '#5ff09c' : '#e6ffee'};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</span>
+      <span style="color:#ffd64d;font-weight:800;">${r.elo || 1000}</span>
+      <span style="color:rgba(230,255,238,0.55);">${r.wins||0}W/${r.losses||0}L</span>
+    </div>`;
+  }).join("");
+}
+function tickArenaLeaderboardOverlay(){
+  if(!_arenaLbBoard) ensureArenaLbBoard();
+  // Position the board floating just outside the arena's near edge
+  _arenaLbProj.set(ARENA_POS.x - (ARENA_RADIUS + 4), 5, ARENA_POS.z);
+  _arenaLbProj.project(camera);
+  const visible = _arenaLbProj.z < 1 && _arenaLbProj.z > -1;
+  if(visible){
+    const sx = (_arenaLbProj.x * 0.5 + 0.5) * innerWidth;
+    const sy = (-_arenaLbProj.y * 0.5 + 0.5) * innerHeight;
+    _arenaLbBoard.style.left = sx + "px";
+    _arenaLbBoard.style.top  = sy + "px";
+    _arenaLbBoard.style.display = "";
+  } else {
+    _arenaLbBoard.style.display = "none";
+  }
+}
+// Refresh the board every 20s
+setInterval(refreshArenaLb, 20000);
+setTimeout(refreshArenaLb, 1500);
 
 // Tick the deathmatch state every frame (called from tickGameplaySystems)
 let _dmRingPromptShown = false;
@@ -5321,6 +6568,9 @@ function loop(now){
   updatePeers(dt);
   broadcastPos();
   tickGameplaySystems(dt);
+  tickArenaVisuals(dt);
+  updateChatBubbles();
+  if(typeof tickArenaLeaderboardOverlay === "function") tickArenaLeaderboardOverlay();
 
   // Light passive HUD refresh every few frames
   if(((now / 1000) | 0) !== ((lastTime / 1000 - dt) | 0)){
