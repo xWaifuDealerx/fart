@@ -2628,6 +2628,24 @@ const WalkableSurfaces = [];
 const _floorRay  = new THREE.Raycaster();
 const _floorDown = new THREE.Vector3(0, -1, 0);
 
+// ─── Island shape + water level ─────────────────────────────────
+// The map is a roughly circular island. Inside ISLAND_RADIUS the
+// ground keeps its rolling-hill noise; from there it ramps down
+// smoothly to WATER_DEPTH so the shore line is natural. Anything
+// further out is below sea level and underwater.
+const WATER_LEVEL      = 0.0;
+const ISLAND_RADIUS    = 90;
+const ISLAND_FALLOFF   = 28;
+const WATER_DEPTH      = -6;
+// Returns a 0..1 multiplier — 1 inside the island, smoothing to 0 at
+// the shore. Combined with WATER_DEPTH below to sink the ground.
+function islandFalloff(r){
+  if(r <= ISLAND_RADIUS) return 1;
+  if(r >= ISLAND_RADIUS + ISLAND_FALLOFF) return 0;
+  const t = (r - ISLAND_RADIUS) / ISLAND_FALLOFF;
+  return 1 - (t * t * (3 - 2 * t));     // smoothstep
+}
+
 // ─── World ──────────────────────────────────────────────────────
 // Land-plot locations + sizes are declared BEFORE the ground gets
 // built so we can flatten the ground at those positions during
@@ -2679,6 +2697,10 @@ function makeGround() {
     // ALSO flatten under every plot location so plots aren't half-buried
     // or floating above the surface.
     y *= plotFlattenFactor(x, z);
+    // Island shape — past the shore, ramp the ground down to WATER_DEPTH
+    // so the world looks like a real island instead of an infinite plane.
+    const isl = islandFalloff(r);
+    y = y * isl + WATER_DEPTH * (1 - isl);
     pos.setY(i, y);
   }
   geo.computeVertexNormals();
@@ -2702,7 +2724,9 @@ function groundHeightAt(x, z){
   y += Math.sin(x * 0.05) * Math.cos(z * 0.05) * 0.6;
   y += Math.sin(x * 0.12 + 0.5) * 0.3;
   const flatness = THREE.MathUtils.smoothstep(r, 4, 14);
-  return y * flatness * plotFlattenFactor(x, z);
+  y *= flatness * plotFlattenFactor(x, z);
+  const isl = islandFalloff(r);
+  return y * isl + WATER_DEPTH * (1 - isl);
 }
 
 // Grid overlay (subtle neon lines on the ground)
@@ -3409,6 +3433,8 @@ const Player = {
   fartTimer: 0,
   zone: "neutral",
   prevZone: "neutral",
+  boat:    null,             // when set, player is in this boat (see updateBoat)
+  boatYaw: 0,                // independent of facing yaw so the printer rides the boat
 };
 
 const Cam = {
@@ -4105,6 +4131,9 @@ document.getElementById('skipBtn').addEventListener('click', enterLobby);
 
 // ─── Movement update ────────────────────────────────────────────
 function updateMovement(dt){
+  // If we're in a boat, the boat-update owns position + yaw entirely.
+  if(Player.boat){ updateBoat(dt); return; }
+
   let inputX = 0, inputZ = 0;
   if(keys['KeyW']) inputZ -= 1;
   if(keys['KeyS']) inputZ += 1;
@@ -4119,6 +4148,9 @@ function updateMovement(dt){
   Player.walking = mag > 0.08;
   Player.running = (keys['ShiftLeft'] || keys['ShiftRight']) && Player.walking;
 
+  // Snapshot position so we can revert if the step would land us in
+  // water that's too deep to wade (used by the island-edge clamp below).
+  const oldX = Player.pos.x, oldZ = Player.pos.z;
   if(Player.walking){
     const nx = inputX / Math.max(0.001, mag);
     const nz = inputZ / Math.max(0.001, mag);
@@ -4146,7 +4178,15 @@ function updateMovement(dt){
   }
 
   // Sample ground OR walkable surface (house floors, stairs, refinery, arena)
-  Player.pos.y = sampleSurfaceY(Player.pos.x, Player.pos.z);
+  let yNew = sampleSurfaceY(Player.pos.x, Player.pos.z);
+  // Block walking off the island into deep water. Below WATER_LEVEL-0.4
+  // is "too deep to wade" — revert the step entirely.
+  if(yNew < WATER_LEVEL - 0.4){
+    Player.pos.x = oldX; Player.pos.z = oldZ;
+    yNew = sampleSurfaceY(Player.pos.x, Player.pos.z);
+  }
+  // Cosmetic: in shallow water, your feet sit at the water surface
+  Player.pos.y = Math.max(yNew, WATER_LEVEL - 0.2);
 }
 
 // =================================================================
@@ -5072,11 +5112,376 @@ function buildRefinery(){
 buildRefinery();
 
 // =================================================================
+// ─── WATER SURFACE + DAY/NIGHT CYCLE + BOATS ────────────────────
+// =================================================================
+
+// ── Big water plane around the island ──
+// A wide translucent blue plane at y=0 with subtle ripple animation
+// via vertex displacement. Renders BELOW the bloom threshold so it
+// doesn't blow out in the post pass.
+const Water = { mesh: null, time: 0 };
+function buildWater(){
+  const size = 800;
+  const segs = 96;
+  const geo = new THREE.PlaneGeometry(size, size, segs, segs);
+  geo.rotateX(-Math.PI / 2);
+  const mat = new THREE.MeshStandardMaterial({
+    color:        0x1f5a7a,
+    transparent:  true,
+    opacity:      0.88,
+    roughness:    0.22,
+    metalness:    0.35,
+    side:         THREE.DoubleSide,
+  });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.y = WATER_LEVEL;
+  m.receiveShadow = true;
+  scene.add(m);
+  Water.mesh = m;
+  Water.basePositions = geo.attributes.position.array.slice();   // snapshot for ripple math
+  return m;
+}
+buildWater();
+
+function tickWater(dt){
+  Water.time += dt;
+  // Cheap sinusoidal ripple on the y component of each vertex.
+  const pos = Water.mesh.geometry.attributes.position;
+  const base = Water.basePositions;
+  const t = Water.time;
+  for(let i = 0; i < pos.count; i++){
+    const x = base[i * 3];
+    const z = base[i * 3 + 2];
+    const y =
+      Math.sin(x * 0.18 + t * 1.4) * 0.12 +
+      Math.cos(z * 0.22 + t * 1.7) * 0.08 +
+      Math.sin((x + z) * 0.11 + t * 0.9) * 0.06;
+    pos.setY(i, y);
+  }
+  pos.needsUpdate = true;
+}
+
+// ── Sandy beach ring around the island for natural shoreline ──
+// (Same noise as the ground, just clipped to the falloff annulus,
+// painted in a warm sand color sitting *just* above WATER_LEVEL so
+// it reads as beach instead of grass at the waterline.)
+function buildBeachRing(){
+  const inner = ISLAND_RADIUS - 2;
+  const outer = ISLAND_RADIUS + ISLAND_FALLOFF * 0.65;
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(inner, outer, 96, 1),
+    new THREE.MeshStandardMaterial({
+      color: 0xe6d6a8, roughness: 0.9, side: THREE.DoubleSide,
+    })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.y = WATER_LEVEL + 0.04;
+  ring.receiveShadow = true;
+  scene.add(ring);
+}
+buildBeachRing();
+
+// ── Day/Night cycle ──
+// 1 full real-time hour = 1 in-game day. Time runs 0..1 looping; we
+// derive the sun angle, sky/fog tint, ambient strength, star opacity
+// and the moon position from that single phase value. Everything that
+// looks dynamic in the lighting reads from here.
+const Sky = {
+  phase: 0.28,                    // 0=midnight  0.25=sunrise  0.5=noon  0.75=sunset
+  cycleMs: 60 * 60 * 1000,        // one real-time hour
+  starsMesh: null,
+  moonMesh: null,
+};
+
+function buildMoon(){
+  const m = new THREE.Mesh(
+    new THREE.SphereGeometry(8, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xf5e9c6, transparent: true })
+  );
+  m.position.set(0, 0, 0);
+  scene.add(m);
+  Sky.moonMesh = m;
+}
+buildMoon();
+
+// Pluck the existing star Points object so we can animate its opacity
+// — built earlier in makeStars(). Search the scene's top-level
+// children for the right Points instance.
+scene.traverse(o => {
+  if(o.isPoints && !Sky.starsMesh) Sky.starsMesh = o;
+});
+
+// Three color stops for the sky — we lerp through them based on the
+// current sun height to get a believable sunrise/sunset glow.
+const SKY_NIGHT  = new THREE.Color(0x05101f);
+const SKY_DAWN   = new THREE.Color(0xf09a55);
+const SKY_DAY    = new THREE.Color(0x6ec3d6);
+const FOG_NIGHT  = new THREE.Color(0x070d18);
+const FOG_DAY    = new THREE.Color(0x88c4d6);
+
+function tickDayNight(dt){
+  Sky.phase = (Sky.phase + dt * 1000 / Sky.cycleMs) % 1;
+  // Map phase to an angle where phase 0.25 = sunrise, 0.75 = sunset
+  const angle = (Sky.phase - 0.25) * Math.PI * 2;
+  const sunY  = Math.sin(angle);
+  const sunX  = Math.cos(angle);
+  // Sun position (above the world)
+  sun.position.set(sunX * 120, sunY * 120 + 8, 30);
+  // Intensity scales with sun height; never quite zero so night
+  // still gets a tiny ambient bath from the moon.
+  sun.intensity = Math.max(0.04, sunY) * 2.6;
+  sun.color.setHex(sunY < 0.15 && sunY > -0.05 ? 0xff9c5c : 0xfff4d6);
+  // Ambient — brighter at noon, dimmer at night
+  ambient.intensity = 0.10 + Math.max(0, sunY) * 0.65;
+  // Sky + fog color — lerp through night → dawn → day
+  let skyC, fogC;
+  if(sunY > 0.20){
+    // Full day
+    skyC = SKY_DAY; fogC = FOG_DAY;
+  } else if(sunY > -0.15){
+    // Sunrise / sunset window — blend dawn ↔ day or dawn ↔ night
+    const t = THREE.MathUtils.smoothstep(sunY, -0.15, 0.20);
+    skyC = SKY_NIGHT.clone().lerp(SKY_DAWN, 1).lerp(SKY_DAY, t);   // wash through dawn
+    fogC = FOG_NIGHT.clone().lerp(FOG_DAY, t);
+  } else {
+    skyC = SKY_NIGHT; fogC = FOG_NIGHT;
+  }
+  scene.background = skyC.clone();
+  if(scene.fog) scene.fog.color.copy(fogC);
+  // Stars fade in at night
+  if(Sky.starsMesh){
+    Sky.starsMesh.material.opacity = Math.max(0, 1 - Math.max(0, sunY) * 2.4) * 0.75;
+  }
+  // Moon position (opposite the sun, slightly offset)
+  if(Sky.moonMesh){
+    const mx = -sunX * 200;
+    const my = -sunY * 180 + 40;
+    Sky.moonMesh.position.set(mx, my, -40);
+    Sky.moonMesh.visible = sunY < 0.4;
+    Sky.moonMesh.material.opacity = Math.min(1, Math.max(0, 0.6 - sunY));
+  }
+}
+
+// ── Boat shop on a wooden dock at the eastern shore ──
+const DOCK_POS    = { x: ISLAND_RADIUS - 6, z: 0 };
+const DOCK_RADIUS = 4.5;
+function buildDockAndShop(){
+  const grp = new THREE.Group();
+  grp.position.set(DOCK_POS.x, 0, DOCK_POS.z);
+  const woodMat   = new THREE.MeshStandardMaterial({ color: 0x6b4623, roughness: 0.88 });
+  const woodMat2  = new THREE.MeshStandardMaterial({ color: 0x55351a, roughness: 0.85 });
+  const shopWall  = new THREE.MeshStandardMaterial({ color: 0xd6b277, roughness: 0.75 });
+  const roofMat   = new THREE.MeshStandardMaterial({ color: 0x2c4a78, roughness: 0.7 });
+  const signMat   = new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffd64d, emissiveIntensity: 0.7, roughness: 0.45 });
+
+  // ── Dock planks extending into the water ──
+  const dock = new THREE.Mesh(new THREE.BoxGeometry(12, 0.25, 4), woodMat);
+  dock.position.set(6, WATER_LEVEL + 0.18, 0);
+  dock.castShadow = true; dock.receiveShadow = true;
+  grp.add(dock);
+  WalkableSurfaces.push(dock);
+  // Posts every 3 units
+  for(let i = 0; i <= 4; i++){
+    for(let s = -1; s <= 1; s += 2){
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.18, 2.4, 6), woodMat2);
+      post.position.set(i * 3, WATER_LEVEL - 0.9, s * 1.8);
+      post.castShadow = true;
+      grp.add(post);
+    }
+  }
+  // ── Shop hut on the inland end of the dock ──
+  const hut = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2.6, 3.6), shopWall);
+  hut.position.set(0, WATER_LEVEL + 1.6, 0);
+  hut.castShadow = true; hut.receiveShadow = true;
+  grp.add(hut);
+  // Roof
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(3.0, 1.4, 4), roofMat);
+  roof.position.set(0, WATER_LEVEL + 3.6, 0);
+  roof.rotation.y = Math.PI / 4;
+  roof.castShadow = true;
+  grp.add(roof);
+  // Sign
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.55, 0.14), signMat);
+  sign.position.set(0, WATER_LEVEL + 2.85, 1.9);
+  grp.add(sign);
+  // Yellow lantern at the entrance
+  const lantern = new THREE.PointLight(0xffd64d, 1.4, 14);
+  lantern.position.set(0, WATER_LEVEL + 2.2, 1.8);
+  grp.add(lantern);
+  scene.add(grp);
+}
+buildDockAndShop();
+
+// ── Procedural rowboat ──
+// Brown wooden hull + two darker planks across as seats + a couple of
+// oars resting against the inside. Stays in the local-position scope
+// so we can move/rotate it as a single unit.
+function buildBoat(){
+  const grp = new THREE.Group();
+  const hullMat  = new THREE.MeshStandardMaterial({ color: 0x7a4f25, roughness: 0.82 });
+  const trimMat  = new THREE.MeshStandardMaterial({ color: 0x4a2e15, roughness: 0.85 });
+  const innerMat = new THREE.MeshStandardMaterial({ color: 0x5e3b1c, roughness: 0.9 });
+  // Hull: wide tapered box
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.55, 1.5), hullMat);
+  hull.position.y = 0.32;
+  hull.castShadow = true; hull.receiveShadow = true;
+  grp.add(hull);
+  // Bow + stern tapers
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(0.75, 0.95, 4), hullMat);
+  bow.rotation.z = Math.PI / 2;
+  bow.position.set(1.65, 0.32, 0);
+  grp.add(bow);
+  const stern = bow.clone();
+  stern.position.set(-1.55, 0.32, 0);
+  stern.rotation.z = -Math.PI / 2;
+  grp.add(stern);
+  // Inner cavity (darker plank floor — slightly recessed)
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.06, 1.1), innerMat);
+  floor.position.y = 0.55;
+  grp.add(floor);
+  WalkableSurfaces.push(floor);
+  // Two seats
+  for(const sx of [-0.6, 0.6]){
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.08, 0.25), trimMat);
+    seat.position.set(sx, 0.7, 0);
+    grp.add(seat);
+  }
+  // Oars (two thin sticks lying on the deck)
+  for(const sz of [-0.4, 0.4]){
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.6, 6), trimMat);
+    shaft.position.set(0, 0.78, sz);
+    shaft.rotation.z = Math.PI / 2;
+    grp.add(shaft);
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.12), trimMat);
+    blade.position.set(0.9, 0.78, sz);
+    grp.add(blade);
+  }
+  return grp;
+}
+
+// ── Boat state ──
+const Boats = [];                          // every boat the player owns
+const BOAT_PRICE   = 200;                  // Silver
+const BOAT_BOARD_RANGE = 2.4;              // how close you need to be to board
+const BOAT_SPEED   = 5.0;                  // m/s when paddling
+const BOAT_TURN    = 1.8;                  // rad/s
+function spawnBoatNearPlayer(){
+  const facing = Player.yaw + Math.PI;
+  // Place in water 3 units ahead of the player toward the open water
+  // (use a fixed seaward direction if the player isn't on the dock)
+  const dx = Math.sin(facing) * 4.5;
+  const dz = Math.cos(facing) * 4.5;
+  let bx = Player.pos.x + dx;
+  let bz = Player.pos.z + dz;
+  // If the boat would spawn on land, push it seaward until we hit water
+  for(let i = 0; i < 40; i++){
+    if(groundHeightAt(bx, bz) < WATER_LEVEL - 0.4) break;
+    bx += dx * 0.4;
+    bz += dz * 0.4;
+  }
+  const mesh = buildBoat();
+  mesh.position.set(bx, WATER_LEVEL + 0.05, bz);
+  mesh.rotation.y = facing;
+  scene.add(mesh);
+  const boat = { mesh, x: bx, z: bz, yaw: facing, occupied: false };
+  Boats.push(boat);
+  return boat;
+}
+
+// Find the nearest boat I can board
+function findBoardableBoat(){
+  let best = null, bestD = BOAT_BOARD_RANGE;
+  for(const b of Boats){
+    if(b.occupied) continue;
+    const d = Math.hypot(b.x - Player.pos.x, b.z - Player.pos.z);
+    if(d < bestD){ bestD = d; best = b; }
+  }
+  return best;
+}
+
+// Board / leave
+function boardBoat(b){
+  if(!b || b.occupied) return;
+  b.occupied = true;
+  Player.boat = b;
+  Player.boatYaw = b.yaw;
+}
+function leaveBoat(){
+  if(!Player.boat) return;
+  const b = Player.boat;
+  b.occupied = false;
+  // Step out onto the closest piece of dry land
+  for(let r = 1; r <= 12; r += 0.8){
+    for(let ang = 0; ang < Math.PI * 2; ang += Math.PI / 6){
+      const tx = b.x + Math.cos(ang) * r;
+      const tz = b.z + Math.sin(ang) * r;
+      if(groundHeightAt(tx, tz) >= WATER_LEVEL - 0.1){
+        Player.pos.x = tx;
+        Player.pos.z = tz;
+        Player.boat = null;
+        return;
+      }
+    }
+  }
+  // No land found — just step beside the boat
+  Player.pos.x = b.x + 1.6;
+  Player.pos.z = b.z;
+  Player.boat = null;
+}
+
+// Update boat tick: when player.boat is set, they steer the boat
+// instead of walking. WASD controls the boat. Camera continues to
+// follow normally.
+function updateBoat(dt){
+  if(!Player.boat) return false;
+  const b = Player.boat;
+
+  let forward = 0;
+  let turn    = 0;
+  if(keys['KeyW']) forward += 1;
+  if(keys['KeyS']) forward -= 1;
+  if(keys['KeyA']) turn   += 1;
+  if(keys['KeyD']) turn   -= 1;
+  // Touch joystick maps to forward + turn while in a boat
+  if(joyActive){
+    forward += -joyVec.y;
+    turn    += -joyVec.x;
+  }
+
+  Player.boatYaw += turn * BOAT_TURN * dt;
+  const speed = (Player.running ? 1.5 : 1.0) * BOAT_SPEED * forward;
+  if(forward !== 0){
+    const nx = b.x + Math.sin(Player.boatYaw) * speed * dt;
+    const nz = b.z + Math.cos(Player.boatYaw) * speed * dt;
+    // Don't let the boat sail onto land — sample the ground at the
+    // proposed position; if that's above water level, block this step.
+    if(groundHeightAt(nx, nz) < WATER_LEVEL - 0.2){
+      b.x = nx; b.z = nz;
+    }
+  }
+  b.yaw = Player.boatYaw;
+  // Boat bobs slightly with the waves
+  const bob = Math.sin(Water.time * 1.4 + b.x * 0.1 + b.z * 0.05) * 0.08;
+  b.mesh.position.set(b.x, WATER_LEVEL + 0.18 + bob, b.z);
+  b.mesh.rotation.y = b.yaw;
+  b.mesh.rotation.z = Math.sin(Water.time * 1.6) * 0.04;
+  // The player rides on top of the boat — printer position locks to it
+  Player.pos.x = b.x;
+  Player.pos.z = b.z;
+  Player.pos.y = WATER_LEVEL + 0.85 + bob;
+  Player.yaw   = b.yaw;
+  Player.walking = forward !== 0;
+  return true;
+}
+
+// =================================================================
 // ─── PLOT INTERACTION ───────────────────────────────────────────
 // =================================================================
 let nearbyPlot     = null;
 let nearbyMarket   = false;
 let nearbyRefinery = false;
+let nearbyDock     = false;
+let nearbyBoardable = null;
 const PLOT_INTERACT_RANGE = 3.5;
 
 function findNearbyPlot(){
@@ -5094,9 +5499,39 @@ function updatePlotPrompt(){
   const sub    = document.getElementById('plotPromptSub');
   const ownerId = State.username || State.wallet || "guest";
 
-  nearbyMarket   = Math.hypot(Player.pos.x - MARKET_POS.x,   Player.pos.z - MARKET_POS.z)   < MARKET_RADIUS;
-  nearbyRefinery = !nearbyMarket && Math.hypot(Player.pos.x - REFINERY_POS.x, Player.pos.z - REFINERY_POS.z) < REFINERY_RADIUS;
-  nearbyPlot     = (nearbyMarket || nearbyRefinery) ? null : findNearbyPlot();
+  nearbyMarket    = Math.hypot(Player.pos.x - MARKET_POS.x,   Player.pos.z - MARKET_POS.z)   < MARKET_RADIUS;
+  nearbyRefinery  = !nearbyMarket && Math.hypot(Player.pos.x - REFINERY_POS.x, Player.pos.z - REFINERY_POS.z) < REFINERY_RADIUS;
+  nearbyDock      = !nearbyMarket && !nearbyRefinery && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
+  nearbyBoardable = (!nearbyMarket && !nearbyRefinery && !nearbyDock) ? findBoardableBoat() : null;
+  nearbyPlot      = (nearbyMarket || nearbyRefinery || nearbyDock || nearbyBoardable) ? null : findNearbyPlot();
+
+  // ── Boat-related prompts come first since they're the most actionable ──
+  if(Player.boat){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "⛵ Sailing";
+    sub.innerHTML = `<kbd>W A S D</kbd> to sail · <kbd>E</kbd> to disembark`;
+    return;
+  }
+  if(nearbyBoardable){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "⛵ Your boat";
+    sub.innerHTML = `Press <kbd>E</kbd> to board`;
+    return;
+  }
+  if(nearbyDock){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🪵 BOAT SHOP";
+    if(State.credits >= BOAT_PRICE){
+      sub.innerHTML = `Press <kbd>E</kbd> to buy a <b>Tree Boat</b> for <b>${BOAT_PRICE} 🥈</b>`;
+    } else {
+      sub.innerHTML = `Need <b>${BOAT_PRICE} 🥈 Silver</b> for a boat`;
+      prompt.classList.add('locked');
+    }
+    return;
+  }
 
   if(nearbyMarket){
     prompt.classList.remove('locked');
@@ -5170,6 +5605,28 @@ function sharpenCost(durability){
 }
 
 function tryInteract(){
+  // If you're already in a boat, E disembarks you.
+  if(Player.boat){ leaveBoat(); floater("Stepped out of the boat", "good"); return; }
+  // Boardable boat nearby? E boards it.
+  const nearBoat = findBoardableBoat();
+  if(nearBoat){
+    boardBoat(nearBoat);
+    floater("⛵ Boarded — WASD to sail · E to disembark", "good");
+    return;
+  }
+  // Boat shop interaction (dock)
+  if(nearbyDock){
+    if(State.credits < BOAT_PRICE){
+      floater(`Need ${BOAT_PRICE} 🥈 Silver`, "bad"); return;
+    }
+    State.credits -= BOAT_PRICE;
+    const b = spawnBoatNearPlayer();
+    floater(`⛵ Boat spawned · -${BOAT_PRICE} 🥈`, "good");
+    showBuyToast(`Bought 1 Tree Boat · −${BOAT_PRICE} 🥈 Silver`);
+    playPurchaseSound();
+    saveState(); updateHUD();
+    return;
+  }
   if(nearbyMarket){ openMarket(); return; }
   if(nearbyRefinery){
     if(!State.inventory.pickaxe){ floater("No pickaxe", "bad"); return; }
@@ -6661,6 +7118,8 @@ function loop(now){
   tickArenaVisuals(dt);
   updateChatBubbles();
   if(typeof tickArenaLeaderboardOverlay === "function") tickArenaLeaderboardOverlay();
+  tickWater(dt);
+  tickDayNight(dt);
 
   // Light passive HUD refresh every few frames
   if(((now / 1000) | 0) !== ((lastTime / 1000 - dt) | 0)){
