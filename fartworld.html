@@ -7159,6 +7159,129 @@ let FootballStatue = null;
 buildFootballStatue();
 
 // =================================================================
+// ─── BOWLING ALLEY ──────────────────────────────────────────────
+// =================================================================
+// Long retro alley building with a neon "BOWLING" sign on top. Walk
+// inside (proximity opens the modal) to play the canvas minigame.
+const BOWLING_POS    = { x: -38, z: -16 };
+const BOWLING_RADIUS = 5.5;
+
+function _bowlingNeonTexture(){
+  const cvs = document.createElement('canvas');
+  cvs.width = 1024; cvs.height = 256;
+  const ctx = cvs.getContext('2d');
+  // Dark night-sky background
+  const g = ctx.createLinearGradient(0, 0, 0, 256);
+  g.addColorStop(0, '#0a0418'); g.addColorStop(1, '#1a0830');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 1024, 256);
+  // Neon glow stroke + fill
+  ctx.shadowColor = '#ff5ad6';
+  ctx.shadowBlur = 32;
+  ctx.fillStyle = '#ffd64d';
+  ctx.font = '900 160px "Bangers", "Orbitron", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('BOWLING', 512, 110);
+  // Sub-text
+  ctx.shadowColor = '#46f08a';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = '#5ff09c';
+  ctx.font = '700 38px "Orbitron", sans-serif';
+  ctx.fillText('· STRIKE PALACE ·', 512, 210);
+  return new THREE.CanvasTexture(cvs);
+}
+
+function buildBowlingAlley(){
+  const grp = new THREE.Group();
+  grp.position.set(BOWLING_POS.x, groundHeightAt(BOWLING_POS.x, BOWLING_POS.z), BOWLING_POS.z);
+  const W = 7, D = 10, H = 3.6;
+  const wallMat  = new THREE.MeshStandardMaterial({ color: 0x4e2a1f, roughness: 0.85 });
+  const trimMat  = new THREE.MeshStandardMaterial({ color: 0xb27538, roughness: 0.45, metalness: 0.55 });
+  const roofMat  = new THREE.MeshStandardMaterial({ color: 0x2a1408, roughness: 0.7 });
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0xe8d8a6, roughness: 0.5 });
+  const laneMat  = new THREE.MeshStandardMaterial({ color: 0xc89858, roughness: 0.35, metalness: 0.05 });
+  const pinMat   = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
+  const pinAcc   = new THREE.MeshStandardMaterial({ color: 0xff5a4d, roughness: 0.5 });
+
+  // Foundation
+  const base = new THREE.Mesh(new THREE.BoxGeometry(W + 0.6, 0.4, D + 0.6), trimMat);
+  base.position.y = 0.2;
+  base.castShadow = true; base.receiveShadow = true;
+  grp.add(base);
+  // Walls (4 sides) with a door gap on the front
+  const wallH = H - 0.3;
+  const front  = new THREE.Group();
+  const wallL = new THREE.Mesh(new THREE.BoxGeometry((W - 1.6) / 2, wallH, 0.3), wallMat);
+  wallL.position.set(-(W/4 + 0.4), wallH/2, -D/2);
+  front.add(wallL);
+  const wallR = wallL.clone();
+  wallR.position.set( (W/4 + 0.4), wallH/2, -D/2);
+  front.add(wallR);
+  // Lintel above door
+  const lintel = new THREE.Mesh(new THREE.BoxGeometry(W, 1.0, 0.3), wallMat);
+  lintel.position.set(0, wallH - 0.5, -D/2);
+  front.add(lintel);
+  grp.add(front);
+  const back = new THREE.Mesh(new THREE.BoxGeometry(W, wallH, 0.3), wallMat);
+  back.position.set(0, wallH/2, D/2);
+  grp.add(back);
+  const left = new THREE.Mesh(new THREE.BoxGeometry(0.3, wallH, D), wallMat);
+  left.position.set(-W/2, wallH/2, 0);
+  grp.add(left);
+  const right = left.clone();
+  right.position.set(W/2, wallH/2, 0);
+  grp.add(right);
+  // Roof
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(W + 0.8, 0.3, D + 0.8), roofMat);
+  roof.position.y = H;
+  roof.castShadow = true;
+  grp.add(roof);
+  // Walkable inner floor
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(W - 0.5, 0.1, D - 0.5), floorMat);
+  floor.position.y = 0.45;
+  grp.add(floor);
+  WalkableSurfaces.push(floor);
+  // Lane strips (3 of them) running front-to-back inside the building
+  for(let i = -1; i <= 1; i++){
+    const lane = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.02, D - 1.5), laneMat);
+    lane.position.set(i * 2.0, 0.51, 0.2);
+    grp.add(lane);
+    // Three pins at the far end of each lane (visual flavor)
+    for(let p = 0; p < 3; p++){
+      const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.22, 0.6, 10), pinMat);
+      pin.position.set(i * 2.0 + (p - 1) * 0.35, 0.82, D/2 - 1.2);
+      grp.add(pin);
+      const stripe = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.07, 10), pinAcc);
+      stripe.position.set(i * 2.0 + (p - 1) * 0.35, 0.96, D/2 - 1.2);
+      grp.add(stripe);
+    }
+  }
+  // Neon "BOWLING" sign on top
+  const signTex = _bowlingNeonTexture();
+  const sign = new THREE.Mesh(
+    new THREE.PlaneGeometry(W + 1.0, 1.8),
+    new THREE.MeshBasicMaterial({ map: signTex })
+  );
+  sign.position.set(0, H + 1.4, -D/2 - 0.05);
+  grp.add(sign);
+  const signBack = new THREE.Mesh(new THREE.BoxGeometry(W + 1.0, 1.8, 0.15), trimMat);
+  signBack.position.set(0, H + 1.4, -D/2 - 0.12);
+  grp.add(signBack);
+  // Warm interior lantern
+  const lt = new THREE.PointLight(0xffe4a8, 1.6, 18);
+  lt.position.set(0, H - 0.6, 0);
+  grp.add(lt);
+  // Bowling-ball decoration outside the door
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.45, 18, 14),
+    new THREE.MeshStandardMaterial({ color: 0x1a0830, roughness: 0.3, metalness: 0.4 })
+  );
+  ball.position.set(W/2 + 0.8, 0.85, -D/2 - 0.4);
+  grp.add(ball);
+  scene.add(grp);
+}
+buildBowlingAlley();
+
+// =================================================================
 // ─── BANK — Silver → Paper / Silver → Gold conversions ─────────
 // =================================================================
 const BANK_POS = { x: -22, z: -8 };
@@ -7549,6 +7672,7 @@ let nearbyPoop     = false;
 let nearbyBank     = false;
 let nearbyLaunder  = false;
 let nearbyFootball = false;
+let nearbyBowling  = false;
 let nearbyBoardable = null;
 const PLOT_INTERACT_RANGE = 3.5;
 
@@ -7575,8 +7699,9 @@ function updatePlotPrompt(){
   nearbyPoop      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && Math.hypot(Player.pos.x - POOP_POS.x, Player.pos.z - POOP_POS.z) < POOP_RADIUS;
   nearbyDock      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
   nearbyFootball  = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && Math.hypot(Player.pos.x - FOOTBALL_POS.x, Player.pos.z - FOOTBALL_POS.z) < FOOTBALL_RADIUS;
-  nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball) ? findBoardableBoat() : null;
-  nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyFootball || nearbyBoardable) ? null : findNearbyPlot();
+  nearbyBowling   = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && Math.hypot(Player.pos.x - BOWLING_POS.x, Player.pos.z - BOWLING_POS.z) < BOWLING_RADIUS;
+  nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && !nearbyBowling) ? findBoardableBoat() : null;
+  nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyFootball || nearbyBowling || nearbyBoardable) ? null : findNearbyPlot();
 
   // ── Boat-related prompts come first since they're the most actionable ──
   if(Player.boat){
@@ -7626,6 +7751,19 @@ function updatePlotPrompt(){
     prompt.classList.add('show');
     title.textContent = "⚽ FART CUP";
     sub.innerHTML = `Press <kbd>E</kbd> to trade nation coins · claim flag wearables`;
+    return;
+  }
+  if(nearbyBowling){
+    prompt.classList.remove('locked');
+    prompt.classList.add('show');
+    title.textContent = "🎳 BOWLING";
+    const cost = (typeof BOWLING_COST !== "undefined") ? BOWLING_COST : 10;
+    if(State.credits < cost){
+      sub.innerHTML = `Need <b>${cost} 🥈</b> for a game`;
+      prompt.classList.add('locked');
+    } else {
+      sub.innerHTML = `Press <kbd>E</kbd> to play <b>(${cost} 🥈 entry)</b>`;
+    }
     return;
   }
   if(nearbyDock){
@@ -7732,6 +7870,8 @@ function tryInteract(){
   if(nearbyPoop){ openPoopHouse(); return; }
   // Football statue — open Fart Cup window
   if(nearbyFootball){ openFartCup(); return; }
+  // Bowling alley — open the bowling minigame
+  if(nearbyBowling){ openBowling(); return; }
   // Boat shop interaction (dock)
   if(nearbyDock){
     if(State.credits < BOAT_PRICE){
@@ -10428,6 +10568,418 @@ document.querySelectorAll('.fc-tab').forEach(btn => {
 // Pre-warm prices + images in the background so wearables get the right art
 // even if the player never opens the Fart Cup window first.
 fcFetchPrices();
+
+// =================================================================
+// ─── BOWLING MINIGAME — top-down canvas + simple physics ────────
+// =================================================================
+// Click & drag on the lane to aim + set power, release to throw.
+// 10 pins in the standard triangle. Knock them down for silver +
+// XP. Entry fee: 10 silver. Strike (all 10) = +50 silver bonus.
+const BOWLING_COST       = 10;     // silver per game
+const BOWLING_PER_PIN    = 3;      // silver per pin knocked down
+const BOWLING_STRIKE_BONUS = 50;
+const BOWLING_XP_PER_PIN = 3;
+const BOWLING_LANE_W = 360;
+const BOWLING_LANE_H = 620;
+const BOWLING_BALL_R = 14;
+const BOWLING_PIN_R  = 11;
+
+const _bowlStyle = document.createElement('style');
+_bowlStyle.textContent = `
+.bowl-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 56; padding: 20px; }
+.bowl-bg.show { display: flex; }
+.bowl-card { max-width: 600px; width: 100%; max-height: 92vh; background: linear-gradient(180deg, rgba(28,8,16,0.97), rgba(12,3,8,0.97)); border: 2px solid rgba(255,90,77,0.45); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(255,90,77,0.22); }
+.bowl-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,90,77,0.25); background: linear-gradient(90deg, rgba(255,90,77,0.10), transparent); }
+.bowl-head h2 { font-family: 'Bangers', 'Orbitron', sans-serif; font-size: 32px; letter-spacing: 2.4px; background: linear-gradient(135deg, #ff7a6e 0%, #ffd64d 50%, #ff5ad6 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 12px rgba(255,90,77,0.55)); }
+.bowl-head .close { background: transparent; border: 0; color: rgba(230,255,238,0.55); font-size: 26px; cursor: pointer; line-height: 1; }
+.bowl-body { overflow-y: auto; padding: 14px 18px 20px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.bowl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.bowl-stat { background: rgba(255,90,77,0.07); border: 1px solid rgba(255,90,77,0.20); border-radius: 10px; padding: 8px 12px; text-align: center; }
+.bowl-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.1px; color: rgba(230,255,238,0.55); text-transform: uppercase; }
+.bowl-stat .val { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 18px; color: #ffd64d; margin-top: 2px; }
+.bowl-canvas-wrap { background: #0a0410; border-radius: 14px; border: 1px solid rgba(255,90,77,0.25); padding: 8px; }
+#bowlCanvas { display: block; background: linear-gradient(180deg, #1f0a14 0%, #2a1018 100%); border-radius: 10px; cursor: crosshair; touch-action: none; }
+.bowl-controls { display: flex; gap: 8px; width: 100%; }
+.bowl-btn { flex: 1; background: linear-gradient(135deg, #ff7a6e, #ffd64d); color: #2a1a04; border: 0; padding: 10px 14px; border-radius: 100px; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 14px rgba(255,90,77,0.34); transition: transform 0.14s, filter 0.14s; }
+.bowl-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+.bowl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.bowl-btn.ghost { background: rgba(255,255,255,0.06); color: #e6ffee; box-shadow: none; }
+.bowl-tip { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgba(230,255,238,0.55); text-align: center; margin-top: 2px; }
+`;
+document.head.appendChild(_bowlStyle);
+
+const _bowlModalEl = document.createElement('div');
+_bowlModalEl.innerHTML = `
+<div class="bowl-bg" id="bowlBg">
+  <div class="bowl-card">
+    <div class="bowl-head"><h2>🎳 STRIKE PALACE</h2><button class="close" id="bowlClose">×</button></div>
+    <div class="bowl-body">
+      <div class="bowl-stats">
+        <div class="bowl-stat"><div class="lbl">Game</div><div class="val" id="bowlGameNum">—</div></div>
+        <div class="bowl-stat"><div class="lbl">Pins down</div><div class="val" id="bowlPins">0</div></div>
+        <div class="bowl-stat"><div class="lbl">Best ever</div><div class="val" id="bowlBest">0</div></div>
+      </div>
+      <div class="bowl-canvas-wrap">
+        <canvas id="bowlCanvas" width="${BOWLING_LANE_W}" height="${BOWLING_LANE_H}"></canvas>
+      </div>
+      <div class="bowl-tip" id="bowlTip">Click + drag UP from the ball to aim, release to throw.</div>
+      <div class="bowl-controls">
+        <button class="bowl-btn ghost" id="bowlResetBtn">↻ Reset rack</button>
+        <button class="bowl-btn" id="bowlPlayBtn">Throw (${BOWLING_COST} 🥈)</button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+document.body.appendChild(_bowlModalEl.firstElementChild);
+
+// ── Bowling game state ──
+const Bowl = {
+  active:    false,           // modal open
+  rolling:   false,           // ball is moving
+  aiming:    false,           // dragging
+  ball:      null,            // {x,y,vx,vy}
+  pins:      [],              // [{x,y,vx,vy,down,fall}]
+  aimStart:  null,            // {x,y}
+  aimEnd:    null,
+  pinsKnocked: 0,
+  gameCount:   0,
+  bestPins:    Number(localStorage.getItem("fartworld_bowl_best") || 0),
+  canPlay:     true,
+};
+
+function bowlSetupPins(){
+  // Standard 4-3-2-1 triangle pointing up (toward player at bottom)
+  const cx = BOWLING_LANE_W / 2;
+  const startY = 110;
+  const dx = 26, dy = 24;
+  Bowl.pins = [];
+  // Row 1 (back, 4 pins)
+  for(let i = 0; i < 4; i++) Bowl.pins.push({ x: cx + (i - 1.5) * dx, y: startY,        vx: 0, vy: 0, down: false, fall: 0 });
+  // Row 2 (3 pins)
+  for(let i = 0; i < 3; i++) Bowl.pins.push({ x: cx + (i - 1.0) * dx, y: startY + dy,   vx: 0, vy: 0, down: false, fall: 0 });
+  // Row 3 (2 pins)
+  for(let i = 0; i < 2; i++) Bowl.pins.push({ x: cx + (i - 0.5) * dx, y: startY + 2*dy, vx: 0, vy: 0, down: false, fall: 0 });
+  // Row 4 (front, 1 pin)
+  Bowl.pins.push({ x: cx, y: startY + 3*dy, vx: 0, vy: 0, down: false, fall: 0 });
+}
+function bowlResetBall(){
+  Bowl.ball = { x: BOWLING_LANE_W / 2, y: BOWLING_LANE_H - 50, vx: 0, vy: 0 };
+}
+function bowlResetRack(){
+  bowlSetupPins();
+  bowlResetBall();
+  Bowl.rolling = false;
+  Bowl.aiming = false;
+  Bowl.pinsKnocked = 0;
+  Bowl.canPlay = true;
+  document.getElementById('bowlPins').textContent = "0";
+  const btn = document.getElementById('bowlPlayBtn');
+  btn.disabled = false;
+  btn.textContent = `Throw (${BOWLING_COST} 🥈)`;
+  document.getElementById('bowlTip').textContent = "Click + drag UP from the ball to aim, release to throw.";
+}
+
+function openBowling(){
+  if(State.credits < BOWLING_COST){
+    floater(`Need ${BOWLING_COST} 🥈 to play`, "bad"); return;
+  }
+  Bowl.active = true;
+  document.getElementById('bowlBg').classList.add('show');
+  bowlResetRack();
+  document.getElementById('bowlGameNum').textContent = Bowl.gameCount;
+  document.getElementById('bowlBest').textContent    = Bowl.bestPins;
+  // Kick off the game's render loop
+  bowlFrame();
+}
+function closeBowling(){
+  Bowl.active = false;
+  document.getElementById('bowlBg').classList.remove('show');
+}
+document.getElementById('bowlClose').addEventListener('click', closeBowling);
+document.getElementById('bowlBg').addEventListener('click', (e) => { if(e.target.id === "bowlBg") closeBowling(); });
+document.getElementById('bowlResetBtn').addEventListener('click', () => {
+  if(Bowl.rolling) return;
+  bowlResetRack();
+});
+document.getElementById('bowlPlayBtn').addEventListener('click', () => {
+  // Pay entry fee + arm a throw — actual throw happens via drag-release.
+  // (Charging on throw rather than open avoids double-charging if the
+  // player closes without throwing.)
+  if(!Bowl.canPlay || Bowl.rolling) return;
+  if(State.credits < BOWLING_COST){
+    floater(`Need ${BOWLING_COST} 🥈`, "bad"); return;
+  }
+  document.getElementById('bowlTip').textContent = "Drag from the ball to aim & set power, release to roll.";
+});
+
+// ── Aim + throw via canvas ──
+const _bowlCanvas = document.getElementById('bowlCanvas');
+function _bowlPt(e){
+  const r = _bowlCanvas.getBoundingClientRect();
+  const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
+  return { x: (t.clientX - r.left) * BOWLING_LANE_W / r.width, y: (t.clientY - r.top) * BOWLING_LANE_H / r.height };
+}
+_bowlCanvas.addEventListener('mousedown', (e) => {
+  if(Bowl.rolling || !Bowl.canPlay) return;
+  const p = _bowlPt(e);
+  if(Math.hypot(p.x - Bowl.ball.x, p.y - Bowl.ball.y) < BOWLING_BALL_R * 2.5){
+    Bowl.aiming = true;
+    Bowl.aimStart = { x: Bowl.ball.x, y: Bowl.ball.y };
+    Bowl.aimEnd = p;
+  }
+});
+_bowlCanvas.addEventListener('mousemove', (e) => {
+  if(!Bowl.aiming) return;
+  Bowl.aimEnd = _bowlPt(e);
+});
+_bowlCanvas.addEventListener('mouseup', (e) => {
+  if(!Bowl.aiming) return;
+  Bowl.aiming = false;
+  const p = _bowlPt(e);
+  // Vector from drag-end to ball = throw direction (drag opposite for "pull back")
+  let dx = Bowl.ball.x - p.x;
+  let dy = Bowl.ball.y - p.y;
+  const len = Math.hypot(dx, dy);
+  if(len < 5) return;   // tiny — cancel
+  // Pay entry fee
+  if(State.credits < BOWLING_COST) return;
+  State.credits -= BOWLING_COST;
+  Bowl.gameCount++;
+  Bowl.canPlay = false;
+  saveState(); updateHUD();
+  document.getElementById('bowlGameNum').textContent = Bowl.gameCount;
+  // Power proportional to drag length (capped)
+  const power = Math.min(1, len / 200);
+  // Always throw upward (toward pins) — clamp vy negative
+  const nx = dx / len, ny = dy / len;
+  const ySign = ny > 0 ? 1 : (ny < 0 ? -1 : -1);
+  const baseSpeed = 320;   // px / sec
+  Bowl.ball.vx = nx * baseSpeed * power * 1.2;
+  Bowl.ball.vy = ySign * Math.abs(ny) * baseSpeed * power * 1.6;
+  if(Bowl.ball.vy > -40) Bowl.ball.vy = -baseSpeed * power;   // force upward
+  Bowl.rolling = true;
+  document.getElementById('bowlTip').textContent = "Rolling…";
+});
+// Touch parity
+_bowlCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); _bowlCanvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+_bowlCanvas.addEventListener('touchmove',  (e) => { e.preventDefault(); _bowlCanvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
+_bowlCanvas.addEventListener('touchend',   (e) => { e.preventDefault(); const t = e.changedTouches[0]; _bowlCanvas.dispatchEvent(new MouseEvent('mouseup',   { clientX: t.clientX, clientY: t.clientY })); }, { passive: false });
+
+// ── Simple physics step ──
+function bowlPhysics(dt){
+  if(!Bowl.rolling) return;
+  const ball = Bowl.ball;
+  // Friction
+  const friction = 0.92;
+  ball.vx *= Math.pow(friction, dt * 60);
+  ball.vy *= Math.pow(friction, dt * 60);
+  ball.x += ball.vx * dt;
+  ball.y += ball.vy * dt;
+  // Wall bounces
+  if(ball.x < BOWLING_BALL_R){ ball.x = BOWLING_BALL_R; ball.vx *= -0.6; }
+  if(ball.x > BOWLING_LANE_W - BOWLING_BALL_R){ ball.x = BOWLING_LANE_W - BOWLING_BALL_R; ball.vx *= -0.6; }
+  if(ball.y < BOWLING_BALL_R){ ball.y = BOWLING_BALL_R; ball.vy *= -0.6; }
+  // Pin collisions
+  for(const p of Bowl.pins){
+    if(p.down) continue;
+    const dx = p.x - ball.x;
+    const dy = p.y - ball.y;
+    const d = Math.hypot(dx, dy);
+    const min = BOWLING_BALL_R + BOWLING_PIN_R;
+    if(d < min && d > 0.001){
+      const nx = dx / d, ny = dy / d;
+      // Knock pin down
+      p.down = true;
+      p.fall = 0;
+      p.vx = nx * 280 + (Math.random() - 0.5) * 60;
+      p.vy = ny * 280;
+      // Slight ball deflection
+      ball.vx -= nx * 60;
+      ball.vy -= ny * 60;
+      Bowl.pinsKnocked++;
+      // Play a little sound
+      try {
+        const ctx = ensureAudio();
+        if(ctx){
+          const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = 380 + Math.random() * 200;
+          const g = ctx.createGain(); g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+          o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.2);
+        }
+      } catch(_){}
+    }
+  }
+  // Pin-pin collisions (chain reaction): falling pins push other pins
+  for(const a of Bowl.pins){
+    if(!a.down || a.fall > 0.6) continue;
+    for(const b of Bowl.pins){
+      if(a === b || b.down) continue;
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.hypot(dx, dy);
+      const min = BOWLING_PIN_R * 2;
+      if(d < min && d > 0.001){
+        const nx = dx / d, ny = dy / d;
+        b.down = true; b.fall = 0;
+        b.vx = nx * 200 + (Math.random() - 0.5) * 60;
+        b.vy = ny * 200;
+        Bowl.pinsKnocked++;
+      }
+    }
+  }
+  // Fade out fallen pins
+  for(const p of Bowl.pins){
+    if(!p.down) continue;
+    p.fall += dt;
+    p.x += p.vx * dt; p.y += p.vy * dt;
+    p.vx *= Math.pow(0.86, dt * 60); p.vy *= Math.pow(0.86, dt * 60);
+  }
+  // End-of-roll detection: ball off the back OR too slow
+  const sp = Math.hypot(ball.vx, ball.vy);
+  if(ball.y < -BOWLING_BALL_R || (sp < 8 && ball.y < BOWLING_LANE_H - 100)){
+    bowlEndRoll();
+  }
+  // Also end if ball drifted past bottom (rare)
+  if(ball.y > BOWLING_LANE_H + BOWLING_BALL_R) bowlEndRoll();
+}
+
+function bowlEndRoll(){
+  if(!Bowl.rolling) return;
+  Bowl.rolling = false;
+  const pinsDown = Bowl.pinsKnocked;
+  let reward = pinsDown * BOWLING_PER_PIN;
+  let bonus = 0;
+  let xp = pinsDown * BOWLING_XP_PER_PIN;
+  let label = "";
+  if(pinsDown >= 10){
+    bonus = BOWLING_STRIKE_BONUS;
+    label = "STRIKE! 🎉";
+  } else if(pinsDown >= 7){
+    label = "Great frame!";
+  } else if(pinsDown >= 4){
+    label = "Solid throw";
+  } else if(pinsDown >= 1){
+    label = "Tap";
+  } else {
+    label = "Gutter ball 💀";
+  }
+  State.credits += reward + bonus;
+  State.xp += xp;
+  if(pinsDown > Bowl.bestPins){
+    Bowl.bestPins = pinsDown;
+    localStorage.setItem("fartworld_bowl_best", String(Bowl.bestPins));
+    document.getElementById('bowlBest').textContent = Bowl.bestPins;
+  }
+  checkLevelUp(); saveState(); updateHUD();
+  document.getElementById('bowlPins').textContent = pinsDown;
+  document.getElementById('bowlTip').textContent  =
+    `${label}  ·  ${pinsDown}/10 pins  ·  +${reward + bonus} 🥈  +${xp} XP`;
+  if(reward + bonus > 0){ try { playPurchaseSound(); } catch(_){} }
+  // Re-arm play button so the user can throw again
+  const btn = document.getElementById('bowlPlayBtn');
+  btn.disabled = false;
+  btn.textContent = `Throw again (${BOWLING_COST} 🥈)`;
+  Bowl.canPlay = true;
+  // After a beat, auto-rack for the next throw (keep ball at start)
+  setTimeout(() => {
+    if(!Bowl.active) return;
+    bowlSetupPins();
+    bowlResetBall();
+    Bowl.pinsKnocked = 0;
+    document.getElementById('bowlPins').textContent = "0";
+  }, 1600);
+}
+
+// ── Render ──
+function bowlRender(){
+  const ctx = _bowlCanvas.getContext('2d');
+  ctx.clearRect(0, 0, BOWLING_LANE_W, BOWLING_LANE_H);
+  // Lane wood
+  const grad = ctx.createLinearGradient(0, 0, 0, BOWLING_LANE_H);
+  grad.addColorStop(0, '#c89858'); grad.addColorStop(1, '#a87838');
+  ctx.fillStyle = grad;
+  ctx.fillRect(20, 0, BOWLING_LANE_W - 40, BOWLING_LANE_H);
+  // Gutters
+  ctx.fillStyle = '#3a1810';
+  ctx.fillRect(0, 0, 20, BOWLING_LANE_H);
+  ctx.fillRect(BOWLING_LANE_W - 20, 0, 20, BOWLING_LANE_H);
+  // Wood grain lines
+  ctx.strokeStyle = 'rgba(80,40,15,0.25)'; ctx.lineWidth = 1;
+  for(let i = 0; i < 12; i++){
+    ctx.beginPath();
+    const x = 30 + i * 28;
+    ctx.moveTo(x, 0); ctx.lineTo(x + 4, BOWLING_LANE_H); ctx.stroke();
+  }
+  // Foul line
+  ctx.strokeStyle = '#ff5a4d'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(20, BOWLING_LANE_H - 90); ctx.lineTo(BOWLING_LANE_W - 20, BOWLING_LANE_H - 90); ctx.stroke();
+  // Pin deck shading (top area)
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(20, 60, BOWLING_LANE_W - 40, 160);
+  // Aiming line
+  if(Bowl.aiming && Bowl.aimEnd){
+    const dx = Bowl.ball.x - Bowl.aimEnd.x;
+    const dy = Bowl.ball.y - Bowl.aimEnd.y;
+    const len = Math.hypot(dx, dy);
+    const power = Math.min(1, len / 200);
+    ctx.strokeStyle = `rgba(255, 90, 77, ${0.4 + power * 0.6})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath(); ctx.moveTo(Bowl.ball.x, Bowl.ball.y);
+    // Show aim direction extended forward (toward pins)
+    const nx = dx / Math.max(1, len), ny = dy / Math.max(1, len);
+    ctx.lineTo(Bowl.ball.x + nx * 220, Bowl.ball.y + ny * 220);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Power bar
+    ctx.fillStyle = `rgba(255, 214, 77, ${0.85})`;
+    ctx.fillRect(28, BOWLING_LANE_H - 18, (BOWLING_LANE_W - 56) * power, 6);
+    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(28, BOWLING_LANE_H - 18, BOWLING_LANE_W - 56, 6);
+  }
+  // Pins
+  for(const p of Bowl.pins){
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if(p.down){
+      ctx.globalAlpha = Math.max(0, 1 - p.fall * 1.4);
+      ctx.rotate(p.fall * 3);
+    }
+    // Pin body
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(0, 0, BOWLING_PIN_R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // Red collar
+    ctx.fillStyle = '#ff5a4d';
+    ctx.beginPath(); ctx.arc(0, -2, BOWLING_PIN_R * 0.55, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  // Ball
+  ctx.save();
+  const gradB = ctx.createRadialGradient(Bowl.ball.x - 4, Bowl.ball.y - 4, 2, Bowl.ball.x, Bowl.ball.y, BOWLING_BALL_R);
+  gradB.addColorStop(0, '#5b2870'); gradB.addColorStop(1, '#1a0830');
+  ctx.fillStyle = gradB;
+  ctx.beginPath(); ctx.arc(Bowl.ball.x, Bowl.ball.y, BOWLING_BALL_R, 0, Math.PI * 2); ctx.fill();
+  // Finger holes
+  ctx.fillStyle = '#0a0410';
+  for(let i = -1; i <= 1; i++){
+    ctx.beginPath(); ctx.arc(Bowl.ball.x + i * 4, Bowl.ball.y - 4, 1.6, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+let _bowlLast = 0;
+function bowlFrame(t){
+  if(!Bowl.active) return;
+  if(!_bowlLast) _bowlLast = t || performance.now();
+  const now = t || performance.now();
+  const dt = Math.min(0.05, (now - _bowlLast) / 1000);
+  _bowlLast = now;
+  bowlPhysics(dt);
+  bowlRender();
+  requestAnimationFrame(bowlFrame);
+}
+
+console.log("[FartWorld] Bowling alley ready at", BOWLING_POS);
 
 </script>
 </body>
