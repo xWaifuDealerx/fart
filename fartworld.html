@@ -3032,6 +3032,18 @@
       <div class="room-list" id="roomList">
         <div class="room-empty">Scanning for active rooms…</div>
       </div>
+      <!-- Direct join — paste a Room ID and bypass the discovery list. The
+           discovery feed can lag for a couple of minutes after a host opens
+           a room (ntfy edge propagation + tab throttling); pasting the ID
+           always works as long as the host is currently online. -->
+      <div class="lobby-field" style="margin-top:14px;">
+        <label>Join by Room ID</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="joinRoomIdInput" placeholder="e.g. a3k9p2qz" maxlength="16" style="flex:1;font-family:'JetBrains Mono',monospace;letter-spacing:1px;"/>
+          <button id="joinByIdBtn" style="background:linear-gradient(135deg,#46f08a,#5ff09c);color:#042913;border:0;border-radius:10px;padding:0 16px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;cursor:pointer;">Join</button>
+        </div>
+        <small style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.42);margin-top:6px;display:block;">Faster than waiting for the list — ask your host for their Room ID (shown in their chat when they open the doors).</small>
+      </div>
       <div class="lobby-field">
         <label>Your display name</label>
         <input type="text" id="joinHandleInput" placeholder="e.g. PrintrFan" maxlength="20"/>
@@ -5217,12 +5229,14 @@ async function listRooms(){
   try {
     // Pull from ntfy's edge — wider window so we tolerate background-tab
     // throttling on the host's side (browsers slow setInterval to ~1/min
-    // when the host tab loses focus).
-    const r = await fetch(`https://ntfy.sh/${Net.topicDir}/json?poll=1&since=10m`);
-    if(!r.ok) return [];
+    // when the host tab loses focus). 30m beats edge-propagation lag and
+    // catches rooms whose host just got throttled.
+    const r = await fetch(`https://ntfy.sh/${Net.topicDir}/json?poll=1&since=30m`, { cache: "no-store" });
+    if(!r.ok){ console.warn("[FartWorld] room directory fetch failed:", r.status); return []; }
     const text = await r.text();
     if(!text.trim()) return [];
     const rooms = new Map();
+    let parsed = 0;
     for(const line of text.trim().split("\n")){
       try {
         const evt = JSON.parse(line);
@@ -5235,20 +5249,23 @@ async function listRooms(){
         m._srvMs = (Number(evt.time) || 0) * 1000;
         const cur = rooms.get(m.id);
         if(!cur || (m._srvMs || 0) > (cur._srvMs || 0)) rooms.set(m.id, m);
+        parsed++;
       } catch(_){}
     }
     // Consider a room "live" if its latest alive-message landed on
-    // ntfy within the last 5 minutes — generous enough to ride out
+    // ntfy within the last 8 minutes — generous enough to ride out
     // background-tab throttling without showing zombie rooms forever.
     const nowSrv = Date.now();   // local clock is fine for the *width* of the window
-    return [...rooms.values()].filter(rm => nowSrv - (rm._srvMs || 0) < 5 * 60 * 1000);
-  } catch(_){ return []; }
+    const live = [...rooms.values()].filter(rm => nowSrv - (rm._srvMs || 0) < 8 * 60 * 1000);
+    console.log(`[FartWorld] listRooms: ${parsed} alive-events, ${rooms.size} unique, ${live.length} live`);
+    return live;
+  } catch(e){ console.warn("[FartWorld] listRooms error:", e); return []; }
 }
 
 async function announceRoom(){
   if(Net.mode !== "host" || !Net.roomId) return;
   try {
-    await fetch(`https://ntfy.sh/${Net.topicDir}`, {
+    const r = await fetch(`https://ntfy.sh/${Net.topicDir}`, {
       method: "POST",
       body: JSON.stringify({
         kind:  "alive",
@@ -5259,7 +5276,8 @@ async function announceRoom(){
         ts:    Date.now(),
       }),
     });
-  } catch(_){}
+    if(!r.ok) console.warn("[FartWorld] announceRoom failed:", r.status);
+  } catch(e){ console.warn("[FartWorld] announceRoom error:", e); }
 }
 
 // ── Room session lifecycle ───────────────────────────────────────
@@ -5295,14 +5313,16 @@ function hostRoom(name, handle){
   Net.handle    = handle || "host";
   Net.topicChat = `fartworld-room-${Net.roomId}-v1`;
   startRoomConnection();
-  // Announce immediately + every 10s. Was 20s, which gave background-tab
-  // throttling room to push broadcasts past the joiner's "alive" filter.
-  // Three immediate-burst announces on host so the room shows up almost
-  // instantly on the joiner's side even if their poll arrived early.
+  // Announce immediately + every 6s. A rapid first-burst (3 announces in
+  // the first 4 seconds) makes the room land on ntfy's edge well before
+  // the joiner's first poll completes. The 6s steady cadence keeps the
+  // freshness clock ticking even when the host's tab is throttled.
   announceRoom();
-  setTimeout(announceRoom, 1500);
+  setTimeout(announceRoom, 800);
+  setTimeout(announceRoom, 2200);
   setTimeout(announceRoom, 4000);
-  Net.announceTimer = setInterval(announceRoom, 10000);
+  Net.announceTimer = setInterval(announceRoom, 6000);
+  console.log("[FartWorld] hosting room:", Net.roomId, Net.roomName);
 }
 
 function joinRoom(room, handle){
@@ -5631,6 +5651,31 @@ async function refreshRoomList(){
 }
 
 document.getElementById('roomRefreshBtn').addEventListener('click', refreshRoomList);
+
+// ── Direct join by Room ID (bypasses discovery) ────────────────
+// The directory feed sometimes takes 30–90s to propagate through ntfy's
+// edge after a host opens a room. If the joiner already knows the ID
+// (host shared it via chat/text), this skips the wait entirely and
+// connects straight to the room's chat topic. The host's room is
+// reachable any time their tab is open — no directory entry required.
+function joinByRoomIdRaw(rawId){
+  // randomRoomId() returns 8 chars of base-36 (a–z0–9). Strip any prefix
+  // chars users might paste in by accident (R_, #, whitespace, etc.) and
+  // lowercase so it matches what the host actually uses on the topic.
+  let id = (rawId || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  if(!id) return floater("Paste a Room ID first", "bad");
+  const handle = (document.getElementById('joinHandleInput').value || "").trim() || State.username || "guest";
+  const room = { id, name: "Room " + id.toUpperCase(), host: "host" };
+  console.log("[FartWorld] Direct join:", id);
+  joinRoom(room, handle);
+  enterGame();
+}
+document.getElementById('joinByIdBtn').addEventListener('click', () => {
+  joinByRoomIdRaw(document.getElementById('joinRoomIdInput').value);
+});
+document.getElementById('joinRoomIdInput').addEventListener('keydown', (e) => {
+  if(e.code === "Enter") joinByRoomIdRaw(e.target.value);
+});
 
 document.getElementById('hostGoBtn').addEventListener('click', () => {
   const name   = (document.getElementById('hostNameInput').value   || "").trim() || randomRoomName();
