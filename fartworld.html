@@ -35,6 +35,7 @@
 <script src="crafting.js" defer></script>
 <!-- Wave's Sea Plane — buy at the port, take off and fly. -->
 <script src="seaplane.js" defer></script>
+<script src="roki.js" defer></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -4499,6 +4500,36 @@ function tryFart(){
   spawnFartParticles(power, Player.zone === "danger");
   playFartSound(power, Player.zone === "danger");
   broadcastFart(power, Player.zone === "danger");
+
+  // ── Cat-cruelty penalty: farting on a cat costs XP ──
+  // Cats stored on window.Cats by the cat system. Any cat within 3.2m
+  // counts as "farted on" → big XP loss + scared flee.
+  let catsHit = 0;
+  if(Array.isArray(window.Cats || (typeof Cats !== "undefined" ? Cats : null))){
+    const CATS_REF = window.Cats || Cats;
+    for(const c of CATS_REF){
+      if(!c) continue;
+      const d = Math.hypot(Player.pos.x - c.x, Player.pos.z - c.z);
+      if(d < 3.2){
+        catsHit++;
+        // Make the cat flee away from the player
+        c.state = "flee";
+        c.stateTimer = 4 + Math.random() * 2;
+        const fx = c.x - Player.pos.x, fz = c.z - Player.pos.z;
+        const fl = Math.hypot(fx, fz) || 1;
+        c.goalX = c.x + (fx / fl) * 14;
+        c.goalZ = c.z + (fz / fl) * 14;
+      }
+    }
+  }
+  if(catsHit > 0){
+    const xpPenalty = 25 * catsHit + Math.floor(power * 20);
+    State.xp = Math.max(0, (State.xp || 0) - xpPenalty);
+    State.cleanSeconds = 0;
+    floater(`-${xpPenalty} XP · 🐈 cats don't like that!`, "bad");
+    updateHUD();
+    return;  // skip the normal zone reward — cat cruelty short-circuits it
+  }
 
   if(Player.zone === "safe"){
     const gainedXp      = Math.floor(15 + power * 30);
@@ -11157,7 +11188,6 @@ renderInventory = function(){
     const id = el.dataset.id;
     const item = ITEMS[id];
     if(!item || item.type !== "wearable") return;
-    el.classList.add('wearable');
     el.classList.toggle('worn', State.wornFlag === item.code);
     let b = el.querySelector('.wear-badge');
     if(State.wornFlag === item.code && !b){ b = document.createElement('div'); b.className='wear-badge'; b.textContent='WEARING'; el.appendChild(b); }
@@ -11167,7 +11197,7 @@ renderInventory = function(){
 };
 window.renderInventory = renderInventory;
 (function(){ if(!State.claimedFlags?.size) return; for(const c of State.claimedFlags){ const co = FARTCUP_COINS.find(x => x.code === c); if(co) ensureFlagItem(co); } })();
-Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys });
+Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats });
 try { fcFetchPrices(); } catch(e){}
 </script>
 </body>

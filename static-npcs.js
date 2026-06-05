@@ -153,41 +153,76 @@
       const polesMat = new THREE.MeshStandardMaterial({ color: 0x6e4a25, roughness: 0.9 });
       const stripe1 = new THREE.MeshStandardMaterial({ color: 0xc89858, roughness: 0.85, side: THREE.DoubleSide });
       const stripe2 = new THREE.MeshStandardMaterial({ color: 0xfff1c2, roughness: 0.85, side: THREE.DoubleSide });
-      // 4 corner poles
+      // 4 corner poles — bottom at 0, top at 4.0 (centered at y=2.0)
+      const POLE_TOP_Y = 4.0;
       for(const [px, pz] of [[-3, -2.5], [3, -2.5], [-3, 2.5], [3, 2.5]]){
-        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 4.2, 8), polesMat);
-        pole.position.set(px, 2.1, pz);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, POLE_TOP_Y, 8), polesMat);
+        pole.position.set(px, POLE_TOP_Y / 2, pz);
         pole.castShadow = true;
         grp.add(pole);
       }
-      // Pitched striped roof — alternating panels
-      const roofGrp = new THREE.Group();
-      for(let i = 0; i < 6; i++){
-        const w = 1.05;
-        const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, 3.4), i % 2 ? stripe2 : stripe1);
-        panel.position.x = -3 + (i + 0.5) * w;
-        panel.position.y = 4.7;
-        panel.position.z = -2.5 + 2.5 * (i / 6) * 0;  // flat front
-        panel.rotation.x = -0.45;
-        panel.receiveShadow = true;
-        roofGrp.add(panel);
-        const panelB = panel.clone();
-        panelB.rotation.x =  0.45;
-        panelB.position.z = 2.5 * 0;
-        roofGrp.add(panelB);
+      // Horizontal cross-beams along the top of the poles (close the gap)
+      const beamMat = polesMat;
+      const beamFB = new THREE.Mesh(new THREE.BoxGeometry(6.2, 0.18, 0.18), beamMat);
+      beamFB.position.set(0, POLE_TOP_Y, -2.5);
+      grp.add(beamFB);
+      const beamBack = beamFB.clone(); beamBack.position.z = 2.5; grp.add(beamBack);
+      const beamSL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, 5.18), beamMat);
+      beamSL.position.set(-3, POLE_TOP_Y, 0); grp.add(beamSL);
+      const beamSR = beamSL.clone(); beamSR.position.x = 3; grp.add(beamSR);
+      // Pitched striped roof — two sloped slabs meeting at a ridge.
+      // Slab bottom edges sit ON the cross-beams (POLE_TOP_Y); ridge in the
+      // middle rises to RIDGE_Y so the slope is visible.
+      const SLAB_LEN = Math.hypot(2.5, 1.6);                // sqrt(z² + rise²)
+      const SLAB_ANG = Math.atan2(1.6, 2.5);                // ~32.6°
+      const RIDGE_Y  = POLE_TOP_Y + 1.6;
+      function makeSlab(sign){
+        const slab = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.10, SLAB_LEN * 2), stripe1);
+        // mid-Z = ±SLAB_LEN/2 (along the rotated plane projects to ±1.25 in world Z)
+        slab.position.set(0, (POLE_TOP_Y + RIDGE_Y) / 2, sign * 1.25);
+        slab.rotation.x = sign * -SLAB_ANG;
+        slab.castShadow = true; slab.receiveShadow = true;
+        return slab;
       }
-      // Simpler back: two big triangle awnings
-      const tarpFront = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.05, 3.2), stripe1);
-      tarpFront.position.set(0, 4.4, 0);
-      tarpFront.rotation.x = -0.05;
-      tarpFront.castShadow = true;
-      grp.add(tarpFront);
-      // Striped decoration on the underside
-      for(let i = 0; i < 6; i++){
-        const s = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.06, 3.0), i % 2 ? stripe2 : stripe1);
-        s.position.set(-3 + (i + 0.5) * 1.05, 4.37, 0);
-        grp.add(s);
+      grp.add(makeSlab(1));
+      grp.add(makeSlab(-1));
+      // Painted stripe overlay on each slab — repeated stripes along width
+      function makeStripeOverlay(sign){
+        const grp2 = new THREE.Group();
+        for(let i = 0; i < 6; i++){
+          const m = i % 2 ? stripe2 : stripe1;
+          const s = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.06, SLAB_LEN * 2 - 0.05), m);
+          s.position.x = -3 + (i + 0.5) * 1.05;
+          grp2.add(s);
+        }
+        grp2.position.set(0, (POLE_TOP_Y + RIDGE_Y) / 2 + sign * 0.04, sign * 1.25);
+        grp2.rotation.x = sign * -SLAB_ANG;
+        return grp2;
       }
+      grp.add(makeStripeOverlay(1));
+      grp.add(makeStripeOverlay(-1));
+      // Closed gable triangles on the left & right sides between roof
+      // slabs and beams (so the structure looks like a real tent — no
+      // open gap looking through the roof).
+      const gableShape = new THREE.Shape();
+      gableShape.moveTo(-2.5, 0);
+      gableShape.lineTo( 2.5, 0);
+      gableShape.lineTo( 0,   1.6);
+      gableShape.lineTo(-2.5, 0);
+      const gableGeom = new THREE.ShapeGeometry(gableShape);
+      const gableMatX = new THREE.MeshStandardMaterial({ color: 0xc89858, roughness: 0.85, side: THREE.DoubleSide });
+      const gableL = new THREE.Mesh(gableGeom, gableMatX);
+      gableL.rotation.y = Math.PI / 2;
+      gableL.position.set(-3.0, POLE_TOP_Y, 0);
+      grp.add(gableL);
+      const gableR = gableL.clone();
+      gableR.position.x = 3.0;
+      grp.add(gableR);
+      // Ridge beam along the top (caps the joint)
+      const ridge = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.10, 6.2, 8), polesMat);
+      ridge.rotation.z = Math.PI / 2;
+      ridge.position.set(0, RIDGE_Y, 0);
+      grp.add(ridge);
       // Counter / display table in front
       const table = new THREE.Mesh(new THREE.BoxGeometry(5.0, 0.18, 1.2), polesMat);
       table.position.set(0, 1.10, -1.4);
@@ -281,7 +316,7 @@
 `;
     document.head.appendChild(style);
     const cmEl = document.createElement('div');
-    cmEl.innerHTML = `<div class="carlos-bg" id="carlosBg"><div class="carlos-card"><div class="carlos-head"><h2>\u{1F5A8} Carlos — Market</h2><button class="close" id="carlosClose">×</button></div><div style="display:flex;border-bottom:1px solid rgba(95,240,156,.18);"><button class="ctab" data-ctab="buy" style="flex:1;background:transparent;border:0;color:#5ff09c;padding:12px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid #5ff09c;">BUY</button><button class="ctab" data-ctab="sell" style="flex:1;background:transparent;border:0;color:rgba(230,255,238,.55);padding:12px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;">SELL · 70%</button></div><div class="carlos-body"><div class="carlos-pop" id="carlosPop">+0 🥈</div><div class="carlos-running" id="carlosRunning">This visit: <b>0 🥈</b></div><p class="carlos-intro" id="carlosIntro">Pick anything off the shop shelves below.</p><div id="carlosList"></div></div></div></div>`;
+    cmEl.innerHTML = `<div class="carlos-bg" id="carlosBg"><div class="carlos-card"><div class="carlos-head"><h2>\u{1F5A8} Carlos — Market</h2><button class="close" id="carlosClose">×</button></div><div style="display:flex;border-bottom:1px solid rgba(95,240,156,.18);"><button class="ctab" data-ctab="buy" style="flex:1;background:transparent;border:0;color:#5ff09c;padding:12px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid #5ff09c;">BUY</button><button class="ctab" data-ctab="sell" style="flex:1;background:transparent;border:0;color:rgba(230,255,238,.55);padding:12px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:11px;letter-spacing:1.4px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;">SELL · 70%</button></div><div class="carlos-body"><div class="carlos-pop" id="carlosPop">+0</div><div class="carlos-running" id="carlosRunning">This visit: <b>0 💵</b></div><p class="carlos-intro" id="carlosIntro">Pick anything off the shop shelves below.</p><div id="carlosList"></div></div></div></div>`;
     document.body.appendChild(cmEl.firstElementChild);
     document.getElementById('carlosClose').addEventListener('click', () => {
       document.getElementById('carlosBg').classList.remove('show');
@@ -316,14 +351,15 @@
           lines.push(`<div class="carlos-row"><div class="ico" style="color:${item.color||'#e6ffee'};">${item.icon||''}</div><div class="meta"><div class="nm">${item.name}</div><div class="sub">${price}\u{1F948} each · you own ×${have}</div></div><div class="qty"></div><button class="btn buy" data-id="${id}" data-price="${price}">BUY 1</button></div>`);
         }
       } else {
-        intro.innerHTML = "Carlos buys for 70% of market price.";
+        intro.innerHTML = "Carlos buys for 70% of market price. He pays in 💵 cash.";
         for(const id of Object.keys(State.inventory || {})){
           const item = ITEMS[id]; if(!item) continue;
           const qty = State.inventory[id] || 0; if(qty <= 0) continue;
           const ref = item.marketPrice || item.suggestedPrice;
           if(!ref || item.isNFT) continue;
           const sellAt = Math.max(1, Math.floor(ref * 0.7));
-          lines.push(`<div class="carlos-row"><div class="ico" style="color:${item.color||'#e6ffee'};">${item.icon||''}</div><div class="meta"><div class="nm">${item.name}</div><div class="sub">market ${ref}\u{1F948} · Carlos pays ${sellAt}\u{1F948}</div></div><div class="qty">×${qty}</div><button class="btn sell" data-id="${id}" data-price="${sellAt}">SELL 1</button></div>`);
+          const sellAll = sellAt * qty;
+          lines.push(`<div class="carlos-row"><div class="ico" style="color:${item.color||'#e6ffee'};">${item.icon||''}</div><div class="meta"><div class="nm">${item.name}</div><div class="sub">market ${ref}\u{1F948} · Carlos pays ${sellAt}\u{1F4B5}</div></div><div class="qty">×${qty}</div><div style="display:flex;gap:6px;"><button class="btn sell" data-id="${id}" data-price="${sellAt}">SELL 1</button><button class="btn sellall" data-id="${id}" data-price="${sellAt}" data-qty="${qty}" data-total="${sellAll}" title="Sell all ${qty} for ${sellAll} 💵">SELL ALL</button></div></div>`);
         }
       }
       host.innerHTML = lines.length ? lines.join("") : '<div class="carlos-empty">Nothing here right now.</div>';
@@ -338,16 +374,33 @@
         window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.(); renderCarlos();
       }));
       host.querySelectorAll('.btn.sell').forEach(b => b.addEventListener('click', () => {
+        if(b.classList.contains('sellall')) return; // handled below
         const id = b.dataset.id, price = Number(b.dataset.price) || 0;
         if((State.inventory[id] || 0) <= 0) return;
         window.takeItem(id, 1);
-        State.credits = (State.credits || 0) + price;
+        State.paper = (State.paper || 0) + price;
         _carlosTotal += price;
         const pop = document.getElementById('carlosPop');
-        pop.textContent = `+${price} \u{1F948} · sold 1 ${window.ITEMS[id].name}`;
+        pop.textContent = `+${price} \u{1F4B5} · sold 1 ${window.ITEMS[id].name}`;
         pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
         clearTimeout(window._carlosPopT); window._carlosPopT = setTimeout(() => pop.classList.remove('show'), 2000);
-        document.getElementById('carlosRunning').innerHTML = `This visit: <b>${_carlosTotal} \u{1F948}</b>`;
+        document.getElementById('carlosRunning').innerHTML = `This visit: <b>${_carlosTotal} \u{1F4B5}</b>`;
+        window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.(); renderCarlos();
+      }));
+      host.querySelectorAll('.btn.sellall').forEach(b => b.addEventListener('click', () => {
+        const id = b.dataset.id;
+        const price = Number(b.dataset.price) || 0;
+        const qty = Math.min(Number(b.dataset.qty) || 0, State.inventory[id] || 0);
+        if(qty <= 0) return;
+        const total = price * qty;
+        window.takeItem(id, qty);
+        State.paper = (State.paper || 0) + total;
+        _carlosTotal += total;
+        const pop = document.getElementById('carlosPop');
+        pop.textContent = `+${total} \u{1F4B5} · sold ${qty}× ${window.ITEMS[id].name}`;
+        pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+        clearTimeout(window._carlosPopT); window._carlosPopT = setTimeout(() => pop.classList.remove('show'), 2000);
+        document.getElementById('carlosRunning').innerHTML = `This visit: <b>${_carlosTotal} \u{1F4B5}</b>`;
         window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.(); renderCarlos();
       }));
     }
@@ -368,7 +421,7 @@
         b.style.color = a ? "#5ff09c" : "rgba(230,255,238,.55)";
         b.style.borderBottomColor = a ? "#5ff09c" : "transparent";
       });
-      const r = document.getElementById('carlosRunning'); if(r) r.innerHTML = "This visit: <b>0 \u{1F948}</b>";
+      const r = document.getElementById('carlosRunning'); if(r) r.innerHTML = "This visit: <b>0 \u{1F4B5}</b>";
       const p = document.getElementById('carlosPop'); if(p) p.classList.remove('show');
       renderCarlos();
       document.getElementById('carlosBg').classList.add('show');
