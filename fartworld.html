@@ -19,6 +19,12 @@
 <script src="bowling.js" defer></script>
 <!-- Portfolio panel — shows all owned assets (off-chain + on-chain). -->
 <script src="portfolio.js" defer></script>
+<!-- Native in-app swap (Jupiter API + Phantom signing). -->
+<script src="swap.js" defer></script>
+<!-- World extras: jail cell mesh, extra trees + chop mechanic, paper mill. -->
+<script src="world-extras.js" defer></script>
+<!-- Fart Cup CSS + modal injection (moved out of main file for size). -->
+<script src="fartcup-ui.js" defer></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -3141,6 +3147,8 @@ const State = {
   claimedFlags: new Set(),   // Set<countryCode> of flags the player has claimed
   flagImages:   {},          // countryCode → image URL (cached so we don't refetch on every load)
   wornFlag:     null,        // currently worn flag country code, or null
+  // ── Jail: when busted with fake money, locked here until this ts
+  jailUntil:    0,           // ms epoch — 0 = free, > now = stuck in jail
 };
 const STORE_KEY = "fartworld_state_v1";
 
@@ -3167,6 +3175,7 @@ function saveState(){
       claimedFlags:        [...(State.claimedFlags || [])],   // Set → array
       flagImages:          State.flagImages || {},
       wornFlag:            State.wornFlag || null,
+      jailUntil:           State.jailUntil || 0,
     }));
   } catch(_){}
 }
@@ -3266,6 +3275,31 @@ const ITEMS = {
     type:    "ore",
     isNFT:   false,
     suggestedPrice: 14,
+  },
+  // ── Crafting materials (used for counterfeiting + tree-chopping) ──
+  paper: {
+    id: "paper", name: "Paper",
+    icon: "📜", color: "#f2eecf",
+    type: "material", isNFT: false,
+    marketPrice: 5, suggestedPrice: 4,
+  },
+  ink: {
+    id: "ink", name: "Ink",
+    icon: "🖋", color: "#7a83ff",
+    type: "material", isNFT: false,
+    marketPrice: 8, suggestedPrice: 6,
+  },
+  wood: {
+    id: "wood", name: "Wood",
+    icon: "🪵", color: "#a87338",
+    type: "material", isNFT: false,
+    suggestedPrice: 8,
+  },
+  saw: {
+    id: "saw", name: "Saw",
+    icon: "🪚", color: "#c0c8d6",
+    type: "tool", isNFT: false,
+    marketPrice: 60, suggestedPrice: 50,
   },
 };
 
@@ -4753,11 +4787,19 @@ function tryPrint(dt){
   if(printHoldTime > 0.55){
     const counterfeit = keys['ShiftLeft'] || keys['ShiftRight'];
     if(counterfeit){
-      // ── Print fake money. Highly illegal — cats can smell it (see
-      // tickFakeMoneyRisks below) and marketplace purchases trigger a
-      // 50/50 caught roll. Each press makes 1 fake bill.
+      // ── Counterfeit fake bills. Now requires 1 📜 Paper + 1 🖋 Ink
+      // per bill — printer station alone isn't enough anymore. Both
+      // materials are bought at the marketplace (or paper milled
+      // from wood). Highly illegal — cats can sniff it out.
+      if(!State.inventory.paper || !State.inventory.ink){
+        floater("Need 📜 Paper + 🖋 Ink to forge", "bad");
+        printHoldTime = 0;
+        return;
+      }
+      takeItem("paper", 1);
+      takeItem("ink",   1);
       State.fakeMoney = (State.fakeMoney || 0) + 1;
-      State.xp += 2;   // tiny XP for the hustle
+      State.xp += 2;
       floater("+1 🪙 Fake Bill (illegal!)", "bad");
     } else {
       State.pagesPrinted++;
@@ -5149,6 +5191,11 @@ function updateMovement(dt){
   // If we're in a boat, the boat-update owns position + yaw entirely.
   if(Player.boat){ updateBoat(dt); return; }
 
+  // JAIL — locked to a tiny cell for 5 minutes after a counterfeit bust.
+  // Movement input is still read so the player can pace inside the cell,
+  // but every step is clamped to JAIL_RADIUS of JAIL_POS.
+  const jailing = State.jailUntil && Date.now() < State.jailUntil;
+
   let inputX = 0, inputZ = 0;
   if(keys['KeyW']) inputZ -= 1;
   if(keys['KeyS']) inputZ += 1;
@@ -5228,6 +5275,17 @@ function updateMovement(dt){
     Player.pos.y = groundY + 0.05;
   } else {
     Player.pos.y = groundY;
+  }
+  // ── Jail clamp (last so it overrides everything) ──
+  if(jailing){
+    const dx = Player.pos.x - JAIL_POS.x;
+    const dz = Player.pos.z - JAIL_POS.z;
+    const d  = Math.hypot(dx, dz);
+    if(d > JAIL_RADIUS){
+      Player.pos.x = JAIL_POS.x + (dx / d) * JAIL_RADIUS;
+      Player.pos.z = JAIL_POS.z + (dz / d) * JAIL_RADIUS;
+      Player.pos.y = sampleSurfaceY(Player.pos.x, Player.pos.z);
+    }
   }
 }
 
@@ -8280,6 +8338,9 @@ const SEED_SHOP = [
   { itemId: "weed_seed",   desc: "Premium crop. 10× the seed cost but the harvest sells for double." },
   { itemId: "pickaxe",     desc: "Required to mine ore deposits scattered around the world. Press F when standing on one." },
   { itemId: "cat_food",    desc: "Brrrish, Billy and Ket love this. Feed a cat with G for XP." },
+  { itemId: "saw",         desc: "Chop down trees + beach palms for wood. Sell the wood or mill it into paper." },
+  { itemId: "paper",       desc: "Blank sheets. Required (with ink) to forge fake bills at the print stations." },
+  { itemId: "ink",         desc: "Black ink. Required (with paper) to forge fake bills at the print stations." },
 ];
 
 function openMarket(){
@@ -8430,6 +8491,13 @@ function renderSellPane(){
 // don't search for) and on-chain $FARTPRINT lives in the wallet so it's
 // untouchable. Used by the marketplace fake-pay roll, the holding-fake
 // passive market roll, and the cat sniff event.
+// Jail: where busted players land + how long they stay. Position chosen
+// to be far from everything (south of the south beach) so it isn't
+// blocking gameplay. Movement clamp logic lives in updateMovement.
+const JAIL_POS    = { x: 70, z: 70 };
+const JAIL_RADIUS = 1.6;                  // cell bounds
+const JAIL_MS     = 5 * 60 * 1000;        // 5 minutes
+
 function counterfeitBusted(reason){
   const lost = (State.credits || 0) + (State.paper || 0) + (State.fakeMoney || 0);
   State.credits = 0;
@@ -8439,7 +8507,14 @@ function counterfeitBusted(reason){
   // street-level marketplace security.
   triggerShame();
   floater(`🚨 BUSTED · ${reason}`, "bad");
-  showBuyToast(`Lost ${lost} in coins + cash + fakes. Gold + $FARTPRINT survive.`);
+  showBuyToast(`Lost ${lost} in coins + cash + fakes. 5 minutes in jail!`);
+  // Teleport to jail + set the release timestamp.
+  State.jailUntil = Date.now() + JAIL_MS;
+  Player.pos.x = JAIL_POS.x;
+  Player.pos.z = JAIL_POS.z;
+  if(typeof groundHeightAt === "function"){
+    Player.pos.y = groundHeightAt(JAIL_POS.x, JAIL_POS.z) + 0.05;
+  }
   saveState(); updateHUD();
   if(window.renderInventory) renderInventory();
 }
@@ -8557,11 +8632,11 @@ function openPaySelector(label, priceSilver, onPay){
       const asset = btn.dataset.asset;
       if(asset === "silver"){
         if(State.credits < priceSilver){ floater(`Need ${priceSilver} 🥈`, "bad"); return; }
-        if(maybeMarketBust()){ document.getElementById('paySelBg').classList.remove('show'); return; }
+        // Bust check REMOVED for real money. The risk only exists when
+        // you actually hand fake bills to the cashier.
         State.credits -= priceSilver;
       } else if(asset === "cash"){
         if((State.paper || 0) < costC){ floater(`Need ${costC} 💵`, "bad"); return; }
-        if(maybeMarketBust()){ document.getElementById('paySelBg').classList.remove('show'); return; }
         State.paper -= costC;
       } else if(asset === "fake"){
         if((State.fakeMoney || 0) < costF){ floater(`Need ${costF} 🪙 Fake`, "bad"); return; }
@@ -8883,10 +8958,15 @@ async function poopFetchPrices(){
   }
 }
 
-// Open Jupiter swap as a popup window so the game tab stays loaded
-// behind. User signs with Phantom in the popup, closes it, then walks
-// back into the world. Beats redirecting them to a full new tab.
+// In-game Jupiter swap. Prefers the native swap modal (swap.js, opens
+// inside the game and signs through the already-connected Phantom
+// wallet). Falls back to a popup of jup.ag if swap.js hasn't loaded.
 function openJupSwap(ca){
+  if(typeof window.openNativeSwap === "function"){
+    window.openNativeSwap(ca);
+    return;
+  }
+  // Fallback only — opens Jupiter inside a popup window
   const url = `https://jup.ag/swap/SOL-${ca}`;
   const w = 520, h = 760;
   const x = (screen.width  - w) / 2;
@@ -11040,29 +11120,36 @@ window.renderInventory = renderInventory;
 })();
 
 // =================================================================
-// ─── FART CUP CSS + MODAL HTML ───────────────────────────────────
-const _fcStyle = document.createElement('style');
-_fcStyle.textContent = `.fc-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:56;padding:20px}.fc-bg.show{display:flex}.fc-card{max-width:760px;width:100%;max-height:90vh;background:linear-gradient(180deg,rgba(8,28,18,.97),rgba(5,16,11,.97));border:2px solid rgba(255,214,77,.42);border-radius:22px;overflow:hidden;display:flex;flex-direction:column}.fc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(255,214,77,.20)}.fc-head h2{font-family:'Bangers','Orbitron',sans-serif;font-size:34px;letter-spacing:2.4px;color:#ffd64d}.fc-head .close{background:transparent;border:0;color:rgba(230,255,238,.55);font-size:26px;cursor:pointer}.fc-tabs{display:flex;border-bottom:1px solid rgba(255,214,77,.16)}.fc-tab{flex:1;background:transparent;border:0;color:rgba(230,255,238,.55);padding:14px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent}.fc-tab.active{color:#ffd64d;border-bottom-color:#ffd64d;background:rgba(255,214,77,.06)}.fc-body{overflow-y:auto;padding:18px 22px 26px;flex:1}.fc-intro{color:rgba(230,255,238,.72);font-size:13px;margin-bottom:16px}.fc-intro b{color:#ffd64d}.fc-list{display:flex;flex-direction:column;gap:8px}.fc-row{display:grid;grid-template-columns:44px 1.1fr 1fr auto;gap:12px;align-items:center;padding:10px 12px;background:rgba(255,214,77,.05);border:1px solid rgba(255,214,77,.18);border-radius:12px}.fc-row.claim{grid-template-columns:44px 1.1fr .9fr auto}.fc-row .ico{width:44px;height:44px;border-radius:10px;background-size:cover;background-position:center;background-color:rgba(255,255,255,.05);border:1px solid rgba(255,214,77,.30)}.fc-row .meta{display:flex;flex-direction:column;gap:2px}.fc-row .sym{font-family:'Orbitron',sans-serif;font-weight:900;font-size:13.5px;color:#ffd64d}.fc-row .ticker{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.55)}.fc-row .price-col{text-align:right}.fc-row .price{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .mcap{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#ffd64d}.fc-row .bal-col{text-align:right}.fc-row .bal-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(230,255,238,.45);text-transform:uppercase}.fc-row .bal{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .trade-btn{background:linear-gradient(135deg,#b27538,#ffd64d);color:#2a1a04;border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn{border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn.go{background:linear-gradient(135deg,#46f08a,#5ff09c);color:#042913}.fc-claim-btn.locked,.fc-claim-btn.done{background:rgba(255,214,77,.10);color:rgba(230,255,238,.4);cursor:not-allowed}.fc-claim-btn.done{background:rgba(95,240,156,.18);color:#5ff09c}.fc-foot{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.45);text-align:center}.inv-slot{position:relative}.inv-slot.wearable{box-shadow:inset 0 0 0 1px rgba(255,214,77,.45)}.inv-slot.wearable.worn{box-shadow:inset 0 0 0 2px #ffd64d,0 0 18px rgba(255,214,77,.35)}.inv-slot .wear-badge{position:absolute;top:4px;right:4px;background:#ffd64d;color:#2a1a04;font-family:'Orbitron',sans-serif;font-weight:900;font-size:8px;padding:2px 6px;border-radius:5px;pointer-events:none}`;
-document.head.appendChild(_fcStyle);
-const _fcModalEl = document.createElement('div');
-_fcModalEl.innerHTML = '<div class="fc-bg" id="fcBg"><div class="fc-card"><div class="fc-head"><h2>⚽ FART CUP</h2><button class="close" id="fcClose">×</button></div><div class="fc-tabs"><button class="fc-tab active" data-fctab="trade">Trade</button><button class="fc-tab" data-fctab="claim">Claim Flags</button></div><div class="fc-body"><div class="fc-pane" data-fcpane="trade"><p class="fc-intro">48 national FART tokens. Sorted by market cap. <b>BUY</b> opens Jupiter in a popup.</p><div class="fc-list" id="fcTradeList"></div></div><div class="fc-pane" data-fcpane="claim" style="display:none;"><p class="fc-intro">Hold <b>100,000</b> of a country\'s FART token to claim its flag as a wearable.</p><div class="fc-list" id="fcClaimList"></div><div class="fc-foot">Flags are forever.</div></div></div></div></div>';
-document.body.appendChild(_fcModalEl.firstElementChild);
-document.getElementById('fcClose').addEventListener('click', closeFartCup);
-document.getElementById('fcBg').addEventListener('click', (e) => { if(e.target.id === "fcBg") closeFartCup(); });
-document.querySelectorAll('.fc-tab').forEach(btn => btn.addEventListener('click', () => {
-  const t = btn.dataset.fctab; _fcCurrentTab = t;
-  document.querySelectorAll('.fc-tab').forEach(b => b.classList.toggle('active', b === btn));
-  document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === t ? "" : "none");
-  if(t === "trade") fcRenderTrade(); else fcRenderClaim();
-}));
-fcFetchPrices();
+// ─── Fart Cup CSS + modal injection moved to fartcup-ui.js for size. ──
+
 Object.assign(window, {
-  State, ITEMS, addItem, floater, showBuyToast, playPurchaseSound, ensureAudio,
-  checkLevelUp, saveState, updateHUD,
+  // Core game state / helpers
+  State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound,
+  ensureAudio, checkLevelUp, saveState, updateHUD,
+  // Token registries + price caches for Portfolio / Swap / Quests
   POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData,
   refreshFartprintBalance, fetchFartprintBalance,
   poopFetchPrices, fcFetchPrices, fcFetchBalances,
+  // Fart Cup render handles (called by fartcup-ui.js after it injects the modal)
+  fcRenderTrade, fcRenderClaim, closeFartCup,
+  // World extras needs scene access + the jail constants
+  THREE, scene, groundHeightAt, Player, JAIL_POS, JAIL_RADIUS,
+  WalkableSurfaces, sampleSurfaceY, escHtml,
 });
+// Fart Cup quick handle — pre-fetch in case the player walks straight up
+// to the football statue before fartcup-ui.js has finished injecting.
+fcFetchPrices();
 </script>
 </body>
 </html>
+t up to the football statue.
+fcFetchPrices();
+</script>
+</body>
+</html>
+
+fcFetchPrices();
+</script>
+</body>
+</html>
+l>
