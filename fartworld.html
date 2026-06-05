@@ -25,6 +25,16 @@
 <script src="world-extras.js" defer></script>
 <!-- Fart Cup CSS + modal injection (moved out of main file for size). -->
 <script src="fartcup-ui.js" defer></script>
+<!-- 3 junkie printer NPCs that wander + buy fake weed + launder fake cash. -->
+<script src="junkies.js" defer></script>
+<!-- Static printer NPCs behind counters (Carlos / Moneycaller / Wave / Gary). -->
+<script src="static-npcs.js" defer></script>
+<!-- Logout, crafting items, weed tiers, fart-jar tiers, Pawn Shop stub. -->
+<script src="extras-v6b.js" defer></script>
+<!-- Sand collection, jar melt, Fart Filling Station building. -->
+<script src="crafting.js" defer></script>
+<!-- Wave's Sea Plane — buy at the port, take off and fly. -->
+<script src="seaplane.js" defer></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -2608,8 +2618,11 @@
   </div>
 
   <!-- Inventory toggle button (top-right corner of the HUD) -->
+  <!-- The inv-toggle class uses position:absolute top:80px right:14px, so
+       siblings would land on top of each other. Stack them vertically by
+       pushing the portfolio button's top down by one button height + gap. -->
   <button class="inv-toggle" id="invToggle" title="Inventory (I)">🎒</button>
-  <button class="inv-toggle" id="portfolioToggle" title="Portfolio (P)" style="margin-top:8px;">💼</button>
+  <button class="inv-toggle" id="portfolioToggle" title="Portfolio (P)" style="top:134px;">💼</button>
   <!-- Leaderboard toggle button -->
   <button class="lb-toggle-btn" id="lbToggle" title="Leaderboard (L)">🏆</button>
 
@@ -2993,8 +3006,10 @@
     </div>
     <div class="market-tabs">
       <button class="market-tab active" data-mtab="seeds">Shop</button>
-      <button class="market-tab" data-mtab="listings">Player Market</button>
-      <button class="market-tab" data-mtab="sell">Sell Stuff</button>
+      <!-- Player Market + Sell tabs hidden: Carlos handles all buying and
+           selling for now via his own modal inside the marketplace tent. -->
+      <button class="market-tab" data-mtab="listings" style="display:none;">Player Market</button>
+      <button class="market-tab" data-mtab="sell" style="display:none;">Sell Stuff</button>
     </div>
     <div class="market-body">
       <div class="market-pane" data-mpane="seeds">
@@ -3214,8 +3229,9 @@ const ITEMS = {
     color:   "#5ff09c",
     type:    "seed",
     isNFT:   false,
-    growMs:  30 * 60 * 1000,   // 30 minutes — premium crop, longer wait
+    growMs:  10 * 60 * 1000,   // 10 minutes
     harvest: "weed",
+    harvestQty: 10,            // 10 buds per harvest
     marketPrice: 250,
   },
   carrot_seed: {
@@ -4802,10 +4818,20 @@ function tryPrint(dt){
       State.xp += 2;
       floater("+1 🪙 Fake Bill (illegal!)", "bad");
     } else {
+      // ── Legit printing. Costs 1 💵 Cash per batch and produces
+      // 10 📜 Paper items the player can use for crafting / fake bills
+      // / selling. Was "press E for free silver" — no longer a passive
+      // income loop; now you have to spend real money for blanks.
+      if((State.paper || 0) < 1){
+        floater("Need 1 💵 Cash to print", "bad");
+        printHoldTime = 0;
+        return;
+      }
+      State.paper -= 1;
       State.pagesPrinted++;
       State.xp += 4;
-      State.credits += 1;
-      floater("+1 page  +4 XP", "good");
+      for(let i = 0; i < 10; i++) addItem("paper", 1);
+      floater("−1 💵  +10 📜 Paper  +4 XP", "good");
       playPrintSound();
     }
     printHoldTime = 0;
@@ -4999,11 +5025,20 @@ canvas.addEventListener('mousedown', () => {
   const a = document.activeElement;
   if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) a.blur();
 });
-// Escape always blurs the chat (or any) input so you can return to play.
+// Escape: blurs the chat (or any) input + closes any open modal so the
+// player can always get back to gameplay regardless of which window
+// they have on screen.
 window.addEventListener('keydown', (e) => {
   if(e.code === "Escape"){
     const a = document.activeElement;
     if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) a.blur();
+    // Force-close every known modal — belts and braces.
+    ['invBg', 'pfBg', 'fcBg', 'bowlBg', 'bankBg', 'launderBg', 'marketBg',
+     'lbBg', 'goldBg', 'poopBg', 'labBg', 'paySelBg', 'seedChBg', 'millBg',
+     'swapBg', 'junkBg'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.classList.remove('show');
+    });
   }
 });
 
@@ -6843,7 +6878,7 @@ setInterval(refreshFartprintStats, 30000);
 const Cats = [];
 const CATS_SPEC = [
   { id: "brrrish", name: "Brrrish", body: 0x111111, belly: 0x222222, ear:  0x111111, fat: 0.78 },
-  { id: "billy",   name: "Billy",   body: 0xe87d2a, belly: 0xfff0c8, ear:  0xe87d2a, fat: 1.25 },
+  { id: "billy",   name: "Billi",   body: 0xe87d2a, belly: 0xfff0c8, ear:  0xe87d2a, fat: 1.25 },
   { id: "ket",     name: "Ket",     body: 0xf8f8f0, belly: 0xffffff, ear:  0xf8f8f0, fat: 1.00, rightEar: 0x7a4a1a },
 ];
 
@@ -6941,11 +6976,18 @@ function spawnCat(spec){
   const x = Math.cos(ang) * dist;
   const z = Math.sin(ang) * dist;
   built.mesh.position.set(x, groundHeightAt(x, z), z);
+  // Floating name tag (same style as the junkie tags). Stored on the cat
+  // so updateCats() can keep its screen position synced each frame.
+  const tag = document.createElement('div');
+  tag.style.cssText = `position:absolute;transform:translate(-50%,-100%);background:rgba(8,18,11,.86);color:#ffd4a3;padding:4px 10px;border:1px solid rgba(255,212,163,.55);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;pointer-events:none;z-index:9;white-space:nowrap;`;
+  tag.textContent = spec.name + " 🐈";
+  (document.getElementById('chatBubbles')?.parentElement || document.body).appendChild(tag);
   const cat = {
     ...spec,
     mesh:      built.mesh,
     legs:      built.legs,
     tailSegs:  built.tailSegs,
+    tag,
     x, z, yaw: Math.random() * Math.PI * 2,
     goalX:     x, goalZ: z,
     state:     "wander",       // wander | pause | flee
@@ -6957,18 +6999,40 @@ function spawnCat(spec){
   return cat;
 }
 
+// Cats avoid the same building footprints + the arena pit that were
+// trapping the junkies — same circle list so the rules stay in sync.
+const CAT_AVOID = [
+  { x:  36, z:  36, r: 14 }, // Arena platform
+  { x: -15, z: -45, r: 4.5 }, // Football statue
+  { x: -22, z:  -8, r: 5 },   // Bank
+  { x: -22, z: -32, r: 5 },   // Market
+  { x: -48, z:  28, r: 5 },   // Lab
+  { x:  42, z:   0, r: 5 },   // Refinery
+  { x:  50, z: -36, r: 5 },   // Poop
+  { x:   0, z: -55, r: 6 },   // House
+  { x:  84, z:   0, r: 5 },   // Dock
+  { x: -38, z: -16, r: 6 },   // Bowling
+  { x: -45, z:   8, r: 4 },   // Paper Mill
+  { x:  -8, z: -16, r: 3 },   // Stats sign
+  { x:  70, z:  70, r: 3 },   // Jail
+];
+function _catForbidden(gx, gz){
+  for(const a of CAT_AVOID){
+    if(Math.hypot(gx - a.x, gz - a.z) < a.r) return true;
+  }
+  return false;
+}
 function pickNewWanderGoal(c){
-  // Pick a goal somewhere on the island, within ~25m of the cat's
-  // current position, and not in the deep water.
-  for(let i = 0; i < 12; i++){
+  for(let i = 0; i < 20; i++){
     const ang = Math.random() * Math.PI * 2;
     const r   = 6 + Math.random() * 20;
     const gx  = c.x + Math.cos(ang) * r;
     const gz  = c.z + Math.sin(ang) * r;
-    if(Math.hypot(gx, gz) < ISLAND_RADIUS - 4 && groundHeightAt(gx, gz) > WATER_LEVEL + 0.1){
-      c.goalX = gx; c.goalZ = gz;
-      return;
-    }
+    if(Math.hypot(gx, gz) >= ISLAND_RADIUS - 4) continue;
+    if(groundHeightAt(gx, gz) <= WATER_LEVEL + 0.1) continue;
+    if(_catForbidden(gx, gz)) continue;
+    c.goalX = gx; c.goalZ = gz;
+    return;
   }
 }
 
@@ -7055,10 +7119,23 @@ function updateCats(dt){
       }
     }
 
-    // Apply position + walk animation
-    const y = groundHeightAt(c.x, c.z);
+    // Apply position + walk animation. Lift by 0.1 so the paws sit on
+    // the grass instead of sinking into the terrain mesh.
+    const y = groundHeightAt(c.x, c.z) + 0.1;
     c.mesh.position.set(c.x, y, c.z);
     c.mesh.rotation.y = c.yaw;
+    // Project floating name tag to screen space
+    if(c.tag){
+      const v = new THREE.Vector3(c.x, y + 1.0, c.z);
+      v.project(camera);
+      if(v.z < 1 && v.z > -1){
+        c.tag.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + "px";
+        c.tag.style.top  = ((-v.y * 0.5 + 0.5) * innerHeight) + "px";
+        c.tag.style.display = "";
+      } else {
+        c.tag.style.display = "none";
+      }
+    }
     // Subtle body bob + leg pendulum scaled to speed
     const bobAmp = Math.min(0.04, c.speed * 0.02);
     c.mesh.position.y = y + Math.abs(Math.sin(c.animT * 10 * (1 + c.speed / 3))) * bobAmp;
@@ -8140,15 +8217,20 @@ function tryInteract(){
     broadcastPlot(nearbyPlot);
     return;
   }
-  // HARVEST?
+  // HARVEST? Crops can return more than one item via their `harvestQty`
+  // field on the seed catalog. Weed gives 10 buds per harvest now.
   const item = ITEMS[nearbyPlot.crop];
   const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
   if(t >= 1){
-    addItem(nearbyPlot.crop, 1);
+    // Look up the seed that produced this crop to find its harvest yield.
+    const seedKey = Object.keys(ITEMS).find(k => ITEMS[k].harvest === nearbyPlot.crop);
+    const qty = (seedKey && ITEMS[seedKey].harvestQty) || 1;
+    addItem(nearbyPlot.crop, qty);
     nearbyPlot.crop = null;
     nearbyPlot.plantedAt = 0;
     plotStateChanged(nearbyPlot);
-    floater(`+1 ${ITEMS[item.harvest || nearbyPlot.crop || ""]?.name || "crop"}  +20 XP`, "good");
+    const cropName = ITEMS[item.harvest || nearbyPlot.crop || ""]?.name || "crop";
+    floater(`+${qty} ${cropName}  +20 XP`, "good");
     State.xp += 20; checkLevelUp();
     saveState(); updateHUD();
     broadcastPlot(nearbyPlot);
@@ -8325,7 +8407,9 @@ function updatePrinterStationPrompt(){
   prompt.classList.add('show');
   prompt.classList.remove('locked');
   title.textContent = "🖨 Print Station";
-  sub.innerHTML = `Hold <kbd>E</kbd> for pages · <kbd>Shift+E</kbd> for fake bills 🪙`;
+  // Updated rule: holding E costs 1 💵 Cash and outputs 10 📜 Paper.
+  // Shift+E still produces a fake bill (consumes paper + ink).
+  sub.innerHTML = `Hold <kbd>E</kbd> · 1 💵 → 10 📜 · <kbd>Shift+E</kbd> for fake bills 🪙`;
 }
 
 // =================================================================
@@ -8341,6 +8425,8 @@ const SEED_SHOP = [
   { itemId: "saw",         desc: "Chop down trees + beach palms for wood. Sell the wood or mill it into paper." },
   { itemId: "paper",       desc: "Blank sheets. Required (with ink) to forge fake bills at the print stations." },
   { itemId: "ink",         desc: "Black ink. Required (with paper) to forge fake bills at the print stations." },
+  { itemId: "plastic_bag", desc: "Container for sand. Take to the beach with a shovel to scoop it full." },
+  { itemId: "shovel",      desc: "Dig sand on the beach into a plastic bag. Sand bags melt into Empty Jars at the Refinery." },
 ];
 
 function openMarket(){
@@ -11049,6 +11135,8 @@ function applyWornFlagPaper(){
     paper.material.color.setHex(0xffffff);
     paper.material.needsUpdate = true;
   };
+  // If we have a real flag URL, try loading it; on failure fall back to
+  // the canvas-letter rendering above.
   if(!url){ setCanvasFallback(); return; }
   new THREE.TextureLoader().load(url, (tex) => {
     if("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
@@ -11059,28 +11147,10 @@ function applyWornFlagPaper(){
   }, undefined, setCanvasFallback);
 }
 
-function toggleWearFlag(itemId){
-  const item = ITEMS[itemId];
-  if(!item || item.type !== "wearable") return;
-  if(State.wornFlag === item.code){
-    State.wornFlag = null;
-    floater("Removed flag", "good");
-  } else {
-    State.wornFlag = item.code;
-    floater(`🏁 Wearing ${item.coinSym || item.name}`, "good");
-  }
-  applyWornFlagPaper();
-  saveState();
-  if(window.renderInventory) renderInventory();
-}
-
-// Wrap renderInventory to decorate wearables with the WEARING badge + click
-// handler. We reassign the module binding (function decls are mutable in
-// modules) and re-mirror it onto window so older `if(window.renderInventory)`
-// guards continue to pick up the wrapped version.
-const _origRenderInventory = renderInventory;
+// Renders wearables with the WEARING badge + click-to-toggle
+const _origRender = renderInventory;
 renderInventory = function(){
-  _origRenderInventory();
+  _origRender();
   const grid = document.getElementById('invGrid');
   if(!grid) return;
   grid.querySelectorAll('.inv-slot[data-id]').forEach(el => {
@@ -11088,68 +11158,17 @@ renderInventory = function(){
     const item = ITEMS[id];
     if(!item || item.type !== "wearable") return;
     el.classList.add('wearable');
-    if(State.wornFlag === item.code){
-      el.classList.add('worn');
-      if(!el.querySelector('.wear-badge')){
-        const b = document.createElement('div');
-        b.className = 'wear-badge';
-        b.textContent = "WEARING";
-        el.appendChild(b);
-      }
-    } else {
-      el.classList.remove('worn');
-      el.querySelector('.wear-badge')?.remove();
-    }
-    if(!el._wearWired){
-      el._wearWired = true;
-      el.addEventListener('click', () => toggleWearFlag(id));
-    }
-    el.style.cursor = "pointer";
-    el.title = item.name + " · click to " + (State.wornFlag === item.code ? "remove" : "wear");
+    el.classList.toggle('worn', State.wornFlag === item.code);
+    let b = el.querySelector('.wear-badge');
+    if(State.wornFlag === item.code && !b){ b = document.createElement('div'); b.className='wear-badge'; b.textContent='WEARING'; el.appendChild(b); }
+    else if(b && State.wornFlag !== item.code) b.remove();
+    if(!el._w){ el._w = true; el.addEventListener('click', () => toggleWearFlag(id)); el.style.cursor = "pointer"; }
   });
 };
 window.renderInventory = renderInventory;
-
-// Re-register flag items on boot for anything previously claimed
-(function bootRehydrateFlags(){
-  if(!State.claimedFlags || !State.claimedFlags.size) return;
-  for(const code of State.claimedFlags){
-    const coin = FARTCUP_COINS.find(c => c.code === code);
-    if(coin) ensureFlagItem(coin);
-  }
-})();
-
-// =================================================================
-// ─── Fart Cup CSS + modal injection moved to fartcup-ui.js for size. ──
-
-Object.assign(window, {
-  // Core game state / helpers
-  State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound,
-  ensureAudio, checkLevelUp, saveState, updateHUD,
-  // Token registries + price caches for Portfolio / Swap / Quests
-  POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData,
-  refreshFartprintBalance, fetchFartprintBalance,
-  poopFetchPrices, fcFetchPrices, fcFetchBalances,
-  // Fart Cup render handles (called by fartcup-ui.js after it injects the modal)
-  fcRenderTrade, fcRenderClaim, closeFartCup,
-  // World extras needs scene access + the jail constants
-  THREE, scene, groundHeightAt, Player, JAIL_POS, JAIL_RADIUS,
-  WalkableSurfaces, sampleSurfaceY, escHtml,
-});
-// Fart Cup quick handle — pre-fetch in case the player walks straight up
-// to the football statue before fartcup-ui.js has finished injecting.
-fcFetchPrices();
+(function(){ if(!State.claimedFlags?.size) return; for(const c of State.claimedFlags){ const co = FARTCUP_COINS.find(x => x.code === c); if(co) ensureFlagItem(co); } })();
+Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys });
+try { fcFetchPrices(); } catch(e){}
 </script>
 </body>
 </html>
-t up to the football statue.
-fcFetchPrices();
-</script>
-</body>
-</html>
-
-fcFetchPrices();
-</script>
-</body>
-</html>
-l>
