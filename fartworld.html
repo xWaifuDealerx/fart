@@ -2733,7 +2733,7 @@
       <div class="bank-row">
         <div>
           <h3>Silver → Cash</h3>
-          <p>1 🥈 Silver = <b>10 💵 Cash</b>. Real money — spendable at the Marketplace.</p>
+          <p>1 🥈 Silver = <b>50 💵 Cash</b>. Cash inflates — you'll need a lot of it at the market.</p>
           <div class="qty-row">
             <input id="bankPaperQty" type="number" min="1" placeholder="silver to convert"/>
             <span class="preview" id="bankPaperPreview">→ 0 💵</span>
@@ -2745,9 +2745,9 @@
       <div class="bank-row">
         <div>
           <h3>Cash → Silver</h3>
-          <p>Tellers buy clean bills back: <b>10 💵 Cash = 1 🥈 Silver</b>. Same rate as the other way.</p>
+          <p>Tellers only take <b>100 💵 Cash per 🥈 Silver</b> back — that 2× spread is the inflation toll.</p>
           <div class="qty-row">
-            <input id="bankCashToSilverQty" type="number" min="10" placeholder="cash to convert"/>
+            <input id="bankCashToSilverQty" type="number" min="100" placeholder="cash to convert"/>
             <span class="preview" id="bankCashToSilverPreview">→ 0 🥈</span>
           </div>
         </div>
@@ -4866,6 +4866,34 @@ const Quests = [
     target: 600,
     progress: () => Math.min(600, Math.floor(State.cleanSeconds)),
     reward: { xp: 200, credits: 75 },
+  },
+  {
+    // Holds ≥$1 worth of any Fart Cup OR FART&POOP500 token. Progress is
+    // the integer cents (so 0–100 fills the bar in 1¢ steps). Reads live
+    // balances + prices from the cached _fcData / _poopData maps that
+    // the Fart Cup and Poop House code populates.
+    id: "crypto_buy_1usd",
+    name: "Buy $1+ of any Fart Cup or FART&POOP500 token",
+    target: 100,
+    progress: () => {
+      let usd = 0;
+      try {
+        if(typeof FARTCUP_COINS !== "undefined" && typeof _fcData !== "undefined"){
+          for(const c of FARTCUP_COINS){
+            const d = _fcData[c.ca] || {};
+            usd += (d.balance || 0) * (d.price || 0);
+          }
+        }
+        if(typeof POOP_TOKENS !== "undefined" && typeof _poopData !== "undefined"){
+          for(const t of POOP_TOKENS){
+            const d = _poopData[t.ca] || {};
+            usd += (d.balance || 0) * (d.price || 0);
+          }
+        }
+      } catch(_){}
+      return Math.min(100, Math.floor(usd * 100));
+    },
+    reward: { xp: 250, credits: 100 },
   },
 ];
 const _questClaimed = new Set();
@@ -7364,8 +7392,12 @@ buildTrampoline( 10, 40, 2.4, 10);   // far north meadow
 // =================================================================
 const BANK_POS = { x: -22, z: -8 };
 const BANK_RADIUS = 4.5;
-const PAPER_PER_SILVER = 10;          // 1 silver → 10 paper bills
-const SILVER_PER_GOLD  = 100000;      // BRUTAL grind to convert silver to gold
+// Cash is hyper-inflating vs silver — was a 1:10 peg, now 1 silver buys
+// 50 cash but tellers only take 100 cash back per silver. The 2× spread
+// is the inflation toll on holding paper money.
+const PAPER_PER_SILVER     = 50;      // forward rate: 1 silver = 50 cash
+const CASH_PER_SILVER_BACK = 100;     // buyback rate: 100 cash = 1 silver
+const SILVER_PER_GOLD      = 100000;  // BRUTAL grind to convert silver to gold
 const GOLD_MIN_QTY     = 0.01;        // smallest gold purchase (so 1000 silver → 0.01 gold)
 
 function buildBank(){
@@ -8492,13 +8524,14 @@ function openPaySelector(label, priceSilver, onPay){
   // losing ALL Silver + Cash + Fake. Gold and on-chain $FARTPRINT
   // are untouchable by the bust).
   document.getElementById('paySelSub').innerHTML =
-    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * 10} 💵 Cash</b>, or <b>${priceSilver * 10} 🪙 Fake</b> (risky!)`;
+    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * PAPER_PER_SILVER} 💵 Cash</b>, or <b>${priceSilver * PAPER_PER_SILVER} 🪙 Fake</b> (risky!)`;
   const rows = document.getElementById('paySelRows');
   const haveS = State.credits   || 0;
   const haveC = State.paper     || 0;
   const haveF = State.fakeMoney || 0;
-  const costC = priceSilver * 10;
-  const costF = priceSilver * 10;
+  // Cash/Fake cost use the current forward inflation rate (PAPER_PER_SILVER)
+  const costC = priceSilver * PAPER_PER_SILVER;
+  const costF = priceSilver * PAPER_PER_SILVER;
   const okS = haveS >= priceSilver;
   const okC = haveC >= costC;
   const okF = haveF >= costF;
@@ -8850,6 +8883,17 @@ async function poopFetchPrices(){
   }
 }
 
+// Open Jupiter swap as a popup window so the game tab stays loaded
+// behind. User signs with Phantom in the popup, closes it, then walks
+// back into the world. Beats redirecting them to a full new tab.
+function openJupSwap(ca){
+  const url = `https://jup.ag/swap/SOL-${ca}`;
+  const w = 520, h = 760;
+  const x = (screen.width  - w) / 2;
+  const y = (screen.height - h) / 2;
+  window.open(url, "jup_swap", `width=${w},height=${h},left=${x},top=${y}`);
+}
+
 function renderPoopList(){
   const host = document.getElementById('poopList');
   if(!host) return;
@@ -8869,10 +8913,14 @@ function renderPoopList(){
           <div class="price">${poopFmtPrice(d.price)}</div>
           <div class="chg ${chgCls}">${chgArrow}${poopFmtChg(d.ch24)}</div>
         </div>
-        <a class="trade-btn" href="${t.pool}" target="_blank" rel="noopener">Trade</a>
+        <button class="trade-btn" data-buy="${t.ca}">BUY</button>
       </div>
     `;
   }).join("");
+  // BUY button → Jupiter swap popup
+  host.querySelectorAll('.trade-btn[data-buy]').forEach(b => {
+    b.addEventListener('click', () => openJupSwap(b.dataset.buy));
+  });
   // Copy-CA click handlers
   host.querySelectorAll('.ca').forEach(el => {
     el.addEventListener('click', () => {
@@ -9264,20 +9312,22 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
   saveState(); updateHUD(); openBank();
 });
 // ── Reverse conversion handlers ──
-// Cash → Silver: 10 cash = 1 silver (same rate as the forward direction)
+// Cash → Silver uses the BUYBACK rate (100 cash per silver), worse than
+// the forward rate (50 cash per silver). The spread is the inflation
+// cost — round-tripping silver→cash→silver loses 50% of value.
 document.getElementById('bankCashToSilverQty')?.addEventListener('input', (e) => {
   const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('bankCashToSilverPreview').textContent = `→ ${Math.floor(n / PAPER_PER_SILVER)} 🥈`;
+  document.getElementById('bankCashToSilverPreview').textContent = `→ ${Math.floor(n / CASH_PER_SILVER_BACK)} 🥈`;
 });
 document.getElementById('bankCashToSilverGo')?.addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('bankCashToSilverQty').value) || 0));
-  if(n < PAPER_PER_SILVER){ floater(`Minimum ${PAPER_PER_SILVER} 💵 Cash`, "bad"); return; }
+  if(n < CASH_PER_SILVER_BACK){ floater(`Minimum ${CASH_PER_SILVER_BACK} 💵 Cash`, "bad"); return; }
   if((State.paper || 0) < n){ floater(`Need ${n} 💵 Cash`, "bad"); return; }
-  const silver = Math.floor(n / PAPER_PER_SILVER);
-  State.paper   -= silver * PAPER_PER_SILVER;     // floor to exact silver units
+  const silver = Math.floor(n / CASH_PER_SILVER_BACK);
+  State.paper   -= silver * CASH_PER_SILVER_BACK;     // floor to exact silver units
   State.credits += silver;
-  floater(`+${silver} 🥈 Silver · -${silver * PAPER_PER_SILVER} 💵`, "good");
-  showBuyToast(`Converted ${silver * PAPER_PER_SILVER} Cash → ${silver} Silver`);
+  floater(`+${silver} 🥈 Silver · -${silver * CASH_PER_SILVER_BACK} 💵`, "good");
+  showBuyToast(`Converted ${silver * CASH_PER_SILVER_BACK} Cash → ${silver} Silver (inflation toll)`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
@@ -10751,7 +10801,6 @@ function fcRenderTrade(){
   if(!host) return;
   host.innerHTML = fcSortedCoins().map(c => {
     const d = _fcData[c.ca] || {};
-    const tradeUrl = `https://pump.fun/coin/${c.ca}`;
     return `
       <div class="fc-row">
         <div class="ico" style="background-image:url('${flagImg(c.code)}');"></div>
@@ -10763,10 +10812,17 @@ function fcRenderTrade(){
           <div class="price">${fcFmtPrice(d.price)}</div>
           <div class="mcap">${fcFmtMcap(d.mcap)}</div>
         </div>
-        <a class="trade-btn" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>
+        <button class="trade-btn" data-buy="${c.ca}">BUY</button>
       </div>
     `;
   }).join("");
+  // BUY → Jupiter swap popup (same flow as the Poop House)
+  host.querySelectorAll('.trade-btn[data-buy]').forEach(b => {
+    b.addEventListener('click', () => {
+      if(typeof openJupSwap === "function") openJupSwap(b.dataset.buy);
+      else window.open(`https://jup.ag/swap/SOL-${b.dataset.buy}`, "jup_swap", "width=520,height=760");
+    });
+  });
 }
 
 function fcRenderClaim(){
@@ -10984,13 +11040,12 @@ window.renderInventory = renderInventory;
 })();
 
 // =================================================================
-// ─── FART CUP CSS + MODAL HTML (injected) ───────────────────────
-// =================================================================
+// ─── FART CUP CSS + MODAL HTML ───────────────────────────────────
 const _fcStyle = document.createElement('style');
-_fcStyle.textContent = `.fc-bg{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:56;padding:20px}.fc-bg.show{display:flex}.fc-card{max-width:760px;width:100%;max-height:90vh;background:linear-gradient(180deg,rgba(8,28,18,0.97),rgba(5,16,11,0.97));border:2px solid rgba(255,214,77,0.42);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.6)}.fc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(255,214,77,0.20)}.fc-head h2{font-family:'Bangers','Orbitron',sans-serif;font-size:34px;letter-spacing:2.4px;background:linear-gradient(135deg,#fff1a8,#ffd64d,#b27538);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.fc-head .close{background:transparent;border:0;color:rgba(230,255,238,0.55);font-size:26px;cursor:pointer}.fc-tabs{display:flex;border-bottom:1px solid rgba(255,214,77,0.16)}.fc-tab{flex:1;background:transparent;border:0;color:rgba(230,255,238,0.55);padding:14px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent}.fc-tab.active{color:#ffd64d;border-bottom-color:#ffd64d;background:rgba(255,214,77,0.06)}.fc-body{overflow-y:auto;padding:18px 22px 26px;flex:1}.fc-intro{color:rgba(230,255,238,0.72);font-size:13px;margin-bottom:16px}.fc-intro b{color:#ffd64d}.fc-list{display:flex;flex-direction:column;gap:8px}.fc-row{display:grid;grid-template-columns:44px 1.1fr 1fr auto;gap:12px;align-items:center;padding:10px 12px;background:rgba(255,214,77,0.05);border:1px solid rgba(255,214,77,0.18);border-radius:12px}.fc-row.claim{grid-template-columns:44px 1.1fr 0.9fr auto}.fc-row .ico{width:44px;height:44px;border-radius:10px;background-size:cover;background-position:center;background-color:rgba(255,255,255,0.05);border:1px solid rgba(255,214,77,0.30)}.fc-row .meta{display:flex;flex-direction:column;gap:2px}.fc-row .sym{font-family:'Orbitron',sans-serif;font-weight:900;font-size:13.5px;color:#ffd64d}.fc-row .ticker{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.55)}.fc-row .price-col{text-align:right}.fc-row .price{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .mcap{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#ffd64d}.fc-row .bal-col{text-align:right}.fc-row .bal-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(230,255,238,0.45);text-transform:uppercase}.fc-row .bal{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .trade-btn{background:linear-gradient(135deg,#b27538,#ffd64d);color:#2a1a04;border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer;text-decoration:none}.fc-claim-btn{border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn.go{background:linear-gradient(135deg,#46f08a,#5ff09c);color:#042913}.fc-claim-btn.locked,.fc-claim-btn.done{background:rgba(255,214,77,0.10);color:rgba(230,255,238,0.4);cursor:not-allowed}.fc-claim-btn.done{background:rgba(95,240,156,0.18);color:#5ff09c}.fc-foot{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.45);text-align:center}.inv-slot{position:relative}.inv-slot.wearable{box-shadow:inset 0 0 0 1px rgba(255,214,77,0.45)}.inv-slot.wearable.worn{box-shadow:inset 0 0 0 2px #ffd64d,0 0 18px rgba(255,214,77,0.35)}.inv-slot .wear-badge{position:absolute;top:4px;right:4px;background:#ffd64d;color:#2a1a04;font-family:'Orbitron',sans-serif;font-weight:900;font-size:8px;padding:2px 6px;border-radius:5px;pointer-events:none}`;
+_fcStyle.textContent = `.fc-bg{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:56;padding:20px}.fc-bg.show{display:flex}.fc-card{max-width:760px;width:100%;max-height:90vh;background:linear-gradient(180deg,rgba(8,28,18,.97),rgba(5,16,11,.97));border:2px solid rgba(255,214,77,.42);border-radius:22px;overflow:hidden;display:flex;flex-direction:column}.fc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(255,214,77,.20)}.fc-head h2{font-family:'Bangers','Orbitron',sans-serif;font-size:34px;letter-spacing:2.4px;color:#ffd64d}.fc-head .close{background:transparent;border:0;color:rgba(230,255,238,.55);font-size:26px;cursor:pointer}.fc-tabs{display:flex;border-bottom:1px solid rgba(255,214,77,.16)}.fc-tab{flex:1;background:transparent;border:0;color:rgba(230,255,238,.55);padding:14px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent}.fc-tab.active{color:#ffd64d;border-bottom-color:#ffd64d;background:rgba(255,214,77,.06)}.fc-body{overflow-y:auto;padding:18px 22px 26px;flex:1}.fc-intro{color:rgba(230,255,238,.72);font-size:13px;margin-bottom:16px}.fc-intro b{color:#ffd64d}.fc-list{display:flex;flex-direction:column;gap:8px}.fc-row{display:grid;grid-template-columns:44px 1.1fr 1fr auto;gap:12px;align-items:center;padding:10px 12px;background:rgba(255,214,77,.05);border:1px solid rgba(255,214,77,.18);border-radius:12px}.fc-row.claim{grid-template-columns:44px 1.1fr .9fr auto}.fc-row .ico{width:44px;height:44px;border-radius:10px;background-size:cover;background-position:center;background-color:rgba(255,255,255,.05);border:1px solid rgba(255,214,77,.30)}.fc-row .meta{display:flex;flex-direction:column;gap:2px}.fc-row .sym{font-family:'Orbitron',sans-serif;font-weight:900;font-size:13.5px;color:#ffd64d}.fc-row .ticker{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.55)}.fc-row .price-col{text-align:right}.fc-row .price{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .mcap{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#ffd64d}.fc-row .bal-col{text-align:right}.fc-row .bal-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(230,255,238,.45);text-transform:uppercase}.fc-row .bal{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .trade-btn{background:linear-gradient(135deg,#b27538,#ffd64d);color:#2a1a04;border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn{border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn.go{background:linear-gradient(135deg,#46f08a,#5ff09c);color:#042913}.fc-claim-btn.locked,.fc-claim-btn.done{background:rgba(255,214,77,.10);color:rgba(230,255,238,.4);cursor:not-allowed}.fc-claim-btn.done{background:rgba(95,240,156,.18);color:#5ff09c}.fc-foot{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.45);text-align:center}.inv-slot{position:relative}.inv-slot.wearable{box-shadow:inset 0 0 0 1px rgba(255,214,77,.45)}.inv-slot.wearable.worn{box-shadow:inset 0 0 0 2px #ffd64d,0 0 18px rgba(255,214,77,.35)}.inv-slot .wear-badge{position:absolute;top:4px;right:4px;background:#ffd64d;color:#2a1a04;font-family:'Orbitron',sans-serif;font-weight:900;font-size:8px;padding:2px 6px;border-radius:5px;pointer-events:none}`;
 document.head.appendChild(_fcStyle);
 const _fcModalEl = document.createElement('div');
-_fcModalEl.innerHTML = '<div class="fc-bg" id="fcBg"><div class="fc-card"><div class="fc-head"><h2>⚽ FART CUP</h2><button class="close" id="fcClose">×</button></div><div class="fc-tabs"><button class="fc-tab active" data-fctab="trade">Trade Nation Coins</button><button class="fc-tab" data-fctab="claim">Claim Flags</button></div><div class="fc-body"><div class="fc-pane" data-fcpane="trade"><p class="fc-intro">48 national FART tokens. Sorted by market cap.</p><div class="fc-list" id="fcTradeList"></div></div><div class="fc-pane" data-fcpane="claim" style="display:none;"><p class="fc-intro">Hold <b>100,000</b> of a country\'s FART token to claim its flag as a wearable. No burn required.</p><div class="fc-list" id="fcClaimList"></div><div class="fc-foot">Flags are forever.</div></div></div></div></div>';
+_fcModalEl.innerHTML = '<div class="fc-bg" id="fcBg"><div class="fc-card"><div class="fc-head"><h2>⚽ FART CUP</h2><button class="close" id="fcClose">×</button></div><div class="fc-tabs"><button class="fc-tab active" data-fctab="trade">Trade</button><button class="fc-tab" data-fctab="claim">Claim Flags</button></div><div class="fc-body"><div class="fc-pane" data-fcpane="trade"><p class="fc-intro">48 national FART tokens. Sorted by market cap. <b>BUY</b> opens Jupiter in a popup.</p><div class="fc-list" id="fcTradeList"></div></div><div class="fc-pane" data-fcpane="claim" style="display:none;"><p class="fc-intro">Hold <b>100,000</b> of a country\'s FART token to claim its flag as a wearable.</p><div class="fc-list" id="fcClaimList"></div><div class="fc-foot">Flags are forever.</div></div></div></div></div>';
 document.body.appendChild(_fcModalEl.firstElementChild);
 document.getElementById('fcClose').addEventListener('click', closeFartCup);
 document.getElementById('fcBg').addEventListener('click', (e) => { if(e.target.id === "fcBg") closeFartCup(); });
