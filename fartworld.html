@@ -13,6 +13,12 @@
 <meta name="apple-mobile-web-app-title" content="FARTPRINT">
 <meta name="description" content="FartWorld — the $FARTPRINT 3D virtual world. Play as a sentient office printer, rip farts in safe zones, earn XP and $FART credits, complete quests. Built with Three.js.">
 <script src="mwa-shim.js" defer></script>
+<!-- Bowling minigame lives in its own file so the main game's HTML stays
+     under the editor size limit. Loaded with defer so it runs after the
+     module script has exposed globals (State, ITEMS, etc) onto window. -->
+<script src="bowling.js" defer></script>
+<!-- Portfolio panel — shows all owned assets (off-chain + on-chain). -->
+<script src="portfolio.js" defer></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -2578,7 +2584,7 @@
       <span id="hudGold">0</span>
     </div>
     <div class="hud-card hud-paper" id="hudPaperCard">
-      <span class="lbl">📄 PAPER</span>
+      <span class="lbl">💵 CASH</span>
       <span id="hudPaper">0</span>
     </div>
     <div class="hud-card hud-fake" id="hudFakeCard">
@@ -2597,6 +2603,7 @@
 
   <!-- Inventory toggle button (top-right corner of the HUD) -->
   <button class="inv-toggle" id="invToggle" title="Inventory (I)">🎒</button>
+  <button class="inv-toggle" id="portfolioToggle" title="Portfolio (P)" style="margin-top:8px;">💼</button>
   <!-- Leaderboard toggle button -->
   <button class="lb-toggle-btn" id="lbToggle" title="Leaderboard (L)">🏆</button>
 
@@ -2719,17 +2726,17 @@
     <div class="bank-body">
       <div class="bank-stats">
         <div class="bank-stat"><div class="lbl">Silver</div><div class="val" id="bankSilver">0</div></div>
-        <div class="bank-stat"><div class="lbl">Paper</div><div class="val" id="bankPaper">0</div></div>
+        <div class="bank-stat"><div class="lbl">Cash</div><div class="val" id="bankPaper">0</div></div>
         <div class="bank-stat"><div class="lbl">Gold</div><div class="val" id="bankGold">0</div></div>
       </div>
 
       <div class="bank-row">
         <div>
-          <h3>Silver → Paper Bills</h3>
-          <p>1 🥈 Silver = <b>10 📄 Paper</b>. Lighter to carry around.</p>
+          <h3>Silver → Cash</h3>
+          <p>1 🥈 Silver = <b>10 💵 Cash</b>. Real money — spendable at the Marketplace.</p>
           <div class="qty-row">
             <input id="bankPaperQty" type="number" min="1" placeholder="silver to convert"/>
-            <span class="preview" id="bankPaperPreview">→ 0 📄</span>
+            <span class="preview" id="bankPaperPreview">→ 0 💵</span>
           </div>
         </div>
         <button class="go" id="bankPaperGo">Convert</button>
@@ -2737,14 +2744,38 @@
 
       <div class="bank-row">
         <div>
-          <h3>Silver → Gold</h3>
-          <p>The brutal rate: <b>100,000 🥈 Silver per 🥇 Gold</b>. Minimum 0.01 Gold per purchase. Grind earned.</p>
+          <h3>Cash → Silver</h3>
+          <p>Tellers buy clean bills back: <b>10 💵 Cash = 1 🥈 Silver</b>. Same rate as the other way.</p>
           <div class="qty-row">
-            <input id="bankGoldQty" type="number" min="0.01" step="0.01" placeholder="gold to buy"/>
-            <span class="preview" id="bankGoldPreview">→ 0 🥈</span>
+            <input id="bankCashToSilverQty" type="number" min="10" placeholder="cash to convert"/>
+            <span class="preview" id="bankCashToSilverPreview">→ 0 🥈</span>
+          </div>
+        </div>
+        <button class="go" id="bankCashToSilverGo">Convert</button>
+      </div>
+
+      <div class="bank-row">
+        <div>
+          <h3>Silver → Gold</h3>
+          <p>The brutal rate: <b>100,000 🥈 Silver per 🥇 Gold</b>. Enter how much Silver you want to spend — the gold you'll get appears below.</p>
+          <div class="qty-row">
+            <input id="bankGoldQty" type="number" min="1000" step="1000" placeholder="silver to spend"/>
+            <span class="preview" id="bankGoldPreview">→ 0.0000 🥇</span>
           </div>
         </div>
         <button class="go" id="bankGoldGo">Convert</button>
+      </div>
+
+      <div class="bank-row">
+        <div>
+          <h3>Gold → Silver</h3>
+          <p>Cash out a gold bar: <b>1 🥇 Gold = 100,000 🥈 Silver</b>. Same rate either direction.</p>
+          <div class="qty-row">
+            <input id="bankGoldToSilverQty" type="number" min="0.01" step="0.01" placeholder="gold to sell"/>
+            <span class="preview" id="bankGoldToSilverPreview">→ 0 🥈</span>
+          </div>
+        </div>
+        <button class="go" id="bankGoldToSilverGo">Convert</button>
       </div>
     </div>
   </div>
@@ -2754,11 +2785,11 @@
 <div class="launder-bg" id="launderBg">
   <div class="launder-card">
     <h2>🕵 LAUNDERING ROOM</h2>
-    <p>You found the back office. Exchange fake bills for real Silver at the criminal rate: <b>1 🪙 Fake → 0.3 🥈 Silver</b>. Cuts your wad in two-thirds but it's clean.</p>
-    <p style="margin-top:8px;">Holding <b id="launderFakeQty">0</b> fake bills · <b id="launderSilverQty">0</b> 🥈 Silver</p>
+    <p>You found the back office. Exchange fake bills for clean Cash at the criminal rate: <b>1 🪙 Fake → 0.3 💵 Cash</b>. Cuts your wad in two-thirds but it's spendable real money.</p>
+    <p style="margin-top:8px;">Holding <b id="launderFakeQty">0</b> fake bills · <b id="launderSilverQty">0</b> 💵 Cash</p>
     <div class="row">
       <input id="launderInput" type="number" min="1" placeholder="fake bills"/>
-      <span class="preview" id="launderPreview" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(230,255,238,0.65);">→ 0 🥈</span>
+      <span class="preview" id="launderPreview" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(230,255,238,0.65);">→ 0 💵</span>
     </div>
     <button id="launderGo">Launder it</button>
     <button class="ghost" id="launderClose">Leave</button>
@@ -3174,9 +3205,9 @@ const ITEMS = {
     color:   "#5ff09c",
     type:    "seed",
     isNFT:   false,
-    growMs:  60 * 60 * 1000,   // 1 hour real-time to fully grow
-    harvest: "weed",           // → harvest produces 1 weed
-    marketPrice: 250,          // premium crop — 10× the cost of carrots
+    growMs:  30 * 60 * 1000,   // 30 minutes — premium crop, longer wait
+    harvest: "weed",
+    marketPrice: 250,
   },
   carrot_seed: {
     id:      "carrot_seed",
@@ -3185,9 +3216,9 @@ const ITEMS = {
     color:   "#ff8a3d",
     type:    "seed",
     isNFT:   false,
-    growMs:  60 * 60 * 1000,   // also 1 hour
+    growMs:  10 * 60 * 1000,   // 10 minutes — entry-level crop, fast turnaround
     harvest: "carrot",
-    marketPrice: 25,           // entry-level crop (the old weed seed price)
+    marketPrice: 25,
   },
   carrot: {
     id:      "carrot",
@@ -3699,34 +3730,10 @@ function makeStars(){
 }
 scene.add(makeStars());
 
-// Floating islands (low-poly cone/cylinder shapes) with platforms
-function makeIsland(x, y, z, radius, color){
-  const grp = new THREE.Group();
-  const cone = new THREE.Mesh(
-    new THREE.ConeGeometry(radius, radius * 1.4, 8, 1, false),
-    new THREE.MeshStandardMaterial({ color: 0x0e2818, roughness: 0.9, flatShading: true })
-  );
-  cone.position.y = -radius * 0.7;
-  cone.castShadow = true; cone.receiveShadow = true;
-  grp.add(cone);
-  // Top disc
-  const top = new THREE.Mesh(
-    new THREE.CylinderGeometry(radius * 0.95, radius * 0.95, 0.3, 16),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true })
-  );
-  top.position.y = 0;
-  top.castShadow = true; top.receiveShadow = true;
-  grp.add(top);
-  grp.position.set(x, y, z);
-  return grp;
-}
-[
-  [22, 6, -18, 4, 0x2c5a36],
-  [-30, 9, 12, 5, 0x2c5a36],
-  [10, 12, 30, 3.5, 0x305f3a],
-  [-18, 5, -28, 4.5, 0x2c5a36],
-  [38, 16, 6, 3, 0x355f44],
-].forEach(([x,y,z,r,c]) => scene.add(makeIsland(x,y,z,r,c)));
+// Floating-islands decoration REMOVED — each one was a cone (pyramid)
+// with a flat cylinder disc on top, suspended in mid-air. They clashed
+// with the proper terrain and looked like floating round-tables to
+// players. Function definition stays only as a record; nothing calls it.
 
 // ─── Zones ──────────────────────────────────────────────────────
 // Each zone is a glowing ring on the ground + a column of light.
@@ -3870,7 +3877,12 @@ function makePrinterStation(x, z){
 // grows through 3 stages over its `growMs` duration before becoming
 // harvestable. Plot ownership + crops sync across the room via ntfy.
 const Plots = [];                      // { id, x, z, w, h, mesh, signMesh, plantMesh, owner, ownerName, crop, plantedAt, ownerLabel }
-const PLOT_PRICE = 50;
+// Plots are now RENTED for 24h at a time, not permanently bought —
+// after the rental expires the plot returns to the marketplace and
+// any crop still planted on it is forfeited. This keeps the available
+// land turning over instead of accumulating to early players.
+const PLOT_PRICE   = 30;                      // silver per 24h rental
+const PLOT_RENT_MS = 24 * 60 * 60 * 1000;     // 24 hours in ms
 // PLOT_SIZE + PLOT_LOCATIONS are declared earlier (before makeGround)
 // so the ground-flatten pass can use them — see top of World section.
 
@@ -4352,28 +4364,16 @@ function makePaperMountain(x, z, scale){
   m.rotation.y = Math.random() * Math.PI;
   scene.add(m);
 }
-[
-  [60, -40, 6], [-55, -50, 7], [70, 40, 5], [-65, 50, 6.5], [50, 70, 5.5],
-].forEach(([x,z,s]) => makePaperMountain(x,z,s));
+// Paper mountains REMOVED — they looked like floating triangular sculptures
+// because the cone bases were anchored to absolute y=0 (not the local
+// terrain height), so they appeared to hover above the beach slope.
+// Kept the makePaperMountain function definition in case we want to
+// revive them later with proper ground-snapping; just don't call it.
 
-// ─── Ink rivers (low ribbon of dark blue) ───────────────────────
-function makeInkRiver(){
-  const points = [];
-  // Keep the river entirely on the island — sample a curve that stays
-  // well inside ISLAND_RADIUS so it doesn't visibly poke out into the
-  // ocean (where it used to look like a metallic stripe in the water).
-  // River sits just above the BASE_GROUND so it visually flows over the
-  // grass instead of being buried under it.
-  for(let i = -70; i <= 70; i += 4){
-    points.push(new THREE.Vector3(i, BASE_GROUND + 0.05, Math.sin(i * 0.05) * 5 - 35));
-  }
-  const curve = new THREE.CatmullRomCurve3(points);
-  const geo = new THREE.TubeGeometry(curve, 80, 1.4, 8, false);
-  const mat = new THREE.MeshStandardMaterial({ color: 0x16243a, emissive: 0x0a1622, emissiveIntensity: 0.3, roughness: 0.3, metalness: 0.6 });
-  const m = new THREE.Mesh(geo, mat);
-  scene.add(m);
-}
-makeInkRiver();
+// Ink river REMOVED — the long dark-blue TubeGeometry looked like a
+// power cable strung across the map, which clashed with the natural
+// island vibe. Kept the makeInkRiver definition above as a no-op call
+// site; we just don't invoke it on world build anymore.
 
 // ─── Player ─────────────────────────────────────────────────────
 const Player = {
@@ -4391,6 +4391,9 @@ const Player = {
   prevZone: "neutral",
   boat:    null,             // when set, player is in this boat (see updateBoat)
   boatYaw: 0,                // independent of facing yaw so the printer rides the boat
+  // ── Bounce/airborne state (trampolines + future vertical mechanics) ──
+  vy:        0,              // vertical velocity (m/s); positive = upward
+  airborne:  false,          // when true, Y is integrated instead of clamped to ground
 };
 
 const Cam = {
@@ -5040,6 +5043,12 @@ async function connectWallet(){
     const resp = await phantom.connect();
     State.wallet = resp.publicKey.toString();
     saveState();
+    // Pre-warm the Fart Cup balance cache the moment a wallet is connected
+    // so flags are claim-ready by the time the player walks to the statue.
+    // (Fire-and-forget — never blocks the lobby flow.)
+    if(typeof fcFetchBalances === "function"){
+      fcFetchBalances().catch(()=>{});
+    }
     enterLobby();
   } catch(e){ console.warn("Phantom connect failed", e); }
 }
@@ -5163,8 +5172,35 @@ function updateMovement(dt){
     Player.pos.x = oldX; Player.pos.z = oldZ;
     yNew = sampleSurfaceY(Player.pos.x, Player.pos.z);
   }
-  // Cosmetic: in shallow water, your feet sit at the water surface
-  Player.pos.y = Math.max(yNew, WATER_LEVEL - 0.2);
+  // Trampoline detection — if the player is over an active trampoline AND
+  // not yet airborne (or just landed on it), kick them upward. Each time
+  // they touch down on the mat, they bounce again with the same impulse.
+  const tramp = typeof Trampolines !== "undefined" ? Trampolines.find(t =>
+    Math.hypot(Player.pos.x - t.x, Player.pos.z - t.z) < t.radius
+  ) : null;
+  const groundY = Math.max(yNew, WATER_LEVEL - 0.2);
+  if(Player.airborne){
+    // Integrate vertical velocity + gravity
+    Player.vy -= 22 * dt;     // m/s² downward
+    Player.pos.y += Player.vy * dt;
+    if(Player.pos.y <= groundY){
+      // Touched down
+      Player.pos.y = groundY;
+      if(tramp){
+        Player.vy = tramp.power;          // re-bounce
+      } else {
+        Player.airborne = false;
+        Player.vy = 0;
+      }
+    }
+  } else if(tramp && Math.abs(Player.pos.y - groundY) < 0.3){
+    // Just stepped onto the mat — launch
+    Player.airborne = true;
+    Player.vy = tramp.power;
+    Player.pos.y = groundY + 0.05;
+  } else {
+    Player.pos.y = groundY;
+  }
 }
 
 // =================================================================
@@ -6624,12 +6660,13 @@ function renderFartprintBillboard(){
   // All 5 stats stacked vertically — labels left, values right-aligned
   // so a wide value ($12.34M) never collides with a wide label
   // (PERCENTAGE STAKED).
+  // Staked-% and burned-% rows REMOVED — both relied on Solana RPC reads
+  // that were noisy in-game and the player rarely cared about them
+  // mid-session. Keeping the on-chain refresh code below for future use.
   const stats = [
     { label: "PRICE",        value: fmtUsdFp(FpStats.price),                 color: "#e6ffee" },
     { label: "MARKET CAP",   value: fmtUsdFp(FpStats.mcap),                  color: "#e6ffee" },
     { label: "24H CHANGE",   value: fmtPctFp(FpStats.ch24),                  color: (FpStats.ch24 == null) ? "#a8b5a0" : (FpStats.ch24 >= 0 ? "#5ff09c" : "#ff7a6e") },
-    { label: "% STAKED",     value: (FpStats.stakedPct != null ? FpStats.stakedPct.toFixed(2) + "%" : "—"), color: "#ffd64d" },
-    { label: "% BURNED",     value: (FpStats.burnedPct != null ? FpStats.burnedPct.toFixed(2) + "%" : "—"), color: "#ff7a6e" },
   ];
   const rowH = 92;
   const top  = 130;
@@ -7040,9 +7077,12 @@ function buildAdBillboard(x, z, yaw){
 
   const tex = new THREE.CanvasTexture(cvs);
   tex.anisotropy = 4;
+  // Was emissiveIntensity 1.0 — the boards were so bright they bleached
+  // out the text. Dropped to 0.25 + slight roughness so the ad reads
+  // like a real backlit billboard instead of a floodlit one.
   const screenMat = new THREE.MeshStandardMaterial({
-    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.0,
-    roughness: 0.5, metalness: 0.0,
+    map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0.25,
+    roughness: 0.7, metalness: 0.0,
   });
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.4), screenMat);
   screen.position.set(0, 3.4, 0.17);
@@ -7282,6 +7322,44 @@ function buildBowlingAlley(){
 buildBowlingAlley();
 
 // =================================================================
+// ─── TRAMPOLINES — step on, bounce up ──────────────────────────
+// =================================================================
+// Movement loop reads Trampolines[] each frame; standing within a
+// trampoline's radius launches Player.vy = power. Visual mesh is
+// built compactly here to stay within the editor size budget.
+const Trampolines = [];   // { x, z, radius, power, mesh }
+function buildTrampoline(x, z, radius, power){
+  const grp = new THREE.Group();
+  grp.position.set(x, groundHeightAt(x, z), z);
+  const matMat = new THREE.MeshStandardMaterial({ color: 0x111228, roughness: 0.6, side: THREE.DoubleSide });
+  const mat = new THREE.Mesh(new THREE.CircleGeometry(radius * 0.92, 24), matMat);
+  mat.rotation.x = -Math.PI / 2; mat.position.y = 0.55;
+  grp.add(mat);
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(radius * 0.95, 0.16, 8, 24),
+    new THREE.MeshStandardMaterial({ color: 0xff5ad6, emissive: 0xff5ad6, emissiveIntensity: 0.4, roughness: 0.45 })
+  );
+  rim.rotation.x = -Math.PI / 2; rim.position.y = 0.6;
+  grp.add(rim);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.7, metalness: 0.3 });
+  for(let i = 0; i < 4; i++){
+    const ang = i * Math.PI / 2 + Math.PI / 4;
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.55, 6), legMat);
+    leg.position.set(Math.cos(ang) * radius * 0.85, 0.28, Math.sin(ang) * radius * 0.85);
+    grp.add(leg);
+  }
+  const lt = new THREE.PointLight(0xff5ad6, 0.8, 8);
+  lt.position.y = 1.2; grp.add(lt);
+  scene.add(grp);
+  Trampolines.push({ x, z, radius, power, mesh: grp });
+}
+// Three trampolines placed in clear ground — the original (20, 30) was
+// landing on top of a print station at (20, 32), so it's been relocated.
+buildTrampoline( 35, 18, 2.4, 10);   // east side, between Plot[14,18] + Arena
+buildTrampoline(-10, 25, 2.4, 10);   // northwest of spawn
+buildTrampoline( 10, 40, 2.4, 10);   // far north meadow
+
+// =================================================================
 // ─── BANK — Silver → Paper / Silver → Gold conversions ─────────
 // =================================================================
 const BANK_POS = { x: -22, z: -8 };
@@ -7349,7 +7427,7 @@ buildBank();
 // for real silver at a brutal 1 fake = 0.3 silver.
 const LAUNDER_POS = { x: HOUSE_POS.x + 2.5, z: HOUSE_POS.z + 2.0 };
 const LAUNDER_RADIUS  = 2.0;
-const LAUNDER_RATE    = 0.3;          // 1 fake → 0.3 silver
+const LAUNDER_RATE    = 0.3;          // 1 fake → 0.3 paper (clean cash)
 
 // Hover detection — raycast against any cat mesh on mousemove and
 // show a CSS tooltip with the cat's name positioned at the cursor.
@@ -7546,7 +7624,11 @@ function buildBoat(){
 // ── Boat state ──
 const Boats = [];                          // every boat the player owns
 const BOAT_PRICE   = 200;                  // Silver
-const BOAT_BOARD_RANGE = 2.4;              // how close you need to be to board
+// Bumped to 6.0 (was 2.4) because the player can only wade ~0.4 below the
+// water level — anything past that gets reverted by the movement clamp,
+// which made parked boats unreachable from the beach. A wider board range
+// lets you re-enter your boat from dry land without swimming.
+const BOAT_BOARD_RANGE = 6.0;
 const BOAT_SPEED   = 5.0;                  // m/s when paddling
 const BOAT_TURN    = 1.8;                  // rad/s
 function spawnBoatNearPlayer(){
@@ -7809,39 +7891,65 @@ function updatePlotPrompt(){
     prompt.classList.remove('show');
     return;
   }
+  // Auto-release plots whose 24h rental has expired (covers plots loaded
+  // from the room snapshot too — anyone within 3.5m of an expired plot
+  // sees it flip back to "FOR RENT" the moment they walk near it).
+  if(nearbyPlot.owner && nearbyPlot.rentedUntil && Date.now() > nearbyPlot.rentedUntil){
+    releasePlot(nearbyPlot);
+  }
   prompt.classList.add('show');
   prompt.classList.remove('locked');
   if(!nearbyPlot.owner){
-    title.textContent = `🏷 Plot for sale`;
-    sub.innerHTML = `Press <kbd>E</kbd> to buy for <b>${PLOT_PRICE} 🥈 Silver</b>`;
+    title.textContent = `🏷 Plot for rent`;
+    sub.innerHTML = `Press <kbd>E</kbd> to rent for <b>${PLOT_PRICE} 🥈</b> · <b>24h</b>`;
   } else if(nearbyPlot.owner === ownerId){
+    const hoursLeft = nearbyPlot.rentedUntil ? Math.max(0, (nearbyPlot.rentedUntil - Date.now()) / 3600000) : 24;
+    const rentTag = `· ${hoursLeft >= 1 ? hoursLeft.toFixed(1) + "h" : Math.ceil(hoursLeft * 60) + "m"} left`;
     if(!nearbyPlot.crop){
       const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
       if(seeds.length){
-        const seed = seeds[0];
-        title.textContent = `🌱 Your plot`;
-        sub.innerHTML = `Press <kbd>E</kbd> to plant <b>${ITEMS[seed].name}</b>`;
+        title.textContent = `🌱 Your plot ${rentTag}`;
+        sub.innerHTML = seeds.length > 1
+          ? `Press <kbd>E</kbd> to <b>choose a seed</b> to plant`
+          : `Press <kbd>E</kbd> to plant <b>${ITEMS[seeds[0]].name}</b>`;
       } else {
-        title.textContent = `🏡 Your plot`;
+        title.textContent = `🏡 Your plot ${rentTag}`;
         sub.innerHTML = `No seeds. Visit the <b>marketplace</b> first.`;
       }
     } else {
       const item = ITEMS[nearbyPlot.crop];
       const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
       if(t >= 1){
-        title.textContent = `✨ Ready to harvest`;
+        title.textContent = `✨ Ready to harvest ${rentTag}`;
         sub.innerHTML = `Press <kbd>E</kbd> to pick the <b>${ITEMS[item.harvest].name}</b>`;
       } else {
-        const sec = Math.ceil((1 - t) * item.growMs / 1000);
-        title.textContent = `🌿 Growing…`;
-        sub.innerHTML = `Ready in <b>${sec}s</b> (${Math.floor(t * 100)}%)`;
+        const remainingMs = (1 - t) * item.growMs;
+        const remainingLabel = remainingMs >= 60000
+          ? Math.ceil(remainingMs / 60000) + "m"
+          : Math.ceil(remainingMs / 1000) + "s";
+        title.textContent = `🌿 Growing… ${rentTag}`;
+        sub.innerHTML = `Ready in <b>${remainingLabel}</b> (${Math.floor(t * 100)}%)`;
       }
     }
   } else {
     prompt.classList.add('locked');
-    title.textContent = `🔒 Owned by ${escHtml(nearbyPlot.ownerName || "another printer")}`;
+    title.textContent = `🔒 Rented by ${escHtml(nearbyPlot.ownerName || "another printer")}`;
     sub.innerHTML = `Hands off.`;
   }
+}
+
+// Release a plot — used both by the rental-expiry check above and by the
+// 30s sweep inside tickGameplaySystems. Clears ownership + crop and
+// re-broadcasts so other peers in the room see it free up immediately.
+function releasePlot(plot){
+  if(!plot) return;
+  plot.owner = null;
+  plot.ownerName = null;
+  plot.crop = null;
+  plot.plantedAt = 0;
+  plot.rentedUntil = 0;
+  plotStateChanged(plot);
+  if(typeof broadcastPlot === "function") broadcastPlot(plot);
 }
 
 function sharpenCost(durability){
@@ -7870,8 +7978,8 @@ function tryInteract(){
   if(nearbyPoop){ openPoopHouse(); return; }
   // Football statue — open Fart Cup window
   if(nearbyFootball){ openFartCup(); return; }
-  // Bowling alley — open the bowling minigame
-  if(nearbyBowling){ openBowling(); return; }
+  // Bowling alley — opens the bowling minigame (loaded from bowling.js)
+  if(nearbyBowling){ if(window.openBowling) window.openBowling(); return; }
   // Boat shop interaction (dock)
   if(nearbyDock){
     if(State.credits < BOAT_PRICE){
@@ -7905,7 +8013,7 @@ function tryInteract(){
   if(!nearbyPlot) return;
   const ownerId = State.username || State.wallet || "guest";
   if(!nearbyPlot.owner){
-    // BUY
+    // RENT (24h)
     if(State.credits < PLOT_PRICE){
       floater(`Need ${PLOT_PRICE} 🥈 Silver`, "bad");
       return;
@@ -7913,17 +8021,24 @@ function tryInteract(){
     State.credits -= PLOT_PRICE;
     nearbyPlot.owner = ownerId;
     nearbyPlot.ownerName = State.username || "anon";
+    nearbyPlot.rentedUntil = Date.now() + PLOT_RENT_MS;
     plotStateChanged(nearbyPlot);
-    floater(`PLOT BOUGHT  -${PLOT_PRICE} 🥈`, "good");
+    floater(`PLOT RENTED · 24h  -${PLOT_PRICE} 🥈`, "good");
     saveState(); updateHUD();
     broadcastPlot(nearbyPlot);
     return;
   }
   if(nearbyPlot.owner !== ownerId) return;
   if(!nearbyPlot.crop){
-    // PLANT
+    // PLANT — if multiple seed types available, open the chooser modal.
+    // Single-type inventories skip the modal so power-users don't have
+    // an extra click in their plant→harvest loop.
     const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
     if(!seeds.length){ floater("No seeds in inventory", "bad"); return; }
+    if(seeds.length > 1){
+      openSeedChooser(nearbyPlot, seeds);
+      return;
+    }
     const seed = seeds[0];
     if(!takeItem(seed, 1)) return;
     nearbyPlot.crop = ITEMS[seed].harvest;
@@ -7982,11 +8097,40 @@ function tryFeedCat(){
   floater(`Fed ${nearest.name} 🐈 +35 XP`, "good");
   showBuyToast(`${nearest.name} loved it! +35 XP`);
   playPurchaseSound();
+  playMeow();
   checkLevelUp();
   // Make the cat stop and look at you (pause state) for ~3s
   nearest.state = "pause";
   nearest.stateTimer = 3.0;
   saveState(); updateHUD();
+}
+
+// Cute synthesized meow — two sliding sine tones that arc up then down,
+// mimicking the "mrrr-OW" contour of a happy cat. Played whenever the
+// player feeds a cat so feeding always has a satisfying audio reward.
+function playMeow(){
+  const ctx = ensureAudio(); if(!ctx) return;
+  const now = ctx.currentTime;
+  // First syllable: low → high
+  const o1 = ctx.createOscillator(); o1.type = "triangle";
+  o1.frequency.setValueAtTime(380, now);
+  o1.frequency.exponentialRampToValueAtTime(720, now + 0.16);
+  const g1 = ctx.createGain();
+  g1.gain.setValueAtTime(0.0001, now);
+  g1.gain.exponentialRampToValueAtTime(0.18, now + 0.04);
+  g1.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  o1.connect(g1); g1.connect(ctx.destination);
+  o1.start(now); o1.stop(now + 0.23);
+  // Second syllable: high → mid (the "ow" tail)
+  const o2 = ctx.createOscillator(); o2.type = "sine";
+  o2.frequency.setValueAtTime(720, now + 0.18);
+  o2.frequency.exponentialRampToValueAtTime(440, now + 0.42);
+  const g2 = ctx.createGain();
+  g2.gain.setValueAtTime(0.0001, now + 0.18);
+  g2.gain.exponentialRampToValueAtTime(0.20, now + 0.22);
+  g2.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+  o2.connect(g2); g2.connect(ctx.destination);
+  o2.start(now + 0.18); o2.stop(now + 0.5);
 }
 
 // =================================================================
@@ -8148,19 +8292,17 @@ function renderSeedShop(){
     c.addEventListener('click', () => {
       const id = c.dataset.id;
       const item = ITEMS[id];
-      if(State.credits < item.marketPrice){
-        floater(`Need ${item.marketPrice} 🥈 Silver`, "bad");
-        return;
-      }
-      // Counterfeit-on-the-premises bust roll
-      if(maybeMarketBust()) return;
-      State.credits -= item.marketPrice;
-      addItem(id, 1);
-      floater(`+1 ${item.name}  -${item.marketPrice} 🥈`, "good");
-      showBuyToast(`Bought 1 ${item.name} · -${item.marketPrice} 🥈 Silver`);
-      playPurchaseSound();
-      saveState(); updateHUD();
-      renderInventory();
+      // Defer to the asset-selector modal — the player picks Silver,
+      // Paper, or Fake; the selector handles deduction + bust roll.
+      openPaySelector(`1 ${item.name}`, item.marketPrice, (asset) => {
+        addItem(id, 1);
+        const tag = asset === "cash" ? "💵 Cash" : asset === "fake" ? "🪙 Fake" : "🥈 Silver";
+        floater(`+1 ${item.name}  · paid ${tag}`, "good");
+        showBuyToast(`Bought 1 ${item.name} · paid with ${tag}`);
+        playPurchaseSound();
+        saveState(); updateHUD();
+        renderInventory();
+      });
     });
   });
 }
@@ -8252,25 +8394,27 @@ function renderSellPane(){
 }
 
 // ── Counterfeit punishment ──
-// Wipes Silver, Paper, and Fake — used by both the marketplace bust
-// roll AND the cat sniff event. Heavy on the floater so the player
-// always knows what just happened.
+// Wipes Silver, Cash, and Fake. Gold is spared (it's a hard asset they
+// don't search for) and on-chain $FARTPRINT lives in the wallet so it's
+// untouchable. Used by the marketplace fake-pay roll, the holding-fake
+// passive market roll, and the cat sniff event.
 function counterfeitBusted(reason){
   const lost = (State.credits || 0) + (State.paper || 0) + (State.fakeMoney || 0);
   State.credits = 0;
   State.paper = 0;
   State.fakeMoney = 0;
-  // Big red screen flash + canvas shake (reuses existing penalty FX)
+  // Gold + on-chain $FARTPRINT survive — those are out of reach of
+  // street-level marketplace security.
   triggerShame();
   floater(`🚨 BUSTED · ${reason}`, "bad");
-  showBuyToast(`Lost ${lost} in coins, paper, and fakes`);
+  showBuyToast(`Lost ${lost} in coins + cash + fakes. Gold + $FARTPRINT survive.`);
   saveState(); updateHUD();
   if(window.renderInventory) renderInventory();
 }
 
-// Check if any marketplace purchase should trigger a bust. Holding any
-// fake money is the crime — even if you pay in real silver, the staff
-// can smell counterfeits on you. 50% caught roll per purchase.
+// Passive check: if you're carrying ANY fake money, every marketplace
+// purchase has a 50% bust roll — even when you're paying with silver
+// or cash, the bills in your pocket give off the wrong smell.
 function maybeMarketBust(){
   if((State.fakeMoney || 0) <= 0) return false;
   if(Math.random() < 0.5){
@@ -8280,26 +8424,226 @@ function maybeMarketBust(){
   return false;
 }
 
+// Active check: called only when the player explicitly chooses to PAY
+// with fake cash. Always rolls (since the fake is being handed over
+// at the counter), still a 50% chance of getting caught.
+function payFakeBustRoll(){
+  if(Math.random() < 0.5){
+    counterfeitBusted("fake bills flagged at the register");
+    return true;
+  }
+  return false;
+}
+
+// ── Asset payment selector ──
+// Lets the player pick which currency to use for any market purchase —
+// Silver (1:1), Paper bills (10 paper = 1 silver), or Fake money (1:1
+// but with the standard bust risk). Shows live balances of all three
+// so the player can compare what they have. onPay(assetKey) fires after
+// the deduction succeeds; the caller handles inventory + toast etc.
+function ensurePaySelector(){
+  if(document.getElementById('paySelBg')) return;
+  const style = document.createElement('style');
+  style.textContent = `
+  .pay-sel-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.80); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 70; padding: 20px; }
+  .pay-sel-bg.show { display: flex; }
+  .pay-sel-card { max-width: 460px; width: 100%; background: linear-gradient(180deg, rgba(8,28,18,0.97), rgba(5,16,11,0.97)); border: 2px solid rgba(95,240,156,0.42); border-radius: 18px; padding: 18px 22px 22px; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(46,224,107,0.20); }
+  .pay-sel-card h3 { font-family: 'Bangers', 'Orbitron', sans-serif; font-size: 24px; letter-spacing: 2px; background: linear-gradient(135deg, #46f08a, #5ff09c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 4px; }
+  .pay-sel-sub { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: rgba(230,255,238,0.65); margin-bottom: 14px; }
+  .pay-sel-sub b { color: #5ff09c; }
+  .pay-row { display: grid; grid-template-columns: 1.2fr 1fr auto; gap: 10px; align-items: center; padding: 12px 14px; background: rgba(46,224,107,0.06); border: 1px solid rgba(46,224,107,0.20); border-radius: 12px; margin-bottom: 8px; }
+  .pay-row.disabled { opacity: 0.4; filter: grayscale(0.7); }
+  .pay-row .lbl { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; }
+  .pay-row .balance { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(230,255,238,0.55); }
+  .pay-row .cost { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 14px; color: #ffd64d; text-align: right; }
+  .pay-row .pay-btn { background: linear-gradient(135deg, #46f08a, #5ff09c); color: #042913; border: 0; padding: 10px 16px; border-radius: 100px; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 14px rgba(95,240,156,0.34); }
+  .pay-row .pay-btn:disabled { background: rgba(255,255,255,0.08); color: rgba(230,255,238,0.4); cursor: not-allowed; box-shadow: none; }
+  .pay-row.fake { background: rgba(255,90,77,0.07); border-color: rgba(255,90,77,0.20); }
+  .pay-row.fake .cost { color: #ff7a6e; }
+  .pay-row.fake .pay-btn { background: linear-gradient(135deg, #ff5a4d, #ff7a6e); color: #2a0a08; box-shadow: 0 6px 14px rgba(255,90,77,0.36); }
+  .pay-cancel { width: 100%; background: transparent; border: 1px solid rgba(230,255,238,0.25); color: rgba(230,255,238,0.6); padding: 8px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; margin-top: 6px; }
+  `;
+  document.head.appendChild(style);
+  const el = document.createElement('div');
+  el.innerHTML = `
+    <div class="pay-sel-bg" id="paySelBg">
+      <div class="pay-sel-card">
+        <h3 id="paySelTitle">Pay how?</h3>
+        <div class="pay-sel-sub" id="paySelSub"></div>
+        <div id="paySelRows"></div>
+        <button class="pay-cancel" id="paySelCancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el.firstElementChild);
+  document.getElementById('paySelCancel').addEventListener('click', () => {
+    document.getElementById('paySelBg').classList.remove('show');
+  });
+  document.getElementById('paySelBg').addEventListener('click', (e) => {
+    if(e.target.id === "paySelBg") document.getElementById('paySelBg').classList.remove('show');
+  });
+}
+
+function openPaySelector(label, priceSilver, onPay){
+  ensurePaySelector();
+  document.getElementById('paySelTitle').textContent = `Pay for: ${label}`;
+  // Three accepted methods: Silver, Cash (Bank/Laundry), Fake Cash
+  // (printed at print stations — 50% chance of getting caught and
+  // losing ALL Silver + Cash + Fake. Gold and on-chain $FARTPRINT
+  // are untouchable by the bust).
+  document.getElementById('paySelSub').innerHTML =
+    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * 10} 💵 Cash</b>, or <b>${priceSilver * 10} 🪙 Fake</b> (risky!)`;
+  const rows = document.getElementById('paySelRows');
+  const haveS = State.credits   || 0;
+  const haveC = State.paper     || 0;
+  const haveF = State.fakeMoney || 0;
+  const costC = priceSilver * 10;
+  const costF = priceSilver * 10;
+  const okS = haveS >= priceSilver;
+  const okC = haveC >= costC;
+  const okF = haveF >= costF;
+  rows.innerHTML = `
+    <div class="pay-row ${okS ? '' : 'disabled'}">
+      <div><div class="lbl">🥈 Silver</div><div class="balance">balance: ${haveS}</div></div>
+      <div class="cost">−${priceSilver} 🥈</div>
+      <button class="pay-btn" data-asset="silver" ${okS ? '' : 'disabled'}>Pay</button>
+    </div>
+    <div class="pay-row ${okC ? '' : 'disabled'}">
+      <div><div class="lbl">💵 Cash</div><div class="balance">balance: ${haveC} (from Bank / Laundry)</div></div>
+      <div class="cost">−${costC} 💵</div>
+      <button class="pay-btn" data-asset="cash" ${okC ? '' : 'disabled'}>Pay</button>
+    </div>
+    <div class="pay-row fake ${okF ? '' : 'disabled'}">
+      <div><div class="lbl">🪙 Fake Cash</div><div class="balance">balance: ${haveF} (50% bust risk!)</div></div>
+      <div class="cost">−${costF} 🪙</div>
+      <button class="pay-btn" data-asset="fake" ${okF ? '' : 'disabled'}>Pay</button>
+    </div>
+  `;
+  rows.querySelectorAll('.pay-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const asset = btn.dataset.asset;
+      if(asset === "silver"){
+        if(State.credits < priceSilver){ floater(`Need ${priceSilver} 🥈`, "bad"); return; }
+        if(maybeMarketBust()){ document.getElementById('paySelBg').classList.remove('show'); return; }
+        State.credits -= priceSilver;
+      } else if(asset === "cash"){
+        if((State.paper || 0) < costC){ floater(`Need ${costC} 💵`, "bad"); return; }
+        if(maybeMarketBust()){ document.getElementById('paySelBg').classList.remove('show'); return; }
+        State.paper -= costC;
+      } else if(asset === "fake"){
+        if((State.fakeMoney || 0) < costF){ floater(`Need ${costF} 🪙 Fake`, "bad"); return; }
+        // Always force the bust roll when paying with fake — that's
+        // the entire risk premise of using fake at the market.
+        if(payFakeBustRoll()){ document.getElementById('paySelBg').classList.remove('show'); return; }
+        State.fakeMoney -= costF;
+      }
+      document.getElementById('paySelBg').classList.remove('show');
+      onPay(asset);
+    });
+  });
+  document.getElementById('paySelBg').classList.add('show');
+}
+
+// ── Seed chooser modal ──
+// Opens when the player has more than one type of seed in their
+// inventory and walks up to an empty plot. Each card shows seed
+// icon, name, qty owned, and the grow time so the player can pick
+// based on how long they want to wait.
+function ensureSeedChooser(){
+  if(document.getElementById('seedChBg')) return;
+  const style = document.createElement('style');
+  style.textContent = `
+  .seedch-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.78); backdrop-filter: blur(10px); display: none; align-items: center; justify-content: center; z-index: 70; padding: 20px; }
+  .seedch-bg.show { display: flex; }
+  .seedch-card { max-width: 420px; width: 100%; background: linear-gradient(180deg, rgba(8,28,18,0.97), rgba(5,16,11,0.97)); border: 2px solid rgba(95,240,156,0.42); border-radius: 18px; padding: 20px 22px; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 60px rgba(46,224,107,0.20); }
+  .seedch-card h3 { font-family: 'Bangers', 'Orbitron', sans-serif; font-size: 24px; letter-spacing: 2px; background: linear-gradient(135deg, #46f08a, #5ff09c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+  .seedch-row { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; background: rgba(46,224,107,0.06); border: 1px solid rgba(46,224,107,0.20); border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.14s; }
+  .seedch-row:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; transform: translateY(-1px); }
+  .seedch-row .ico { font-size: 28px; text-align: center; }
+  .seedch-row .meta .nm { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; }
+  .seedch-row .meta .sub { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgba(230,255,238,0.55); margin-top: 2px; }
+  .seedch-row .qty { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 16px; color: #ffd64d; }
+  .seedch-cancel { width: 100%; background: transparent; border: 1px solid rgba(230,255,238,0.25); color: rgba(230,255,238,0.6); padding: 8px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; margin-top: 6px; }
+  `;
+  document.head.appendChild(style);
+  const el = document.createElement('div');
+  el.innerHTML = `
+    <div class="seedch-bg" id="seedChBg">
+      <div class="seedch-card">
+        <h3>🌱 Pick a seed to plant</h3>
+        <div id="seedChRows"></div>
+        <button class="seedch-cancel" id="seedChCancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(el.firstElementChild);
+  document.getElementById('seedChCancel').addEventListener('click', () => {
+    document.getElementById('seedChBg').classList.remove('show');
+  });
+  document.getElementById('seedChBg').addEventListener('click', (e) => {
+    if(e.target.id === "seedChBg") document.getElementById('seedChBg').classList.remove('show');
+  });
+}
+
+function openSeedChooser(plot, seedIds){
+  ensureSeedChooser();
+  const host = document.getElementById('seedChRows');
+  host.innerHTML = seedIds.map(id => {
+    const item = ITEMS[id];
+    const have = State.inventory[id] || 0;
+    const growMin = Math.round(item.growMs / 60000);
+    const harvest = ITEMS[item.harvest];
+    return `
+      <div class="seedch-row" data-id="${id}">
+        <div class="ico" style="color:${item.color};">${item.icon}</div>
+        <div class="meta">
+          <div class="nm">${escHtml(item.name)}</div>
+          <div class="sub">${growMin}m grow → 🌾 ${escHtml(harvest?.name || "crop")}</div>
+        </div>
+        <div class="qty">×${have}</div>
+      </div>
+    `;
+  }).join("");
+  host.querySelectorAll('.seedch-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const id = row.dataset.id;
+      if(!takeItem(id, 1)) return;
+      plot.crop = ITEMS[id].harvest;
+      plot.plantedAt = Date.now();
+      plotStateChanged(plot);
+      floater(`PLANTED  ${ITEMS[id].name}`, "good");
+      State.xp += 5;
+      if(typeof checkLevelUp === "function") checkLevelUp();
+      saveState(); updateHUD();
+      if(typeof broadcastPlot === "function") broadcastPlot(plot);
+      document.getElementById('seedChBg').classList.remove('show');
+    });
+  });
+  document.getElementById('seedChBg').classList.add('show');
+}
+
 function buyListing(id){
   const idx = Listings.findIndex(L => L.id === id);
   if(idx < 0) return;
   const L = Listings[idx];
   const ownerId = State.username || State.wallet || "guest";
   if(L.sellerId === ownerId) return;
-  if(State.credits < L.price){
-    floater(`Need ${L.price} 🥈 Silver`, "bad");
-    return;
-  }
-  if(maybeMarketBust()) return;
-  State.credits -= L.price;
-  addItem(L.item, L.qty);
-  Listings.splice(idx, 1);
-  floater(`BOUGHT ${ITEMS[L.item].name} × ${L.qty}  -${L.price}🥈`, "good");
-  showBuyToast(`Bought ${L.qty} × ${ITEMS[L.item].name} · -${L.price} 🥈 Silver`);
-  playPurchaseSound();
-  broadcastListingBuy(L.id, ownerId, State.username || "anon");
-  saveState(); updateHUD();
-  renderListings();
+  const label = `${ITEMS[L.item]?.name || "item"} × ${L.qty}`;
+  openPaySelector(label, L.price, (asset) => {
+    // Re-find listing in case it got removed while the modal was open
+    const idx2 = Listings.findIndex(x => x.id === id);
+    if(idx2 < 0) return;
+    const L2 = Listings[idx2];
+    addItem(L2.item, L2.qty);
+    Listings.splice(idx2, 1);
+    const tag = asset === "cash" ? "💵 Cash" : asset === "fake" ? "🪙 Fake" : "🥈 Silver";
+    floater(`BOUGHT ${ITEMS[L2.item].name} × ${L2.qty}  · paid ${tag}`, "good");
+    showBuyToast(`Bought ${L2.qty} × ${ITEMS[L2.item].name} · paid with ${tag}`);
+    playPurchaseSound();
+    broadcastListingBuy(L2.id, ownerId, State.username || "anon");
+    saveState(); updateHUD();
+    renderListings();
+  });
 }
 
 // =================================================================
@@ -8318,6 +8662,7 @@ function broadcastPlot(plot){
         ownerName: plot.ownerName,
         crop: plot.crop,
         plantedAt: plot.plantedAt,
+        rentedUntil: plot.rentedUntil || 0,
         ts: Date.now(),
       }),
     });
@@ -8352,10 +8697,11 @@ handleRoomMessage = function(m){
   if(m.kind === "plot"){
     const plot = Plots.find(p => p.id === m.plotId);
     if(!plot) return;
-    plot.owner     = m.owner;
-    plot.ownerName = m.ownerName;
-    plot.crop      = m.crop;
-    plot.plantedAt = m.plantedAt;
+    plot.owner       = m.owner;
+    plot.ownerName   = m.ownerName;
+    plot.crop        = m.crop;
+    plot.plantedAt   = m.plantedAt;
+    plot.rentedUntil = m.rentedUntil || 0;
     plotStateChanged(plot);
     return;
   }
@@ -8866,8 +9212,12 @@ function openBank(){
   document.getElementById('bankGold').textContent   = (State.gold || 0);
   document.getElementById('bankPaperQty').value = "";
   document.getElementById('bankGoldQty').value = "";
-  document.getElementById('bankPaperPreview').textContent = "→ 0 📄";
-  document.getElementById('bankGoldPreview').textContent  = "→ 0 🥈";
+  const c2s = document.getElementById('bankCashToSilverQty');  if(c2s) c2s.value = "";
+  const g2s = document.getElementById('bankGoldToSilverQty');  if(g2s) g2s.value = "";
+  document.getElementById('bankPaperPreview').textContent = "→ 0 💵";
+  document.getElementById('bankGoldPreview').textContent  = "→ 0.0000 🥇";
+  const c2sp = document.getElementById('bankCashToSilverPreview'); if(c2sp) c2sp.textContent = "→ 0 🥈";
+  const g2sp = document.getElementById('bankGoldToSilverPreview'); if(g2sp) g2sp.textContent = "→ 0 🥈";
 }
 function closeBank(){ document.getElementById('bankBg').classList.remove('show'); }
 document.getElementById('bankClose').addEventListener('click', closeBank);
@@ -8876,11 +9226,16 @@ document.getElementById('bankBg').addEventListener('click', (e) => {
 });
 document.getElementById('bankPaperQty').addEventListener('input', (e) => {
   const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('bankPaperPreview').textContent = `→ ${n * PAPER_PER_SILVER} 📄`;
+  document.getElementById('bankPaperPreview').textContent = `→ ${n * PAPER_PER_SILVER} 💵`;
 });
+// Silver → Gold: input is the SILVER amount the player wants to spend,
+// preview shows the gold they'd end up with (4 decimals so fractional
+// purchases are visible). This matches the Cash↔Silver UX where the
+// input is the source asset and the preview is the destination.
 document.getElementById('bankGoldQty').addEventListener('input', (e) => {
-  const g = Math.max(0, Number(e.target.value) || 0);
-  document.getElementById('bankGoldPreview').textContent = `→ ${Math.round(g * SILVER_PER_GOLD).toLocaleString()} 🥈`;
+  const silver = Math.max(0, Math.floor(Number(e.target.value) || 0));
+  const gold = silver / SILVER_PER_GOLD;
+  document.getElementById('bankGoldPreview').textContent = `→ ${gold.toFixed(4)} 🥇`;
 });
 document.getElementById('bankPaperGo').addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('bankPaperQty').value) || 0));
@@ -8888,22 +9243,59 @@ document.getElementById('bankPaperGo').addEventListener('click', () => {
   if(State.credits < n){ floater(`Need ${n} 🥈 Silver`, "bad"); return; }
   State.credits -= n;
   State.paper = (State.paper || 0) + n * PAPER_PER_SILVER;
-  floater(`+${n * PAPER_PER_SILVER} 📄 Paper · -${n} 🥈`, "good");
-  showBuyToast(`Converted ${n} Silver → ${n * PAPER_PER_SILVER} Paper`);
+  floater(`+${n * PAPER_PER_SILVER} 💵 Cash · -${n} 🥈`, "good");
+  showBuyToast(`Converted ${n} Silver → ${n * PAPER_PER_SILVER} Cash`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
 document.getElementById('bankGoldGo').addEventListener('click', () => {
-  let g = Math.max(0, Number(document.getElementById('bankGoldQty').value) || 0);
-  // Round to nearest 0.01 so the UI matches the math
+  const silver = Math.max(0, Math.floor(Number(document.getElementById('bankGoldQty').value) || 0));
+  const minSilver = Math.round(GOLD_MIN_QTY * SILVER_PER_GOLD);
+  if(silver < minSilver){ floater(`Min spend: ${minSilver.toLocaleString()} 🥈`, "bad"); return; }
+  if(State.credits < silver){ floater(`Need ${silver.toLocaleString()} 🥈 Silver`, "bad"); return; }
+  // 4-decimal gold so fractional buys are precise. Spend the exact silver
+  // the player typed; what they get in gold is the proportional amount.
+  const gold = +((silver / SILVER_PER_GOLD).toFixed(4));
+  State.credits -= silver;
+  State.gold = +((State.gold || 0) + gold).toFixed(4);
+  floater(`+${gold.toFixed(4)} 🥇 Gold · -${silver.toLocaleString()} 🥈`, "good");
+  showBuyToast(`Spent ${silver.toLocaleString()} Silver → ${gold.toFixed(4)} Gold`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+// ── Reverse conversion handlers ──
+// Cash → Silver: 10 cash = 1 silver (same rate as the forward direction)
+document.getElementById('bankCashToSilverQty')?.addEventListener('input', (e) => {
+  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
+  document.getElementById('bankCashToSilverPreview').textContent = `→ ${Math.floor(n / PAPER_PER_SILVER)} 🥈`;
+});
+document.getElementById('bankCashToSilverGo')?.addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankCashToSilverQty').value) || 0));
+  if(n < PAPER_PER_SILVER){ floater(`Minimum ${PAPER_PER_SILVER} 💵 Cash`, "bad"); return; }
+  if((State.paper || 0) < n){ floater(`Need ${n} 💵 Cash`, "bad"); return; }
+  const silver = Math.floor(n / PAPER_PER_SILVER);
+  State.paper   -= silver * PAPER_PER_SILVER;     // floor to exact silver units
+  State.credits += silver;
+  floater(`+${silver} 🥈 Silver · -${silver * PAPER_PER_SILVER} 💵`, "good");
+  showBuyToast(`Converted ${silver * PAPER_PER_SILVER} Cash → ${silver} Silver`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+// Gold → Silver: 1 gold = 100,000 silver
+document.getElementById('bankGoldToSilverQty')?.addEventListener('input', (e) => {
+  const g = Math.max(0, Number(e.target.value) || 0);
+  document.getElementById('bankGoldToSilverPreview').textContent = `→ ${Math.round(g * SILVER_PER_GOLD).toLocaleString()} 🥈`;
+});
+document.getElementById('bankGoldToSilverGo')?.addEventListener('click', () => {
+  let g = Math.max(0, Number(document.getElementById('bankGoldToSilverQty').value) || 0);
   g = Math.round(g * 100) / 100;
   if(g < GOLD_MIN_QTY){ floater(`Minimum ${GOLD_MIN_QTY} 🥇 Gold`, "bad"); return; }
-  const cost = Math.round(g * SILVER_PER_GOLD);
-  if(State.credits < cost){ floater(`Need ${cost.toLocaleString()} 🥈 Silver`, "bad"); return; }
-  State.credits -= cost;
-  State.gold = +((State.gold || 0) + g).toFixed(2);
-  floater(`+${g} 🥇 Gold · -${cost.toLocaleString()} 🥈`, "good");
-  showBuyToast(`Bought ${g} Gold for ${cost.toLocaleString()} Silver`);
+  if((State.gold || 0) < g){ floater(`Need ${g} 🥇 Gold`, "bad"); return; }
+  const silver = Math.round(g * SILVER_PER_GOLD);
+  State.gold = +((State.gold || 0) - g).toFixed(2);
+  State.credits += silver;
+  floater(`+${silver.toLocaleString()} 🥈 · -${g} 🥇`, "good");
+  showBuyToast(`Sold ${g} Gold → ${silver.toLocaleString()} Silver`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
@@ -8912,9 +9304,11 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
 function openLaunder(){
   document.getElementById('launderBg').classList.add('show');
   document.getElementById('launderFakeQty').textContent = State.fakeMoney || 0;
-  document.getElementById('launderSilverQty').textContent = State.credits || 0;
+  // Label shows current Paper holdings now (was Silver) — laundering pays
+  // in clean cash, since fake bills exchange to real bills, not coins.
+  document.getElementById('launderSilverQty').textContent = State.paper || 0;
   document.getElementById('launderInput').value = "";
-  document.getElementById('launderPreview').textContent = "→ 0 🥈";
+  document.getElementById('launderPreview').textContent = "→ 0 💵";
 }
 function closeLaunder(){ document.getElementById('launderBg').classList.remove('show'); }
 document.getElementById('launderClose').addEventListener('click', closeLaunder);
@@ -8923,17 +9317,17 @@ document.getElementById('launderBg').addEventListener('click', (e) => {
 });
 document.getElementById('launderInput').addEventListener('input', (e) => {
   const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * LAUNDER_RATE)} 🥈`;
+  document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * LAUNDER_RATE)} 💵`;
 });
 document.getElementById('launderGo').addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('launderInput').value) || 0));
   if(n <= 0){ floater("Enter a fake-bill amount", "bad"); return; }
   if((State.fakeMoney || 0) < n){ floater("Not enough fake bills", "bad"); return; }
-  const silver = Math.floor(n * LAUNDER_RATE);
+  const cash = Math.floor(n * LAUNDER_RATE);
   State.fakeMoney -= n;
-  State.credits   += silver;
-  floater(`Laundered ${n} 🪙 → +${silver} 🥈`, "good");
-  showBuyToast(`Laundered ${n} fake → ${silver} Silver`);
+  State.paper = (State.paper || 0) + cash;
+  floater(`Laundered ${n} 🪙 → +${cash} 💵 Cash`, "good");
+  showBuyToast(`Laundered ${n} fake → ${cash} Cash`);
   playPurchaseSound();
   saveState(); updateHUD(); openLaunder();
 });
@@ -9033,17 +9427,43 @@ async function _resolveMintProgram(conn){
   return info.owner.toBase58() === TOKEN_2022_ID ? TOKEN_2022_ID : TOKEN_PROGRAM_ID;
 }
 
+// Try each RPC in turn until one succeeds; mainnet-beta.solana.com
+// is the slowest of the three and frequently 429s browser-origin
+// requests, which was the root cause of the burn flow appearing
+// "broken" — it would just hang or throw an opaque fetch error.
+async function _firstHealthyConnection(W3){
+  for(const url of FARTPRINT_RPCS){
+    try {
+      const c = new W3.Connection(url, "confirmed");
+      await c.getLatestBlockhash();   // cheap sanity check
+      console.log("[Gold] using RPC:", url);
+      return c;
+    } catch(e){ console.warn("[Gold] RPC dead:", url, e?.message || e); }
+  }
+  throw new Error("Every Solana RPC failed — try again in a moment.");
+}
+
 async function burnFartprint(uiAmount){
   const W3 = window.solanaWeb3;
   if(!W3) throw new Error("solana web3 not loaded");
   const phantom = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
   if(!phantom) throw new Error("Phantom not detected");
+  // Make sure we have a fresh trusted session before signing
+  try { await phantom.connect(); } catch(_){}
 
-  const conn = new W3.Connection("https://api.mainnet-beta.solana.com", "confirmed");
-  const tokenProgramStr = await _resolveMintProgram(conn);
+  const conn = await _firstHealthyConnection(W3);
 
   const owner       = new W3.PublicKey(State.wallet);
   const mint        = new W3.PublicKey(FP_MINT_STR);
+  // Resolve which token program owns the mint (legacy SPL vs Token-2022)
+  let tokenProgramStr;
+  try {
+    const info = await conn.getAccountInfo(mint);
+    if(!info) throw new Error("Mint not found on RPC");
+    tokenProgramStr = info.owner.toBase58() === TOKEN_2022_ID ? TOKEN_2022_ID : TOKEN_PROGRAM_ID;
+  } catch(e){
+    throw new Error("Couldn't resolve mint program: " + (e?.message || e));
+  }
   const tokenProg   = new W3.PublicKey(tokenProgramStr);
   const assocProg   = new W3.PublicKey(ASSOC_TOKEN_PROG);
   const [ata]       = W3.PublicKey.findProgramAddressSync(
@@ -9051,7 +9471,7 @@ async function burnFartprint(uiAmount){
     assocProg
   );
 
-  // BurnChecked (instruction 15): u64 amount LE + u8 decimals
+  // BurnChecked (SPL Token instruction 15): u64 amount LE + u8 decimals
   const rawAmount = BigInt(uiAmount) * (10n ** BigInt(FP_DECIMALS));
   const data = new Uint8Array(10);
   data[0] = 15;
@@ -9077,11 +9497,14 @@ async function burnFartprint(uiAmount){
   }).compileToV0Message();
   const tx = new W3.VersionedTransaction(msg);
 
+  console.log("[Gold] sending burn tx for", uiAmount, "FARTPRINT");
   const res = await phantom.signAndSendTransaction(tx);
-  const sig = res?.signature || res;
+  const sig = (typeof res === "string") ? res : (res?.signature || res?.publicKey);
+  if(!sig) throw new Error("Phantom returned no signature");
+  console.log("[Gold] tx submitted:", sig);
   try {
     await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-  } catch(_){}
+  } catch(e){ console.warn("[Gold] confirm timed out (tx may still land):", e?.message || e); }
   return sig;
 }
 
@@ -9743,61 +10166,133 @@ async function fetchEloLeaderboard(){
   } catch(_){ return []; }
 }
 
-// CSS overlay that shows the top-10 ELO leaderboard, positioned in 3D
-// next to the arena via projection. Refreshes every 20s.
-let _arenaLbBoard = null;
-const _arenaLbProj = new THREE.Vector3();
-function ensureArenaLbBoard(){
-  if(_arenaLbBoard) return _arenaLbBoard;
-  const el = document.createElement('div');
-  el.style.cssText = `
-    position: absolute; transform: translate(-50%, -100%);
-    background: rgba(8,18,11,0.86); border: 2px solid rgba(255,90,77,0.50);
-    border-radius: 12px; padding: 10px 14px; pointer-events: none;
-    font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
-    color: #e6ffee; min-width: 230px; max-width: 260px; z-index: 9;
-    box-shadow: 0 10px 26px rgba(0,0,0,0.55), 0 0 32px rgba(255,90,77,0.30);
-  `;
-  el.innerHTML = '<div style="font-family:Bangers;letter-spacing:2px;font-size:16px;text-align:center;background:linear-gradient(135deg,#ff7a6e,#ffd64d);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;">🏆 ARENA TOP 10</div><div id="arenaLbRows">loading…</div>';
-  document.getElementById('chatBubbles').parentElement.appendChild(el);
-  _arenaLbBoard = el;
-  return el;
-}
-async function refreshArenaLb(){
-  ensureArenaLbBoard();
-  const rows = await fetchEloLeaderboard();
-  const host = document.getElementById('arenaLbRows');
-  if(!host) return;
-  if(!rows.length){
-    host.innerHTML = '<div style="color:rgba(230,255,238,0.4);text-align:center;padding:8px 0;">No matches recorded yet</div>';
+// 3D Arena Top-10 sign — a proper signpost mesh next to the arena
+// instead of the old CSS-bubble overlay. Two wooden posts hold up
+// a stone board; the board's face is a CanvasTexture that gets
+// redrawn whenever refreshArenaLb pulls fresh ELO data.
+let _arenaLbCvs   = null;
+let _arenaLbCtx   = null;
+let _arenaLbTex   = null;
+const _ARENA_LB_W = 880;
+const _ARENA_LB_H = 1100;
+
+function _drawArenaLbFrame(rows){
+  const ctx = _arenaLbCtx;
+  const W = _ARENA_LB_W, H = _ARENA_LB_H;
+  // Stone background
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#181a1f');
+  g.addColorStop(1, '#0a0c10');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  // Inner border
+  ctx.strokeStyle = 'rgba(255,90,77,0.55)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(20, 20, W - 40, H - 40);
+  // Title
+  ctx.fillStyle = '#ffd64d';
+  ctx.font = "900 78px 'Bangers', 'Orbitron', sans-serif";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🏆 ARENA TOP 10', W / 2, 70);
+  ctx.fillStyle = '#ff7a6e';
+  ctx.font = "700 30px 'JetBrains Mono', monospace";
+  ctx.fillText('· ELO LEADERBOARD ·', W / 2, 130);
+  if(!rows || !rows.length){
+    ctx.fillStyle = 'rgba(230,255,238,0.5)';
+    ctx.font = "700 38px 'JetBrains Mono', monospace";
+    ctx.fillText('No matches recorded yet', W / 2, H / 2);
     return;
   }
-  host.innerHTML = rows.map((r, i) => {
+  // Rows
+  ctx.textBaseline = 'middle';
+  const startY = 200, rowH = (H - 240) / Math.max(rows.length, 1);
+  rows.forEach((r, i) => {
+    const yy = startY + i * rowH + rowH / 2;
     const me = r.name === State.username;
-    return `<div style="display:grid;grid-template-columns:18px 1fr auto auto;gap:8px;padding:3px 0;${me ? 'background:rgba(46,224,107,0.10);border-radius:4px;' : ''}">
-      <span style="color:${i===0?'#ffd64d':i===1?'#c0c8d6':i===2?'#ff9d6b':'rgba(230,255,238,0.42)'};font-weight:800;text-align:center;">${i+1}</span>
-      <span style="color:${me ? '#5ff09c' : '#e6ffee'};font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escHtml(r.name)}</span>
-      <span style="color:#ffd64d;font-weight:800;">${r.elo || 1000}</span>
-      <span style="color:rgba(230,255,238,0.55);">${r.wins||0}W/${r.losses||0}L</span>
-    </div>`;
-  }).join("");
+    const rankColor = i === 0 ? '#ffd64d' : i === 1 ? '#c0c8d6' : i === 2 ? '#ff9d6b' : 'rgba(230,255,238,0.42)';
+    // Self highlight
+    if(me){
+      ctx.fillStyle = 'rgba(95,240,156,0.10)';
+      ctx.fillRect(34, yy - rowH/2 + 4, W - 68, rowH - 8);
+    }
+    // Rank
+    ctx.fillStyle = rankColor;
+    ctx.font = "900 42px 'Orbitron', sans-serif";
+    ctx.textAlign = 'left';
+    ctx.fillText(String(i + 1).padStart(2, ' '), 60, yy);
+    // Name
+    ctx.fillStyle = me ? '#5ff09c' : '#e6ffee';
+    ctx.font = "700 38px 'JetBrains Mono', monospace";
+    const nm = (r.name || 'anon').slice(0, 14);
+    ctx.fillText(nm, 150, yy);
+    // ELO
+    ctx.fillStyle = '#ffd64d';
+    ctx.font = "900 38px 'Orbitron', sans-serif";
+    ctx.textAlign = 'right';
+    ctx.fillText(String(r.elo || 1000), W - 220, yy);
+    // W/L
+    ctx.fillStyle = 'rgba(230,255,238,0.6)';
+    ctx.font = "700 26px 'JetBrains Mono', monospace";
+    ctx.fillText(`${r.wins||0}W/${r.losses||0}L`, W - 60, yy);
+  });
 }
-function tickArenaLeaderboardOverlay(){
-  if(!_arenaLbBoard) ensureArenaLbBoard();
-  // Position the board floating just outside the arena's near edge
-  _arenaLbProj.set(ARENA_POS.x - (ARENA_RADIUS + 4), 5, ARENA_POS.z);
-  _arenaLbProj.project(camera);
-  const visible = _arenaLbProj.z < 1 && _arenaLbProj.z > -1;
-  if(visible){
-    const sx = (_arenaLbProj.x * 0.5 + 0.5) * innerWidth;
-    const sy = (-_arenaLbProj.y * 0.5 + 0.5) * innerHeight;
-    _arenaLbBoard.style.left = sx + "px";
-    _arenaLbBoard.style.top  = sy + "px";
-    _arenaLbBoard.style.display = "";
-  } else {
-    _arenaLbBoard.style.display = "none";
+
+function buildArenaLbSign(){
+  // Position the sign just outside the arena's near edge, facing inward
+  const SIGN_POS = { x: ARENA_POS.x - (ARENA_RADIUS + 5), z: ARENA_POS.z };
+  const grp = new THREE.Group();
+  grp.position.set(SIGN_POS.x, groundHeightAt(SIGN_POS.x, SIGN_POS.z), SIGN_POS.z);
+  // Two stone posts
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x2a1408, roughness: 0.85 });
+  for(const px of [-2.2, 2.2]){
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.35, 5.0, 0.35), postMat);
+    post.position.set(px, 2.5, 0);
+    post.castShadow = true;
+    grp.add(post);
   }
+  // Frame around the board
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(5.6, 6.0, 0.2),
+    new THREE.MeshStandardMaterial({ color: 0x3a1c0a, roughness: 0.7 }));
+  frame.position.set(0, 4.8, 0);
+  frame.castShadow = true;
+  grp.add(frame);
+  // Display board — CanvasTexture face
+  _arenaLbCvs = document.createElement('canvas');
+  _arenaLbCvs.width  = _ARENA_LB_W;
+  _arenaLbCvs.height = _ARENA_LB_H;
+  _arenaLbCtx = _arenaLbCvs.getContext('2d');
+  _drawArenaLbFrame(null);   // initial empty frame
+  _arenaLbTex = new THREE.CanvasTexture(_arenaLbCvs);
+  _arenaLbTex.anisotropy = 4;
+  const screen = new THREE.Mesh(
+    new THREE.PlaneGeometry(5.2, 5.6),
+    new THREE.MeshStandardMaterial({
+      map: _arenaLbTex, emissive: 0xffffff, emissiveMap: _arenaLbTex,
+      emissiveIntensity: 0.30, roughness: 0.6,
+    })
+  );
+  screen.position.set(0, 4.8, 0.12);
+  // Face the arena center
+  const dir = Math.atan2(ARENA_POS.x - SIGN_POS.x, ARENA_POS.z - SIGN_POS.z);
+  grp.rotation.y = dir;
+  grp.add(screen);
+  // Backlight glow
+  const lt = new THREE.PointLight(0xff5a4d, 0.9, 12);
+  lt.position.set(0, 5, 0.8);
+  grp.add(lt);
+  scene.add(grp);
 }
+buildArenaLbSign();
+
+async function refreshArenaLb(){
+  const rows = await fetchEloLeaderboard();
+  if(!_arenaLbCtx) return;
+  _drawArenaLbFrame(rows);
+  if(_arenaLbTex) _arenaLbTex.needsUpdate = true;
+}
+
+// Old projection overlay no longer needed — sign lives in 3D space.
+function tickArenaLeaderboardOverlay(){ /* no-op (3D sign now) */ }
+
 // Refresh the board every 20s
 setInterval(refreshArenaLb, 20000);
 setTimeout(refreshArenaLb, 1500);
@@ -9898,9 +10393,22 @@ function tickGameplaySystems(dt){
     _oreRespawnAcc = 0;
     respawnDownedOres();
   }
+  // Expire plot rentals — sweep every 30s so plots whose 24h ran out
+  // while no one was nearby still get released back to the marketplace.
+  _plotRentalAcc += dt;
+  if(_plotRentalAcc > 30){
+    _plotRentalAcc = 0;
+    const now = Date.now();
+    for(const p of Plots){
+      if(p.owner && p.rentedUntil && now > p.rentedUntil){
+        releasePlot(p);
+      }
+    }
+  }
   // Deathmatch update is below — keep it in its own slot so it's easy to find
   if(typeof tickDeathmatch === "function") tickDeathmatch(dt);
 }
+let _plotRentalAcc = 0;
 
 // Broadcast that an ore is currently mined-out so other players see it
 // disappear (and respawn later) at the same time.
@@ -10072,6 +10580,38 @@ function fcFmtBal(n){
   return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
+// Map of country code → full country name. Used to render the friendly
+// "FartAustralia" label above the "$FARTAUS" ticker in the Fart Cup list.
+const _FC_COUNTRY = {
+  au:"Australia", ir:"Iran", iq:"Iraq", jp:"Japan", jo:"Jordan", qa:"Qatar",
+  uz:"Uzbekistan", de:"Germany", sa:"SaudiArabia", kr:"Korea", dz:"Algeria",
+  cv:"CapeVerde", cd:"Congo", eg:"Egypt", gh:"Ghana", ma:"Morocco", sn:"Senegal",
+  ci:"IvoryCoast", es:"Spain", br:"Brazil", fr:"France", no:"Norway", tr:"Turkey",
+  ch:"Switzerland", se:"Sweden", "gb-sct":"Scotland", pt:"Portugal", nl:"Netherlands",
+  "gb-eng":"England", py:"Paraguay", hr:"Croatia", be:"Belgium", at:"Austria",
+  nz:"NewZealand", uy:"Uruguay", co:"Colombia", us:"USA", ec:"Ecuador",
+  cz:"Czechia", ba:"Bosnia", mx:"Mexico", ca:"Canada", tn:"Tunisia", za:"SouthAfrica",
+  ht:"Haiti", cw:"Curacao", pa:"Panama", ar:"Argentina",
+};
+function fartName(code){ return "Fart" + (_FC_COUNTRY[code] || code.toUpperCase()); }
+
+// Compact "MC $4.2M" formatter
+function fcFmtMcap(n){
+  if(n == null || isNaN(n) || n <= 0) return "MC —";
+  if(n < 1e3) return "MC $" + Math.round(n);
+  if(n < 1e6) return "MC $" + (n / 1e3).toFixed(1) + "K";
+  if(n < 1e9) return "MC $" + (n / 1e6).toFixed(2) + "M";
+  return "MC $" + (n / 1e9).toFixed(2) + "B";
+}
+
+// Sort coins by mcap descending; coins without a known cap drop to the
+// bottom. Returns a fresh array so the original FARTCUP_COINS stays stable.
+function fcSortedCoins(){
+  return FARTCUP_COINS.slice().sort((a, b) =>
+    (_fcData[b.ca]?.mcap || 0) - (_fcData[a.ca]?.mcap || 0)
+  );
+}
+
 async function fcFetchPrices(){
   const mints = FARTCUP_COINS.map(c => c.ca);
   try {
@@ -10088,8 +10628,9 @@ async function fcFetchPrices(){
         if(!cur || liq > cur.liq){
           seen[mint] = {
             liq, price: parseFloat(p.priceUsd) || 0,
-            ch24: p.priceChange?.h24 ?? null,
+            ch24:  p.priceChange?.h24 ?? null,
             image: p.info?.imageUrl || null,
+            mcap:  p.marketCap || p.fdv || 0,
           };
         }
       }
@@ -10097,6 +10638,7 @@ async function fcFetchPrices(){
         _fcData[m] = Object.assign(_fcData[m] || {}, {
           price: seen[m].price,
           ch24:  seen[m].ch24,
+          mcap:  seen[m].mcap || _fcData[m]?.mcap || 0,
           image: seen[m].image || _fcData[m]?.image,
         });
       }
@@ -10112,6 +10654,7 @@ async function fcFetchPrices(){
         _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, {
           price: _fcData[c.ca]?.price || Number(j?.usd_price) || 0,
           ch24:  _fcData[c.ca]?.ch24 ?? null,
+          mcap:  _fcData[c.ca]?.mcap || Number(j?.usd_market_cap) || 0,
           image: j?.image_uri || _fcData[c.ca]?.image,
         });
         if(j?.image_uri && State.flagImages) State.flagImages[c.code] = j.image_uri;
@@ -10128,56 +10671,97 @@ async function fcFetchPrices(){
   saveState();
 }
 
-async function fcFetchBalances(){
-  if(!State.wallet) return;
+// Race multiple Solana RPC endpoints — whoever answers first wins.
+// mainnet-beta is rate-limited and frequently times out for browser
+// requests; the public mirrors below are usually 2–10× faster.
+const _FC_RPCS = [
+  "https://solana-rpc.publicnode.com",
+  "https://rpc.ankr.com/solana",
+  "https://api.mainnet-beta.solana.com",
+];
+const _FC_BAL_CACHE_KEY = "fartworld_fc_balances_v1";
+
+function _fcLoadCachedBalances(){
   try {
-    const TOKEN_PROG = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-    const r = await fetch("https://api.mainnet-beta.solana.com", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
-        params: [State.wallet, { programId: TOKEN_PROG }, { encoding: "jsonParsed" }],
-      }),
-    });
-    if(!r.ok) return;
-    const j = await r.json();
-    const accs = j?.result?.value || [];
-    const mintToBal = {};
-    for(const a of accs){
-      try {
-        const info = a.account.data.parsed.info;
-        const mint = info.mint;
-        const amt  = Number(info.tokenAmount.uiAmount) || 0;
-        if(amt > 0) mintToBal[mint] = (mintToBal[mint] || 0) + amt;
-      } catch(_){}
-    }
+    const j = JSON.parse(localStorage.getItem(_FC_BAL_CACHE_KEY) || "null");
+    if(!j || j.wallet !== State.wallet) return;
     for(const c of FARTCUP_COINS){
-      const b = mintToBal[c.ca] || 0;
-      _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, { balance: b });
+      if(j.bal && j.bal[c.ca] != null){
+        _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, { balance: j.bal[c.ca] });
+      }
     }
   } catch(_){}
 }
+function _fcSaveCachedBalances(){
+  try {
+    const bal = {};
+    for(const c of FARTCUP_COINS) bal[c.ca] = _fcData[c.ca]?.balance || 0;
+    localStorage.setItem(_FC_BAL_CACHE_KEY, JSON.stringify({
+      wallet: State.wallet, bal, ts: Date.now(),
+    }));
+  } catch(_){}
+}
+
+async function fcFetchBalances(){
+  if(!State.wallet) return;
+  // Race all configured RPCs in parallel — the first one to come back
+  // wins and we ignore the rest. This typically resolves in <1s vs
+  // 5–15s when mainnet-beta is throttling browser-origin requests.
+  const TOKEN_PROG = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+  const body = JSON.stringify({
+    jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
+    params: [State.wallet, { programId: TOKEN_PROG }, { encoding: "jsonParsed" }],
+  });
+  const races = _FC_RPCS.map(url => fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  }).then(async r => {
+    if(!r.ok) throw new Error("bad rpc " + r.status);
+    const j = await r.json();
+    if(!j?.result?.value) throw new Error("no result");
+    return j.result.value;
+  }));
+  let accs;
+  try { accs = await Promise.any(races); }
+  catch(_){ console.warn("[FartWorld] All Solana RPCs failed for balances"); return; }
+  const mintToBal = {};
+  for(const a of accs){
+    try {
+      const info = a.account.data.parsed.info;
+      const mint = info.mint;
+      const amt  = Number(info.tokenAmount.uiAmount) || 0;
+      if(amt > 0) mintToBal[mint] = (mintToBal[mint] || 0) + amt;
+    } catch(_){}
+  }
+  for(const c of FARTCUP_COINS){
+    const b = mintToBal[c.ca] || 0;
+    _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, { balance: b });
+  }
+  _fcSaveCachedBalances();
+}
+
+// flagcdn.com — free, CORS-friendly hosted country flag PNGs. Always-on
+// flag display means even countries whose pump.fun art hasn't loaded
+// yet still show a recognisable national flag in the icon slot.
+function flagImg(code){ return `https://flagcdn.com/w80/${code}.png`; }
 
 function fcRenderTrade(){
   const host = document.getElementById('fcTradeList');
   if(!host) return;
-  host.innerHTML = FARTCUP_COINS.map(c => {
+  host.innerHTML = fcSortedCoins().map(c => {
     const d = _fcData[c.ca] || {};
-    const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
-    const chgCls = d.ch24 == null ? "" : (d.ch24 >= 0 ? "up" : "down");
-    const chgArrow = d.ch24 == null ? "" : (d.ch24 >= 0 ? "▲ " : "▼ ");
     const tradeUrl = `https://pump.fun/coin/${c.ca}`;
     return `
       <div class="fc-row">
-        <div class="ico" ${img}>${d.image ? "" : flagEmoji(c.code)}</div>
+        <div class="ico" style="background-image:url('${flagImg(c.code)}');"></div>
         <div class="meta">
-          <div class="sym">${escHtml(c.sym)}</div>
-          <div class="flag">${flagEmoji(c.code)} <span style="opacity:.6">${c.code.toUpperCase()}</span></div>
+          <div class="sym">${escHtml(fartName(c.code))}</div>
+          <div class="ticker">$${escHtml(c.sym)}</div>
         </div>
         <div class="price-col">
           <div class="price">${fcFmtPrice(d.price)}</div>
-          <div class="chg ${chgCls}">${chgArrow}${fcFmtChg(d.ch24)}</div>
+          <div class="mcap">${fcFmtMcap(d.mcap)}</div>
         </div>
         <a class="trade-btn" href="${tradeUrl}" target="_blank" rel="noopener">Trade</a>
       </div>
@@ -10190,7 +10774,7 @@ function fcRenderClaim(){
   if(!host) return;
   const claimed = State.claimedFlags || new Set();
   const walletConn = !!State.wallet;
-  host.innerHTML = FARTCUP_COINS.map(c => {
+  host.innerHTML = fcSortedCoins().map(c => {
     const d = _fcData[c.ca] || {};
     const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
     const bal = d.balance;
@@ -10209,10 +10793,10 @@ function fcRenderClaim(){
     }
     return `
       <div class="fc-row claim">
-        <div class="ico" ${img}>${d.image ? "" : flagEmoji(c.code)}</div>
+        <div class="ico" style="background-image:url('${flagImg(c.code)}');"></div>
         <div class="meta">
-          <div class="sym">${escHtml(c.sym)}</div>
-          <div class="flag">${flagEmoji(c.code)} <span style="opacity:.6">${c.code.toUpperCase()}</span></div>
+          <div class="sym">${escHtml(fartName(c.code))}</div>
+          <div class="ticker">$${escHtml(c.sym)}</div>
         </div>
         <div class="bal-col">
           <div class="bal-lbl">YOUR HOLD</div>
@@ -10274,12 +10858,19 @@ async function openFartCup(){
   _fcCurrentTab = "trade";
   document.querySelectorAll('.fc-tab').forEach(t => t.classList.toggle('active', t.dataset.fctab === "trade"));
   document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === "trade" ? "" : "none");
+  // 1) Show cached balances IMMEDIATELY so "Checking…" turns into actual
+  // numbers on first render. If the player has visited the modal before,
+  // their flags are already claimable as the modal pops open.
+  _fcLoadCachedBalances();
   fcRenderTrade();
   fcRenderClaim();
-  await fcFetchPrices();
-  fcRenderTrade();
-  await fcFetchBalances();
-  fcRenderClaim();
+  // 2) Refresh prices + balances in parallel (no awaiting one before the
+  // other). Balances are the slow path (Solana RPC), prices the fast path
+  // (DexScreener edge); racing them shaves seconds off cold opens.
+  Promise.all([
+    fcFetchPrices().then(() => fcRenderTrade()),
+    fcFetchBalances().then(() => fcRenderClaim()),
+  ]);
   if(!window._fcPriceTimer) window._fcPriceTimer = setInterval(async () => {
     await fcFetchPrices(); fcRenderTrade();
   }, 30000);
@@ -10396,591 +10987,27 @@ window.renderInventory = renderInventory;
 // ─── FART CUP CSS + MODAL HTML (injected) ───────────────────────
 // =================================================================
 const _fcStyle = document.createElement('style');
-_fcStyle.textContent = `
-.fc-bg {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.78);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  display: none; align-items: center; justify-content: center;
-  z-index: 56; padding: 20px;
-}
-.fc-bg.show { display: flex; }
-.fc-card {
-  max-width: 760px; width: 100%; max-height: 90vh;
-  background: linear-gradient(180deg, rgba(8,28,18,0.97), rgba(5,16,11,0.97));
-  border: 2px solid rgba(255,214,77,0.42);
-  border-radius: 22px;
-  overflow: hidden;
-  display: flex; flex-direction: column;
-  box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(255,214,77,0.22);
-}
-.fc-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 18px 24px;
-  border-bottom: 1px solid rgba(255,214,77,0.20);
-  background: linear-gradient(90deg, rgba(255,214,77,0.10), transparent);
-}
-.fc-head h2 {
-  font-family: 'Bangers', 'Orbitron', sans-serif;
-  font-size: 34px; letter-spacing: 2.4px;
-  background: linear-gradient(135deg, #fff1a8 0%, #ffd64d 50%, #b27538 100%);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 0 14px rgba(255,214,77,0.55));
-}
-.fc-head .close { background: transparent; border: 0; color: rgba(230,255,238,0.55); font-size: 26px; cursor: pointer; line-height: 1; }
-.fc-tabs { display: flex; border-bottom: 1px solid rgba(255,214,77,0.16); }
-.fc-tab {
-  flex: 1; background: transparent; border: 0;
-  color: rgba(230,255,238,0.55); padding: 14px;
-  font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 12px;
-  letter-spacing: 1.6px; text-transform: uppercase; cursor: pointer;
-  border-bottom: 2px solid transparent; transition: all 0.14s;
-}
-.fc-tab.active { color: #ffd64d; border-bottom-color: #ffd64d; background: rgba(255,214,77,0.06); }
-.fc-body { overflow-y: auto; padding: 18px 22px 26px; flex: 1; }
-.fc-intro { color: rgba(230,255,238,0.72); font-size: 13px; line-height: 1.55; margin-bottom: 16px; }
-.fc-intro b { color: #ffd64d; }
-.fc-list { display: flex; flex-direction: column; gap: 8px; }
-.fc-row {
-  display: grid;
-  grid-template-columns: 44px 1.1fr 1fr auto;
-  gap: 12px; align-items: center;
-  padding: 10px 12px;
-  background: rgba(255,214,77,0.05);
-  border: 1px solid rgba(255,214,77,0.18);
-  border-radius: 12px;
-}
-.fc-row:hover { background: rgba(255,214,77,0.12); border-color: #ffd64d; }
-.fc-row.claim { grid-template-columns: 44px 1.1fr 0.9fr auto; }
-.fc-row .ico {
-  width: 44px; height: 44px; border-radius: 10px;
-  background-size: cover; background-position: center;
-  background-color: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,214,77,0.30);
-  display: grid; place-items: center; font-size: 22px;
-}
-.fc-row .meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.fc-row .sym {
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 13.5px;
-  background: linear-gradient(135deg, #fff1a8, #ffd64d);
-  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-}
-.fc-row .flag { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: rgba(230,255,238,0.65); }
-.fc-row .price-col { text-align: right; }
-.fc-row .price { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; }
-.fc-row .chg { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; margin-top: 2px; }
-.fc-row .chg.up   { color: #5ff09c; }
-.fc-row .chg.down { color: #ff7a6e; }
-.fc-row .bal-col { text-align: right; }
-.fc-row .bal-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 1.1px; color: rgba(230,255,238,0.45); text-transform: uppercase; }
-.fc-row .bal { font-family: 'Orbitron', sans-serif; font-weight: 800; font-size: 14px; color: #e6ffee; margin-top: 2px; }
-.fc-row .trade-btn {
-  background: linear-gradient(135deg, #b27538, #ffd64d); color: #2a1a04;
-  border: 0; padding: 8px 14px; border-radius: 100px;
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 11px;
-  letter-spacing: 1.1px; text-transform: uppercase; cursor: pointer;
-  text-decoration: none; box-shadow: 0 6px 14px rgba(180,128,48,0.34);
-  transition: transform 0.15s, filter 0.15s;
-}
-.fc-row .trade-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
-.fc-claim-btn {
-  border: 0; padding: 8px 14px; border-radius: 100px;
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 11px;
-  letter-spacing: 1.1px; text-transform: uppercase; cursor: pointer;
-  transition: transform 0.14s, filter 0.14s;
-}
-.fc-claim-btn.go {
-  background: linear-gradient(135deg, #46f08a, #5ff09c); color: #042913;
-  box-shadow: 0 6px 14px rgba(95,240,156,0.36);
-}
-.fc-claim-btn.go:hover { transform: translateY(-1px); filter: brightness(1.08); }
-.fc-claim-btn.locked, .fc-claim-btn.done {
-  background: rgba(255,214,77,0.10); color: rgba(230,255,238,0.4);
-  cursor: not-allowed;
-}
-.fc-claim-btn.done { background: rgba(95,240,156,0.18); color: #5ff09c; }
-.fc-foot {
-  margin-top: 14px;
-  font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
-  color: rgba(230,255,238,0.45); text-align: center;
-}
-.inv-slot { position: relative; }
-.inv-slot.wearable { box-shadow: inset 0 0 0 1px rgba(255,214,77,0.45); }
-.inv-slot.wearable.worn { box-shadow: inset 0 0 0 2px #ffd64d, 0 0 18px rgba(255,214,77,0.35); }
-.inv-slot .wear-badge {
-  position: absolute; top: 4px; right: 4px;
-  background: linear-gradient(135deg, #ffd64d, #fff1a8); color: #2a1a04;
-  font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 8px;
-  letter-spacing: 0.6px; padding: 2px 6px; border-radius: 5px;
-  pointer-events: none;
-}
-`;
+_fcStyle.textContent = `.fc-bg{position:fixed;inset:0;background:rgba(0,0,0,0.78);backdrop-filter:blur(12px);display:none;align-items:center;justify-content:center;z-index:56;padding:20px}.fc-bg.show{display:flex}.fc-card{max-width:760px;width:100%;max-height:90vh;background:linear-gradient(180deg,rgba(8,28,18,0.97),rgba(5,16,11,0.97));border:2px solid rgba(255,214,77,0.42);border-radius:22px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 80px rgba(0,0,0,0.6)}.fc-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid rgba(255,214,77,0.20)}.fc-head h2{font-family:'Bangers','Orbitron',sans-serif;font-size:34px;letter-spacing:2.4px;background:linear-gradient(135deg,#fff1a8,#ffd64d,#b27538);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}.fc-head .close{background:transparent;border:0;color:rgba(230,255,238,0.55);font-size:26px;cursor:pointer}.fc-tabs{display:flex;border-bottom:1px solid rgba(255,214,77,0.16)}.fc-tab{flex:1;background:transparent;border:0;color:rgba(230,255,238,0.55);padding:14px;font-family:'Orbitron',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.6px;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent}.fc-tab.active{color:#ffd64d;border-bottom-color:#ffd64d;background:rgba(255,214,77,0.06)}.fc-body{overflow-y:auto;padding:18px 22px 26px;flex:1}.fc-intro{color:rgba(230,255,238,0.72);font-size:13px;margin-bottom:16px}.fc-intro b{color:#ffd64d}.fc-list{display:flex;flex-direction:column;gap:8px}.fc-row{display:grid;grid-template-columns:44px 1.1fr 1fr auto;gap:12px;align-items:center;padding:10px 12px;background:rgba(255,214,77,0.05);border:1px solid rgba(255,214,77,0.18);border-radius:12px}.fc-row.claim{grid-template-columns:44px 1.1fr 0.9fr auto}.fc-row .ico{width:44px;height:44px;border-radius:10px;background-size:cover;background-position:center;background-color:rgba(255,255,255,0.05);border:1px solid rgba(255,214,77,0.30)}.fc-row .meta{display:flex;flex-direction:column;gap:2px}.fc-row .sym{font-family:'Orbitron',sans-serif;font-weight:900;font-size:13.5px;color:#ffd64d}.fc-row .ticker{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.55)}.fc-row .price-col{text-align:right}.fc-row .price{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .mcap{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#ffd64d}.fc-row .bal-col{text-align:right}.fc-row .bal-lbl{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(230,255,238,0.45);text-transform:uppercase}.fc-row .bal{font-family:'Orbitron',sans-serif;font-weight:800;font-size:14px;color:#e6ffee}.fc-row .trade-btn{background:linear-gradient(135deg,#b27538,#ffd64d);color:#2a1a04;border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer;text-decoration:none}.fc-claim-btn{border:0;padding:8px 14px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;text-transform:uppercase;cursor:pointer}.fc-claim-btn.go{background:linear-gradient(135deg,#46f08a,#5ff09c);color:#042913}.fc-claim-btn.locked,.fc-claim-btn.done{background:rgba(255,214,77,0.10);color:rgba(230,255,238,0.4);cursor:not-allowed}.fc-claim-btn.done{background:rgba(95,240,156,0.18);color:#5ff09c}.fc-foot{margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,0.45);text-align:center}.inv-slot{position:relative}.inv-slot.wearable{box-shadow:inset 0 0 0 1px rgba(255,214,77,0.45)}.inv-slot.wearable.worn{box-shadow:inset 0 0 0 2px #ffd64d,0 0 18px rgba(255,214,77,0.35)}.inv-slot .wear-badge{position:absolute;top:4px;right:4px;background:#ffd64d;color:#2a1a04;font-family:'Orbitron',sans-serif;font-weight:900;font-size:8px;padding:2px 6px;border-radius:5px;pointer-events:none}`;
 document.head.appendChild(_fcStyle);
-
 const _fcModalEl = document.createElement('div');
-_fcModalEl.innerHTML = `
-<div class="fc-bg" id="fcBg">
-  <div class="fc-card">
-    <div class="fc-head">
-      <h2>⚽ FART CUP</h2>
-      <button class="close" id="fcClose">×</button>
-    </div>
-    <div class="fc-tabs">
-      <button class="fc-tab active" data-fctab="trade">Trade Nation Coins</button>
-      <button class="fc-tab" data-fctab="claim">Claim Flags</button>
-    </div>
-    <div class="fc-body">
-      <div class="fc-pane" data-fcpane="trade">
-        <p class="fc-intro">
-          The 48 national FART tokens — every flag in the cup. Click <b>Trade</b>
-          on any row to swap on pump.fun. Prices stream live from DexScreener.
-        </p>
-        <div class="fc-list" id="fcTradeList"></div>
-      </div>
-      <div class="fc-pane" data-fcpane="claim" style="display:none;">
-        <p class="fc-intro">
-          Hold <b>${FLAG_CLAIM_THRESHOLD.toLocaleString()}</b> of any country's FART token
-          to claim its flag as a permanent wearable. <b>One per country, no burn required —</b>
-          just hold and claim. Wear it from your inventory to swap your printer's paper for the flag.
-        </p>
-        <div class="fc-list" id="fcClaimList"></div>
-        <div class="fc-foot">Flags are forever. Selling the tokens after claiming does not revoke them.</div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
+_fcModalEl.innerHTML = '<div class="fc-bg" id="fcBg"><div class="fc-card"><div class="fc-head"><h2>⚽ FART CUP</h2><button class="close" id="fcClose">×</button></div><div class="fc-tabs"><button class="fc-tab active" data-fctab="trade">Trade Nation Coins</button><button class="fc-tab" data-fctab="claim">Claim Flags</button></div><div class="fc-body"><div class="fc-pane" data-fcpane="trade"><p class="fc-intro">48 national FART tokens. Sorted by market cap.</p><div class="fc-list" id="fcTradeList"></div></div><div class="fc-pane" data-fcpane="claim" style="display:none;"><p class="fc-intro">Hold <b>100,000</b> of a country\'s FART token to claim its flag as a wearable. No burn required.</p><div class="fc-list" id="fcClaimList"></div><div class="fc-foot">Flags are forever.</div></div></div></div></div>';
 document.body.appendChild(_fcModalEl.firstElementChild);
 document.getElementById('fcClose').addEventListener('click', closeFartCup);
-document.getElementById('fcBg').addEventListener('click', (e) => {
-  if(e.target.id === "fcBg") closeFartCup();
-});
-document.querySelectorAll('.fc-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const t = btn.dataset.fctab;
-    _fcCurrentTab = t;
-    document.querySelectorAll('.fc-tab').forEach(b => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === t ? "" : "none");
-    if(t === "trade") fcRenderTrade(); else fcRenderClaim();
-  });
-});
-
-// Pre-warm prices + images in the background so wearables get the right art
-// even if the player never opens the Fart Cup window first.
+document.getElementById('fcBg').addEventListener('click', (e) => { if(e.target.id === "fcBg") closeFartCup(); });
+document.querySelectorAll('.fc-tab').forEach(btn => btn.addEventListener('click', () => {
+  const t = btn.dataset.fctab; _fcCurrentTab = t;
+  document.querySelectorAll('.fc-tab').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === t ? "" : "none");
+  if(t === "trade") fcRenderTrade(); else fcRenderClaim();
+}));
 fcFetchPrices();
-
-// =================================================================
-// ─── BOWLING MINIGAME — top-down canvas + simple physics ────────
-// =================================================================
-// Click & drag on the lane to aim + set power, release to throw.
-// 10 pins in the standard triangle. Knock them down for silver +
-// XP. Entry fee: 10 silver. Strike (all 10) = +50 silver bonus.
-const BOWLING_COST       = 10;     // silver per game
-const BOWLING_PER_PIN    = 3;      // silver per pin knocked down
-const BOWLING_STRIKE_BONUS = 50;
-const BOWLING_XP_PER_PIN = 3;
-const BOWLING_LANE_W = 360;
-const BOWLING_LANE_H = 620;
-const BOWLING_BALL_R = 14;
-const BOWLING_PIN_R  = 11;
-
-const _bowlStyle = document.createElement('style');
-_bowlStyle.textContent = `
-.bowl-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.82); backdrop-filter: blur(12px); display: none; align-items: center; justify-content: center; z-index: 56; padding: 20px; }
-.bowl-bg.show { display: flex; }
-.bowl-card { max-width: 600px; width: 100%; max-height: 92vh; background: linear-gradient(180deg, rgba(28,8,16,0.97), rgba(12,3,8,0.97)); border: 2px solid rgba(255,90,77,0.45); border-radius: 22px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 30px 80px rgba(0,0,0,0.6), 0 0 80px rgba(255,90,77,0.22); }
-.bowl-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid rgba(255,90,77,0.25); background: linear-gradient(90deg, rgba(255,90,77,0.10), transparent); }
-.bowl-head h2 { font-family: 'Bangers', 'Orbitron', sans-serif; font-size: 32px; letter-spacing: 2.4px; background: linear-gradient(135deg, #ff7a6e 0%, #ffd64d 50%, #ff5ad6 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 12px rgba(255,90,77,0.55)); }
-.bowl-head .close { background: transparent; border: 0; color: rgba(230,255,238,0.55); font-size: 26px; cursor: pointer; line-height: 1; }
-.bowl-body { overflow-y: auto; padding: 14px 18px 20px; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.bowl-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
-.bowl-stat { background: rgba(255,90,77,0.07); border: 1px solid rgba(255,90,77,0.20); border-radius: 10px; padding: 8px 12px; text-align: center; }
-.bowl-stat .lbl { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 1.1px; color: rgba(230,255,238,0.55); text-transform: uppercase; }
-.bowl-stat .val { font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 18px; color: #ffd64d; margin-top: 2px; }
-.bowl-canvas-wrap { background: #0a0410; border-radius: 14px; border: 1px solid rgba(255,90,77,0.25); padding: 8px; }
-#bowlCanvas { display: block; background: linear-gradient(180deg, #1f0a14 0%, #2a1018 100%); border-radius: 10px; cursor: crosshair; touch-action: none; }
-.bowl-controls { display: flex; gap: 8px; width: 100%; }
-.bowl-btn { flex: 1; background: linear-gradient(135deg, #ff7a6e, #ffd64d); color: #2a1a04; border: 0; padding: 10px 14px; border-radius: 100px; font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 12px; letter-spacing: 1.2px; text-transform: uppercase; cursor: pointer; box-shadow: 0 6px 14px rgba(255,90,77,0.34); transition: transform 0.14s, filter 0.14s; }
-.bowl-btn:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
-.bowl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.bowl-btn.ghost { background: rgba(255,255,255,0.06); color: #e6ffee; box-shadow: none; }
-.bowl-tip { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; color: rgba(230,255,238,0.55); text-align: center; margin-top: 2px; }
-`;
-document.head.appendChild(_bowlStyle);
-
-const _bowlModalEl = document.createElement('div');
-_bowlModalEl.innerHTML = `
-<div class="bowl-bg" id="bowlBg">
-  <div class="bowl-card">
-    <div class="bowl-head"><h2>🎳 STRIKE PALACE</h2><button class="close" id="bowlClose">×</button></div>
-    <div class="bowl-body">
-      <div class="bowl-stats">
-        <div class="bowl-stat"><div class="lbl">Game</div><div class="val" id="bowlGameNum">—</div></div>
-        <div class="bowl-stat"><div class="lbl">Pins down</div><div class="val" id="bowlPins">0</div></div>
-        <div class="bowl-stat"><div class="lbl">Best ever</div><div class="val" id="bowlBest">0</div></div>
-      </div>
-      <div class="bowl-canvas-wrap">
-        <canvas id="bowlCanvas" width="${BOWLING_LANE_W}" height="${BOWLING_LANE_H}"></canvas>
-      </div>
-      <div class="bowl-tip" id="bowlTip">Click + drag UP from the ball to aim, release to throw.</div>
-      <div class="bowl-controls">
-        <button class="bowl-btn ghost" id="bowlResetBtn">↻ Reset rack</button>
-        <button class="bowl-btn" id="bowlPlayBtn">Throw (${BOWLING_COST} 🥈)</button>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-document.body.appendChild(_bowlModalEl.firstElementChild);
-
-// ── Bowling game state ──
-const Bowl = {
-  active:    false,           // modal open
-  rolling:   false,           // ball is moving
-  aiming:    false,           // dragging
-  ball:      null,            // {x,y,vx,vy}
-  pins:      [],              // [{x,y,vx,vy,down,fall}]
-  aimStart:  null,            // {x,y}
-  aimEnd:    null,
-  pinsKnocked: 0,
-  gameCount:   0,
-  bestPins:    Number(localStorage.getItem("fartworld_bowl_best") || 0),
-  canPlay:     true,
-};
-
-function bowlSetupPins(){
-  // Standard 4-3-2-1 triangle pointing up (toward player at bottom)
-  const cx = BOWLING_LANE_W / 2;
-  const startY = 110;
-  const dx = 26, dy = 24;
-  Bowl.pins = [];
-  // Row 1 (back, 4 pins)
-  for(let i = 0; i < 4; i++) Bowl.pins.push({ x: cx + (i - 1.5) * dx, y: startY,        vx: 0, vy: 0, down: false, fall: 0 });
-  // Row 2 (3 pins)
-  for(let i = 0; i < 3; i++) Bowl.pins.push({ x: cx + (i - 1.0) * dx, y: startY + dy,   vx: 0, vy: 0, down: false, fall: 0 });
-  // Row 3 (2 pins)
-  for(let i = 0; i < 2; i++) Bowl.pins.push({ x: cx + (i - 0.5) * dx, y: startY + 2*dy, vx: 0, vy: 0, down: false, fall: 0 });
-  // Row 4 (front, 1 pin)
-  Bowl.pins.push({ x: cx, y: startY + 3*dy, vx: 0, vy: 0, down: false, fall: 0 });
-}
-function bowlResetBall(){
-  Bowl.ball = { x: BOWLING_LANE_W / 2, y: BOWLING_LANE_H - 50, vx: 0, vy: 0 };
-}
-function bowlResetRack(){
-  bowlSetupPins();
-  bowlResetBall();
-  Bowl.rolling = false;
-  Bowl.aiming = false;
-  Bowl.pinsKnocked = 0;
-  Bowl.canPlay = true;
-  document.getElementById('bowlPins').textContent = "0";
-  const btn = document.getElementById('bowlPlayBtn');
-  btn.disabled = false;
-  btn.textContent = `Throw (${BOWLING_COST} 🥈)`;
-  document.getElementById('bowlTip').textContent = "Click + drag UP from the ball to aim, release to throw.";
-}
-
-function openBowling(){
-  if(State.credits < BOWLING_COST){
-    floater(`Need ${BOWLING_COST} 🥈 to play`, "bad"); return;
-  }
-  Bowl.active = true;
-  document.getElementById('bowlBg').classList.add('show');
-  bowlResetRack();
-  document.getElementById('bowlGameNum').textContent = Bowl.gameCount;
-  document.getElementById('bowlBest').textContent    = Bowl.bestPins;
-  // Kick off the game's render loop
-  bowlFrame();
-}
-function closeBowling(){
-  Bowl.active = false;
-  document.getElementById('bowlBg').classList.remove('show');
-}
-document.getElementById('bowlClose').addEventListener('click', closeBowling);
-document.getElementById('bowlBg').addEventListener('click', (e) => { if(e.target.id === "bowlBg") closeBowling(); });
-document.getElementById('bowlResetBtn').addEventListener('click', () => {
-  if(Bowl.rolling) return;
-  bowlResetRack();
+Object.assign(window, {
+  State, ITEMS, addItem, floater, showBuyToast, playPurchaseSound, ensureAudio,
+  checkLevelUp, saveState, updateHUD,
+  POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData,
+  refreshFartprintBalance, fetchFartprintBalance,
+  poopFetchPrices, fcFetchPrices, fcFetchBalances,
 });
-document.getElementById('bowlPlayBtn').addEventListener('click', () => {
-  // Pay entry fee + arm a throw — actual throw happens via drag-release.
-  // (Charging on throw rather than open avoids double-charging if the
-  // player closes without throwing.)
-  if(!Bowl.canPlay || Bowl.rolling) return;
-  if(State.credits < BOWLING_COST){
-    floater(`Need ${BOWLING_COST} 🥈`, "bad"); return;
-  }
-  document.getElementById('bowlTip').textContent = "Drag from the ball to aim & set power, release to roll.";
-});
-
-// ── Aim + throw via canvas ──
-const _bowlCanvas = document.getElementById('bowlCanvas');
-function _bowlPt(e){
-  const r = _bowlCanvas.getBoundingClientRect();
-  const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-  return { x: (t.clientX - r.left) * BOWLING_LANE_W / r.width, y: (t.clientY - r.top) * BOWLING_LANE_H / r.height };
-}
-_bowlCanvas.addEventListener('mousedown', (e) => {
-  if(Bowl.rolling || !Bowl.canPlay) return;
-  const p = _bowlPt(e);
-  if(Math.hypot(p.x - Bowl.ball.x, p.y - Bowl.ball.y) < BOWLING_BALL_R * 2.5){
-    Bowl.aiming = true;
-    Bowl.aimStart = { x: Bowl.ball.x, y: Bowl.ball.y };
-    Bowl.aimEnd = p;
-  }
-});
-_bowlCanvas.addEventListener('mousemove', (e) => {
-  if(!Bowl.aiming) return;
-  Bowl.aimEnd = _bowlPt(e);
-});
-_bowlCanvas.addEventListener('mouseup', (e) => {
-  if(!Bowl.aiming) return;
-  Bowl.aiming = false;
-  const p = _bowlPt(e);
-  // Vector from drag-end to ball = throw direction (drag opposite for "pull back")
-  let dx = Bowl.ball.x - p.x;
-  let dy = Bowl.ball.y - p.y;
-  const len = Math.hypot(dx, dy);
-  if(len < 5) return;   // tiny — cancel
-  // Pay entry fee
-  if(State.credits < BOWLING_COST) return;
-  State.credits -= BOWLING_COST;
-  Bowl.gameCount++;
-  Bowl.canPlay = false;
-  saveState(); updateHUD();
-  document.getElementById('bowlGameNum').textContent = Bowl.gameCount;
-  // Power proportional to drag length (capped)
-  const power = Math.min(1, len / 200);
-  // Always throw upward (toward pins) — clamp vy negative
-  const nx = dx / len, ny = dy / len;
-  const ySign = ny > 0 ? 1 : (ny < 0 ? -1 : -1);
-  const baseSpeed = 320;   // px / sec
-  Bowl.ball.vx = nx * baseSpeed * power * 1.2;
-  Bowl.ball.vy = ySign * Math.abs(ny) * baseSpeed * power * 1.6;
-  if(Bowl.ball.vy > -40) Bowl.ball.vy = -baseSpeed * power;   // force upward
-  Bowl.rolling = true;
-  document.getElementById('bowlTip').textContent = "Rolling…";
-});
-// Touch parity
-_bowlCanvas.addEventListener('touchstart', (e) => { e.preventDefault(); _bowlCanvas.dispatchEvent(new MouseEvent('mousedown', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
-_bowlCanvas.addEventListener('touchmove',  (e) => { e.preventDefault(); _bowlCanvas.dispatchEvent(new MouseEvent('mousemove', { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY })); }, { passive: false });
-_bowlCanvas.addEventListener('touchend',   (e) => { e.preventDefault(); const t = e.changedTouches[0]; _bowlCanvas.dispatchEvent(new MouseEvent('mouseup',   { clientX: t.clientX, clientY: t.clientY })); }, { passive: false });
-
-// ── Simple physics step ──
-function bowlPhysics(dt){
-  if(!Bowl.rolling) return;
-  const ball = Bowl.ball;
-  // Friction
-  const friction = 0.92;
-  ball.vx *= Math.pow(friction, dt * 60);
-  ball.vy *= Math.pow(friction, dt * 60);
-  ball.x += ball.vx * dt;
-  ball.y += ball.vy * dt;
-  // Wall bounces
-  if(ball.x < BOWLING_BALL_R){ ball.x = BOWLING_BALL_R; ball.vx *= -0.6; }
-  if(ball.x > BOWLING_LANE_W - BOWLING_BALL_R){ ball.x = BOWLING_LANE_W - BOWLING_BALL_R; ball.vx *= -0.6; }
-  if(ball.y < BOWLING_BALL_R){ ball.y = BOWLING_BALL_R; ball.vy *= -0.6; }
-  // Pin collisions
-  for(const p of Bowl.pins){
-    if(p.down) continue;
-    const dx = p.x - ball.x;
-    const dy = p.y - ball.y;
-    const d = Math.hypot(dx, dy);
-    const min = BOWLING_BALL_R + BOWLING_PIN_R;
-    if(d < min && d > 0.001){
-      const nx = dx / d, ny = dy / d;
-      // Knock pin down
-      p.down = true;
-      p.fall = 0;
-      p.vx = nx * 280 + (Math.random() - 0.5) * 60;
-      p.vy = ny * 280;
-      // Slight ball deflection
-      ball.vx -= nx * 60;
-      ball.vy -= ny * 60;
-      Bowl.pinsKnocked++;
-      // Play a little sound
-      try {
-        const ctx = ensureAudio();
-        if(ctx){
-          const o = ctx.createOscillator(); o.type = "triangle"; o.frequency.value = 380 + Math.random() * 200;
-          const g = ctx.createGain(); g.gain.setValueAtTime(0.08, ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
-          o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.2);
-        }
-      } catch(_){}
-    }
-  }
-  // Pin-pin collisions (chain reaction): falling pins push other pins
-  for(const a of Bowl.pins){
-    if(!a.down || a.fall > 0.6) continue;
-    for(const b of Bowl.pins){
-      if(a === b || b.down) continue;
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-      const min = BOWLING_PIN_R * 2;
-      if(d < min && d > 0.001){
-        const nx = dx / d, ny = dy / d;
-        b.down = true; b.fall = 0;
-        b.vx = nx * 200 + (Math.random() - 0.5) * 60;
-        b.vy = ny * 200;
-        Bowl.pinsKnocked++;
-      }
-    }
-  }
-  // Fade out fallen pins
-  for(const p of Bowl.pins){
-    if(!p.down) continue;
-    p.fall += dt;
-    p.x += p.vx * dt; p.y += p.vy * dt;
-    p.vx *= Math.pow(0.86, dt * 60); p.vy *= Math.pow(0.86, dt * 60);
-  }
-  // End-of-roll detection: ball off the back OR too slow
-  const sp = Math.hypot(ball.vx, ball.vy);
-  if(ball.y < -BOWLING_BALL_R || (sp < 8 && ball.y < BOWLING_LANE_H - 100)){
-    bowlEndRoll();
-  }
-  // Also end if ball drifted past bottom (rare)
-  if(ball.y > BOWLING_LANE_H + BOWLING_BALL_R) bowlEndRoll();
-}
-
-function bowlEndRoll(){
-  if(!Bowl.rolling) return;
-  Bowl.rolling = false;
-  const pinsDown = Bowl.pinsKnocked;
-  let reward = pinsDown * BOWLING_PER_PIN;
-  let bonus = 0;
-  let xp = pinsDown * BOWLING_XP_PER_PIN;
-  let label = "";
-  if(pinsDown >= 10){
-    bonus = BOWLING_STRIKE_BONUS;
-    label = "STRIKE! 🎉";
-  } else if(pinsDown >= 7){
-    label = "Great frame!";
-  } else if(pinsDown >= 4){
-    label = "Solid throw";
-  } else if(pinsDown >= 1){
-    label = "Tap";
-  } else {
-    label = "Gutter ball 💀";
-  }
-  State.credits += reward + bonus;
-  State.xp += xp;
-  if(pinsDown > Bowl.bestPins){
-    Bowl.bestPins = pinsDown;
-    localStorage.setItem("fartworld_bowl_best", String(Bowl.bestPins));
-    document.getElementById('bowlBest').textContent = Bowl.bestPins;
-  }
-  checkLevelUp(); saveState(); updateHUD();
-  document.getElementById('bowlPins').textContent = pinsDown;
-  document.getElementById('bowlTip').textContent  =
-    `${label}  ·  ${pinsDown}/10 pins  ·  +${reward + bonus} 🥈  +${xp} XP`;
-  if(reward + bonus > 0){ try { playPurchaseSound(); } catch(_){} }
-  // Re-arm play button so the user can throw again
-  const btn = document.getElementById('bowlPlayBtn');
-  btn.disabled = false;
-  btn.textContent = `Throw again (${BOWLING_COST} 🥈)`;
-  Bowl.canPlay = true;
-  // After a beat, auto-rack for the next throw (keep ball at start)
-  setTimeout(() => {
-    if(!Bowl.active) return;
-    bowlSetupPins();
-    bowlResetBall();
-    Bowl.pinsKnocked = 0;
-    document.getElementById('bowlPins').textContent = "0";
-  }, 1600);
-}
-
-// ── Render ──
-function bowlRender(){
-  const ctx = _bowlCanvas.getContext('2d');
-  ctx.clearRect(0, 0, BOWLING_LANE_W, BOWLING_LANE_H);
-  // Lane wood
-  const grad = ctx.createLinearGradient(0, 0, 0, BOWLING_LANE_H);
-  grad.addColorStop(0, '#c89858'); grad.addColorStop(1, '#a87838');
-  ctx.fillStyle = grad;
-  ctx.fillRect(20, 0, BOWLING_LANE_W - 40, BOWLING_LANE_H);
-  // Gutters
-  ctx.fillStyle = '#3a1810';
-  ctx.fillRect(0, 0, 20, BOWLING_LANE_H);
-  ctx.fillRect(BOWLING_LANE_W - 20, 0, 20, BOWLING_LANE_H);
-  // Wood grain lines
-  ctx.strokeStyle = 'rgba(80,40,15,0.25)'; ctx.lineWidth = 1;
-  for(let i = 0; i < 12; i++){
-    ctx.beginPath();
-    const x = 30 + i * 28;
-    ctx.moveTo(x, 0); ctx.lineTo(x + 4, BOWLING_LANE_H); ctx.stroke();
-  }
-  // Foul line
-  ctx.strokeStyle = '#ff5a4d'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(20, BOWLING_LANE_H - 90); ctx.lineTo(BOWLING_LANE_W - 20, BOWLING_LANE_H - 90); ctx.stroke();
-  // Pin deck shading (top area)
-  ctx.fillStyle = 'rgba(255,255,255,0.04)';
-  ctx.fillRect(20, 60, BOWLING_LANE_W - 40, 160);
-  // Aiming line
-  if(Bowl.aiming && Bowl.aimEnd){
-    const dx = Bowl.ball.x - Bowl.aimEnd.x;
-    const dy = Bowl.ball.y - Bowl.aimEnd.y;
-    const len = Math.hypot(dx, dy);
-    const power = Math.min(1, len / 200);
-    ctx.strokeStyle = `rgba(255, 90, 77, ${0.4 + power * 0.6})`;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 6]);
-    ctx.beginPath(); ctx.moveTo(Bowl.ball.x, Bowl.ball.y);
-    // Show aim direction extended forward (toward pins)
-    const nx = dx / Math.max(1, len), ny = dy / Math.max(1, len);
-    ctx.lineTo(Bowl.ball.x + nx * 220, Bowl.ball.y + ny * 220);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    // Power bar
-    ctx.fillStyle = `rgba(255, 214, 77, ${0.85})`;
-    ctx.fillRect(28, BOWLING_LANE_H - 18, (BOWLING_LANE_W - 56) * power, 6);
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 1;
-    ctx.strokeRect(28, BOWLING_LANE_H - 18, BOWLING_LANE_W - 56, 6);
-  }
-  // Pins
-  for(const p of Bowl.pins){
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    if(p.down){
-      ctx.globalAlpha = Math.max(0, 1 - p.fall * 1.4);
-      ctx.rotate(p.fall * 3);
-    }
-    // Pin body
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.arc(0, 0, BOWLING_PIN_R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Red collar
-    ctx.fillStyle = '#ff5a4d';
-    ctx.beginPath(); ctx.arc(0, -2, BOWLING_PIN_R * 0.55, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-  }
-  // Ball
-  ctx.save();
-  const gradB = ctx.createRadialGradient(Bowl.ball.x - 4, Bowl.ball.y - 4, 2, Bowl.ball.x, Bowl.ball.y, BOWLING_BALL_R);
-  gradB.addColorStop(0, '#5b2870'); gradB.addColorStop(1, '#1a0830');
-  ctx.fillStyle = gradB;
-  ctx.beginPath(); ctx.arc(Bowl.ball.x, Bowl.ball.y, BOWLING_BALL_R, 0, Math.PI * 2); ctx.fill();
-  // Finger holes
-  ctx.fillStyle = '#0a0410';
-  for(let i = -1; i <= 1; i++){
-    ctx.beginPath(); ctx.arc(Bowl.ball.x + i * 4, Bowl.ball.y - 4, 1.6, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.restore();
-}
-
-let _bowlLast = 0;
-function bowlFrame(t){
-  if(!Bowl.active) return;
-  if(!_bowlLast) _bowlLast = t || performance.now();
-  const now = t || performance.now();
-  const dt = Math.min(0.05, (now - _bowlLast) / 1000);
-  _bowlLast = now;
-  bowlPhysics(dt);
-  bowlRender();
-  requestAnimationFrame(bowlFrame);
-}
-
-console.log("[FartWorld] Bowling alley ready at", BOWLING_POS);
-
 </script>
 </body>
 </html>
