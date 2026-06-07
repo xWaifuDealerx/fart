@@ -25,9 +25,9 @@
 
     const css = document.createElement('style');
     css.textContent = `
-.wt-panel{position:fixed;right:14px;top:90px;display:none;background:linear-gradient(180deg,rgba(10,28,12,.96),rgba(6,18,8,.96));border:2px solid rgba(140,220,90,.55);border-radius:14px;padding:12px 14px;z-index:32;color:#e6ffee;font-family:'Outfit','JetBrains Mono',sans-serif;min-width:240px;max-width:320px;box-shadow:0 14px 28px rgba(0,0,0,.55)}
+.wt-panel{position:fixed;left:14px;top:200px;display:none;background:linear-gradient(180deg,rgba(10,28,12,.96),rgba(6,18,8,.96));border:2px solid rgba(140,220,90,.55);border-radius:14px;padding:12px 14px;z-index:32;color:#e6ffee;font-family:'Outfit','JetBrains Mono',sans-serif;min-width:240px;max-width:320px;box-shadow:0 14px 28px rgba(0,0,0,.55)}
 .wt-panel.show{display:block}
-.wt-panel h3{margin:0 0 8px;font-family:'Bangers','Orbitron',sans-serif;font-size:16px;color:#a8e060;letter-spacing:1.1px;text-align:center}
+.wt-panel h3{margin:0 0 8px;font-family:'Outfit','Inter',sans-serif;font-size:11px;font-weight:800;color:#a8e060;letter-spacing:1.4px;text-align:center;text-transform:uppercase}
 .wt-row{padding:7px 0;border-top:1px solid rgba(140,220,90,.15);font-size:11.5px}
 .wt-row:first-of-type{border-top:none}
 .wt-row .ttl{font-weight:700;color:#fff1c2;font-size:13px;margin-bottom:3px}
@@ -159,6 +159,6 @@
       document.getElementById('wtList').innerHTML = lines.join('');
     }, 500);
 
-    console.log("[weed-timer] always-visible crop panel ready");
+    console.log("[weed-timer] ready");
   }
 })();

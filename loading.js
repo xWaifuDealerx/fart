@@ -31,7 +31,7 @@
     + '#fwLoading .tips b{color:#ffce4a}'
     + '</style>'
     + '<div class="logo">FARTWORLD</div>'
-    + '<div class="tag">A Solana Memecoin Universe</div>'
+    + '<div class="tag">A Solana Brainrot MMO</div>'
     + '<div class="bar-wrap"><div class="bar" id="fwLoadingBar"></div></div>'
     + '<div class="pct" id="fwLoadingPct">0%</div>'
     + '<div class="step" id="fwLoadingStep">Booting up the printers…</div>'

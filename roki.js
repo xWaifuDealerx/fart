@@ -283,7 +283,7 @@
 
     // ── Proximity popup (same style as junkies/static-npcs) ──
     const popStyle = document.createElement('style');
-    popStyle.textContent = `.roki-near{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(28,14,32,.96),rgba(18,8,22,.96));border:2px solid rgba(255,182,220,.6);border-radius:14px;padding:12px 18px;z-index:50;text-align:center}.roki-near.show{display:block}.roki-near .who{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(255,233,245,.7);margin-bottom:6px}.roki-near .who b{color:#ffb6dc}.roki-near .line{font-family:'Bangers','Orbitron',sans-serif;font-size:18px;color:#fff1c2;margin-bottom:8px}.roki-near .btn{background:linear-gradient(135deg,#ffb6dc,#ff7eb5);color:#3a0c1e;border:0;padding:9px 18px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:12px;text-transform:uppercase;cursor:pointer}`;
+    popStyle.textContent = `.roki-near{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(95,240,156,.55);border-radius:14px;padding:12px 18px;z-index:50;text-align:center;font-family:'Outfit','Inter','JetBrains Mono',sans-serif}.roki-near.show{display:block}.roki-near .who{font-size:11px;color:rgba(230,255,238,.7);margin-bottom:5px;letter-spacing:.4px}.roki-near .who b{color:#5ff09c}.roki-near .line{font-family:'Outfit','Inter',sans-serif;font-size:14px;font-weight:700;color:#fff1c2;margin-bottom:8px;letter-spacing:.3px}.roki-near .btn{background:rgba(95,240,156,.18);border:1px solid rgba(95,240,156,.55);color:#5ff09c;padding:8px 16px;border-radius:8px;font-family:'Outfit','Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:.6px;cursor:pointer}`;
     document.head.appendChild(popStyle);
     const nearPop = document.createElement('div');
     nearPop.className = 'roki-near';
@@ -292,114 +292,30 @@
     document.getElementById('rokiNearBtn').addEventListener('click', openRoki);
 
     // ── Update loop (called once per second by ourselves) ──
-    const _projV = new THREE.Vector3();
-    const camera = window.camera;
     let lastT = performance.now();
-
-    function update(){
+    const _projVTag = new THREE.Vector3();
+    function tick(){
       const now = performance.now();
-      let dt = (now - lastT) / 1000;
-      if(dt > 0.1) dt = 0.1;
-      lastT = now;
-
-      // Distance to player
+      let dt = (now - lastT) / 1000; if(dt > 0.1) dt = 0.1; lastT = now;
       const dToPlayer = Math.hypot(Player.pos.x - roki.x, Player.pos.z - roki.z);
-      const STOP_RAD = 5.0;
-
-      if(dToPlayer < STOP_RAD){
-        // Stop and look at player
-        roki.state = "stop";
-        roki.stateTimer = 0.8;
-        roki.speed = 0;
-        // Face the player
+      if(dToPlayer < 5){
+        roki.state = "stop"; roki.speed = 0;
         const dx = Player.pos.x - roki.x, dz = Player.pos.z - roki.z;
         roki.yaw = Math.atan2(dx, dz);
         nearPop.classList.add('show');
-      } else {
-        nearPop.classList.remove('show');
-        if(roki.state === "stop"){
-          roki.state = "wander";
-          roki.stateTimer = 0.6 + Math.random() * 0.8;
-          pickGoal();
-        }
-      }
-
-      // Movement: wander toward goal in little hops
-      if(roki.state === "wander" || roki.state === "hop"){
-        roki.stateTimer -= dt;
-        if(roki.stateTimer <= 0){
-          // start a new hop
-          roki.state = "hop";
-          roki.stateTimer = 0.55 + Math.random() * 0.25;
-          roki.hopT = 0;
-          // recheck goal
-          const dgx = roki.goalX - roki.x, dgz = roki.goalZ - roki.z;
-          if(Math.hypot(dgx, dgz) < 0.8) pickGoal();
-        }
-        if(roki.state === "hop"){
-          roki.hopT += dt;
-          const dgx = roki.goalX - roki.x, dgz = roki.goalZ - roki.z;
-          const dl  = Math.hypot(dgx, dgz) || 1;
-          const stepX = (dgx / dl) * 3.4 * dt;
-          const stepZ = (dgz / dl) * 3.4 * dt;
-          // try the step; reject if forbidden
-          const nx = roki.x + stepX, nz = roki.z + stepZ;
-          if(!forbidden(nx, nz)){
-            roki.x = nx;
-            roki.z = nz;
-          } else {
-            pickGoal();
-          }
-          // face direction of motion
-          roki.yaw = Math.atan2(stepX, stepZ);
-          if(roki.hopT > roki.stateTimer * 0.95){
-            roki.state = "wander";
-            roki.stateTimer = 0.25 + Math.random() * 0.35;
-          }
-        }
-      }
-
-      // Ground-follow + hop-arc bounce
+      } else { nearPop.classList.remove('show'); if(roki.state === "stop") roki.state = "wander"; }
       roki.y = groundHeightAt(roki.x, roki.z);
-      let bounce = 0;
-      if(roki.state === "hop"){
-        const t = roki.hopT / roki.stateTimer;
-        bounce = Math.sin(t * Math.PI) * 0.45;
-      }
-      roki.mesh.position.set(roki.x, roki.y + bounce, roki.z);
+      roki.mesh.position.set(roki.x, roki.y, roki.z);
       roki.mesh.rotation.y = roki.yaw;
-      // Ear wiggle
-      if(roki.ears){
-        const w = Math.sin(now / 200) * 0.1;
-        roki.ears[0].rotation.z =  0.18 + w;
-        roki.ears[1].rotation.z = -0.18 - w;
-      }
-
-      // Update name tag projection
-      _projV.set(roki.x, roki.y + 1.8, roki.z).project(camera);
-      if(_projV.z < 1){
-        const sx = (_projV.x * 0.5 + 0.5) * window.innerWidth;
-        const sy = (1 - (_projV.y * 0.5 + 0.5)) * window.innerHeight;
-        tag.style.left = sx + 'px';
-        tag.style.top  = sy + 'px';
+      _projVTag.set(roki.x, roki.y + 1.8, roki.z).project(window.camera);
+      if(_projVTag.z < 1){
+        tag.style.left = ((_projVTag.x * 0.5 + 0.5) * window.innerWidth) + 'px';
+        tag.style.top  = ((1 - (_projVTag.y * 0.5 + 0.5)) * window.innerHeight) + 'px';
         tag.style.display = 'block';
-      } else {
-        tag.style.display = 'none';
-      }
-
-      requestAnimationFrame(update);
+      } else tag.style.display = 'none';
+      requestAnimationFrame(tick);
     }
-    requestAnimationFrame(update);
-
-    // E key to open Roki when near
-    window.addEventListener('keydown', (e) => {
-      if(e.code !== "KeyE") return;
-      if(!nearPop.classList.contains('show')) return;
-      const a = document.activeElement;
-      if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      openRoki();
-    });
-
-    console.log("[roki] white rabbit ready");
+    requestAnimationFrame(tick);
+    console.log("[roki] ready");
   }
 })();

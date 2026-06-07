@@ -290,9 +290,7 @@
     requestAnimationFrame(tick);
 
     // Floating name tag for the pad
-    const tag = document.createElement('div');
-    tag.style.cssText = "position:absolute;transform:translate(-50%,-100%);background:rgba(36,12,18,.86);color:#ffce4a;padding:4px 10px;border:1px solid rgba(255,206,74,.55);border-radius:8px;font-family:Outfit,monospace;font-size:10.5px;pointer-events:none;z-index:9;white-space:nowrap;";
-    tag.textContent = "Launch Pad \u{1F680}";
+    tag.textContent = "Launch Pad";
     (document.getElementById('chatBubbles')?.parentElement || document.body).appendChild(tag);
     const _v = new THREE.Vector3();
     function nameTick(){
@@ -306,6 +304,8 @@
       }
       requestAnimationFrame(nameTick);
     }
+    requestAnimationFrame(nameTick);
+
     console.log("[rocket] launchpad ready");
   }
 })();

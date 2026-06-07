@@ -29,7 +29,7 @@
     const WATER_LEVEL = window.WATER_LEVEL || 0;
 
     // ──────────────────────────────────────────────────────────────
-    // 1) BEACH SAND COLLECTION — F key, near shoreline, needs shovel
+    // 1) BEACH SAND COLLECTION — F key, near shoreline, needs only a plastic bag
     // ──────────────────────────────────────────────────────────────
     // Beach = ground height within 0.0..1.2 of WATER_LEVEL (the sand
     // band). One dig = consume 1 plastic_bag, gain 1 sand_bag.
@@ -40,9 +40,13 @@
       _digCool = now;
       const x = Player.pos.x, z = Player.pos.z;
       const gh = groundHeightAt(x, z);
-      const onBeach = gh > WATER_LEVEL - 0.1 && gh < WATER_LEVEL + 1.2;
-      if(!onBeach){ window.floater?.("Find sand on the beach", "bad"); return; }
-      if(!(State.inventory.shovel)){ window.floater?.("Need a \u{1FA8F} Shovel", "bad"); return; }
+      // Sandy zone = anywhere the ground is painted sand-coloured.
+      // Matches the terrain vertex ramp in fartworld.html: wet sand
+      // (-0.3..0.4), dry sand (0.4..1.1), sand→grass blend (1.1..1.7).
+      // We accept up to 1.4 so the upper sandy-tan band still counts
+      // but the green grass interior (>1.7) does not.
+      const onSand = gh > WATER_LEVEL - 0.35 && gh < WATER_LEVEL + 1.4;
+      if(!onSand){ window.floater?.("That's grass — stand on sandy ground to dig", "bad"); return; }
       if(!(State.inventory.plastic_bag)){ window.floater?.("Need a \u{1F6CD} Plastic Bag", "bad"); return; }
       window.takeItem("plastic_bag", 1);
       window.addItem("sand_bag", 1);
@@ -52,13 +56,14 @@
       window.saveState?.();
       window.updateHUD?.();
     }
-    // Bind to F (existing F on tree calls tryChopTree first; if no tree
-    // is in range that handler no-ops and we run after it).
+    // Bind to G — separate from F (mining) so swings don't collide
+    // with the pickaxe action. The drop-item pickup also lives on G,
+    // but it checks `nearest` first and bails if none is in range, so
+    // both behaviours coexist cleanly.
     window.addEventListener('keydown', (e) => {
-      if(e.code !== "KeyF") return;
+      if(e.code !== "KeyG") return;
       const a = document.activeElement;
       if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      // Only dig if we're not standing on a tree (tree-chop has priority)
       tryDigSand();
     });
 
@@ -92,11 +97,10 @@
       window.saveState?.();
       window.updateHUD?.();
     });
-    setInterval(() => {
-      const d = Math.hypot(Player.pos.x - REF_POS.x, Player.pos.z - REF_POS.z);
-      const showIt = d < REF_R && (State.inventory.sand_bag || 0) > 0;
-      meltPop.classList.toggle('show', showIt);
-    }, 200);
+    // Melt popup disabled — the main module's Glassworks proximity
+    // prompt + E-key handler now own this interaction (no more double
+    // popup at the building).
+    meltPop.style.display = 'none';
 
     // ──────────────────────────────────────────────────────────────
     // 3) FART FILLING STATION — new building + mechanic
@@ -206,7 +210,6 @@
       if(show){ ffSubUpdate(); }
       ffPop.classList.toggle('show', show);
     }, 200);
-
-    console.log("[crafting] beach dig + jar melt + Fart Filling Station ready");
+    console.log('[crafting] ready');
   }
 })();
