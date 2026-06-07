@@ -152,7 +152,8 @@
       grp.add(sign);
       scene.add(grp);
     }
-    buildBuilding();
+    try { buildBuilding(); console.log('[datacenter] building rendered at', DC_POS); }
+    catch(e){ console.error('[datacenter] buildBuilding error', e); }
 
     // NPC "Data"
     function buildNpc(name, tint, x, z, facing){
@@ -195,7 +196,11 @@
       scene.add(grp);
       return { x, z, y: baseY + 2.6, tag };
     }
-    const DATA = buildNpc("Data", 0xa8b5ff, DC_POS.x, DC_POS.z - 2.5, 0);
+    let DATA = null;
+    try {
+      DATA = buildNpc("Data", 0xa8b5ff, DC_POS.x, DC_POS.z - 2.5, 0);
+      console.log('[datacenter] NPC Data spawned');
+    } catch(e){ console.error('[datacenter] buildNpc error', e); }
 
     // ─────────────────────────────────────────────────────────────
     // MODAL UI
@@ -288,8 +293,19 @@
       if(t >= 1) return { ...j, status: "done", t: 1 };
       return { ...j, status: "running", t };
     }
+    function anyJobRunning(){
+      for(const id of Object.keys(State.dcJobs || {})){
+        const j = State.dcJobs[id];
+        if(!j) continue;
+        const t = (Date.now() - j.startTs) / j.duration;
+        if(t < 1) return true;
+      }
+      return false;
+    }
     function startJob(act){
       if(!isRented()){ window.floater?.("Rent the rack first", "bad"); return; }
+      // Only one job at a time — rack can only crunch one workload
+      if(anyJobRunning()){ window.floater?.("One job at a time — wait or claim the running one", "bad"); return; }
       const dur = act.durMin * 60 * 1000;
       // Job can't finish AFTER rental expires
       const remaining = State.dcRentedUntil - Date.now();
@@ -329,6 +345,8 @@
         } else if(js?.status === "running"){
           const ms = (1 - js.t) * js.duration;
           btn = '<button disabled>Running · ' + fmtMs(ms) + '</button>';
+        } else if(anyJobRunning()){
+          btn = '<button disabled>Rack busy</button>';
         } else {
           btn = '<button data-start="' + act.id + '">Start</button>';
         }
@@ -392,9 +410,9 @@
       window.openDataCenter();
     });
 
-    // Project tag for Data NPC
-    const _v = new THREE.Vector3();
+    // Project tag for Data NPC (guarded if buildNpc failed)
     function tagTick(){
+      if(!DATA || !window.camera){ requestAnimationFrame(tagTick); return; }
       _v.set(DATA.x, DATA.y, DATA.z).project(window.camera);
       if(_v.z < 1){
         DATA.tag.style.left = ((_v.x * 0.5 + 0.5) * window.innerWidth) + 'px';
@@ -403,11 +421,6 @@
       } else { DATA.tag.style.display = 'none'; }
       requestAnimationFrame(tagTick);
     }
-    requestAnimationFrame(tagTick);
-
-    console.log('[datacenter] ready');
-  }
-})();
     requestAnimationFrame(tagTick);
     console.log('[datacenter] ready');
   }

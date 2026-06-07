@@ -47,7 +47,7 @@
     'Tip: Press <b>M</b> to fullscreen the mini-map',
     'Tip: Plant weed seeds for a chance at rainbow buds',
     'Tip: Hold <b>Shift</b> to throttle up the plane',
-    'Tip: Press <b>Ctrl+Shift+M</b> for instant test silver',
+    'Tip: Hold <b>E</b> at a print station to make paper from cash',
   ];
   const tipEl = document.getElementById('fwLoadingTip');
   setInterval(() => { tipEl.innerHTML = TIPS[Math.floor(Math.random() * TIPS.length)]; }, 2200);

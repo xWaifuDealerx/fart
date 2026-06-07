@@ -2,9 +2,8 @@
 // bike.js — rideable bicycle. One parked behind Gary's tent. Player
 // can mount/dismount, ride faster, sell/buy the bike at Carlos.
 // =================================================================
-// Per-day theft cap is enforced silently via State.lastBikeSteal so
-// the player doesn't see any "stealing" UI; from their POV they just
-// hop on a parked bike.
+// A fresh bike is parked behind Gary's tent every time the player logs
+// in without one — no per-day cap, no stealing UI.
 // =================================================================
 (function(){
   'use strict';
@@ -87,39 +86,55 @@
       return grp;
     }
 
-    // Parked spawn = behind Gary's pawn tent (GARY at (60,60); his eyes
-    // face +z, so behind him = -z direction). A few meters offset so the
-    // bike sits in his blind spot.
-    const PARKED_POS = { x: 62, z: 55 };
+    // Parked spawn = behind Gary's pawn tent. GARY_POS = (60, 60).
+    // Bike sits a few meters behind him so it's visible to a player
+    // walking around the back of the tent.
+    const PARKED_POS = { x: 60, z: 52 };
     let bike = null;
     function spawnParkedBike(){
-      if(bike) return;
-      const m = buildBikeMesh();
-      const gy = groundHeightAt(PARKED_POS.x, PARKED_POS.z);
-      m.position.set(PARKED_POS.x, gy, PARKED_POS.z);
-      m.rotation.y = Math.PI * 0.4;     // angled, like it was just dropped
-      scene.add(m);
-      bike = m;
+      if(bike){ return bike; }
+      try {
+        const m = buildBikeMesh();
+        const gy = (typeof groundHeightAt === "function") ? groundHeightAt(PARKED_POS.x, PARKED_POS.z) : 0;
+        // Lift 0.05 so wheels don't clip into the terrain
+        m.position.set(PARKED_POS.x, (gy || 0) + 0.05, PARKED_POS.z);
+        m.rotation.y = Math.PI * 0.4;     // angled, like it was just dropped
+        scene.add(m);
+        bike = m;
+        console.log('[bike] parked at', PARKED_POS, 'ground y=', gy);
+        return m;
+      } catch(e){
+        console.error('[bike] spawn failed', e);
+        return null;
+      }
     }
-    // Spawn the parked bike whenever the player loads in without one.
-    // (Removed the per-day theft cap so every session has a bike out
-    // back of Gary's tent ready to grab.)
+    // ALWAYS have a parked bike behind Gary unless we're actively
+    // riding it. We forcibly clear any stale State.onBike that survived
+    // from a previous broken session so the gate can't lock us out.
+    if(State.onBike && !window._bikeMountedThisSession){
+      console.log('[bike] clearing stale State.onBike from old session');
+      State.onBike = false;
+    }
     function refreshSpawn(){
-      const hasBike = (State.inventory?.bike || 0) > 0;
       const mounted = !!State.onBike;
-      if(!hasBike && !mounted){
+      if(!mounted && !bike){
         spawnParkedBike();
-      } else if(bike){
+      } else if(mounted && bike){
         scene.remove(bike);
         bike = null;
       }
     }
-    function todayKey(){ return ''; } // kept for compat
+    function todayKey(){ return ''; }
     function canTakeToday(){ return true; }
+    // Spawn IMMEDIATELY on init, no waiting
+    spawnParkedBike();
+    // And re-check every 5 seconds in case something removed it
+    setInterval(refreshSpawn, 5000);
 
     // ── Mount / dismount ──
     function mountBike(){
       State.onBike = true;
+      window._bikeMountedThisSession = true;
       State.bikeMounted = performance.now();
       if(bike){ scene.remove(bike); bike = null; }
       // First mount of the day = mark theft slot
@@ -229,7 +244,6 @@
     const ejectBtn = document.createElement('button');
     ejectBtn.className = 'bk-eject';
     ejectBtn.textContent = '\u{1F6B2} Eject';
-    ejectBtn.addEventListener('click', () => { dismountBike(); refreshSpawn(); });
     document.body.appendChild(ejectBtn);
     setInterval(() => ejectBtn.classList.toggle('show', !!State.onBike), 200);
     function wireInvClick(){
