@@ -54,6 +54,11 @@
       if(r >= ISLAND_R) return true;
       const g = groundHeightAt(x, z);
       if(g <= WATER_L + 0.1) return true;          // water
+      // Grass / flowers / mushrooms grow on GRASS ONLY, never on the
+      // sandy band that hugs the shore. The terrain vertex ramp paints
+      // sand from water-edge up to y≈1.7 and full grass from y≈1.7+,
+      // so anything below that is excluded.
+      if(g <  WATER_L + 1.6) return true;
       if(g >  WATER_L + 4.5) return true;          // too steep / building roof
       for(const a of AVOID){
         if(Math.hypot(x - a.x, z - a.z) < a.r) return true;
@@ -290,14 +295,9 @@
         b.mesh.userData.lWing.rotation.z = -flap;
         b.mesh.userData.rWing.rotation.z =  flap;
       }
-      requestAnimationFrame(tick);
+      requestAnimationFrame(birdTick);
     }
-    requestAnimationFrame(tick);
-
-    // ── Subtle distance fog so the horizon doesn't read as a hard cut. ──
-    try {
-      scene.fog = new THREE.Fog(0x2a4860, 90, 290);
-    } catch(e){}
+    requestAnimationFrame(birdTick);
 
     console.log('[nature] scatter ready');
   }

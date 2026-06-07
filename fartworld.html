@@ -48,6 +48,15 @@
 <script src="house-walls.js" defer></script>
 <script src="rocket.js" defer></script>
 <script src="moon.js" defer></script>
+<script src="social.js" defer></script>
+<script src="mobile.js" defer></script>
+<script src="dropitem.js" defer></script>
+<script src="establishments.js" defer></script>
+<script src="streetlights.js" defer></script>
+<script src="bike.js" defer></script>
+<script src="datacenter.js" defer></script>
+<script src="storage.js" defer></script>
+<script src="poop500.js" defer></script>
 <script src="loading.js"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -283,11 +292,13 @@
   }
   .fart-meter-lbl {
     text-align: center;
-    font-family: 'Bangers', 'Orbitron', sans-serif;
-    letter-spacing: 3px;
-    font-size: 18px;
-    color: #fff;
-    text-shadow: 0 0 14px rgba(46,224,107,0.65), 0 2px 6px rgba(0,0,0,0.8);
+    font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: rgba(230,255,238,0.85);
+    text-shadow: 0 1px 0 rgba(0,0,0,0.7), 0 0 8px rgba(46,224,107,0.45);
     margin-bottom: 6px;
   }
   .fart-meter {
@@ -1666,6 +1677,50 @@
     font-weight: 900; font-size: 18px;
     color: #ffd64d;
   }
+  .bank-tabs {
+    display: flex; gap: 4px; margin: 0 0 14px 0;
+    border-bottom: 1px solid rgba(95,240,156,.25);
+  }
+  .bank-tab {
+    flex: 1;
+    background: transparent;
+    border: 0;
+    color: rgba(230,255,238,.5);
+    padding: 11px 4px;
+    font-family: 'Outfit','Inter',-apple-system,sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color .15s, border-color .15s;
+  }
+  .bank-tab:hover { color: rgba(230,255,238,.85); }
+  .bank-tab.active { color: #5ff09c; border-bottom-color: #5ff09c; }
+  .bank-tab-pane { display: none; }
+  .bank-tab-pane.active { display: block; }
+  .vault-overview {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .vault-tile {
+    background: linear-gradient(180deg, rgba(8,18,11,.7), rgba(5,14,9,.7));
+    border: 1px solid rgba(95,240,156,.30);
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .vault-tile.silver { border-color: rgba(192,192,200,.42); background: linear-gradient(180deg, rgba(50,50,60,.4), rgba(20,20,28,.6)); }
+  .vault-tile.cash   { border-color: rgba(95,240,156,.45); }
+  .vault-tile.gold   { border-color: rgba(255,206,74,.55); background: linear-gradient(180deg, rgba(60,40,10,.4), rgba(30,20,5,.6)); }
+  .vault-tile.onchain{ border-color: rgba(168,180,255,.45); background: linear-gradient(180deg, rgba(30,32,70,.4), rgba(14,16,40,.6)); }
+  .vault-tile .hd { font-size: 11.5px; color: rgba(230,255,238,.75); letter-spacing: .8px; text-transform: uppercase; font-weight: 700; margin-bottom: 6px; }
+  .vault-tile .hd .ic { font-size: 16px; margin-right: 4px; }
+  .vault-tile .bal { font-family: 'Outfit',sans-serif; font-weight: 800; font-size: 28px; color: #fff1c2; letter-spacing: .5px; }
+  .vault-tile .sub { font-size: 11px; color: rgba(230,255,238,.55); margin-top: 4px; }
+  .vault-note { font-size: 12px; color: rgba(230,255,238,.7); text-align: center; margin: 0 0 14px; line-height: 1.5; }
   .bank-row {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -2763,52 +2818,106 @@
         <div class="bank-stat"><div class="lbl">Gold</div><div class="val" id="bankGold">0</div></div>
       </div>
 
-      <div class="bank-row">
-        <div>
-          <h3>Silver → Cash</h3>
-          <p>1 🥈 Silver = <b>50 💵 Cash</b>. Cash inflates — you'll need a lot of it at the market.</p>
-          <div class="qty-row">
-            <input id="bankPaperQty" type="number" min="1" placeholder="silver to convert"/>
-            <span class="preview" id="bankPaperPreview">→ 0 💵</span>
-          </div>
-        </div>
-        <button class="go" id="bankPaperGo">Convert</button>
+      <div class="bank-tabs">
+        <button class="bank-tab active" data-tab="exchange">EXCHANGE</button>
+        <button class="bank-tab" data-tab="vault">VAULT</button>
       </div>
 
-      <div class="bank-row">
-        <div>
-          <h3>Cash → Silver</h3>
-          <p>Tellers only take <b>100 💵 Cash per 🥈 Silver</b> back — that 2× spread is the inflation toll.</p>
-          <div class="qty-row">
-            <input id="bankCashToSilverQty" type="number" min="100" placeholder="cash to convert"/>
-            <span class="preview" id="bankCashToSilverPreview">→ 0 🥈</span>
+      <div class="bank-tab-pane active" id="bankPaneExchange">
+        <div class="bank-row">
+          <div>
+            <h3>Silver → Cash</h3>
+            <p>Today's rate: 1 🥈 Silver = <b><span id="bankCashRateA">50.0</span> 💵 Cash</b>. Cash inflates — every day 1 Silver buys +0.1 more Cash.</p>
+            <div class="qty-row">
+              <input id="bankPaperQty" type="number" min="1" placeholder="silver to convert"/>
+              <span class="preview" id="bankPaperPreview">→ 0 💵</span>
+            </div>
           </div>
+          <button class="go" id="bankPaperGo">Convert</button>
         </div>
-        <button class="go" id="bankCashToSilverGo">Convert</button>
+
+        <div class="bank-row">
+          <div>
+            <h3>Cash → Silver</h3>
+            <p>Tellers buy back at <b><span id="bankCashRateB">100.0</span> 💵 Cash per 🥈 Silver</b> — that 2× spread is the inflation toll.</p>
+            <div class="qty-row">
+              <input id="bankCashToSilverQty" type="number" min="100" placeholder="cash to convert"/>
+              <span class="preview" id="bankCashToSilverPreview">→ 0 🥈</span>
+            </div>
+          </div>
+          <button class="go" id="bankCashToSilverGo">Convert</button>
+        </div>
+
+        <div class="bank-row">
+          <div>
+            <h3>Silver → Gold</h3>
+            <p>Today's rate at the teller: <b><span id="bankRateLiveA">100,000</span> 🥈 Silver per 🥇 Gold</b>. The peg drifts up over time — silver inflates faster than gold can be minted.</p>
+            <div class="qty-row">
+              <input id="bankGoldQty" type="number" min="1000" step="1000" placeholder="silver to spend"/>
+              <span class="preview" id="bankGoldPreview">→ 0.0000 🥇</span>
+            </div>
+          </div>
+          <button class="go" id="bankGoldGo">Convert</button>
+        </div>
+
+        <div class="bank-row">
+          <div>
+            <h3>Gold → Silver</h3>
+            <p>Cash out a gold bar: <b>1 🥇 Gold = <span id="bankRateLiveB">100,000</span> 🥈 Silver</b> at today's rate. The bank quotes the same number both ways.</p>
+            <div class="qty-row">
+              <input id="bankGoldToSilverQty" type="number" min="0.01" step="0.01" placeholder="gold to sell"/>
+              <span class="preview" id="bankGoldToSilverPreview">→ 0 🥈</span>
+            </div>
+          </div>
+          <button class="go" id="bankGoldToSilverGo">Convert</button>
+        </div>
       </div>
 
-      <div class="bank-row">
-        <div>
-          <h3>Silver → Gold</h3>
-          <p>The brutal rate: <b>100,000 🥈 Silver per 🥇 Gold</b>. Enter how much Silver you want to spend — the gold you'll get appears below.</p>
-          <div class="qty-row">
-            <input id="bankGoldQty" type="number" min="1000" step="1000" placeholder="silver to spend"/>
-            <span class="preview" id="bankGoldPreview">→ 0.0000 🥇</span>
+      <div class="bank-tab-pane" id="bankPaneVault">
+        <div class="vault-overview">
+          <div class="vault-tile silver">
+            <div class="hd"><span class="ic">🥈</span> Silver in vault</div>
+            <div class="bal" id="bankVaultSilver">0</div>
+            <div class="sub">Wallet: <b id="bankVaultWalletSilver">0</b></div>
+          </div>
+          <div class="vault-tile cash">
+            <div class="hd"><span class="ic">💵</span> Cash in vault</div>
+            <div class="bal" id="bankVaultCash">0</div>
+            <div class="sub">Wallet: <b id="bankVaultWalletCash">0</b></div>
+          </div>
+          <div class="vault-tile gold">
+            <div class="hd"><span class="ic">🥇</span> Gold</div>
+            <div class="bal" id="bankVaultGold">0</div>
+            <div class="sub">Always safe — no vault needed</div>
+          </div>
+          <div class="vault-tile onchain">
+            <div class="hd"><span class="ic">⛓️</span> On-chain $FARTPRINT</div>
+            <div class="bal" id="bankVaultFartprint">—</div>
+            <div class="sub">Always safe — lives in your wallet</div>
           </div>
         </div>
-        <button class="go" id="bankGoldGo">Convert</button>
-      </div>
+        <p class="vault-note">Silver and Cash stored in the vault are <b>safe from death and arrest</b>. Anything you carry on your person is at risk.</p>
 
-      <div class="bank-row">
-        <div>
-          <h3>Gold → Silver</h3>
-          <p>Cash out a gold bar: <b>1 🥇 Gold = 100,000 🥈 Silver</b>. Same rate either direction.</p>
-          <div class="qty-row">
-            <input id="bankGoldToSilverQty" type="number" min="0.01" step="0.01" placeholder="gold to sell"/>
-            <span class="preview" id="bankGoldToSilverPreview">→ 0 🥈</span>
+        <div class="bank-row">
+          <div>
+            <h3>🥈 Silver — Deposit / Withdraw</h3>
+            <div class="qty-row" style="margin-top:6px;">
+              <input id="bankVaultSilverQty" type="number" min="1" placeholder="amount"/>
+              <button class="go" id="bankVaultSilverDep">Deposit</button>
+              <button class="go" id="bankVaultSilverWd" style="background:rgba(255,206,74,.22);border-color:rgba(255,206,74,.55);color:#ffd64d;">Withdraw</button>
+            </div>
           </div>
         </div>
-        <button class="go" id="bankGoldToSilverGo">Convert</button>
+        <div class="bank-row">
+          <div>
+            <h3>💵 Cash — Deposit / Withdraw</h3>
+            <div class="qty-row" style="margin-top:6px;">
+              <input id="bankVaultCashQty" type="number" min="1" placeholder="amount"/>
+              <button class="go" id="bankVaultCashDep">Deposit</button>
+              <button class="go" id="bankVaultCashWd" style="background:rgba(255,206,74,.22);border-color:rgba(255,206,74,.55);color:#ffd64d;">Withdraw</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -3049,9 +3158,8 @@
     <span class="eye">▲ The $FARTPRINT Virtual World</span>
     <h1>FARTWORLD</h1>
     <p class="tag">
-      Play as a <b>sentient office printer</b>. Walk, climb, fart in safe zones for XP and
-      <b>$FART credits</b>, complete daily quests, level up. Connect Phantom to save your
-      progress on-chain — or play as a guest.
+      Play as a <b>sentient office printer</b>. Fart and print while building your empire.
+      Complete daily tasks, level up and become a leader in the <b>Fartprint</b> economy.
     </p>
     <button class="connect-btn" id="connectBtn">
       <svg width="18" height="18" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
@@ -3076,7 +3184,6 @@
     <div class="lobby-tabs">
       <button class="lobby-tab active" data-tab="host">Host</button>
       <button class="lobby-tab" data-tab="join">Join</button>
-      <button class="lobby-tab solo" data-tab="solo">Solo</button>
     </div>
 
     <!-- HOST -->
@@ -3220,6 +3327,9 @@ function loadState(){
     if(State.gold == null)    State.gold = 0;
     if(State.paper == null)   State.paper = 0;
     if(State.fakeMoney == null) State.fakeMoney = 0;
+    // Bank vault — safe from death + jail. Holds silver and cash.
+    if(State.vaultSilver == null) State.vaultSilver = 0;
+    if(State.vaultCash   == null) State.vaultCash   = 0;
     if(State.elo == null)     State.elo = 1000;
     if(State.dmWins == null)  State.dmWins = 0;
     if(State.dmLosses == null)State.dmLosses = 0;
@@ -4351,15 +4461,22 @@ function tickArenaVisuals(dt){
 const Ores = [];
 const ORE_RESPAWN_MS = 90_000;
 const ORE_INTERACT_RANGE = 3.0;
+// Each deposit has a kind that controls visual color, mining duration,
+// and the resource it yields.
 const ORE_LOCATIONS = [
-  [ 30,  -6], [-32,  14], [ 42,  28], [-46,  -8],
-  [ 16,  50], [-18, -40], [ 50, -42], [-50,  44],
+  [ 30,  -6, "copper"], [-32,  14, "iron"], [ 42,  28, "tin"], [-46,  -8, "copper"],
+  [ 16,  50, "iron"],   [-18, -40, "tin"],  [ 50, -42, "iron"],[-50,  44, "copper"],
 ];
+const ORE_KIND_INFO = {
+  copper: { palette: [0xc8714a, 0xd9885a, 0xa85a3a], glow: 0x4a2010, miss: 0x80361a, mineMs: 5000,  itemId: "copper_ore", labelEmoji: "🟠", labelName: "Copper Ore", xp: 12 },
+  tin:    { palette: [0x9fbcc0, 0xb8ccd0, 0x7fa0a8], glow: 0x183a40, miss: 0x355560, mineMs: 9000,  itemId: "tin_ore",    labelEmoji: "⬜", labelName: "Tin Ore",    xp: 18 },
+  iron:   { palette: [0x9a9aa6, 0xb0b0bf, 0x808093], glow: 0x222236, miss: 0x484860, mineMs: 13000, itemId: "iron_ore",   labelEmoji: "🪨", labelName: "Iron Ore",   xp: 26 },
+};
 
-function buildOreDeposit(x, z){
+function buildOreDeposit(x, z, kind){
   const grp = new THREE.Group();
-  // Cluster of metallic crystals — 5 lumps of varied size + rotation
-  const baseColors = [0x9a9aa6, 0xb0b0bf, 0x808093];
+  const info = ORE_KIND_INFO[kind] || ORE_KIND_INFO.iron;
+  const baseColors = info.palette;
   for(let i = 0; i < 5; i++){
     const sz = 0.45 + Math.random() * 0.55;
     const lump = new THREE.Mesh(
@@ -4368,7 +4485,7 @@ function buildOreDeposit(x, z){
         color: baseColors[i % baseColors.length],
         roughness: 0.35,
         metalness: 0.85,
-        emissive: 0x222236,
+        emissive: info.glow,
         emissiveIntensity: 0.18,
         flatShading: true,
       })
@@ -4393,15 +4510,17 @@ function buildOreDeposit(x, z){
 }
 
 function initOres(){
-  ORE_LOCATIONS.forEach(([x, z], i) => {
+  ORE_LOCATIONS.forEach(([x, z, kind], i) => {
+    const k = kind || "iron";
     const ore = {
       id:       "ore_" + i,
       x, z,
+      kind:     k,
       mesh:     null,
       alive:    true,
       minedAt:  0,
     };
-    ore.mesh = buildOreDeposit(x, z);
+    ore.mesh = buildOreDeposit(x, z, k);
     Ores.push(ore);
   });
 }
@@ -4413,7 +4532,7 @@ function respawnDownedOres(){
     if(o.alive) continue;
     if(now - o.minedAt > ORE_RESPAWN_MS){
       o.alive = true;
-      o.mesh  = buildOreDeposit(o.x, o.z);
+      o.mesh  = buildOreDeposit(o.x, o.z, o.kind || "iron");
     }
   }
 }
@@ -6303,25 +6422,34 @@ function buildHollywoodSign(){
   const letterW = 5.2;
   const letterH = 8;
   const startX = -((letters.length - 1) * letterW) / 2;
-  const baseY  = 18;
   const baseZ  = 25;
   const letterMat = new THREE.MeshStandardMaterial({ color: 0xf6f6f0, roughness: 0.75 });
   const supportMat = new THREE.MeshStandardMaterial({ color: 0x404040, roughness: 0.85 });
-
+  // Cone goes from y=0 to y=20 with radius 40, so the surface height at
+  // radial distance r is: y = 20 - r/2 (clamped to 0). We anchor each
+  // letter's BOTTOM right on that slope so the sign is stuck to the hill
+  // instead of floating in the sky.
+  function moundY(x, z){
+    const r = Math.hypot(x, z);
+    return Math.max(0, 20 - r / 2);
+  }
   letters.forEach((ch, i) => {
+    const x = startX + i * letterW;
+    const slope = moundY(x, baseZ);
+    const yCenter = slope + letterH / 2 - 0.6; // bottom just below ground line
     const lg = new THREE.Group();
-    lg.position.set(startX + i * letterW, baseY, baseZ);
-    // Each letter = box(es) arranged to look vaguely like the character.
-    // We use a simple "thick uppercase" approximation.
+    lg.position.set(x, yCenter, baseZ);
+    // Tilt back to match the cone slope so letters lie against the hill
+    lg.rotation.x = -0.22;
     drawLetter(lg, ch, letterMat);
-    // Support struts behind each letter
+    // Support struts driven down into the hillside behind the letter
     for(let s = -1; s <= 1; s += 2){
-      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.25, letterH * 1.05, 0.25), supportMat);
-      strut.position.set(s * (letterW * 0.35), 0, 0.25);
-      strut.rotation.x = 0.2;
+      const strutH = letterH * 1.6;
+      const strut = new THREE.Mesh(new THREE.BoxGeometry(0.3, strutH, 0.3), supportMat);
+      // place near letter's bottom and drive down into the hill
+      strut.position.set(s * (letterW * 0.35), -letterH * 0.45, 0.55);
       lg.add(strut);
     }
-    lg.scale.y = 1;
     grp.add(lg);
   });
 
@@ -6351,10 +6479,12 @@ function drawLetter(g, ch, mat){
 }
 buildHollywoodSign();
 
-// ── Refinery building (sharpen tools to restore durability) ──
+// ── Glassworks building (melt sand bags into empty jars) ──
 const REFINERY_POS = { x: 42, z: 0 };
 const REFINERY_RADIUS = 4.5;
 function buildRefinery(){
+  // Build a small lit name plaque above the chimney
+  // (placed after the rest of the structure below).
   const grp = new THREE.Group();
   grp.position.set(REFINERY_POS.x, groundHeightAt(REFINERY_POS.x, REFINERY_POS.z), REFINERY_POS.z);
   // Foundation
@@ -6392,10 +6522,27 @@ function buildRefinery(){
   );
   smoke.position.set(0, 6.4, 0);
   grp.add(smoke);
-  // Sign
+  // Sign — readable canvas with the new "GLASSWORKS" name
+  const sCvs = document.createElement('canvas');
+  sCvs.width = 512; sCvs.height = 128;
+  const sCtx = sCvs.getContext('2d');
+  sCtx.fillStyle = "#2a1408";
+  sCtx.fillRect(0, 0, 512, 128);
+  sCtx.strokeStyle = "#ff8a3d";
+  sCtx.lineWidth = 6;
+  sCtx.strokeRect(8, 8, 496, 112);
+  sCtx.fillStyle = "#ffd64d";
+  sCtx.font = "900 64px 'Bangers','Orbitron',sans-serif";
+  sCtx.textAlign = "center";
+  sCtx.textBaseline = "middle";
+  sCtx.fillText("GLASSWORKS", 256, 60);
+  sCtx.fillStyle = "rgba(255, 234, 174, 0.85)";
+  sCtx.font = "700 18px 'Orbitron',sans-serif";
+  sCtx.fillText("MELT SAND → EMPTY JARS", 256, 104);
+  const sTex = new THREE.CanvasTexture(sCvs);
   const sign = new THREE.Mesh(
-    new THREE.BoxGeometry(3.6, 0.6, 0.18),
-    new THREE.MeshStandardMaterial({ color: 0xff8a3d, emissive: 0xff5a1f, emissiveIntensity: 0.9, roughness: 0.45 })
+    new THREE.PlaneGeometry(3.8, 0.95),
+    new THREE.MeshBasicMaterial({ map: sTex })
   );
   sign.position.set(0, 4.2, 1.7);
   grp.add(sign);
@@ -6776,24 +6923,24 @@ function buildFartprintBillboard(){
   const y = groundHeightAt(FP_STATS_POS.x, FP_STATS_POS.z);
   grp.position.set(FP_STATS_POS.x, y, FP_STATS_POS.z);
 
-  // Two posts
+  // Two posts (shortened so the sign reads compact, not tower-like)
   const postMat = new THREE.MeshStandardMaterial({ color: 0x222831, roughness: 0.7, metalness: 0.5 });
   const trimMat = new THREE.MeshStandardMaterial({ color: 0x6a7280, roughness: 0.45, metalness: 0.7 });
   for(const px of [-2.6, 2.6]){
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6.6, 0.4), postMat);
-    post.position.set(px, 3.3, 0);
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.4, 4.6, 0.4), postMat);
+    post.position.set(px, 2.3, 0);
     post.castShadow = true;
     grp.add(post);
   }
-  // Screen frame — taller, to match the new vertical canvas
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(6.2, 6.3, 0.4), trimMat);
-  frame.position.set(0, 4.6, 0);
+  // Screen frame — half-height now that the content is compressed
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(6.2, 3.55, 0.4), trimMat);
+  frame.position.set(0, 3.05, 0);
   frame.castShadow = true;
   grp.add(frame);
   // Screen (CanvasTexture-driven, emissive so it glows at night).
-  // Tall aspect ratio because the stats are stacked vertically now.
+  // Modern 16:8 aspect ratio — tight on the actual content.
   const cvs = document.createElement('canvas');
-  cvs.width = 720; cvs.height = 760;
+  cvs.width = 720; cvs.height = 380;
   const ctx = cvs.getContext('2d');
   const tex = new THREE.CanvasTexture(cvs);
   tex.anisotropy = 4;
@@ -6803,8 +6950,8 @@ function buildFartprintBillboard(){
     map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.2,
     roughness: 0.5, metalness: 0.0,
   });
-  const screen = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.7), screenMat);
-  screen.position.set(0, 4.6, 0.22);
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 2.85), screenMat);
+  screen.position.set(0, 3.05, 0.22);
   grp.add(screen);
   FpStats.ctx = ctx;
   FpStats.texture = tex;
@@ -6829,62 +6976,59 @@ function fmtPctFp(n){
 }
 function renderFartprintBillboard(){
   const ctx = FpStats.ctx; if(!ctx) return;
-  const W = 720, H = 760;
-  // Background
+  const W = 720, H = 380;
+  // Background — flat dark with a subtle bottom-glow gradient
   const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, "#04140a");
-  grad.addColorStop(1, "#091e10");
+  grad.addColorStop(0, "#0a1410");
+  grad.addColorStop(1, "#04190d");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, W, H);
-  // Border
-  ctx.strokeStyle = "rgba(95,240,156,0.32)";
-  ctx.lineWidth = 8;
-  ctx.strokeRect(4, 4, W - 8, H - 8);
-  // Title
+  // Outer hairline
+  ctx.strokeStyle = "rgba(95,240,156,0.30)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(3, 3, W - 6, H - 6);
+  // Title row: small live-dot, modern wordmark
+  // LIVE indicator
+  ctx.fillStyle = "#ff5a4a";
+  ctx.beginPath(); ctx.arc(56, 50, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,0.65)";
+  ctx.font = "800 16px 'Inter','Outfit',-apple-system,sans-serif";
+  ctx.textAlign = "left"; ctx.textBaseline = "middle";
+  ctx.fillText("LIVE", 72, 50);
+  // Wordmark — clean modern sans, tight tracking
   ctx.fillStyle = "#5ff09c";
-  ctx.font = "bold 48px 'Bangers', 'Orbitron', sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "top";
-  ctx.fillText("$FARTPRINT · LIVE", W / 2, 38);
-  // Underline
-  ctx.fillStyle = "rgba(95,240,156,0.36)";
-  ctx.fillRect(80, 100, W - 160, 3);
+  ctx.font = "900 36px 'Inter','Outfit',-apple-system,sans-serif";
+  ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  ctx.fillText("$FARTPRINT", W - 56, 50);
+  // Divider under header
+  ctx.fillStyle = "rgba(95,240,156,0.24)";
+  ctx.fillRect(56, 84, W - 112, 2);
 
-  // All 5 stats stacked vertically — labels left, values right-aligned
-  // so a wide value ($12.34M) never collides with a wide label
-  // (PERCENTAGE STAKED).
-  // Staked-% and burned-% rows REMOVED — both relied on Solana RPC reads
-  // that were noisy in-game and the player rarely cared about them
-  // mid-session. Keeping the on-chain refresh code below for future use.
   const stats = [
-    { label: "PRICE",        value: fmtUsdFp(FpStats.price),                 color: "#e6ffee" },
-    { label: "MARKET CAP",   value: fmtUsdFp(FpStats.mcap),                  color: "#e6ffee" },
-    { label: "24H CHANGE",   value: fmtPctFp(FpStats.ch24),                  color: (FpStats.ch24 == null) ? "#a8b5a0" : (FpStats.ch24 >= 0 ? "#5ff09c" : "#ff7a6e") },
+    { label: "PRICE",      value: fmtUsdFp(FpStats.price), color: "#e6ffee" },
+    { label: "MARKET CAP", value: fmtUsdFp(FpStats.mcap),  color: "#e6ffee" },
+    { label: "24H CHANGE", value: fmtPctFp(FpStats.ch24),  color: (FpStats.ch24 == null) ? "#a8b5a0" : (FpStats.ch24 >= 0 ? "#5ff09c" : "#ff7a6e") },
   ];
-  const rowH = 92;
-  const top  = 130;
+  const rowH = 78;
+  const top  = 108;
   stats.forEach((s, i) => {
     const yy = top + i * rowH;
-    // Faint divider line between rows
     if(i > 0){
-      ctx.fillStyle = "rgba(95,240,156,0.08)";
-      ctx.fillRect(60, yy - 14, W - 120, 2);
+      ctx.fillStyle = "rgba(95,240,156,0.10)";
+      ctx.fillRect(56, yy - 10, W - 112, 1);
     }
+    // Label — uppercase mono-feel via tracking
     ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = "bold 28px 'JetBrains Mono', monospace";
-    ctx.textAlign = "left"; ctx.textBaseline = "top";
-    ctx.fillText(s.label, 60, yy + 4);
+    ctx.font = "700 16px 'Inter','Outfit',-apple-system,sans-serif";
+    ctx.textAlign = "left"; ctx.textBaseline = "middle";
+    ctx.fillText(s.label, 56, yy + 22);
+    // Value — heavy modern numeral
     ctx.fillStyle = s.color;
-    ctx.font = "bold 56px 'Orbitron', sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText(s.value, W - 60, yy);
+    ctx.font = "800 44px 'Inter','Outfit',-apple-system,sans-serif";
+    ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    ctx.fillText(s.value, W - 56, yy + 22);
   });
   ctx.textAlign = "center";
-  // Footer
-  ctx.fillStyle = "rgba(255,255,255,0.30)";
-  ctx.font = "bold 16px 'JetBrains Mono', monospace";
-  ctx.textAlign = "center";
-  ctx.fillText("LIVE · refreshes every 30s", W / 2, H - 38);
 
   FpStats.texture.needsUpdate = true;
 }
@@ -7635,10 +7779,29 @@ const BANK_RADIUS = 4.5;
 // Cash is hyper-inflating vs silver — was a 1:10 peg, now 1 silver buys
 // 50 cash but tellers only take 100 cash back per silver. The 2× spread
 // is the inflation toll on holding paper money.
-const PAPER_PER_SILVER     = 50;      // forward rate: 1 silver = 50 cash
-const CASH_PER_SILVER_BACK = 100;     // buyback rate: 100 cash = 1 silver
-const SILVER_PER_GOLD      = 100000;  // BRUTAL grind to convert silver to gold
-const GOLD_MIN_QTY     = 0.01;        // smallest gold purchase (so 1000 silver → 0.01 gold)
+const PAPER_PER_SILVER_BASE = 50;     // base forward rate at genesis
+// Cash inflates faster than silver — each day, 1 silver buys +0.1 more
+// cash. paperPerSilver() returns the live forward rate; buyback runs at
+// 2× the forward to preserve the inflation toll.
+function paperPerSilver(){
+  const days = Math.max(0, Math.floor((Date.now() - FW_GENESIS_DATE_MS) / 86400000));
+  return +(PAPER_PER_SILVER_BASE + days * 0.1).toFixed(2);
+}
+function cashPerSilverBack(){
+  return +(paperPerSilver() * 2).toFixed(2);
+}
+// Silver→Gold rate isn't fixed — it inflates by +1 silver per day from
+// the world's genesis date. The peg started at 100,000 silver/gold;
+// since silver inflates faster than gold can be minted, the peg drifts
+// up slowly over real-world time. There is NO fixed rate — the bank UI
+// reads silverPerGold() at the moment of trade.
+const FW_GENESIS_DATE_MS = Date.UTC(2024, 0, 1);   // Jan 1, 2024 UTC
+const SILVER_PER_GOLD_BASE = 100000;
+function silverPerGold(){
+  const days = Math.max(0, Math.floor((Date.now() - FW_GENESIS_DATE_MS) / 86400000));
+  return SILVER_PER_GOLD_BASE + days;
+}
+const GOLD_MIN_QTY     = 0.01;        // smallest gold purchase (so ≥0.01 gold)
 
 function buildBank(){
   const grp = new THREE.Group();
@@ -8075,10 +8238,9 @@ function updatePlotPrompt(){
     return;
   }
   if(nearbyBank){
-    prompt.classList.remove('locked');
-    prompt.classList.add('show');
-    title.textContent = "🏦 BANK";
-    sub.innerHTML = `Press <kbd>E</kbd> · 🥈→📄 / 🥈→🥇`;
+    // Moneycaller's NPC popup handles this interaction now — suppress
+    // the proximity prompt so the player only sees one popup.
+    prompt.classList.remove('show');
     return;
   }
   if(nearbyLaunder){
@@ -8138,19 +8300,12 @@ function updatePlotPrompt(){
   if(nearbyRefinery){
     prompt.classList.remove('locked');
     prompt.classList.add('show');
-    const dur = State.tools.pickaxe?.durability ?? 100;
-    const has = (State.inventory.pickaxe || 0) > 0;
-    if(!has){
-      title.textContent = "🔥 REFINERY";
-      sub.innerHTML = `Need a <b>⛏ Pickaxe</b> to sharpen`;
-      prompt.classList.add('locked');
-    } else if(dur >= 100){
-      title.textContent = "🔥 REFINERY";
-      sub.innerHTML = `Pickaxe is sharp (${dur}%) — come back when it dulls`;
+    const sandBags = State.inventory?.sand_bag || 0;
+    title.textContent = "🔥 GLASSWORKS";
+    if(sandBags > 0){
+      sub.innerHTML = `Press <kbd>E</kbd> to melt sand → empty jar · own ${sandBags} 🏖`;
     } else {
-      const cost = sharpenCost(dur);
-      title.textContent = `🔥 REFINERY · ⛏ ${dur}%`;
-      sub.innerHTML = `Press <kbd>E</kbd> to sharpen for <b>${cost} 🥈</b>`;
+      sub.innerHTML = `Bring 🏖 <b>Bags of Sand</b> to melt into 🫙 <b>Empty Jars</b>`;
     }
     return;
   }
@@ -8264,19 +8419,17 @@ function tryInteract(){
   }
   if(nearbyMarket){ /* Carlos handles market — no-op */ return; }
   if(nearbyRefinery){
-    if(!State.inventory.pickaxe){ floater("No pickaxe", "bad"); return; }
-    const dur = State.tools.pickaxe?.durability ?? 100;
-    if(dur >= 100){ floater("Pickaxe is already sharp", "bad"); return; }
-    const cost = sharpenCost(dur);
-    if(State.credits < cost){ floater(`Need ${cost} 🥈 Silver`, "bad"); return; }
-    State.credits -= cost;
-    if(!State.tools.pickaxe) State.tools.pickaxe = { durability: 100 };
-    State.tools.pickaxe.durability = 100;
+    // Glassworks — melt sand into empty jars.
+    if((State.inventory?.sand_bag || 0) <= 0){
+      floater("Bring 🏖 Bag of Sand to melt", "bad");
+      return;
+    }
+    takeItem("sand_bag", 1);
+    addItem("jar_empty", 1);
     State.xp += 5;
-    floater(`⛏ Sharpened to 100%  -${cost} 🥈`, "good");
-    showBuyToast(`Pickaxe sharpened · 100% durability · -${cost} 🥈 Silver`);
+    floater("+1 🫙 Empty Jar · sand melted", "good");
     playPurchaseSound();
-    saveState(); updateHUD(); renderInventory();
+    saveState(); updateHUD();
     return;
   }
   if(!nearbyPlot) return;
@@ -8420,58 +8573,251 @@ function findNearbyOre(){
   return best;
 }
 
+// ── Timed mining state ──
+// Set by tryMineOre(), advanced by tickMining(dt) (called from the
+// gameplay tick), completed when progress hits 1.0. Player movement
+// cancels the operation so you have to STAND on the deposit.
+let MiningState = null;  // { ore, startTs, duration, startPos }
+
 function tryMineOre(){
+  if(MiningState) return;     // already mining
   const ore = findNearbyOre();
   if(!ore) return;
   if(!State.inventory.pickaxe || State.inventory.pickaxe <= 0){
     floater("⛏ Pickaxe required", "bad");
     return;
   }
-  // Ensure the pickaxe has a durability record (defaults to 100 = fresh)
+  if(!State.tools.pickaxe) State.tools.pickaxe = { durability: 100 };
+  if(State.tools.pickaxe.durability <= 5){
+    floater("⛏ Pickaxe too dull — sharpen at Tool Service (Siim)", "bad");
+    return;
+  }
+  const info = ORE_KIND_INFO[ore.kind] || ORE_KIND_INFO.iron;
+  // Pickaxe durability slows the swing: 100% dur = base time,
+  // 0% dur = 2.5× base time. 50% dur ≈ 1.75× base time.
+  const dur = State.tools.pickaxe?.durability ?? 100;
+  const slowdown = 1 + (1 - dur / 100) * 1.5;
+  const duration = info.mineMs * slowdown;
+  MiningState = {
+    ore,
+    startTs: performance.now(),
+    duration,
+    baseMs: info.mineMs,
+    startPos: { x: Player.pos.x, z: Player.pos.z },
+    startDur: dur,
+  };
+  showMiningBar(info, dur);
+  // Start the player swing animation
+  startMiningSwing();
+  // Click-clack mining loop sound
+  const ctx = ensureAudio();
+  if(ctx){
+    const o = ctx.createOscillator();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(180, ctx.currentTime);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.05, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(); o.stop(ctx.currentTime + 0.2);
+  }
+}
+
+function cancelMining(reason){
+  if(!MiningState) return;
+  MiningState = null;
+  hideMiningBar();
+  stopMiningSwing();
+  if(reason) floater(reason, "bad");
+}
+
+function completeMining(){
+  if(!MiningState) return;
+  const ore = MiningState.ore;
+  const info = ORE_KIND_INFO[ore.kind] || ORE_KIND_INFO.iron;
+  MiningState = null;
+  hideMiningBar();
+  stopMiningSwing();
   if(!State.tools.pickaxe) State.tools.pickaxe = { durability: 100 };
   const dur = State.tools.pickaxe.durability;
-  // Yield curve: dur 100 → 1 ore always. dur 50 → 50% chance of ore. dur 0 → never.
-  // Plus a small floor at higher durability so it always feels productive.
-  const yieldChance = Math.max(0.05, dur / 100);
+  const yieldChance = Math.max(0.10, dur / 100);
   const gotOre = Math.random() < yieldChance;
-  // Each swing burns 6 durability
-  State.tools.pickaxe.durability = Math.max(0, dur - 6);
+  State.tools.pickaxe.durability = Math.max(0, dur - 8);
 
   ore.alive = false;
   ore.minedAt = Date.now();
-  scene.remove(ore.mesh);
-  ore.mesh.traverse(o => {
-    if(o.geometry) o.geometry.dispose();
-    if(o.material){
-      if(Array.isArray(o.material)) o.material.forEach(m => m.dispose());
-      else o.material.dispose();
-    }
-  });
-  ore.mesh = null;
+  // Immediate: remove from scene so the player sees the deposit gone.
+  // The expensive disposal of geometries + materials is deferred so it
+  // doesn't stutter the post-mining frame.
+  if(ore.mesh){
+    scene.remove(ore.mesh);
+    const _meshRef = ore.mesh;
+    ore.mesh = null;
+    setTimeout(() => {
+      try {
+        _meshRef.traverse(o => {
+          if(o.geometry) o.geometry.dispose();
+          if(o.material){
+            if(Array.isArray(o.material)) o.material.forEach(m => m.dispose());
+            else o.material.dispose();
+          }
+        });
+      } catch(e){}
+    }, 0);
+  }
   if(gotOre){
-    addItem("iron_ore", 1);
-    State.xp += 18;
-    floater(`+1 🪨 Iron Ore  +18 XP  ⛏ ${State.tools.pickaxe.durability}%`, "good");
+    addItem(info.itemId, 1);
+    State.xp += info.xp;
+    floater(`+1 ${info.labelEmoji} ${info.labelName}  +${info.xp} XP  ⛏ ${State.tools.pickaxe.durability}%`, "good");
   } else {
     State.xp += 4;
-    floater(`Ore crumbled! ⛏ dull (${State.tools.pickaxe.durability}%) — sharpen at refinery`, "bad");
+    floater(`Ore crumbled! ⛏ dull (${State.tools.pickaxe.durability}%) — sharpen at Tool Service`, "bad");
   }
-  checkLevelUp();
-  // Tiny mining sound — short pitched chunk via the audio context
   const ctx = ensureAudio();
   if(ctx){
     const o = ctx.createOscillator();
     o.type = "square";
-    o.frequency.setValueAtTime(140, ctx.currentTime);
-    o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.25);
+    o.frequency.setValueAtTime(220, ctx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.35);
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.18, ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    g.gain.setValueAtTime(0.22, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
     o.connect(g); g.connect(ctx.destination);
-    o.start(); o.stop(ctx.currentTime + 0.32);
+    o.start(); o.stop(ctx.currentTime + 0.5);
   }
-  saveState(); updateHUD();
-  broadcastOre(ore.id);
+  updateHUD();
+  // Defer the heavy bookkeeping (saveState + level check + multiplayer
+  // broadcast) out of the current frame so the swing-finish + reward
+  // floater feel snappy.
+  setTimeout(() => {
+    try { checkLevelUp(); } catch(e){}
+    try { saveState(); } catch(e){}
+    try { broadcastOre(ore.id); } catch(e){}
+  }, 0);
+}
+
+function tickMining(dt){
+  if(!MiningState) return;
+  // Cancel if the player walks away
+  const dx = Player.pos.x - MiningState.startPos.x;
+  const dz = Player.pos.z - MiningState.startPos.z;
+  if(Math.hypot(dx, dz) > 1.5){
+    cancelMining("Mining cancelled — you moved");
+    return;
+  }
+  // Cancel if the ore deposit disappeared (multiplayer, etc.)
+  if(!MiningState.ore || !MiningState.ore.alive){
+    cancelMining(null);
+    return;
+  }
+  const elapsed = performance.now() - MiningState.startTs;
+  const t = Math.min(1, elapsed / MiningState.duration);
+  updateMiningBar(t, MiningState);
+  // Occasional pickaxe clink during work
+  if(Math.random() < dt * 1.0){
+    const ctx = ensureAudio();
+    if(ctx){
+      const o = ctx.createOscillator();
+      o.type = "triangle";
+      o.frequency.setValueAtTime(160 + Math.random() * 60, ctx.currentTime);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.04, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.18);
+    }
+  }
+  if(t >= 1) completeMining();
+}
+
+// ── Mining progress bar overlay ──
+const MiningBar = (function(){
+  const root = document.createElement('div');
+  root.id = 'mineBar';
+  root.style.cssText = "position:fixed;left:50%;bottom:140px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(95,240,156,.55);border-radius:14px;padding:10px 16px;z-index:60;width:300px;text-align:center;font-family:'Outfit','Inter',sans-serif;color:#fff1c2;box-shadow:0 14px 26px rgba(0,0,0,.55)";
+  root.innerHTML = `
+    <div id="mineLabel" style="font-weight:700;font-size:13px;margin-bottom:6px;color:#fff1c2">Mining...</div>
+    <div style="height:14px;background:rgba(8,18,11,.75);border:1px solid rgba(95,240,156,.35);border-radius:8px;overflow:hidden">
+      <div id="mineFill" style="height:100%;width:0%;background:linear-gradient(90deg,#5ff09c,#a8ffd0);transition:width 80ms linear"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;font-size:11px;font-family:'JetBrains Mono',monospace">
+      <span id="mineTime" style="color:rgba(230,255,238,.7)">0.0s</span>
+      <span id="mineDur" style="color:#ffd64d">⛏ 100%</span>
+    </div>
+  `;
+  document.body.appendChild(root);
+  return root;
+})();
+function durColor(d){
+  if(d >= 70) return "#5ff09c";
+  if(d >= 40) return "#ffd64d";
+  return "#ff7a6e";
+}
+function showMiningBar(info, dur){
+  const label = document.getElementById('mineLabel');
+  if(label) label.textContent = "⛏ Mining " + info.labelEmoji + " " + info.labelName;
+  document.getElementById('mineFill').style.width = "0%";
+  document.getElementById('mineTime').textContent = "0.0s";
+  const d = Math.round(dur || 0);
+  const elDur = document.getElementById('mineDur');
+  elDur.textContent = "⛏ " + d + "%";
+  elDur.style.color = durColor(d);
+  MiningBar.style.display = "block";
+}
+function hideMiningBar(){ MiningBar.style.display = "none"; }
+function updateMiningBar(t, ms){
+  document.getElementById('mineFill').style.width = (t * 100).toFixed(1) + "%";
+  const elapsedS = ((performance.now() - ms.startTs) / 1000).toFixed(1);
+  const totalS  = (ms.duration / 1000).toFixed(1);
+  document.getElementById('mineTime').textContent = elapsedS + "s / " + totalS + "s";
+  const d = Math.round(State.tools?.pickaxe?.durability ?? 100);
+  const elDur = document.getElementById('mineDur');
+  elDur.textContent = "⛏ " + d + "%";
+  elDur.style.color = durColor(d);
+}
+
+// ── Player swing animation while mining ──
+// Drives the printer body lean + repeatedly retriggers the SAME pickaxe
+// that the equip system already holds in the player's hand. No second
+// pickaxe — the one tool comes from the hand, not the body.
+let MiningSwing = null;
+function startMiningSwing(){
+  if(MiningSwing) return;
+  MiningSwing = {
+    t: 0,
+    baseRotZ: printer?.rotation?.z ?? 0,
+    baseRotX: printer?.rotation?.x ?? 0,
+    nextSwing: 0,
+  };
+  // Equip the pickaxe and reveal the held model only while mining.
+  try { window.autoEquipPickaxe?.(); } catch(e){}
+  try { window.equipToolVisible?.('pickaxe', true); } catch(e){}
+}
+function stopMiningSwing(){
+  if(!MiningSwing) return;
+  if(printer){
+    printer.rotation.z = MiningSwing.baseRotZ;
+    printer.rotation.x = MiningSwing.baseRotX;
+  }
+  // Hide the held pickaxe again now that mining is done.
+  try { window.equipToolVisible?.('pickaxe', false); } catch(e){}
+  MiningSwing = null;
+}
+function tickMiningSwing(dt){
+  if(!MiningSwing || !printer) return;
+  MiningSwing.t += dt;
+  // ~1.6 swings/sec — overhead chop motion of the body
+  const w = MiningSwing.t * 10;
+  const back = Math.sin(w);             // -1..1
+  const chop = Math.max(0, Math.sin(w));// 0..1 (only positive half)
+  printer.rotation.x = MiningSwing.baseRotX + chop * 0.32;
+  printer.rotation.z = MiningSwing.baseRotZ + back * 0.05;
+  // Re-trigger the held pickaxe's swing each cycle so the animation
+  // running inside equip.js keeps swinging the existing hand-held tool.
+  if(MiningSwing.t > MiningSwing.nextSwing){
+    MiningSwing.nextSwing = MiningSwing.t + 0.62;     // every ~0.62 s
+    try { window.equipSwing?.(1.0); } catch(e){}
+  }
 }
 
 // Update the plot prompt to also light up for nearby ore deposits.
@@ -8488,9 +8834,10 @@ function updateOrePrompt(){
   const sub    = document.getElementById('plotPromptSub');
   prompt.classList.add('show');
   prompt.classList.remove('locked');
-  title.textContent = "🪨 Iron Ore Deposit";
+  const info = ORE_KIND_INFO[ore.kind] || ORE_KIND_INFO.iron;
+  title.textContent = info.labelEmoji + " " + info.labelName + " Deposit";
   if(State.inventory.pickaxe){
-    sub.innerHTML = `Press <kbd>F</kbd> to mine`;
+    sub.innerHTML = `Press <kbd>F</kbd> to mine · ${(info.mineMs / 1000)|0}s`;
   } else {
     sub.innerHTML = `Need a <b>⛏ Pickaxe</b> (35 🥈 at market)`;
   }
@@ -8527,7 +8874,8 @@ const SEED_SHOP = [
   { itemId: "saw",         desc: "Chop down trees + beach palms for wood. Sell the wood or mill it into paper." },
   { itemId: "paper",       desc: "Blank sheets. Required (with ink) to forge fake bills at the print stations." },
   { itemId: "ink",         desc: "Black ink. Required (with paper) to forge fake bills at the print stations." },
-  { itemId: "plastic_bag", desc: "Container for sand. Hit F on the beach to scoop sand into it." },
+  { itemId: "plastic_bag", desc: "Container for sand. Hit G on sandy ground to scoop sand into it." },
+  { itemId: "bike",        desc: "A trusty two-wheeler. Press B to ride and zoom around at almost 2× walking speed." },
 ];
 
 function openMarket(){
@@ -8687,14 +9035,30 @@ const JAIL_MS     = 5 * 60 * 1000;        // 5 minutes
 
 function counterfeitBusted(reason){
   const lost = (State.credits || 0) + (State.paper || 0) + (State.fakeMoney || 0);
+  const saved = (State.vaultSilver || 0) + (State.vaultCash || 0);
   State.credits = 0;
   State.paper = 0;
   State.fakeMoney = 0;
+  // INVENTORY WIPE — getting arrested means losing everything you're
+  // carrying. The bank vault, the storage room, gold, and on-chain
+  // $FARTPRINT are the only safe places. Wearables (flags) stay on
+  // your person so the player doesn't lose Fart Cup flag NFTs.
+  if(State.inventory){
+    const keep = {};
+    for(const id of Object.keys(State.inventory)){
+      const it = window.ITEMS?.[id];
+      if(it && (it.type === "wearable" || it.isNFT)) keep[id] = State.inventory[id];
+    }
+    State.inventory = keep;
+  }
   // Gold + on-chain $FARTPRINT survive — those are out of reach of
   // street-level marketplace security.
+  // Anything in the bank vault (vaultSilver / vaultCash) also survives.
+  // Anything in Hapu's storage room (State.storageBox) also survives.
   triggerShame();
   floater(`🚨 BUSTED · ${reason}`, "bad");
-  showBuyToast(`Lost ${lost} in coins + cash + fakes. 5 minutes in jail!`);
+  showBuyToast(`Lost ${lost} in coins + cash + fakes + your inventory. 5 minutes in jail!`
+    + (saved > 0 ? ` Vault safe: ${saved} 🔒` : ""));
   // Teleport to jail + set the release timestamp.
   State.jailUntil = Date.now() + JAIL_MS;
   Player.pos.x = JAIL_POS.x;
@@ -8786,14 +9150,14 @@ function openPaySelector(label, priceSilver, onPay){
   // losing ALL Silver + Cash + Fake. Gold and on-chain $FARTPRINT
   // are untouchable by the bust).
   document.getElementById('paySelSub').innerHTML =
-    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * PAPER_PER_SILVER} 💵 Cash</b>, or <b>${priceSilver * PAPER_PER_SILVER} 🪙 Fake</b> (risky!)`;
+    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * paperPerSilver()} 💵 Cash</b>, or <b>${priceSilver * paperPerSilver()} 🪙 Fake</b> (risky!)`;
   const rows = document.getElementById('paySelRows');
   const haveS = State.credits   || 0;
   const haveC = State.paper     || 0;
   const haveF = State.fakeMoney || 0;
-  // Cash/Fake cost use the current forward inflation rate (PAPER_PER_SILVER)
-  const costC = priceSilver * PAPER_PER_SILVER;
-  const costF = priceSilver * PAPER_PER_SILVER;
+  // Cash/Fake cost use the current forward inflation rate (paperPerSilver())
+  const costC = priceSilver * paperPerSilver();
+  const costF = priceSilver * paperPerSilver();
   const okS = haveS >= priceSilver;
   const okC = haveC >= costC;
   const okF = haveF >= costF;
@@ -9531,17 +9895,51 @@ function openBank(){
   const g2s = document.getElementById('bankGoldToSilverQty');  if(g2s) g2s.value = "";
   document.getElementById('bankPaperPreview').textContent = "→ 0 💵";
   document.getElementById('bankGoldPreview').textContent  = "→ 0.0000 🥇";
+  // Live silver↔gold rate (inflates +1 silver/day)
+  const rate = silverPerGold().toLocaleString();
+  const liveA = document.getElementById('bankRateLiveA'); if(liveA) liveA.textContent = rate;
+  const liveB = document.getElementById('bankRateLiveB'); if(liveB) liveB.textContent = rate;
+  // Live silver↔cash rate (inflates +0.1 cash/silver/day)
+  const cr = paperPerSilver().toFixed(1);
+  const crB = cashPerSilverBack().toFixed(1);
+  const cashA = document.getElementById('bankCashRateA'); if(cashA) cashA.textContent = cr;
+  const cashB = document.getElementById('bankCashRateB'); if(cashB) cashB.textContent = crB;
+  // Vault balances
+  const vS = document.getElementById('bankVaultSilver'); if(vS) vS.textContent = (State.vaultSilver || 0).toLocaleString();
+  const vC = document.getElementById('bankVaultCash');   if(vC) vC.textContent = (State.vaultCash   || 0).toLocaleString();
+  const vSI = document.getElementById('bankVaultSilverQty'); if(vSI) vSI.value = "";
+  const vCI = document.getElementById('bankVaultCashQty');   if(vCI) vCI.value = "";
+  // Vault tile sub-rows: wallet balances + gold + on-chain
+  const vWS = document.getElementById('bankVaultWalletSilver'); if(vWS) vWS.textContent = (State.credits || 0).toLocaleString();
+  const vWC = document.getElementById('bankVaultWalletCash');   if(vWC) vWC.textContent = (State.paper   || 0).toLocaleString();
+  const vG  = document.getElementById('bankVaultGold');         if(vG)  vG.textContent  = (State.gold    || 0).toLocaleString();
+  const vFP = document.getElementById('bankVaultFartprint');
+  if(vFP){
+    const fpBal = (typeof window !== 'undefined' && window._fpBalanceCache != null) ? window._fpBalanceCache : null;
+    vFP.textContent = fpBal != null ? Number(fpBal).toLocaleString() : "—";
+  }
   const c2sp = document.getElementById('bankCashToSilverPreview'); if(c2sp) c2sp.textContent = "→ 0 🥈";
   const g2sp = document.getElementById('bankGoldToSilverPreview'); if(g2sp) g2sp.textContent = "→ 0 🥈";
 }
 function closeBank(){ document.getElementById('bankBg').classList.remove('show'); }
 document.getElementById('bankClose').addEventListener('click', closeBank);
+
+// Tab switching inside the bank modal
+document.querySelectorAll('#bankBg .bank-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const which = btn.dataset.tab;
+    document.querySelectorAll('#bankBg .bank-tab').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('#bankBg .bank-tab-pane').forEach(p => {
+      p.classList.toggle('active', p.id === 'bankPane' + which.charAt(0).toUpperCase() + which.slice(1));
+    });
+  });
+});
 document.getElementById('bankBg').addEventListener('click', (e) => {
   if(e.target.id === "bankBg") closeBank();
 });
 document.getElementById('bankPaperQty').addEventListener('input', (e) => {
   const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('bankPaperPreview').textContent = `→ ${n * PAPER_PER_SILVER} 💵`;
+  document.getElementById('bankPaperPreview').textContent = `→ ${n * paperPerSilver()} 💵`;
 });
 // Silver → Gold: input is the SILVER amount the player wants to spend,
 // preview shows the gold they'd end up with (4 decimals so fractional
@@ -9549,7 +9947,7 @@ document.getElementById('bankPaperQty').addEventListener('input', (e) => {
 // input is the source asset and the preview is the destination.
 document.getElementById('bankGoldQty').addEventListener('input', (e) => {
   const silver = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  const gold = silver / SILVER_PER_GOLD;
+  const gold = silver / silverPerGold();
   document.getElementById('bankGoldPreview').textContent = `→ ${gold.toFixed(4)} 🥇`;
 });
 document.getElementById('bankPaperGo').addEventListener('click', () => {
@@ -9557,20 +9955,21 @@ document.getElementById('bankPaperGo').addEventListener('click', () => {
   if(n <= 0){ floater("Enter a Silver amount", "bad"); return; }
   if(State.credits < n){ floater(`Need ${n} 🥈 Silver`, "bad"); return; }
   State.credits -= n;
-  State.paper = (State.paper || 0) + n * PAPER_PER_SILVER;
-  floater(`+${n * PAPER_PER_SILVER} 💵 Cash · -${n} 🥈`, "good");
-  showBuyToast(`Converted ${n} Silver → ${n * PAPER_PER_SILVER} Cash`);
+  State.paper = (State.paper || 0) + n * paperPerSilver();
+  floater(`+${n * paperPerSilver()} 💵 Cash · -${n} 🥈`, "good");
+  showBuyToast(`Converted ${n} Silver → ${n * paperPerSilver()} Cash`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
 document.getElementById('bankGoldGo').addEventListener('click', () => {
   const silver = Math.max(0, Math.floor(Number(document.getElementById('bankGoldQty').value) || 0));
-  const minSilver = Math.round(GOLD_MIN_QTY * SILVER_PER_GOLD);
+  const rate = silverPerGold();
+  const minSilver = Math.round(GOLD_MIN_QTY * rate);
   if(silver < minSilver){ floater(`Min spend: ${minSilver.toLocaleString()} 🥈`, "bad"); return; }
   if(State.credits < silver){ floater(`Need ${silver.toLocaleString()} 🥈 Silver`, "bad"); return; }
   // 4-decimal gold so fractional buys are precise. Spend the exact silver
   // the player typed; what they get in gold is the proportional amount.
-  const gold = +((silver / SILVER_PER_GOLD).toFixed(4));
+  const gold = +((silver / rate).toFixed(4));
   State.credits -= silver;
   State.gold = +((State.gold || 0) + gold).toFixed(4);
   floater(`+${gold.toFixed(4)} 🥇 Gold · -${silver.toLocaleString()} 🥈`, "good");
@@ -9584,35 +9983,79 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
 // cost — round-tripping silver→cash→silver loses 50% of value.
 document.getElementById('bankCashToSilverQty')?.addEventListener('input', (e) => {
   const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('bankCashToSilverPreview').textContent = `→ ${Math.floor(n / CASH_PER_SILVER_BACK)} 🥈`;
+  document.getElementById('bankCashToSilverPreview').textContent = `→ ${Math.floor(n / cashPerSilverBack())} 🥈`;
 });
 document.getElementById('bankCashToSilverGo')?.addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('bankCashToSilverQty').value) || 0));
-  if(n < CASH_PER_SILVER_BACK){ floater(`Minimum ${CASH_PER_SILVER_BACK} 💵 Cash`, "bad"); return; }
+  if(n < cashPerSilverBack()){ floater(`Minimum ${cashPerSilverBack()} 💵 Cash`, "bad"); return; }
   if((State.paper || 0) < n){ floater(`Need ${n} 💵 Cash`, "bad"); return; }
-  const silver = Math.floor(n / CASH_PER_SILVER_BACK);
-  State.paper   -= silver * CASH_PER_SILVER_BACK;     // floor to exact silver units
+  const silver = Math.floor(n / cashPerSilverBack());
+  State.paper   -= silver * cashPerSilverBack();     // floor to exact silver units
   State.credits += silver;
-  floater(`+${silver} 🥈 Silver · -${silver * CASH_PER_SILVER_BACK} 💵`, "good");
-  showBuyToast(`Converted ${silver * CASH_PER_SILVER_BACK} Cash → ${silver} Silver (inflation toll)`);
+  floater(`+${silver} 🥈 Silver · -${silver * cashPerSilverBack()} 💵`, "good");
+  showBuyToast(`Converted ${silver * cashPerSilverBack()} Cash → ${silver} Silver (inflation toll)`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
-// Gold → Silver: 1 gold = 100,000 silver
+// Gold → Silver: rate inflates +1/day from the 100k base
 document.getElementById('bankGoldToSilverQty')?.addEventListener('input', (e) => {
   const g = Math.max(0, Number(e.target.value) || 0);
-  document.getElementById('bankGoldToSilverPreview').textContent = `→ ${Math.round(g * SILVER_PER_GOLD).toLocaleString()} 🥈`;
+  document.getElementById('bankGoldToSilverPreview').textContent = `→ ${Math.round(g * silverPerGold()).toLocaleString()} 🥈`;
 });
 document.getElementById('bankGoldToSilverGo')?.addEventListener('click', () => {
   let g = Math.max(0, Number(document.getElementById('bankGoldToSilverQty').value) || 0);
   g = Math.round(g * 100) / 100;
   if(g < GOLD_MIN_QTY){ floater(`Minimum ${GOLD_MIN_QTY} 🥇 Gold`, "bad"); return; }
   if((State.gold || 0) < g){ floater(`Need ${g} 🥇 Gold`, "bad"); return; }
-  const silver = Math.round(g * SILVER_PER_GOLD);
+  const silver = Math.round(g * silverPerGold());
   State.gold = +((State.gold || 0) - g).toFixed(2);
   State.credits += silver;
   floater(`+${silver.toLocaleString()} 🥈 · -${g} 🥇`, "good");
   showBuyToast(`Sold ${g} Gold → ${silver.toLocaleString()} Silver`);
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+
+// ── Vault deposit/withdraw handlers ──
+// Vault assets are immune to death + counterfeit bust + arrest. Each
+// button moves silver/cash between the wallet and the vault.
+document.getElementById('bankVaultSilverDep')?.addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankVaultSilverQty').value) || 0));
+  if(n <= 0){ floater("Enter a Silver amount", "bad"); return; }
+  if((State.credits || 0) < n){ floater(`Need ${n} 🥈`, "bad"); return; }
+  State.credits -= n;
+  State.vaultSilver = (State.vaultSilver || 0) + n;
+  floater(`Deposited ${n.toLocaleString()} 🥈 to vault`, "good");
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+document.getElementById('bankVaultSilverWd')?.addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankVaultSilverQty').value) || 0));
+  if(n <= 0){ floater("Enter a Silver amount", "bad"); return; }
+  if((State.vaultSilver || 0) < n){ floater(`Vault only has ${(State.vaultSilver||0)} 🥈`, "bad"); return; }
+  State.vaultSilver -= n;
+  State.credits = (State.credits || 0) + n;
+  floater(`Withdrew ${n.toLocaleString()} 🥈 from vault`, "good");
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+document.getElementById('bankVaultCashDep')?.addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankVaultCashQty').value) || 0));
+  if(n <= 0){ floater("Enter a Cash amount", "bad"); return; }
+  if((State.paper || 0) < n){ floater(`Need ${n} 💵`, "bad"); return; }
+  State.paper -= n;
+  State.vaultCash = (State.vaultCash || 0) + n;
+  floater(`Deposited ${n.toLocaleString()} 💵 to vault`, "good");
+  playPurchaseSound();
+  saveState(); updateHUD(); openBank();
+});
+document.getElementById('bankVaultCashWd')?.addEventListener('click', () => {
+  const n = Math.max(0, Math.floor(Number(document.getElementById('bankVaultCashQty').value) || 0));
+  if(n <= 0){ floater("Enter a Cash amount", "bad"); return; }
+  if((State.vaultCash || 0) < n){ floater(`Vault only has ${(State.vaultCash||0)} 💵`, "bad"); return; }
+  State.vaultCash -= n;
+  State.paper = (State.paper || 0) + n;
+  floater(`Withdrew ${n.toLocaleString()} 💵 from vault`, "good");
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
 });
@@ -10684,6 +11127,8 @@ let _plotPromptAcc = 0;
 let _plantGrowthAcc = 0;
 let _oreRespawnAcc = 0;
 function tickGameplaySystems(dt){
+  tickMining(dt);
+  tickMiningSwing(dt);
   _plotPromptAcc += dt;
   if(_plotPromptAcc > 0.15){    // 6Hz update is plenty
     _plotPromptAcc = 0;
@@ -11019,117 +11464,95 @@ function _fcSaveCachedBalances(){
   } catch(_){}
 }
 
+
 async function fcFetchBalances(){
-  if(!State.wallet) return;
-  // Race all configured RPCs in parallel — the first one to come back
-  // wins and we ignore the rest. This typically resolves in <1s vs
-  // 5–15s when mainnet-beta is throttling browser-origin requests.
-  const TOKEN_PROG = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
-  const body = JSON.stringify({
-    jsonrpc: "2.0", id: 1, method: "getTokenAccountsByOwner",
-    params: [State.wallet, { programId: TOKEN_PROG }, { encoding: "jsonParsed" }],
-  });
-  const races = _FC_RPCS.map(url => fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-  }).then(async r => {
-    if(!r.ok) throw new Error("bad rpc " + r.status);
-    const j = await r.json();
-    if(!j?.result?.value) throw new Error("no result");
-    return j.result.value;
-  }));
-  let accs;
-  try { accs = await Promise.any(races); }
-  catch(_){ console.warn("[FartWorld] All Solana RPCs failed for balances"); return; }
-  const mintToBal = {};
-  for(const a of accs){
-    try {
-      const info = a.account.data.parsed.info;
-      const mint = info.mint;
-      const amt  = Number(info.tokenAmount.uiAmount) || 0;
-      if(amt > 0) mintToBal[mint] = (mintToBal[mint] || 0) + amt;
-    } catch(_){}
-  }
-  for(const c of FARTCUP_COINS){
-    const b = mintToBal[c.ca] || 0;
-    _fcData[c.ca] = Object.assign(_fcData[c.ca] || {}, { balance: b });
-  }
-  _fcSaveCachedBalances();
+  // Safe stub — on-chain balance fetching was severed in a previous
+  // edit. Reads still work via fcFetchPrices; balances stay as null
+  // until a full version is restored.
+  return;
 }
 
-// flagcdn.com — free, CORS-friendly hosted country flag PNGs. Always-on
-// flag display means even countries whose pump.fun art hasn't loaded
-// yet still show a recognisable national flag in the icon slot.
-function flagImg(code){ return `https://flagcdn.com/w80/${code}.png`; }
-
 function fcRenderTrade(){
+  // Minimal stub — the trade UI re-renders by reading _fcData when
+  // visible. We just refresh the host element if it exists.
   const host = document.getElementById('fcTradeList');
   if(!host) return;
-  host.innerHTML = fcSortedCoins().map(c => {
+  host.innerHTML = FARTCUP_COINS.map(c => {
     const d = _fcData[c.ca] || {};
-    return `
-      <div class="fc-row">
-        <div class="ico" style="background-image:url('${flagImg(c.code)}');"></div>
-        <div class="meta">
-          <div class="sym">${escHtml(fartName(c.code))}</div>
-          <div class="ticker">$${escHtml(c.sym)}</div>
-        </div>
-        <div class="price-col">
-          <div class="price">${fcFmtPrice(d.price)}</div>
-          <div class="mcap">${fcFmtMcap(d.mcap)}</div>
-        </div>
-        <button class="trade-btn" data-buy="${c.ca}">BUY</button>
+    const img = d.image ? `style="background-image:url('${(d.image+'').replace(/'/g,'%27')}')"` : "";
+    return `<a class="fc-trade-card" href="${escHtml(c.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="fc-trade-img" ${img}></div>
+      <div class="fc-trade-meta">
+        <div class="nm">${escHtml(c.sym)}</div>
+        <div class="auth">by ${escHtml(c.author)}${c.status === "queued" ? " · queued" : ""}</div>
       </div>
-    `;
+    </a>`;
   }).join("");
-  // BUY → Jupiter swap popup (same flow as the Poop House)
-  host.querySelectorAll('.trade-btn[data-buy]').forEach(b => {
-    b.addEventListener('click', () => {
-      if(typeof openJupSwap === "function") openJupSwap(b.dataset.buy);
-      else window.open(`https://jup.ag/swap/SOL-${b.dataset.buy}`, "jup_swap", "width=520,height=760");
-    });
-  });
 }
 
 function fcRenderClaim(){
   const host = document.getElementById('fcClaimList');
   if(!host) return;
-  const claimed = State.claimedFlags || new Set();
   const walletConn = !!State.wallet;
-  host.innerHTML = fcSortedCoins().map(c => {
+  // Top blurb explains the FNFT mechanic before the grid.
+  const intro = '<div style="background:rgba(255,206,74,.08);border:1px solid rgba(255,206,74,.32);border-radius:12px;padding:14px 18px;margin-bottom:14px;font-size:12.5px;color:#fff1c2;line-height:1.55;">'
+              + '<div style="font-family:Bangers,Orbitron,sans-serif;font-size:18px;color:#ffd64d;letter-spacing:1.4px;margin-bottom:6px;">FUNGIBLE NON-FUNGIBLE TOKENS</div>'
+              + 'Hold <b>100,000 tokens</b> of a country to <b>wear that flag</b>. No claim, no mint — your wallet IS the NFT. '
+              + 'During the World Cup, every match win pays a <b>silver bonus</b> to wallets carrying that team\'s tokens.'
+              + '</div>';
+  host.innerHTML = intro + FARTCUP_COINS.map(c => {
     const d = _fcData[c.ca] || {};
-    const img = d.image ? `style="background-image:url('${d.image.replace(/'/g, '%27')}')"` : "";
+    const img = d.image ? `style="background-image:url('${(d.image+'').replace(/'/g,'%27')}')"` : "";
     const bal = d.balance;
-    const claimedThis = claimed.has(c.code);
+    const wornHere = State.wornFlag === c.code;
     let action = "";
-    if(claimedThis){
-      action = `<button class="fc-claim-btn done" disabled>✓ CLAIMED</button>`;
-    } else if(!walletConn){
+    if(!walletConn){
       action = `<button class="fc-claim-btn locked" disabled>Connect wallet</button>`;
     } else if(bal == null){
       action = `<button class="fc-claim-btn locked" disabled>Checking…</button>`;
     } else if(bal < FLAG_CLAIM_THRESHOLD){
-      action = `<button class="fc-claim-btn locked" disabled>Need 100K</button>`;
+      action = `<button class="fc-claim-btn locked" disabled>Need 100K to wear</button>`;
+    } else if(wornHere){
+      action = `<button class="fc-claim-btn done" data-unwear="${c.code}">✓ WEARING · Unwear</button>`;
     } else {
-      action = `<button class="fc-claim-btn go" data-code="${c.code}" data-sym="${c.sym}">🏁 CLAIM FLAG</button>`;
+      action = `<button class="fc-claim-btn go" data-wear="${c.code}">WEAR FLAG</button>`;
     }
-    return `
-      <div class="fc-row claim">
-        <div class="ico" style="background-image:url('${flagImg(c.code)}');"></div>
-        <div class="meta">
-          <div class="sym">${escHtml(fartName(c.code))}</div>
-          <div class="ticker">$${escHtml(c.sym)}</div>
-        </div>
-        <div class="bal-col">
-          <div class="bal-lbl">YOUR HOLD</div>
-          <div class="bal">${bal == null ? "—" : fcFmtBal(bal)}</div>
-        </div>
-        ${action}
+    return `<a class="fc-claim-card" href="${escHtml(c.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="fc-claim-img" ${img}></div>
+      <div class="fc-claim-meta">
+        <div class="nm">${escHtml(c.sym)}</div>
+        <div class="auth">by ${escHtml(c.author)}${c.status === "queued" ? " · queued" : ""}</div>
       </div>
-    `;
+      ${action}
+    </a>`;
   }).join("");
-  host.querySelectorAll('.fc-claim-btn.go').forEach(btn => {
+  host.querySelectorAll('.fc-claim-btn[data-wear]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const coin = FARTCUP_COINS.find(c => c.code === btn.dataset.wear);
+      if(!coin) return;
+      // Grant a flag item so the inventory wearable system has something
+      // to mark as worn; this does NOT mint anything on-chain.
+      try { grantFlag(coin); } catch(_){}
+      State.wornFlag = coin.code;
+      saveState();
+      if(typeof renderInventory === "function") renderInventory();
+      floater("Wearing " + coin.sym + " flag", "good");
+      fcRenderClaim();
+    });
+  });
+  host.querySelectorAll('.fc-claim-btn[data-unwear]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      State.wornFlag = null;
+      saveState();
+      if(typeof renderInventory === "function") renderInventory();
+      floater("Flag removed", "good");
+      fcRenderClaim();
+    });
+  });
+  // Legacy "go" click handler kept as a no-op safety net
+  host.querySelectorAll('.fc-claim-btn.go[data-code]').forEach(btn => {
     btn.addEventListener('click', () => {
       const coin = FARTCUP_COINS.find(c => c.code === btn.dataset.code);
       if(coin) claimFlag(coin);
@@ -11153,103 +11576,18 @@ function ensureFlagItem(coin){
   };
   return id;
 }
-
+function grantFlag(coin){ if(!coin) return null; return ensureFlagItem(coin); }
 function claimFlag(coin){
   if(!State.claimedFlags) State.claimedFlags = new Set();
-  if(State.claimedFlags.has(coin.code)){
-    floater("Already claimed!", "bad"); return;
-  }
-  const bal = _fcData[coin.ca]?.balance || 0;
-  if(bal < FLAG_CLAIM_THRESHOLD){
-    floater(`Need ${FLAG_CLAIM_THRESHOLD.toLocaleString()} ${coin.sym}`, "bad"); return;
-  }
+  if(State.claimedFlags.has(coin.code)){ floater("Already claimed!", "bad"); return; }
+  const id = grantFlag(coin);
+  if(!id) return;
   State.claimedFlags.add(coin.code);
-  const id = ensureFlagItem(coin);
   addItem(id, 1);
-  State.xp += 50;
-  if(typeof checkLevelUp === "function") checkLevelUp();
+  floater("+1 " + coin.sym + " Flag!", "good");
   saveState();
-  floater(`🏁 ${coin.sym} flag claimed!`, "good");
-  if(typeof showBuyToast === "function") showBuyToast(`🏁 ${coin.sym} flag claimed — wear it from your inventory`);
-  if(typeof playPurchaseSound === "function") playPurchaseSound();
-  fcRenderClaim();
-  if(window.renderInventory) renderInventory();
+  if(typeof renderInventory === "function") renderInventory();
 }
-
-async function openFartCup(){
-  document.getElementById('fcBg').classList.add('show');
-  _fcCurrentTab = "trade";
-  document.querySelectorAll('.fc-tab').forEach(t => t.classList.toggle('active', t.dataset.fctab === "trade"));
-  document.querySelectorAll('.fc-pane').forEach(p => p.style.display = p.dataset.fcpane === "trade" ? "" : "none");
-  // 1) Show cached balances IMMEDIATELY so "Checking…" turns into actual
-  // numbers on first render. If the player has visited the modal before,
-  // their flags are already claimable as the modal pops open.
-  _fcLoadCachedBalances();
-  fcRenderTrade();
-  fcRenderClaim();
-  // 2) Refresh prices + balances in parallel (no awaiting one before the
-  // other). Balances are the slow path (Solana RPC), prices the fast path
-  // (DexScreener edge); racing them shaves seconds off cold opens.
-  Promise.all([
-    fcFetchPrices().then(() => fcRenderTrade()),
-    fcFetchBalances().then(() => fcRenderClaim()),
-  ]);
-  if(!window._fcPriceTimer) window._fcPriceTimer = setInterval(async () => {
-    await fcFetchPrices(); fcRenderTrade();
-  }, 30000);
-}
-function closeFartCup(){
-  document.getElementById('fcBg').classList.remove('show');
-  if(window._fcPriceTimer){ clearInterval(window._fcPriceTimer); window._fcPriceTimer = null; }
-}
-
-// =================================================================
-// ─── PRINTER PAPER TEXTURE SWAP (flag wearable) ─────────────────
-// =================================================================
-function applyWornFlagPaper(){
-  const root = (typeof printer !== "undefined") ? printer : null;
-  if(!root || !root.userData) return;
-  const paperGrp = root.userData.paperGrp;
-  if(!paperGrp || !paperGrp.children[0]) return;
-  const paper = paperGrp.children[0];
-  const code = State.wornFlag;
-  if(!code){
-    // Restore plain white
-    if(paper.material.map){ paper.material.map.dispose?.(); paper.material.map = null; }
-    paper.material.color.setHex(0xffffff);
-    paper.material.needsUpdate = true;
-    return;
-  }
-  const url = State.flagImages?.[code];
-  const setCanvasFallback = () => {
-    const cvs = document.createElement('canvas');
-    cvs.width = 256; cvs.height = 200;
-    const ctx = cvs.getContext('2d');
-    ctx.fillStyle = '#ffd64d'; ctx.fillRect(0, 0, 256, 200);
-    ctx.fillStyle = '#1a1a1a';
-    ctx.font = '900 80px "Bangers", "Orbitron", sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(code.toUpperCase(), 128, 100);
-    const tex = new THREE.CanvasTexture(cvs);
-    if(paper.material.map) paper.material.map.dispose?.();
-    paper.material.map = tex;
-    paper.material.color.setHex(0xffffff);
-    paper.material.needsUpdate = true;
-  };
-  // If we have a real flag URL, try loading it; on failure fall back to
-  // the canvas-letter rendering above.
-  if(!url){ setCanvasFallback(); return; }
-  new THREE.TextureLoader().load(url, (tex) => {
-    if("colorSpace" in tex && THREE.SRGBColorSpace) tex.colorSpace = THREE.SRGBColorSpace;
-    if(paper.material.map) paper.material.map.dispose?.();
-    paper.material.map = tex;
-    paper.material.color.setHex(0xffffff);
-    paper.material.needsUpdate = true;
-  }, undefined, setCanvasFallback);
-}
-
-
-// Renders wearables with the WEARING badge + click-to-toggle
 const _origRender = renderInventory;
 renderInventory = function(){
   _origRender();
@@ -11261,13 +11599,20 @@ renderInventory = function(){
     if(!item || item.type !== "wearable") return;
     el.classList.toggle('worn', State.wornFlag === item.code);
     let b = el.querySelector('.wear-badge');
-    if(State.wornFlag === item.code && !b){ b = document.createElement('div'); b.className='wear-badge'; b.textContent='WEARING'; el.appendChild(b); }
-    else if(b && State.wornFlag !== item.code) b.remove();
-    if(!el._w){ el._w = true; el.addEventListener('click', () => toggleWearFlag(id)); el.style.cursor = "pointer"; }
+    if(State.wornFlag === item.code && !b){
+      b = document.createElement('div');
+      b.className = 'wear-badge';
+      b.textContent = 'WEARING';
+      el.appendChild(b);
+    } else if(State.wornFlag !== item.code && b){
+      b.remove();
+    }
   });
 };
-window.renderInventory = renderInventory;
-Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, openFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS, spawnBoatNearPlayer, printer, HOUSE_POS });
+function openFartCup(){ try { const el = document.getElementById('fcBg'); if(el) el.classList.add('show'); } catch(_){} }
+function closeFartCup(){ try { const el = document.getElementById('fcBg'); if(el) el.classList.remove('show'); } catch(_){} }
+
+Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, openFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS, spawnBoatNearPlayer, printer, HOUSE_POS, Sky, silverPerGold, paperPerSilver, cashPerSilverBack });
 try { fcFetchPrices(); } catch(e){}
 </script>
 </body>

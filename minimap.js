@@ -19,7 +19,7 @@
       { x: -22, z:  -8, c: '#ffd64d', l: 'Bank' },
       { x: -22, z: -32, c: '#5ff09c', l: 'Market' },
       { x: -48, z:  28, c: '#a0a0ff', l: 'Lab' },
-      { x:  42, z:   0, c: '#ff7d3b', l: 'Refinery' },
+      { x:  42, z:   0, c: '#ff7d3b', l: 'Glassworks' },
       { x:  50, z: -36, c: '#a05030', l: 'Poop' },
       { x:   0, z: -55, c: '#a8e0ff', l: 'House' },
       { x:  84, z:   0, c: '#6ed0d6', l: 'Dock' },
@@ -29,6 +29,8 @@
       { x:  60, z:  60, c: '#c89858', l: 'Pawn' },
       { x: -55, z:  32, c: '#90d090', l: 'Fart Stn' },
       { x: -10.5, z: -45, c: '#ff7a2a', l: 'Alex' },
+      { x: -50, z: -22, c: '#5ff09c', l: 'Data Ctr' },
+      { x: -27, z:  32, c: '#ffce4a', l: 'Storage' },
     ];
 
     // ── Three sizes: small, medium, large + optional fullscreen view ──
@@ -42,7 +44,7 @@
 
     const css = document.createElement('style');
     css.textContent = `
-.mm-root{position:fixed;bottom:14px;right:14px;z-index:30;font-family:'Outfit','Inter','JetBrains Mono',sans-serif;color:#e6ffee;user-select:none}
+.mm-root{position:fixed;bottom:14px;right:14px;z-index:42;font-family:'Outfit','Inter','JetBrains Mono',sans-serif;color:#e6ffee;user-select:none}
 .mm-root.full{bottom:50%;right:50%;transform:translate(50%,50%)}
 .mm-card{position:relative;background:rgba(8,18,11,.94);border:2px solid rgba(95,240,156,.55);border-radius:14px;box-shadow:0 14px 28px rgba(0,0,0,.55);overflow:hidden}
 .mm-card canvas{display:block}
@@ -74,6 +76,18 @@
     document.body.appendChild(root);
     const cvs = root.querySelector('#mmCanvas');
     const ctx = cvs.getContext('2d');
+    // Move out of the way of the mobile action buttons (which sit at
+    // bottom-right on touch devices).
+    function reanchorForMobile(){
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /Mobi|Android|iPhone|iPad|iPod/.test(navigator.userAgent || '');
+      if(isTouch){
+        root.style.right = 'auto';
+        root.style.left = '14px';
+        root.style.bottom = '14px';
+        root.style.top = '14px';
+      }
+    }
+    reanchorForMobile();
 
     function applySize(){
       const s = SIZES[sizeIdx];
@@ -213,7 +227,15 @@
     cvs.addEventListener('wheel', (e) => {
       e.preventDefault();
       if(e.deltaY < 0) sizeIdx = Math.min(SIZES.length - 1, sizeIdx + 1);
-      else             sizeIdx = Math.max(0, sizeIdx - 1);
+      else sizeIdx = Math.max(0, sizeIdx - 1);
+      applySize();
+    }, { passive: false });
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyM') return;
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      fullscreen = !fullscreen;
+      root.classList.toggle('full', fullscreen);
       applySize();
     }, { passive: false });
     window.addEventListener('keydown', (e) => {
@@ -224,7 +246,6 @@
       root.classList.toggle('full', fullscreen);
       applySize();
     });
-
     console.log('[minimap] ready');
   }
 })();

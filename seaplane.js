@@ -174,24 +174,51 @@
       // body inside the cockpit while the plane flies. Cloned once per
       // boarding so we don't accumulate meshes.
       if(!p._pilot){
+        // Mini-printer that sits in the cockpit. Mirrors the main
+        // printer model (box body + bezel + paper sheet + eyes + antenna)
+        // so the seated pilot reads as a small printer, not a humanoid.
         const pilot = new THREE.Group();
-        const pMat = new THREE.MeshStandardMaterial({ color: 0xe6ffee, roughness: 0.55 });
-        const body = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.5, 0.4), pMat);
-        body.position.y = 1.55;
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe6ffee, roughness: 0.55 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 });
+        const eyeW    = new THREE.MeshStandardMaterial({ color: 0xffffff });
+        const eyeB    = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        // Body box
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.46, 0.50), bodyMat);
+        body.position.y = 1.62;
+        body.castShadow = true;
         pilot.add(body);
-        const head = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10),
-          new THREE.MeshStandardMaterial({ color: 0xe6ffee, roughness: 0.5 }));
-        head.position.y = 1.95;
-        pilot.add(head);
-        // Eyes
-        const eyeW = new THREE.MeshStandardMaterial({ color: 0xffffff });
-        const eyeB = new THREE.MeshBasicMaterial({ color: 0x000000 });
-        const eL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 8), eyeW);
-        eL.position.set(-0.07, 1.97, 0.16); pilot.add(eL);
-        const eR = eL.clone(); eR.position.x = 0.07; pilot.add(eR);
-        const pL = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), eyeB);
-        pL.position.set(-0.07, 1.97, 0.20); pilot.add(pL);
-        const pR = pL.clone(); pR.position.x = 0.07; pilot.add(pR);
+        // Top bezel (where the paper feeds out)
+        const bezel = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.04, 0.42), darkMat);
+        bezel.position.y = 1.87;
+        pilot.add(bezel);
+        // Paper sheet sticking up from the bezel
+        const paper = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.36, 0.30),
+          new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.95 })
+        );
+        paper.position.set(0, 1.92, -0.02);
+        paper.rotation.x = -Math.PI / 2 + 0.35;
+        pilot.add(paper);
+        // Eyes — matching the player printer style (white sphere + black pupil)
+        const eyeR = 0.075;
+        const eL = new THREE.Mesh(new THREE.SphereGeometry(eyeR, 12, 12), eyeW);
+        eL.position.set(-0.12, 1.70, 0.245);
+        pilot.add(eL);
+        const eR = eL.clone(); eR.position.x = 0.12; pilot.add(eR);
+        const pL = new THREE.Mesh(new THREE.SphereGeometry(eyeR * 0.42, 8, 8), eyeB);
+        pL.position.set(-0.12, 1.70, 0.32);
+        pilot.add(pL);
+        const pR = pL.clone(); pR.position.x = 0.12; pilot.add(pR);
+        // Antenna with green orb (matches player)
+        const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.18, 6), darkMat);
+        ant.position.set(0.22, 1.97, 0);
+        pilot.add(ant);
+        const orb = new THREE.Mesh(
+          new THREE.SphereGeometry(0.04, 8, 8),
+          new THREE.MeshStandardMaterial({ color: 0x6ed0d6, emissive: 0x6ed0d6, emissiveIntensity: 1.4 })
+        );
+        orb.position.set(0.22, 2.07, 0);
+        pilot.add(orb);
         pilot.position.set(0, 0, -0.2);   // sit at the cockpit
         p.mesh.add(pilot);
         p._pilot = pilot;
@@ -631,23 +658,18 @@
         + (own.boat ? '<button class="btn" id="waveGetBoat">Retrieve</button>' : '<button class="btn" id="waveBuyBoat">Buy</button>') + '</div>'
         + '<div class="row"><div class="ico">\u{1F6E9}</div><div><div class="nm">Sea Plane</div><div class="sub">' + PLANE_PRICE + ' \u{1F948} · float-equipped — takes off + flies</div></div>'
         + (own.plane ? '<button class="btn" id="waveGetPlane">Retrieve</button>' : '<button class="btn" id="waveBuyPlane">Buy</button>') + '</div>'
+        + '<div class="row"><div class="ico">\u{1F6A4}</div><div><div class="nm">Yacht</div><div class="sub">' + YACHT_PRICE + ' \u{1F948} · floating palace</div></div>'
         + (own.yacht ? '<button class="btn" id="waveGetYacht">Retrieve</button>' : '<button class="btn" id="waveBuyYacht">Buy</button>') + '</div>'
-        + '<button class="cancel" id="waveCancel">Leave</button></div>';
+        + '<button class="cancel" id="waveCancel">Leave</button>'
+        + '</div>';
+      const cancel = document.getElementById('waveCancel');
+      if(cancel) cancel.addEventListener('click', () => waveBg.classList.remove('show'));
     }
-    window.openWaveShop = function(){ renderWave(); waveBg.classList.add('show'); };
-
-    window.addEventListener('keydown', (e) => {
-      if(e.code !== "KeyE") return;
-      const a = document.activeElement;
-      if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      if(myPlane){ leave(); return; }
-      if(myYacht){ leaveYacht(); return; }
-      const yt = findBoardableYacht();
-      if(yt){ boardYacht(yt); return; }
-      const pl = findBoardable();
-      if(pl){ board(pl); window.floater?.("\u{1F6E9} Boarded — W/Shift throttle, Space climb, E to leave", "good"); }
-    });
-
-    console.log("[seaplane] ready");
+    function openWaveShop(){ renderWave(); waveBg.classList.add('show'); }
+    function closeWaveShop(){ waveBg.classList.remove('show'); }
+    window.openWaveShop = openWaveShop;
+    window.closeWaveShop = closeWaveShop;
+    waveBg.addEventListener('click', (e) => { if(e.target === waveBg) closeWaveShop(); });
+    console.log('[seaplane] ready');
   }
 })();

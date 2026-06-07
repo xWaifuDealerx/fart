@@ -305,21 +305,9 @@
         wheelGrp.add(blade);
       }
       grp.add(wheelGrp);
-      // Sign canvas
-      const cvs = document.createElement('canvas');
-      cvs.width = 384; cvs.height = 96;
-      const ctx = cvs.getContext('2d');
-      ctx.fillStyle = '#3a1c08'; ctx.fillRect(0, 0, 384, 96);
-      ctx.strokeStyle = '#c89858'; ctx.lineWidth = 4; ctx.strokeRect(4, 4, 376, 88);
-      ctx.fillStyle = '#fff1c2';
-      ctx.font = "900 56px 'Bangers','Orbitron',sans-serif";
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillText('PAPER MILL', 192, 50);
-      const signTex = new THREE.CanvasTexture(cvs);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 0.9),
-        new THREE.MeshBasicMaterial({ map: signTex }));
-      sign.position.set(0, 3.25, 2.32);
-      grp.add(sign);
+      // Sign removed — was clipping into the house. The proximity popup
+      // tells the player it's the Paper Mill, so the 3D sign isn't
+      // needed.
       // Spinning ticker
       let angle = 0;
       function spin(){
@@ -395,31 +383,29 @@
       };
     })();
 
-    // Proximity detection + open on E ── piggy-backs on the existing
-    // proximity check by polling every ~150ms. Press E when nearby.
+    // Proximity detection + open on E — uses its OWN persistent popup
+    // (the main module's plotPrompt was being yanked every frame by the
+    // other proximity loop). Polls every 200ms while you're nearby.
+    const millPopCSS = document.createElement('style');
+    millPopCSS.textContent = '.mill-pop{position:fixed;left:50%;bottom:160px;transform:translateX(-50%);display:none;background:rgba(36,22,8,.96);border:2px solid rgba(200,152,88,.6);border-radius:14px;padding:12px 22px;z-index:55;text-align:center;font-family:Outfit,sans-serif;box-shadow:0 14px 26px rgba(0,0,0,.55)}.mill-pop.show{display:block}.mill-pop .who{font-size:11px;color:rgba(255,241,194,.7);margin-bottom:5px}.mill-pop .line{font-family:Bangers,Orbitron,sans-serif;font-size:17px;color:#fff1c2;margin-bottom:5px}.mill-pop kbd{display:inline-block;background:rgba(200,152,88,.22);border:1px solid rgba(200,152,88,.6);color:#ffd64d;padding:2px 8px;border-radius:6px;font-family:monospace;font-size:12px;font-weight:700}';
+    document.head.appendChild(millPopCSS);
+    const millPop = document.createElement('div');
+    millPop.className = 'mill-pop';
+    millPop.innerHTML = '<div class="who">\u{1F3ED} Paper Mill</div><div class="line">Mill wood into paper</div><div>Press <kbd>E</kbd> to convert 1 \u{1FAB5} \u{2192} ' + MILL_RATE + ' \u{1F4DC}</div>';
+    document.body.appendChild(millPop);
     let _millNear = false;
     setInterval(() => {
       const d = Math.hypot(Player.pos.x - MILL_POS.x, Player.pos.z - MILL_POS.z);
-      const near = d < MILL_RADIUS;
-      if(near !== _millNear){
-        _millNear = near;
-        // Show prompt
-        const p = document.getElementById('plotPrompt');
-        if(near && p){
-          p.classList.add('show');
-          p.classList.remove('locked');
-          document.getElementById('plotPromptTitle').textContent = "🏭 PAPER MILL";
-          document.getElementById('plotPromptSub').innerHTML = `Press <kbd>E</kbd> to mill 🪵 → 📜 (1:${MILL_RATE})`;
-        }
-      }
-    }, 150);
+      _millNear = d < MILL_RADIUS;
+      millPop.classList.toggle('show', _millNear);
+    }, 200);
     window.addEventListener('keydown', (e) => {
       if(e.code !== "KeyE" || !_millNear) return;
       const a = document.activeElement;
       if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      if(window.openPaperMill) window.openPaperMill();
+      document.getElementById('millBg')?.classList.add('show');
+      if(typeof window.renderMillPanel === 'function') window.renderMillPanel();
     });
-
-    console.log("[world-extras] jail + trees + mill ready");
+    console.log('[world-extras] mill ready with persistent popup');
   }
 })();

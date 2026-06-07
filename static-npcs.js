@@ -228,12 +228,36 @@
     })();
     // Carlos stands ON the counter behind it — onCounter:true lifts the
     // printer 0.26m so it sits ON the table top instead of on the floor.
-    StaticNPCs.push(Object.assign(buildStaticPrinter("Carlos", 0xe0d4b8, CARLOS_POS.x, CARLOS_POS.z, Math.PI, { onCounter: true }), { kind: "market" }));
+    StaticNPCs.push(Object.assign(buildStaticPrinter("Carlos", 0xe0d4b8, CARLOS_POS.x, CARLOS_POS.z, 0, { onCounter: true }), { kind: "market" }));
 
-    // ── Moneycaller at the Bank (-22, -8) ──
-    const MONEY_POS = { x: -19, z: -10 };
-    buildCounter(MONEY_POS.x, MONEY_POS.z, Math.PI);
-    StaticNPCs.push(Object.assign(buildStaticPrinter("Moneycaller", 0xc8a96b, MONEY_POS.x, MONEY_POS.z + 0.5, Math.PI), { kind: "bank" }));
+    // ── Moneycaller at the Bank (-22, -8) — centered between the
+    //    columns and the back wall, facing the customer at the door.
+    const MONEY_POS = { x: -22, z: -9.0 };
+    // Counter sits in front of Moneycaller, facing the customer who
+    // enters from the +z side of the bank.
+    buildCounter(MONEY_POS.x, MONEY_POS.z + 0.7, 0);
+    // Chair behind the desk — wooden seat + backrest + 4 legs.
+    (function buildBankChair(){
+      const grp = new THREE.Group();
+      const y = groundHeightAt(MONEY_POS.x, MONEY_POS.z) + 0.45;
+      grp.position.set(MONEY_POS.x, y, MONEY_POS.z - 0.05);
+      const wood = new THREE.MeshStandardMaterial({ color: 0x6a4a25, roughness: 0.85 });
+      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.5), wood);
+      seat.position.y = 0;
+      grp.add(seat);
+      const back = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.55, 0.06), wood);
+      back.position.set(0, 0.28, -0.22);
+      grp.add(back);
+      for(const sx of [-0.2, 0.2]){
+        for(const sz of [-0.2, 0.2]){
+          const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.45, 0.06), wood);
+          leg.position.set(sx, -0.22, sz);
+          grp.add(leg);
+        }
+      }
+      scene.add(grp);
+    })();
+    StaticNPCs.push(Object.assign(buildStaticPrinter("Moneycaller", 0xc8a96b, MONEY_POS.x, MONEY_POS.z, Math.PI, { onCounter: true }), { kind: "bank" }));
 
     // ── Wave at the boat dock (≈ 84, 0) ──
     const WAVE_POS = { x: 82, z: 1.5 };
@@ -522,7 +546,7 @@
       document.getElementById('carlosBg').classList.add('show');
     }
     const popStyle = document.createElement('style');
-    popStyle.textContent = `.npc-pop{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(110,208,214,.55);border-radius:14px;padding:12px 18px;z-index:50;text-align:center}.npc-pop.show{display:block}.npc-pop .who{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.65);margin-bottom:6px}.npc-pop .who b{color:#6ed0d6}.npc-pop .line{font-family:'Bangers','Orbitron',sans-serif;font-size:18px;color:#fff1c2;margin-bottom:8px}.npc-pop .btn{background:linear-gradient(135deg,#46c5d6,#6ed0d6);color:#061a1c;border:0;padding:9px 18px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:12px;text-transform:uppercase;cursor:pointer}`;
+    popStyle.textContent = `.npc-pop{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(95,240,156,.55);border-radius:14px;padding:12px 18px;z-index:50;text-align:center;font-family:'Outfit','Inter','JetBrains Mono',sans-serif;min-width:220px;box-shadow:0 14px 26px rgba(0,0,0,.55)}.npc-pop.show{display:block}.npc-pop .who{font-size:11px;color:rgba(230,255,238,.7);margin-bottom:5px;letter-spacing:.4px}.npc-pop .who b{color:#5ff09c}.npc-pop .line{font-family:'Outfit','Inter',sans-serif;font-size:14px;font-weight:700;color:#fff1c2;margin-bottom:8px;letter-spacing:.3px}.npc-pop .btn{background:rgba(95,240,156,.18);border:1px solid rgba(95,240,156,.55);color:#5ff09c;padding:8px 16px;border-radius:8px;font-family:'Outfit','Inter',sans-serif;font-weight:700;font-size:12px;letter-spacing:.6px;cursor:pointer}.npc-pop .btn:hover{background:rgba(95,240,156,.3)}`;
     document.head.appendChild(popStyle);
     const pop = document.createElement('div');
     pop.className = 'npc-pop';
@@ -551,13 +575,13 @@
         document.getElementById('npcPopBtn').textContent = best.kind === "market" ? "Open Carlos's Market" : best.kind === "bank" ? "Open Bank" : best.kind === "dock" ? "Talk to Wave" : "Talk to Gary";
         pop.classList.add('show');
       } else { pop.classList.remove('show'); }
-}, 160);
+    }, 160);
     window.addEventListener('keydown', (e) => {
       if(e.code !== "KeyE" || !nearNpc) return;
       const a = document.activeElement;
       if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
       tryHandle(nearNpc);
     });
-    console.log("[static-npcs] Carlos+Moneycaller+Wave+Gary ready");
+    console.log('[static-npcs] ready');
   }
 })();
