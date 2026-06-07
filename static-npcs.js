@@ -132,8 +132,103 @@
     //     in to greet him. NO counter — he just stands in the tent
     //     handling all buying and selling. ──
     const CARLOS_POS = { x: -22, z: -33 };
-    // No buildCounter — Carlos stands under the existing tent roof
-    StaticNPCs.push(Object.assign(buildStaticPrinter("Carlos", 0xe0d4b8, CARLOS_POS.x, CARLOS_POS.z, Math.PI, { onCounter: false }), { kind: "market" }));
+    // Build a nicer market table for Carlos + a wall of stacked produce
+    // crates behind him so it looks like an actual stall.
+    (function buildCarlosTable(){
+      const grp = new THREE.Group();
+      grp.position.set(CARLOS_POS.x, groundHeightAt(CARLOS_POS.x, CARLOS_POS.z), CARLOS_POS.z);
+      grp.rotation.y = Math.PI; // face the player approach direction
+      const lightWood = new THREE.MeshStandardMaterial({ color: 0xc8945a, roughness: 0.85 });
+      const darkWood  = new THREE.MeshStandardMaterial({ color: 0x6a3a18, roughness: 0.9 });
+      const cloth     = new THREE.MeshStandardMaterial({ color: 0xc02a2a, roughness: 0.75 });
+      const crateMat  = new THREE.MeshStandardMaterial({ color: 0x8f5b30, roughness: 0.88 });
+      const crateBand = new THREE.MeshStandardMaterial({ color: 0x4a2810, roughness: 0.9 });
+      // Big counter top (in front of Carlos)
+      const top = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.18, 1.2), lightWood);
+      top.position.set(0, 1.05, 0.55);
+      top.castShadow = true; top.receiveShadow = true;
+      grp.add(top);
+      // Red cloth draped over the front of the counter
+      const draped = new THREE.Mesh(new THREE.BoxGeometry(3.05, 0.95, 0.10), cloth);
+      draped.position.set(0, 0.55, 1.10);
+      grp.add(draped);
+      // Side panels
+      for(const sx of [-1.5, 1.5]){
+        const side = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.0, 1.2), darkWood);
+        side.position.set(sx, 0.55, 0.55);
+        grp.add(side);
+      }
+      // Three little goods baskets on top of the counter
+      for(let i = -1; i <= 1; i++){
+        const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.22, 12), darkWood);
+        basket.position.set(i * 1.0, 1.27, 0.55);
+        grp.add(basket);
+        // produce blob inside (random colour)
+        const colors = [0xff6a3a, 0xf8c84a, 0x6ad06a, 0xc070ff];
+        const c = colors[(i + 1) % colors.length];
+        const blob = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 8),
+          new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 }));
+        blob.position.set(i * 1.0, 1.45, 0.55);
+        grp.add(blob);
+      }
+      // Crate wall behind Carlos — three columns × 3 rows
+      function crate(x, y, z){
+        const c = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.7, 0.7), crateMat);
+        c.position.set(x, y, z); c.castShadow = true; c.receiveShadow = true;
+        grp.add(c);
+        // Slat bands
+        for(const oy of [-0.20, 0.20]){
+          const band = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.08, 0.72), crateBand);
+          band.position.set(x, y + oy, z);
+          grp.add(band);
+        }
+        // Stamp on front (random small dark rectangle)
+        const stamp = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.16, 0.02), crateBand);
+        stamp.position.set(x, y, z + 0.36);
+        grp.add(stamp);
+      }
+      // Three columns, three rows, slightly behind Carlos (z = -0.9)
+      for(let col = -1; col <= 1; col++){
+        for(let row = 0; row < 3; row++){
+          // Slight jitter so the stack looks hand-built
+          const jx = col * 0.92 + (row % 2 ? 0.05 : -0.03);
+          const jy = 0.40 + row * 0.78;
+          const jz = -0.95 + (col === 0 ? 0 : 0.05);
+          crate(jx, jy, jz);
+        }
+      }
+      // A row of small produce boxes peeking on top of the back crates
+      for(let i = -2; i <= 2; i++){
+        const pBox = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.35, 0.55),
+          new THREE.MeshStandardMaterial({ color: i % 2 ? 0xd6b070 : 0xb89464, roughness: 0.85 }));
+        pBox.position.set(i * 0.58, 2.95, -0.95);
+        grp.add(pBox);
+        // Top blob (produce)
+        const colors2 = [0xff6a3a, 0xf8c84a, 0x6ad06a, 0xc070ff, 0xf04060];
+        const blob2 = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8),
+          new THREE.MeshStandardMaterial({ color: colors2[(i + 5) % colors2.length], roughness: 0.55 }));
+        blob2.position.set(i * 0.58, 3.20, -0.95);
+        grp.add(blob2);
+      }
+      // Hanging string of garlic / chillies above the counter
+      (function(){
+        const stringMat = new THREE.MeshStandardMaterial({ color: 0xb8a070, roughness: 0.95 });
+        const garlic = new THREE.MeshStandardMaterial({ color: 0xf2efd2, roughness: 0.7 });
+        for(let i = -2; i <= 2; i++){
+          const t = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 8), garlic);
+          t.position.set(i * 0.20, 2.55, 0.05);
+          grp.add(t);
+        }
+        const str = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 1.1, 6), stringMat);
+        str.rotation.z = Math.PI / 2;
+        str.position.set(0, 2.65, 0.05);
+        grp.add(str);
+      })();
+      scene.add(grp);
+    })();
+    // Carlos stands ON the counter behind it — onCounter:true lifts the
+    // printer 0.26m so it sits ON the table top instead of on the floor.
+    StaticNPCs.push(Object.assign(buildStaticPrinter("Carlos", 0xe0d4b8, CARLOS_POS.x, CARLOS_POS.z, Math.PI, { onCounter: true }), { kind: "market" }));
 
     // ── Moneycaller at the Bank (-22, -8) ──
     const MONEY_POS = { x: -19, z: -10 };
@@ -329,7 +424,7 @@
     // shows up on window, else fall back to a built-in catalog.
     const CARLOS_SHOP_FALLBACK = [
       "carrot_seed", "weed_seed", "pickaxe", "cat_food",
-      "saw", "paper", "ink", "plastic_bag", "shovel",
+      "saw", "paper", "ink", "plastic_bag",
     ];
     function carlosShopList(){
       const ids = (window.SEED_SHOP || []).map(r => r.itemId).filter(id => window.ITEMS?.[id]) ;
@@ -348,7 +443,7 @@
           const item = ITEMS[id]; if(!item) continue;
           const price = item.marketPrice || item.suggestedPrice || 1;
           const have = State.inventory[id] || 0;
-          lines.push(`<div class="carlos-row"><div class="ico" style="color:${item.color||'#e6ffee'};">${item.icon||''}</div><div class="meta"><div class="nm">${item.name}</div><div class="sub">${price}\u{1F948} each · you own ×${have}</div></div><div class="qty"></div><button class="btn buy" data-id="${id}" data-price="${price}">BUY 1</button></div>`);
+          lines.push(`<div class="carlos-row"><div class="ico" style="color:${item.color||'#e6ffee'};">${item.icon||''}</div><div class="meta"><div class="nm">${item.name}</div><div class="sub">${price}\u{1F948} each · you own: <b style="color:#fff1c2;">${have}</b></div></div><div class="qty"></div><button class="btn buy" data-id="${id}" data-price="${price}">BUY 1</button></div>`);
         }
       } else {
         intro.innerHTML = "Carlos buys for 70% of market price. He pays in 💵 cash.";
@@ -426,14 +521,12 @@
       renderCarlos();
       document.getElementById('carlosBg').classList.add('show');
     }
-
-    // ── "Talk to X" floating popup ──
     const popStyle = document.createElement('style');
     popStyle.textContent = `.npc-pop{position:fixed;left:50%;bottom:130px;transform:translateX(-50%);display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(110,208,214,.55);border-radius:14px;padding:12px 18px;z-index:50;text-align:center}.npc-pop.show{display:block}.npc-pop .who{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.65);margin-bottom:6px}.npc-pop .who b{color:#6ed0d6}.npc-pop .line{font-family:'Bangers','Orbitron',sans-serif;font-size:18px;color:#fff1c2;margin-bottom:8px}.npc-pop .btn{background:linear-gradient(135deg,#46c5d6,#6ed0d6);color:#061a1c;border:0;padding:9px 18px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;font-size:12px;text-transform:uppercase;cursor:pointer}`;
     document.head.appendChild(popStyle);
     const pop = document.createElement('div');
     pop.className = 'npc-pop';
-    pop.innerHTML = '<div class="who"><b id="npcPopName">-</b> \u{1F5A8}</div><div class="line" id="npcPopLine">Talk to them...</div><button class="btn" id="npcPopBtn">Open</button>';
+    pop.innerHTML = '<div class="who"><b id="npcPopName">-</b> \u{1F5A8}</div><div class="line" id="npcPopLine">Talk to them...</div><div style="font-size:11px;color:rgba(230,255,238,.7);margin-bottom:8px;letter-spacing:.4px;">Press <kbd style="background:rgba(110,208,214,.22);border:1px solid rgba(110,208,214,.6);color:#a8e0ff;padding:2px 8px;border-radius:6px;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;">E</kbd> or click below</div><button class="btn" id="npcPopBtn">Open</button>';
     document.body.appendChild(pop);
     let nearNpc = null;
     function tryHandle(n){
@@ -458,7 +551,7 @@
         document.getElementById('npcPopBtn').textContent = best.kind === "market" ? "Open Carlos's Market" : best.kind === "bank" ? "Open Bank" : best.kind === "dock" ? "Talk to Wave" : "Talk to Gary";
         pop.classList.add('show');
       } else { pop.classList.remove('show'); }
-    }, 160);
+}, 160);
     window.addEventListener('keydown', (e) => {
       if(e.code !== "KeyE" || !nearNpc) return;
       const a = document.activeElement;

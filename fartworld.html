@@ -16,7 +16,7 @@
 <!-- Bowling minigame lives in its own file so the main game's HTML stays
      under the editor size limit. Loaded with defer so it runs after the
      module script has exposed globals (State, ITEMS, etc) onto window. -->
-<script src="bowling.js" defer></script>
+<!-- <script src="bowling.js" defer></script> -->
 <!-- Portfolio panel — shows all owned assets (off-chain + on-chain). -->
 <script src="portfolio.js" defer></script>
 <!-- Native in-app swap (Jupiter API + Phantom signing). -->
@@ -36,6 +36,19 @@
 <!-- Wave's Sea Plane — buy at the port, take off and fly. -->
 <script src="seaplane.js" defer></script>
 <script src="roki.js" defer></script>
+<script src="alexandre.js" defer></script>
+<script src="minimap.js" defer></script>
+<script src="compass.js" defer></script>
+<script src="weed-timer.js" defer></script>
+<script src="nature.js" defer></script>
+<script src="ui-polish.js" defer></script>
+<script src="dev.js" defer></script>
+<script src="equip.js" defer></script>
+<script src="bank-fix.js" defer></script>
+<script src="house-walls.js" defer></script>
+<script src="rocket.js" defer></script>
+<script src="moon.js" defer></script>
+<script src="loading.js"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -3757,7 +3770,7 @@ function groundHeightAt(x, z){
 }
 
 // Grid overlay (subtle neon lines on the ground)
-const grid = new THREE.GridHelper(200, 50, 0x2ee06b, 0x0e2818);
+const grid = new THREE.GridHelper(200, 50, 0x2ee06b, 0x0e2818); grid.visible = false; /* hide neon grid */
 grid.material.opacity = 0.18;
 grid.material.transparent = true;
 scene.add(grid);
@@ -5255,7 +5268,15 @@ document.getElementById('skipBtn').addEventListener('click', enterLobby);
 // ─── Movement update ────────────────────────────────────────────
 function updateMovement(dt){
   // If we're in a boat, the boat-update owns position + yaw entirely.
-  if(Player.boat){ updateBoat(dt); return; }
+  // Sea Plane / Yacht physics are owned by seaplane.js — skip everything.
+  if(Player.boat){
+    if(Player.boat.isPlane || Player.boat.isYacht || Player.boat.isRocket){
+      Player.walking = false;
+      return;
+    }
+    updateBoat(dt);
+    return;
+  }
 
   // JAIL — locked to a tiny cell for 5 minutes after a counterfeit bust.
   // Movement input is still read so the player can pace inside the cell,
@@ -5307,11 +5328,17 @@ function updateMovement(dt){
 
   // Sample ground OR walkable surface (house floors, stairs, refinery, arena)
   let yNew = sampleSurfaceY(Player.pos.x, Player.pos.z);
-  // Block walking off the island into deep water. Below WATER_LEVEL-0.4
-  // is "too deep to wade" — revert the step entirely.
-  if(yNew < WATER_LEVEL - 0.4){
-    Player.pos.x = oldX; Player.pos.z = oldZ;
-    yNew = sampleSurfaceY(Player.pos.x, Player.pos.z);
+  // Swimming: allow the player to walk out into deep water at slower
+  // speed. Below WATER_LEVEL - 0.4 we clamp the player's Y to a "head
+  // above water" position (WATER_LEVEL + 0.05) and tag them as swimming.
+  // (Previously we reverted the step entirely → couldn't reach plane.)
+  Player.swimming = (yNew < WATER_LEVEL - 0.4);
+  if(Player.swimming){
+    // Don't revert — just clamp Y. Also slow movement to half by
+    // backing off the step a bit.
+    Player.pos.x = oldX + (Player.pos.x - oldX) * 0.55;
+    Player.pos.z = oldZ + (Player.pos.z - oldZ) * 0.55;
+    yNew = WATER_LEVEL - 0.4;  // head just above water
   }
   // Trampoline detection — if the player is over an active trampoline AND
   // not yet airborne (or just landed on it), kick them upward. Each time
@@ -6152,12 +6179,14 @@ function buildHouse(){
     // Walls (4 sides) with a doorway gap on the front side of floor 0
     function makeWall(x, z, w, h, d, hasDoor){
       if(hasDoor){
-        const left = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 0.8, h, d), wallMat);
-        left.position.set(x - (w/4 + 0.4), h/2, z);
+        // Doorway widened from 1.6m → 3.6m so the player can comfortably
+        // walk in. Each side wall is (w/2 - 1.8) wide instead of (w/2 - 0.8).
+        const left = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 1.8, h, d), wallMat);
+        left.position.set(x - (w/4 + 0.9), h/2, z);
         left.receiveShadow = true; left.castShadow = true;
         fg.add(left);
-        const right = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 0.8, h, d), wallMat);
-        right.position.set(x + (w/4 + 0.4), h/2, z);
+        const right = new THREE.Mesh(new THREE.BoxGeometry(w/2 - 1.8, h, d), wallMat);
+        right.position.set(x + (w/4 + 0.9), h/2, z);
         right.receiveShadow = true; right.castShadow = true;
         fg.add(right);
         const lintel = new THREE.Mesh(new THREE.BoxGeometry(w, h - 2.4, d), wallMat);
@@ -6247,17 +6276,26 @@ buildHouse();
 // ── Hollywood-style $FARTPRINT sign on a distant hill ──
 function buildHollywoodSign(){
   const grp = new THREE.Group();
-  // Position far back on a synthetic hill (north)
-  grp.position.set(0, 0, -160);
-  // Mound under the letters
+  // Position on the south end of the island so the player can walk to it.
+  // Mound centered at z=-120 with radius 40, top at y=20, so the FRONT
+  // toe of the hill touches roughly z=-80 inside ISLAND_RADIUS=90.
+  grp.position.set(0, 0, -120);
+  // Mound under the letters — walkable so the player can hike up it.
   const mound = new THREE.Mesh(
-    new THREE.ConeGeometry(70, 22, 14, 1, false),
+    new THREE.ConeGeometry(40, 20, 24, 1, false),
     new THREE.MeshStandardMaterial({ color: 0x2c5232, roughness: 0.95, flatShading: true })
   );
-  mound.position.y = 11;
+  mound.position.y = 10;
   mound.castShadow = false;
   mound.receiveShadow = true;
+  // Move into world space so the raycaster finds it at the right Z.
+  mound.updateMatrixWorld();
   grp.add(mound);
+  // Register a world-positioned proxy for the walkable raycaster.
+  const walkProxy = mound.clone();
+  walkProxy.position.set(0, 10, -120);
+  walkProxy.updateMatrixWorld();
+  WalkableSurfaces.push(walkProxy);
 
   // Letters — chunky blocks spelling "$FARTPRINT" set on the mound's
   // forward slope. Each letter is a procedural box composition.
@@ -6379,8 +6417,11 @@ buildRefinery();
 // doesn't blow out in the post pass.
 const Water = { mesh: null, time: 0 };
 function buildWater(){
-  const size = 800;
-  const segs = 96;
+  // Bigger sea so float-equipped craft (Sea Plane) have a long open
+  // runway in any direction before hitting the visible horizon. 1400m
+  // square keeps the player ~700m from the water edge at any angle.
+  const size = 1400;
+  const segs = 128;
   const geo = new THREE.PlaneGeometry(size, size, segs, segs);
   geo.rotateX(-Math.PI / 2);
   const mat = new THREE.MeshStandardMaterial({
@@ -7300,35 +7341,68 @@ const FOOTBALL_POS    = { x: -15, z: -45 };   // between Market and House — cl
 const FOOTBALL_RADIUS = 4.5;
 
 function _makeSoccerBallTexture(){
+  // Classical telstar football: white background with cleanly stitched
+  // black pentagons sitting inside a hexagonal lattice. The previous
+  // version drew rotated pentagons on a staggered grid which produced
+  // crooked, irregular patches when wrapped onto a sphere. Here we use
+  // a clean axis-aligned hex grid, draw a UNIFORM circular black patch
+  // at each cell center (circles map smoothly across the sphere), and
+  // add a thin stitch line around each patch for that classic look.
   const cvs = document.createElement('canvas');
-  cvs.width = 512; cvs.height = 256;
+  cvs.width = 1024; cvs.height = 512;
   const ctx = cvs.getContext('2d');
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#f4f1ea';
   ctx.fillRect(0, 0, cvs.width, cvs.height);
-  // Black pentagon stamps in a hex grid — looks like the classic ball
-  // when wrapped onto a sphere
-  ctx.fillStyle = '#101010';
-  const drawPent = (cx, cy, r) => {
-    ctx.beginPath();
-    for(let i = 0; i < 5; i++){
-      const a = -Math.PI/2 + (i / 5) * Math.PI * 2;
-      const x = cx + Math.cos(a) * r;
-      const y = cy + Math.sin(a) * r;
-      if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fill();
-  };
-  const cols = 8, rows = 4;
-  const dx = cvs.width / cols, dy = cvs.height / rows;
+  // Subtle paper-noise so the ball isn't perfectly flat white
+  for(let i = 0; i < 1800; i++){
+    ctx.fillStyle = `rgba(0,0,0,${0.012 + Math.random() * 0.025})`;
+    const x = Math.random() * cvs.width;
+    const y = Math.random() * cvs.height;
+    ctx.fillRect(x, y, 1.5, 1.5);
+  }
+  // Hex-grid lattice
+  const cols = 7, rows = 4;          // fewer + larger patches → cleaner look
+  const cellW = cvs.width / cols;
+  const cellH = cvs.height / rows;
+  const patchR = Math.min(cellW, cellH) * 0.30;
   for(let r = 0; r < rows; r++){
     for(let c = 0; c < cols; c++){
-      const x = c * dx + dx/2 + (r % 2 ? dx/2 : 0);
-      const y = r * dy + dy/2;
-      drawPent(x, y, 18);
+      // Hex offset every other row
+      const cx = c * cellW + cellW / 2 + (r % 2 ? cellW / 2 : 0);
+      const cy = r * cellH + cellH / 2;
+      // Black patch
+      ctx.beginPath();
+      ctx.arc(cx, cy, patchR, 0, Math.PI * 2);
+      ctx.fillStyle = '#0d0d0d';
+      ctx.fill();
+      // Lighter inner sheen
+      const grad = ctx.createRadialGradient(cx - patchR*0.3, cy - patchR*0.3, patchR*0.1, cx, cy, patchR);
+      grad.addColorStop(0, 'rgba(60,60,60,0.55)');
+      grad.addColorStop(1, 'rgba(13,13,13,0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+      // Stitch ring
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = '#1a1a1a';
+      ctx.stroke();
     }
   }
-  return new THREE.CanvasTexture(cvs);
+  // Faint stitch lines connecting neighbouring patches horizontally for
+  // that hand-sewn impression
+  ctx.strokeStyle = 'rgba(40,40,40,.35)';
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 5]);
+  for(let r = 0; r < rows; r++){
+    const cy = r * cellH + cellH / 2;
+    ctx.beginPath();
+    ctx.moveTo(0, cy);
+    ctx.lineTo(cvs.width, cy);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  const tex = new THREE.CanvasTexture(cvs);
+  tex.anisotropy = 4;
+  return tex;
 }
 
 function buildFootballStatue(){
@@ -7513,7 +7587,7 @@ function buildBowlingAlley(){
   grp.add(ball);
   scene.add(grp);
 }
-buildBowlingAlley();
+// buildBowlingAlley(); // removed
 
 // =================================================================
 // ─── TRAMPOLINES — step on, bounce up ──────────────────────────
@@ -7623,8 +7697,10 @@ buildBank();
 // Hidden corner of the house — when the player is on the top-floor
 // terrace, the secret laundering NPC offers to exchange fake bills
 // for real silver at a brutal 1 fake = 0.3 silver.
-const LAUNDER_POS = { x: HOUSE_POS.x + 2.5, z: HOUSE_POS.z + 2.0 };
-const LAUNDER_RADIUS  = 2.0;
+// Triggers anywhere inside the house — centered on the house origin
+// with a 5m radius that comfortably covers the 9×9 footprint.
+const LAUNDER_POS = { x: HOUSE_POS.x, z: HOUSE_POS.z };
+const LAUNDER_RADIUS  = 5.0;
 const LAUNDER_RATE    = 0.3;          // 1 fake → 0.3 paper (clean cash)
 
 // Hover detection — raycast against any cat mesh on mousemove and
@@ -8033,7 +8109,7 @@ function updatePlotPrompt(){
     sub.innerHTML = `Press <kbd>E</kbd> to trade nation coins · claim flag wearables`;
     return;
   }
-  if(nearbyBowling){
+  if(false && nearbyBowling){
     prompt.classList.remove('locked');
     prompt.classList.add('show');
     title.textContent = "🎳 BOWLING";
@@ -8049,21 +8125,14 @@ function updatePlotPrompt(){
   if(nearbyDock){
     prompt.classList.remove('locked');
     prompt.classList.add('show');
-    title.textContent = "🪵 BOAT SHOP";
-    if(State.credits >= BOAT_PRICE){
-      sub.innerHTML = `Press <kbd>E</kbd> to buy a <b>Tree Boat</b> for <b>${BOAT_PRICE} 🥈</b>`;
-    } else {
-      sub.innerHTML = `Need <b>${BOAT_PRICE} 🥈 Silver</b> for a boat`;
-      prompt.classList.add('locked');
-    }
+    title.textContent = "🖨 WAVE'S DOCK";
+    sub.innerHTML = `Press <kbd>E</kbd> to talk to Wave — boats, planes & yachts`;
     return;
   }
 
   if(nearbyMarket){
-    prompt.classList.remove('locked');
-    prompt.classList.add('show');
-    title.textContent = "🌿 MARKETPLACE";
-    sub.innerHTML = `Press <kbd>E</kbd> to enter`;
+    // Carlos handles all market interactions now — his own proximity
+    // popup takes over inside the tent, so we don't show the old prompt.
     return;
   }
   if(nearbyRefinery){
@@ -8116,17 +8185,27 @@ function updatePlotPrompt(){
       }
     } else {
       const item = ITEMS[nearbyPlot.crop];
-      const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
+      // growMs lives on the seed item, not the harvest item — look up
+      // via the seed whose .harvest points back to this crop.
+      let growMs = item && item.growMs;
+      if(!growMs){
+        for(const k of Object.keys(ITEMS)){
+          const it = ITEMS[k];
+          if(it && it.harvest === nearbyPlot.crop && it.growMs){ growMs = it.growMs; break; }
+        }
+      }
+      if(!growMs) growMs = 10 * 60 * 1000; // safety fallback
+      const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / growMs));
       if(t >= 1){
-        title.textContent = `✨ Ready to harvest ${rentTag}`;
+        title.textContent = `✨ Harvest ready · Plot lease ${rentTag}`;
         sub.innerHTML = `Press <kbd>E</kbd> to pick the <b>${ITEMS[item.harvest].name}</b>`;
       } else {
-        const remainingMs = (1 - t) * item.growMs;
+        const remainingMs = (1 - t) * growMs;
         const remainingLabel = remainingMs >= 60000
           ? Math.ceil(remainingMs / 60000) + "m"
           : Math.ceil(remainingMs / 1000) + "s";
-        title.textContent = `🌿 Growing… ${rentTag}`;
-        sub.innerHTML = `Ready in <b>${remainingLabel}</b> (${Math.floor(t * 100)}%)`;
+        title.textContent = `🌿 ${item.name} growing · Plot lease ${rentTag}`;
+        sub.innerHTML = `Crop ready in <b>${remainingLabel}</b> (${Math.floor(t * 100)}%) — separate from plot lease`;
       }
     }
   } else {
@@ -8177,21 +8256,13 @@ function tryInteract(){
   // Football statue — open Fart Cup window
   if(nearbyFootball){ openFartCup(); return; }
   // Bowling alley — opens the bowling minigame (loaded from bowling.js)
-  if(nearbyBowling){ if(window.openBowling) window.openBowling(); return; }
-  // Boat shop interaction (dock)
+  if(false && nearbyBowling){ return; }
+  // Dock interaction — defer to Wave's shop modal (side file owns it now)
   if(nearbyDock){
-    if(State.credits < BOAT_PRICE){
-      floater(`Need ${BOAT_PRICE} 🥈 Silver`, "bad"); return;
-    }
-    State.credits -= BOAT_PRICE;
-    const b = spawnBoatNearPlayer();
-    floater(`⛵ Boat spawned · -${BOAT_PRICE} 🥈`, "good");
-    showBuyToast(`Bought 1 Tree Boat · −${BOAT_PRICE} 🥈 Silver`);
-    playPurchaseSound();
-    saveState(); updateHUD();
-    return;
+    if(typeof window.openWaveShop === "function"){ window.openWaveShop(); return; }
+    floater("Wave is loading...", "bad"); return;
   }
-  if(nearbyMarket){ openMarket(); return; }
+  if(nearbyMarket){ /* Carlos handles market — no-op */ return; }
   if(nearbyRefinery){
     if(!State.inventory.pickaxe){ floater("No pickaxe", "bad"); return; }
     const dur = State.tools.pickaxe?.durability ?? 100;
@@ -8456,8 +8527,7 @@ const SEED_SHOP = [
   { itemId: "saw",         desc: "Chop down trees + beach palms for wood. Sell the wood or mill it into paper." },
   { itemId: "paper",       desc: "Blank sheets. Required (with ink) to forge fake bills at the print stations." },
   { itemId: "ink",         desc: "Black ink. Required (with paper) to forge fake bills at the print stations." },
-  { itemId: "plastic_bag", desc: "Container for sand. Take to the beach with a shovel to scoop it full." },
-  { itemId: "shovel",      desc: "Dig sand on the beach into a plastic bag. Sand bags melt into Empty Jars at the Refinery." },
+  { itemId: "plastic_bag", desc: "Container for sand. Hit F on the beach to scoop sand into it." },
 ];
 
 function openMarket(){
@@ -11178,6 +11248,7 @@ function applyWornFlagPaper(){
   }, undefined, setCanvasFallback);
 }
 
+
 // Renders wearables with the WEARING badge + click-to-toggle
 const _origRender = renderInventory;
 renderInventory = function(){
@@ -11196,8 +11267,7 @@ renderInventory = function(){
   });
 };
 window.renderInventory = renderInventory;
-(function(){ if(!State.claimedFlags?.size) return; for(const c of State.claimedFlags){ const co = FARTCUP_COINS.find(x => x.code === c); if(co) ensureFlagItem(co); } })();
-Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats });
+Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, openFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS, spawnBoatNearPlayer, printer, HOUSE_POS });
 try { fcFetchPrices(); } catch(e){}
 </script>
 </body>
