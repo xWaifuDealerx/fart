@@ -2749,7 +2749,7 @@
     <div class="inv-card">
       <div class="inv-head">
         <h2>🎒 INVENTORY</h2>
-        <button class="close" id="invClose" style="background:transparent;border:0;color:rgba(230,255,238,0.55);font-size:24px;cursor:pointer;line-height:1;">×</button>
+        <button class="close" id="invClose" style="background:transparent;border:0;color:rgba(230,255,238,0.55);font-size:24px;cursor:pointer;line-height:1;position:relative;z-index:10;pointer-events:auto;" onclick="document.getElementById('invBg').classList.remove('show')">×</button>
       </div>
       <div class="stats-row">
         <div class="stat silver">🥈 <b id="invSilver">0</b> Silver</div>
@@ -8393,6 +8393,12 @@ function sharpenCost(durability){
 
 function tryInteract(){
   // If you're already in a boat, E disembarks you.
+  // Yacht / plane stub objects: delegate to seaplane.js so we don't try
+  // to step out of a vessel that's drifting at sea.
+  // Yacht / plane / rocket — seaplane.js (or rocket.js) owns the E-key.
+  // We must NOT clear Player.boat here, because the camera + control loop
+  // reads it. Just bail; the side-file's keydown will tear it down properly.
+  if(Player.boat && (Player.boat.isYacht || Player.boat.isPlane || Player.boat.isRocket)) return;
   if(Player.boat){ leaveBoat(); floater("Stepped out of the boat", "good"); return; }
   // Boardable boat nearby? E boards it.
   const nearBoat = findBoardableBoat();

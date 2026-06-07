@@ -31,12 +31,9 @@
 
     function anyFartJar(){
       const inv = State.inventory || {};
-      // Any inventory id starting with "jar_" (and not "jar_empty") counts.
-      // Common ids from crafting.js: jar_green, jar_blue, jar_purple,
-      // jar_orange, jar_rainbow, jar_weed.
+      // The FFS yields ids prefixed "fartjar_" (green/blue/purple/orange/rainbow).
       for(const id of Object.keys(inv)){
-        if(id === "jar_empty") continue;
-        if(!id.startsWith("jar_")) continue;
+        if(!id.startsWith("fartjar_")) continue;
         if((inv[id] || 0) > 0) return true;
       }
       return false;
@@ -45,8 +42,7 @@
       const inv = State.inventory || {};
       let c = 0;
       for(const id of Object.keys(inv)){
-        if(id === "jar_empty") continue;
-        if(!id.startsWith("jar_")) continue;
+        if(!id.startsWith("fartjar_")) continue;
         c += Number(inv[id] || 0);
       }
       return c;
@@ -114,7 +110,9 @@
           "You'll receive one of: green, blue, purple, orange, or rainbow Fart Jar.",
         ],
         check(){
-          return anyFartJar();
+          // Strictly require that the player used the FFS Fill button.
+          // crafting.js sets State.tutorialFartedAtFFS on each click.
+          return (Number(State.tutorialFartedAtFFS) || 0) > 0;
         },
       },
       {
@@ -283,7 +281,6 @@
         credits: Number(State.credits) || 0,
         paper: Number(State.paper) || 0,
       };
-      collapsed = false;
       window.saveState?.();
       renderStep();
       window.floater?.("Tutorial reset to step 1", "good");

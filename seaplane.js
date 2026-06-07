@@ -425,8 +425,22 @@
         proxEl.classList.remove('show');
       }
     }, 200);
-    // NOTE: the single E-key handler that actually boards/disembarks lives
-    // at the bottom of init() — see the keydown handler around line 615.
+    // E-key handler — boards plane / yacht when nothing else captures it.
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyE') return;
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      // Already in a vessel — disembark.
+      if(myPlane){ try { leave(); } catch(err){ console.error('[plane] leave failed', err); } return; }
+      if(myYacht){ try { leaveYacht(); } catch(err){ console.error('[yacht] leave failed', err); } return; }
+      // Don't board if a modal is showing — the modal owns the keys.
+      const modalOpen = document.querySelector('.bank-bg.show, .stor-bg.show, .dc-bg.show, .est-bg.show, .junk-bg.show, .junk-choose-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show');
+      if(modalOpen) return;
+      const pl = findBoardable();
+      if(pl){ try { board(pl); } catch(_){} return; }
+      const yt = findBoardableYacht();
+      if(yt){ try { boardYacht(yt); } catch(_){} return; }
+    });
 
     // ── Wave's shop modal ──
     const ws = document.createElement('style');
@@ -570,7 +584,10 @@
       myYacht = null;
       Player.boat = null;
       y.speed = 0;
-      window.floater?.("Stepped off the yacht", "good");
+      // Reset rotation so the player isn't permanently looking up at the sky.
+      Player.pitch = 0;
+      Player.boatYaw = 0;
+      window.floater?.("Stepped off the yacht — back on dry land", "good");
     }
     function findBoardableYacht(){
       for(const y of Yachts){
@@ -662,14 +679,13 @@
         + (own.yacht ? '<button class="btn" id="waveGetYacht">Retrieve</button>' : '<button class="btn" id="waveBuyYacht">Buy</button>') + '</div>'
         + '<button class="cancel" id="waveCancel">Leave</button>'
         + '</div>';
-      const cancel = document.getElementById('waveCancel');
       if(cancel) cancel.addEventListener('click', () => waveBg.classList.remove('show'));
     }
     function openWaveShop(){ renderWave(); waveBg.classList.add('show'); }
-    function closeWaveShop(){ waveBg.classList.remove('show'); }
+    function closeWave(){ waveBg.classList.remove('show'); }
     window.openWaveShop = openWaveShop;
-    window.closeWaveShop = closeWaveShop;
-    waveBg.addEventListener('click', (e) => { if(e.target === waveBg) closeWaveShop(); });
+    window.closeWaveShop = closeWave;
+    waveBg.addEventListener('click', (e) => { if(e.target === waveBg) closeWave(); });
     console.log('[seaplane] ready');
   }
 })();
