@@ -42,7 +42,7 @@
       { x: -38, z: -16, r: 6 },   // Bowling
       { x: -45, z:   8, r: 4 },   // Paper Mill
       { x:  -8, z: -16, r: 3 },   // Stats sign
-      { x:  70, z:  70, r: 3 },   // Jail
+      { x:  55, z:  50, r: 3 },   // Jail
       { x:  60, z:  60, r: 4 },   // Gary's tent
       { x: -55, z:  32, r: 4 },   // Fart Filling Station
     ];
@@ -287,9 +287,19 @@
     document.head.appendChild(popStyle);
     const nearPop = document.createElement('div');
     nearPop.className = 'roki-near';
-    nearPop.innerHTML = '<div class="who"><b>Roki</b> 🐇</div><div class="line">Sell him carrots for premium cash!</div><button class="btn" id="rokiNearBtn">Trade</button>';
+    nearPop.innerHTML = '<div class="who"><b>Roki</b> 🐇</div><div class="line">Sell him carrots for premium cash!</div><div style="font-size:11px;color:rgba(230,255,238,.7);margin-bottom:8px;letter-spacing:.4px;">Press <kbd style="background:rgba(95,240,156,.22);border:1px solid rgba(95,240,156,.55);color:#5ff09c;padding:2px 8px;border-radius:6px;font-family:\'JetBrains Mono\',monospace;font-size:11px;font-weight:700;">E</kbd> or click below</div><button class="btn" id="rokiNearBtn">Trade</button>';
     document.body.appendChild(nearPop);
     document.getElementById('rokiNearBtn').addEventListener('click', openRoki);
+    // E-key — open carrot trade when nearPop is visible.
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyE') return;
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      if(!nearPop.classList.contains('show')) return;
+      // Don't intercept if a modal is open
+      if(document.querySelector('.roki-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show')) return;
+      openRoki();
+    });
 
     // ── Update loop (called once per second by ourselves) ──
     let lastT = performance.now();
@@ -303,19 +313,15 @@
         const dx = Player.pos.x - roki.x, dz = Player.pos.z - roki.z;
         roki.yaw = Math.atan2(dx, dz);
         nearPop.classList.add('show');
-      } else { nearPop.classList.remove('show'); if(roki.state === "stop") roki.state = "wander"; }
-      roki.y = groundHeightAt(roki.x, roki.z);
-      roki.mesh.position.set(roki.x, roki.y, roki.z);
+      } else {
+        nearPop.classList.remove('show');
+        if(roki.state === "stop") roki.state = "wander";
+      }
+      roki.mesh.position.set(roki.x, groundHeightAt(roki.x, roki.z), roki.z);
       roki.mesh.rotation.y = roki.yaw;
-      _projVTag.set(roki.x, roki.y + 1.8, roki.z).project(window.camera);
-      if(_projVTag.z < 1){
-        tag.style.left = ((_projVTag.x * 0.5 + 0.5) * window.innerWidth) + 'px';
-        tag.style.top  = ((1 - (_projVTag.y * 0.5 + 0.5)) * window.innerHeight) + 'px';
-        tag.style.display = 'block';
-      } else tag.style.display = 'none';
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
-    console.log("[roki] ready");
+    console.log('[roki] ready');
   }
 })();

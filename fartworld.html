@@ -12,53 +12,64 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FARTPRINT">
 <meta name="description" content="FartWorld — the $FARTPRINT 3D virtual world. Play as a sentient office printer, rip farts in safe zones, earn XP and $FART credits, complete quests. Built with Three.js.">
-<script src="mwa-shim.js" defer></script>
+<script src="desktop-only.js?v=6bd"></script>
+<script src="mwa-shim.js?v=6bd" defer></script>
 <!-- Bowling minigame lives in its own file so the main game's HTML stays
      under the editor size limit. Loaded with defer so it runs after the
      module script has exposed globals (State, ITEMS, etc) onto window. -->
-<!-- <script src="bowling.js" defer></script> -->
+<!-- <script src="bowling.js?v=6bd" defer></script> -->
 <!-- Portfolio panel — shows all owned assets (off-chain + on-chain). -->
-<script src="portfolio.js" defer></script>
+<script src="portfolio.js?v=6bd" defer></script>
 <!-- Native in-app swap (Jupiter API + Phantom signing). -->
-<script src="swap.js" defer></script>
+<script src="swap.js?v=6bd" defer></script>
 <!-- World extras: jail cell mesh, extra trees + chop mechanic, paper mill. -->
-<script src="world-extras.js" defer></script>
+<script src="world-extras.js?v=6bd" defer></script>
 <!-- Fart Cup CSS + modal injection (moved out of main file for size). -->
-<script src="fartcup-ui.js" defer></script>
+<script src="fartcup-ui.js?v=6bd" defer></script>
 <!-- 3 junkie printer NPCs that wander + buy fake weed + launder fake cash. -->
-<script src="junkies.js" defer></script>
+<script src="junkies.js?v=6bd" defer></script>
 <!-- Static printer NPCs behind counters (Carlos / Moneycaller / Wave / Gary). -->
-<script src="static-npcs.js" defer></script>
+<script src="static-npcs.js?v=6bd" defer></script>
 <!-- Logout, crafting items, weed tiers, fart-jar tiers, Pawn Shop stub. -->
 <script src="extras-v6b.js" defer></script>
 <!-- Sand collection, jar melt, Fart Filling Station building. -->
-<script src="crafting.js" defer></script>
+<script src="crafting.js?v=6bd" defer></script>
 <!-- Wave's Sea Plane — buy at the port, take off and fly. -->
-<script src="seaplane.js" defer></script>
-<script src="roki.js" defer></script>
-<script src="alexandre.js" defer></script>
-<script src="minimap.js" defer></script>
-<script src="compass.js" defer></script>
-<script src="weed-timer.js" defer></script>
-<script src="nature.js" defer></script>
-<script src="ui-polish.js" defer></script>
-<script src="dev.js" defer></script>
-<script src="equip.js" defer></script>
-<script src="bank-fix.js" defer></script>
-<script src="house-walls.js" defer></script>
-<script src="rocket.js" defer></script>
-<script src="moon.js" defer></script>
-<script src="social.js" defer></script>
-<script src="mobile.js" defer></script>
-<script src="dropitem.js" defer></script>
-<script src="establishments.js" defer></script>
-<script src="streetlights.js" defer></script>
-<script src="bike.js" defer></script>
-<script src="datacenter.js" defer></script>
-<script src="storage.js" defer></script>
+<script src="seaplane.js?v=6bd" defer></script>
+<script src="roki.js?v=6bd" defer></script>
+<script src="alexandre.js?v=6bd" defer></script>
+<script src="minimap.js?v=6bd" defer></script>
+<script src="compass.js?v=6bd" defer></script>
+<script src="weed-timer.js?v=6bd" defer></script>
+<script src="nature.js?v=6bd" defer></script>
+<script src="ui-polish.js?v=6bd" defer></script>
+<script src="dev.js?v=6bd" defer></script>
+<script src="equip.js?v=6bd" defer></script>
+<script src="bank-fix.js?v=6bd" defer></script>
+<script src="house-walls.js?v=6bd" defer></script>
+<script src="rocket.js?v=6bd" defer></script>
+<script src="moon.js?v=6bd" defer></script>
+<script src="social.js?v=6bd" defer></script>
+<script src="mobile.js?v=6bd" defer></script>
+<script src="dropitem.js?v=6bd" defer></script>
+<script src="establishments.js?v=6bd" defer></script>
+<script src="streetlights.js?v=6bd" defer></script>
+<script src="bike.js?v=6bd" defer></script>
+<script src="datacenter.js?v=6bd" defer></script>
+<script src="storage.js?v=6bd" defer></script>
 <script src="poop500.js" defer></script>
-<script src="tutorial.js" defer></script>
-<script src="loading.js"></script>
+<script src="tutorial.js?v=6bd" defer></script>
+<script src="fartcup.js?v=6bd" defer></script>
+<script src="gunsmith.js?v=6bd" defer></script>
+<script src="extras-v6ay.js?v=6bd" defer></script>
+<script src="extras-v6ba.js?v=6bd" defer></script>
+<script src="extras-v6bb.js?v=6bd" defer></script>
+<script src="extras-v6bd.js?v=6bd" defer></script>
+<script src="extras-v6be.js?v=6bf" defer></script>
+<script src="extras-v6bg.js?v=6bg" defer></script>
+<script src="extras-v6bh.js?v=6bh" defer></script>
+<script src="extras-v6bi.js?v=6bj" defer></script>
+<script src="loading.js?v=6bd"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -3162,13 +3173,13 @@
       Play as a <b>sentient office printer</b>. Fart and print while building your empire.
       Complete daily tasks, level up and become a leader in the <b>Fartprint</b> economy.
     </p>
-    <button class="connect-btn" id="connectBtn">
+    <button class="connect-btn" id="connectBtn" type="button" onclick="(function tryGo(n){if(typeof window.connectWallet==='function'){window.connectWallet();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">
       <svg width="18" height="18" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
         <path d="M64 0a64 64 0 1 0 64 64A64 64 0 0 0 64 0Zm22 64a22 22 0 0 1-22 22 22 22 0 0 1-22-22V42a14 14 0 0 1 14-14h16a14 14 0 0 1 14 14Z"/>
       </svg>
       Connect Phantom
     </button>
-    <button class="skip" id="skipBtn">Play as guest →</button>
+    <button class="skip" id="skipBtn" type="button" onclick="(function tryGo(n){if(typeof window.enterLobby==='function'){window.enterLobby();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">Play as guest →</button>
   </div>
 </div>
 
@@ -3520,13 +3531,27 @@ function xpForLevel(lv){ return 100 * lv; }
 // ─── Three.js setup ─────────────────────────────────────────────
 const canvas   = document.getElementById('canvas');
 const scene    = new THREE.Scene();
+// Expose scene immediately so loading.js's readiness probe can hide
+// the overlay without waiting for the full Object.assign at module end.
+// If we don't, the loading overlay (z-index 9999) stays up for 25s and
+// swallows clicks on the Connect Phantom / Play as guest buttons.
+window.scene = scene;
 scene.background = new THREE.Color(0x0a1408);
 scene.fog = new THREE.Fog(0x0a1408, 60, 220);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 600);
 camera.position.set(0, 6, 12);
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance" });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
+// Suppress the browser's right-click context menu over the canvas
+// (so "Save image as..." doesn't pop up mid-game).
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+// Expose a "snap the game" helper so the milestone-tweet flow can
+// attach a screenshot. preserveDrawingBuffer:true above keeps the
+// last-rendered frame in the canvas backbuffer for capture.
+window.snapGameCanvas = function(){
+  try { return canvas.toDataURL('image/png'); } catch(_){ return null; }
+};
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.75));
 renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -4052,6 +4077,7 @@ function makePrinterStation(x, z){
 // grows through 3 stages over its `growMs` duration before becoming
 // harvestable. Plot ownership + crops sync across the room via ntfy.
 const Plots = [];                      // { id, x, z, w, h, mesh, signMesh, plantMesh, owner, ownerName, crop, plantedAt, ownerLabel }
+window.Plots = Plots;
 // Plots are now RENTED for 24h at a time, not permanently bought —
 // after the rental expires the plot returns to the marketplace and
 // any crop still planted on it is forfeited. This keeps the available
@@ -4560,7 +4586,7 @@ function makePaperMountain(x, z, scale){
 // site; we just don't invoke it on world build anymore.
 
 // ─── Player ─────────────────────────────────────────────────────
-const Player = {
+const Player = window.Player = {
   pos: new THREE.Vector3(0, 0, 0),
   vel: new THREE.Vector3(),
   // Default printer facing away from the camera (yaw = π), so the user is
@@ -4633,6 +4659,12 @@ function tryFart(){
   spawnFartParticles(power, Player.zone === "danger");
   playFartSound(power, Player.zone === "danger");
   broadcastFart(power, Player.zone === "danger");
+
+  // ── Spider repellent — fart radius lethal to any nearby spiders ──
+  if(typeof window.killSpidersNear === "function"){
+    const fartRadius = 3 + power * 4;        // 3-7m based on power
+    try { window.killSpidersNear(Player.pos.x, Player.pos.z, fartRadius); } catch(_){}
+  }
 
   // ── Cat-cruelty penalty: farting on a cat costs XP ──
   // Cats stored on window.Cats by the cat system. Any cat within 3.2m
@@ -5100,30 +5132,21 @@ const Quests = [
     reward: { xp: 200, credits: 75 },
   },
   {
-    // Holds ≥$1 worth of any Fart Cup OR FART&POOP500 token. Progress is
-    // the integer cents (so 0–100 fills the bar in 1¢ steps). Reads live
-    // balances + prices from the cached _fcData / _poopData maps that
-    // the Fart Cup and Poop House code populates.
-    id: "crypto_buy_1usd",
-    name: "Buy $1+ of any Fart Cup or FART&POOP500 token",
-    target: 100,
+    // Fart into 10 jars at the Fart Filling Station today.
+    // Reads State.tutorialFartedAtFFS which crafting.js increments on
+    // every successful Fill click — we keep a per-day baseline so the
+    // counter resets each calendar day.
+    id: "fart_10_jars",
+    name: "Fart into 10 Jars",
+    target: 10,
     progress: () => {
-      let usd = 0;
-      try {
-        if(typeof FARTCUP_COINS !== "undefined" && typeof _fcData !== "undefined"){
-          for(const c of FARTCUP_COINS){
-            const d = _fcData[c.ca] || {};
-            usd += (d.balance || 0) * (d.price || 0);
-          }
-        }
-        if(typeof POOP_TOKENS !== "undefined" && typeof _poopData !== "undefined"){
-          for(const t of POOP_TOKENS){
-            const d = _poopData[t.ca] || {};
-            usd += (d.balance || 0) * (d.price || 0);
-          }
-        }
-      } catch(_){}
-      return Math.min(100, Math.floor(usd * 100));
+      const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+      if(State.questFartJarDay !== today){
+        State.questFartJarDay = today;
+        State.questFartJarBase = Number(State.tutorialFartedAtFFS) || 0;
+      }
+      const cur = Number(State.tutorialFartedAtFFS) || 0;
+      return Math.max(0, Math.min(10, cur - (State.questFartJarBase || 0)));
     },
     reward: { xp: 250, credits: 100 },
   },
@@ -5371,6 +5394,12 @@ function enterGame(){
   }
 }
 
+// Expose immediately so the inline onclick handlers on the login
+// buttons can reach them without waiting for the end-of-module
+// Object.assign. Without this, a slow or errored module load leaves
+// the buttons unresponsive.
+window.connectWallet = connectWallet;
+window.enterLobby    = enterLobby;
 document.getElementById('connectBtn').addEventListener('click', connectWallet);
 document.getElementById('skipBtn').addEventListener('click', enterLobby);
 
@@ -5454,11 +5483,13 @@ function updateMovement(dt){
   // (Previously we reverted the step entirely → couldn't reach plane.)
   Player.swimming = (yNew < WATER_LEVEL - 0.4);
   if(Player.swimming){
-    // Don't revert — just clamp Y. Also slow movement to half by
-    // backing off the step a bit.
-    Player.pos.x = oldX + (Player.pos.x - oldX) * 0.55;
-    Player.pos.z = oldZ + (Player.pos.z - oldZ) * 0.55;
-    yNew = WATER_LEVEL - 0.4;  // head just above water
+    // Slow movement in water to ~40% of normal speed.
+    Player.pos.x = oldX + (Player.pos.x - oldX) * 0.40;
+    Player.pos.z = oldZ + (Player.pos.z - oldZ) * 0.40;
+    // Let yNew stay at the actual sea-floor height — the player will
+    // descend INTO the water rather than skating along the surface.
+    // The groundY clamp below caps the depth so we don't hit the
+    // -infinity of the world bowl.
   }
   // Trampoline detection — if the player is over an active trampoline AND
   // not yet airborne (or just landed on it), kick them upward. Each time
@@ -5466,7 +5497,9 @@ function updateMovement(dt){
   const tramp = typeof Trampolines !== "undefined" ? Trampolines.find(t =>
     Math.hypot(Player.pos.x - t.x, Player.pos.z - t.z) < t.radius
   ) : null;
-  const groundY = Math.max(yNew, WATER_LEVEL - 0.2);
+  const groundY = Player.swimming
+    ? Math.max(yNew, WATER_LEVEL - 2.6)   // submerge up to 2.6m below surface
+    : Math.max(yNew, WATER_LEVEL - 0.2);
   if(Player.airborne){
     // Integrate vertical velocity + gravity
     Player.vy -= 22 * dt;     // m/s² downward
@@ -7093,6 +7126,8 @@ setInterval(refreshFartprintStats, 30000);
 // look (curious) or scamper away (skittish) — random per encounter.
 // Mouse-hovering a cat surfaces its name in a floating tooltip.
 const Cats = [];
+// Expose for loading.js readiness probe.
+window.Cats = Cats;
 const CATS_SPEC = [
   { id: "brrrish", name: "Brrrish", body: 0x111111, belly: 0x222222, ear:  0x111111, fat: 0.78 },
   { id: "billy",   name: "Billi",   body: 0xe87d2a, belly: 0xfff0c8, ear:  0xe87d2a, fat: 1.25 },
@@ -7231,7 +7266,7 @@ const CAT_AVOID = [
   { x: -38, z: -16, r: 6 },   // Bowling
   { x: -45, z:   8, r: 4 },   // Paper Mill
   { x:  -8, z: -16, r: 3 },   // Stats sign
-  { x:  70, z:  70, r: 3 },   // Jail
+  { x:  55, z:  50, r: 3 },   // Jail
 ];
 function _catForbidden(gx, gz){
   for(const a of CAT_AVOID){
@@ -7986,25 +8021,32 @@ function buildBeachRock(){
 }
 function buildBeachDecorations(){
   const rng = _seededRand(13579);
-  // Try this many angular positions around the island; place a palm or
-  // rock at the first one that finds dry sand at the right elevation.
+  // Trees only on GREEN GRASS now (y >= 1.7 per the terrain ramp).
+  // Rocks still allowed on the sandy band so the beach isn't bare.
   for(let i = 0; i < 80; i++){
     const ang = rng() * Math.PI * 2;
-    // Sample radii from just outside the dock area inward looking for sand
     let placed = false;
-    for(let rr = ISLAND_RADIUS + 6; rr > ISLAND_RADIUS - 8; rr -= 0.5){
+    for(let rr = ISLAND_RADIUS - 4; rr > ISLAND_RADIUS - 20; rr -= 0.5){
       const x = Math.cos(ang) * rr;
       const z = Math.sin(ang) * rr;
-      // Don't drop a tree on top of the dock
       if(Math.hypot(x - DOCK_POS.x, z - DOCK_POS.z) < 10) break;
       const y = groundHeightAt(x, z);
-      if(y > 0.5 && y < 1.5){
-        const what = rng() > 0.35 ? buildPalmTree() : buildBeachRock();
-        what.position.set(x, y - 0.05, z);
-        what.rotation.y = rng() * Math.PI * 2;
-        scene.add(what);
-        placed = true;
-        break;
+      // Tree: requires grass (y >= 1.7); rock: stays on sand
+      const isGrass = y >= 1.7 && y < 4.5;
+      const isSand  = y > 0.5 && y < 1.5;
+      const wantTree = rng() > 0.35;
+      if(wantTree && isGrass){
+        const t = buildPalmTree();
+        t.position.set(x, y - 0.05, z);
+        t.rotation.y = rng() * Math.PI * 2;
+        scene.add(t);
+        placed = true; break;
+      } else if(!wantTree && isSand){
+        const r = buildBeachRock();
+        r.position.set(x, y - 0.05, z);
+        r.rotation.y = rng() * Math.PI * 2;
+        scene.add(r);
+        placed = true; break;
       }
     }
     if(placed) continue;
@@ -8218,13 +8260,16 @@ function updatePlotPrompt(){
   nearbyLab       = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && Math.hypot(Player.pos.x - LAB_POS.x, Player.pos.z - LAB_POS.z) < LAB_RADIUS;
   nearbyPoop      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && Math.hypot(Player.pos.x - POOP_POS.x, Player.pos.z - POOP_POS.z) < POOP_RADIUS;
   nearbyDock      = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < DOCK_RADIUS;
+  window.nearbyDock = nearbyDock; // expose for seaplane.js double-prompt guard
   nearbyFootball  = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && Math.hypot(Player.pos.x - FOOTBALL_POS.x, Player.pos.z - FOOTBALL_POS.z) < FOOTBALL_RADIUS;
   nearbyBowling   = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && Math.hypot(Player.pos.x - BOWLING_POS.x, Player.pos.z - BOWLING_POS.z) < BOWLING_RADIUS;
   nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && !nearbyBowling) ? findBoardableBoat() : null;
   nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyFootball || nearbyBowling || nearbyBoardable) ? null : findNearbyPlot();
 
   // ── Boat-related prompts come first since they're the most actionable ──
-  if(Player.boat){
+  // Skip the "Sailing" prompt for sea-plane / yacht / rocket — those have
+  // their own HUD owned by seaplane.js / rocket.js.
+  if(Player.boat && !Player.boat.isPlane && !Player.boat.isYacht && !Player.boat.isRocket){
     prompt.classList.remove('locked');
     prompt.classList.add('show');
     title.textContent = "⛵ Sailing";
@@ -8400,6 +8445,12 @@ function tryInteract(){
   // reads it. Just bail; the side-file's keydown will tear it down properly.
   if(Player.boat && (Player.boat.isYacht || Player.boat.isPlane || Player.boat.isRocket)) return;
   if(Player.boat){ leaveBoat(); floater("Stepped out of the boat", "good"); return; }
+  // Wave's dock takes priority — if you're standing on the dock, E always
+  // talks to Wave, even if a parked boat is moored next to it.
+  if(nearbyDock){
+    if(typeof window.openWaveShop === "function"){ window.openWaveShop(); return; }
+    floater("Wave is loading...", "bad"); return;
+  }
   // Boardable boat nearby? E boards it.
   const nearBoat = findBoardableBoat();
   if(nearBoat){
@@ -8660,17 +8711,10 @@ function completeMining(){
     scene.remove(ore.mesh);
     const _meshRef = ore.mesh;
     ore.mesh = null;
-    setTimeout(() => {
-      try {
-        _meshRef.traverse(o => {
-          if(o.geometry) o.geometry.dispose();
-          if(o.material){
-            if(Array.isArray(o.material)) o.material.forEach(m => m.dispose());
-            else o.material.dispose();
-          }
-        });
-      } catch(e){}
-    }, 0);
+    // Skip explicit disposal — let GC reclaim WebGL resources. The
+    // mesh was already removed from the scene above. Explicit
+    // dispose was stalling the post-mining frame.
+    void _meshRef;
   }
   if(gotOre){
     addItem(info.itemId, 1);
@@ -9036,7 +9080,11 @@ function renderSellPane(){
 // Jail: where busted players land + how long they stay. Position chosen
 // to be far from everything (south of the south beach) so it isn't
 // blocking gameplay. Movement clamp logic lives in updateMovement.
-const JAIL_POS    = { x: 70, z: 70 };
+// JAIL_POS — moved inside the island radius (was at 70,70 which is ~99m
+// from origin and shrunk past the 90m island radius, ending up in the
+// ocean). 55,50 sits on solid ground in the northeast quadrant, away
+// from Gary's tent at (60,60).
+const JAIL_POS    = { x: 55, z: 50 };
 const JAIL_RADIUS = 1.6;                  // cell bounds
 const JAIL_MS     = 5 * 60 * 1000;        // 5 minutes
 
@@ -9149,6 +9197,7 @@ function ensurePaySelector(){
   });
 }
 
+window.openPaySelector = function(label, priceSilver, onPay){ return openPaySelector(label, priceSilver, onPay); };
 function openPaySelector(label, priceSilver, onPay){
   ensurePaySelector();
   document.getElementById('paySelTitle').textContent = `Pay for: ${label}`;
@@ -11320,6 +11369,10 @@ const FARTCUP_COINS = [
 ];
 const FLAG_CLAIM_THRESHOLD = 100000;     // hold ≥100K of a country's token to claim
 const _fcData = {};   // ca → { price, ch24, image, balance }
+// Expose for fartcup.js side file
+window.FARTCUP_COINS = FARTCUP_COINS;
+window.FLAG_CLAIM_THRESHOLD = FLAG_CLAIM_THRESHOLD;
+window._fcData = _fcData;
 let _fcCurrentTab = "trade";
 
 // Country code → flag emoji (e.g. 'us' → 🇺🇸). Custom for England/Scotland.
@@ -11599,28 +11652,51 @@ const _origRender = renderInventory;
 renderInventory = function(){
   _origRender();
   const grid = document.getElementById('invGrid');
-  if(!grid) return;
-  grid.querySelectorAll('.inv-slot[data-id]').forEach(el => {
-    const id = el.dataset.id;
-    const item = ITEMS[id];
-    if(!item || item.type !== "wearable") return;
-    el.classList.toggle('worn', State.wornFlag === item.code);
-    let b = el.querySelector('.wear-badge');
-    if(State.wornFlag === item.code && !b){
-      b = document.createElement('div');
-      b.className = 'wear-badge';
-      b.textContent = 'WEARING';
-      el.appendChild(b);
-    } else if(State.wornFlag !== item.code && b){
-      b.remove();
-    }
-  });
+  if(grid){ /* flag badge decoration was here — omitted, base render still runs */ }
 };
-function openFartCup(){ try { const el = document.getElementById('fcBg'); if(el) el.classList.add('show'); } catch(_){} }
-function closeFartCup(){ try { const el = document.getElementById('fcBg'); if(el) el.classList.remove('show'); } catch(_){} }
 
-Object.assign(window, { State, ITEMS, addItem, takeItem, floater, showBuyToast, playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD, POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData, refreshFartprintBalance, fcRenderTrade, fcRenderClaim, closeFartCup, openFartCup, THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY, WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS, WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS, spawnBoatNearPlayer, printer, HOUSE_POS, Sky, silverPerGold, paperPerSilver, cashPerSilverBack });
-try { fcFetchPrices(); } catch(e){}
+// Stub openFartCup / closeFartCup. The real ones come from fartcup.js
+// (the side file overrides window.openFartCup later). These stubs are
+// here so the Object.assign below doesn't ReferenceError on a fresh
+// load before fartcup.js has had a chance to init.
+function openFartCup(){
+  if(typeof window.openFartCup === 'function' && window.openFartCup !== openFartCup){
+    return window.openFartCup();
+  }
+  // Fartcup side file hasn't loaded — try a few times then give up quietly.
+  let n = 0;
+  const t = setInterval(() => {
+    if(typeof window.openFartCup === 'function' && window.openFartCup !== openFartCup){
+      clearInterval(t); window.openFartCup();
+    } else if(++n > 30) clearInterval(t);
+  }, 100);
+}
+function closeFartCup(){
+  const el = document.getElementById('fcBg');
+  if(el) el.classList.remove('show');
+}
+
+// Expose all globals that side files need to initialise. Without this
+// block, fartcup.js / gunsmith.js / static-npcs.js / minimap.js / etc.
+// can never finish their whenReady polling loop, and any function
+// referenced via window.X (including connectWallet wired by inline
+// onclick) silently fails.
+Object.assign(window, {
+  State, ITEMS, addItem, takeItem, floater, showBuyToast,
+  playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD,
+  POOP_TOKENS, FARTCUP_COINS, _poopData, _fcData,
+  refreshFartprintBalance, fcRenderTrade, fcRenderClaim,
+  closeFartCup, openFartCup, grantFlag, claimFlag,
+  fcFetchPrices, fcFetchBalances, poopFetchPrices,
+  THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY,
+  WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS,
+  WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS,
+  spawnBoatNearPlayer, printer, HOUSE_POS, Sky,
+  silverPerGold, paperPerSilver, cashPerSilverBack,
+  connectWallet, enterLobby, enterGame, renderInventory,
+});
+console.log('[fartworld] module init complete');
 </script>
+
 </body>
 </html>

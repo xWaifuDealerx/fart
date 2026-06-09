@@ -402,4 +402,3 @@
     console.log('[equip] ready');
   }
 })();
-})();

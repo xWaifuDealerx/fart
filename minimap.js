@@ -14,23 +14,26 @@
     const ISLAND_R = window.ISLAND_RADIUS || 95;
 
     const LANDMARKS = [
-      { x:  36, z:  36, c: '#ff5050', l: 'Arena' },
-      { x: -15, z: -45, c: '#ffb347', l: 'Trophy' },
-      { x: -22, z:  -8, c: '#ffd64d', l: 'Bank' },
-      { x: -22, z: -32, c: '#5ff09c', l: 'Market' },
-      { x: -48, z:  28, c: '#a0a0ff', l: 'Lab' },
-      { x:  42, z:   0, c: '#ff7d3b', l: 'Glassworks' },
-      { x:  50, z: -36, c: '#a05030', l: 'Poop' },
-      { x:   0, z: -55, c: '#a8e0ff', l: 'House' },
-      { x:  84, z:   0, c: '#6ed0d6', l: 'Dock' },
-      { x: -45, z:   8, c: '#d0a070', l: 'Mill' },
-      { x:  -8, z: -16, c: '#ffe4a8', l: 'Sign' },
-      { x:  70, z:  70, c: '#888',    l: 'Jail' },
-      { x:  60, z:  60, c: '#c89858', l: 'Pawn' },
-      { x: -55, z:  32, c: '#90d090', l: 'Fart Stn' },
-      { x: -10.5, z: -45, c: '#ff7a2a', l: 'Alex' },
-      { x: -50, z: -22, c: '#5ff09c', l: 'Data Ctr' },
-      { x: -27, z:  32, c: '#ffce4a', l: 'Storage' },
+      { x:  36, z:  36, c: '#ff5050', l: 'Arena',     e: '⚔️' },
+      { x: -15, z: -45, c: '#ffb347', l: 'Trophy',    e: '🏆' },
+      { x: -22, z:  -8, c: '#ffd64d', l: 'Bank',      e: '🏦' },
+      { x: -22, z: -32, c: '#5ff09c', l: 'Market',    e: '🛒' },
+      { x: -48, z:  28, c: '#a0a0ff', l: 'Lab',       e: '⚗️' },
+      { x:  42, z:   0, c: '#ff7d3b', l: 'Glassworks',e: '🔥' },
+      { x:  50, z: -36, c: '#a05030', l: 'Poop',      e: '💩' },
+      { x:   0, z: -55, c: '#a8e0ff', l: 'House',     e: '🏠' },
+      { x:  84, z:   0, c: '#6ed0d6', l: 'Dock',      e: '⛵' },
+      { x: -45, z:   8, c: '#d0a070', l: 'Mill',      e: '📜' },
+      { x:  -8, z: -16, c: '#ffe4a8', l: 'Sign',      e: '📊' },
+      { x:  55, z:  50, c: '#888',    l: 'Jail',      e: '🚨' },
+      { x:  60, z:  60, c: '#c89858', l: 'Pawn',      e: '🏚️' },
+      { x: -55, z:  32, c: '#90d090', l: 'Fart Stn',  e: '🫙' },
+      { x: -10.5,z: -45, c: '#ff7a2a', l: 'Alex',     e: '🥅' },
+      { x: -50, z: -22, c: '#5ff09c', l: 'Data Ctr',  e: '💻' },
+      { x: -27, z:  32, c: '#ffce4a', l: 'Storage',   e: '📦' },
+      { x:  35, z: -70, c: '#ffce4a', l: 'Gunsmith',  e: '🔫' },
+      { x: -64, z:  -8, c: '#ff7a7a', l: 'Hospital',  e: '🏥' },
+      { x: -64, z:  18, c: '#ffd64d', l: 'Hotel',     e: '🏨' },
     ];
 
     // ── Three sizes: small, medium, large + optional fullscreen view ──
@@ -109,10 +112,15 @@
 
     function curSpan(){ return fullscreen ? 220 : SIZES[sizeIdx].span; }
 
+    // Convert world (x, z) to canvas pixels. Player is fixed at the
+    // canvas centre; everything in the world translates around the
+    // player as they walk, so the map feels alive.
     function w2c(x, z){
       const span = curSpan();
       const scale = cvs.width / span;
-      return [cvs.width / 2 + x * scale, cvs.height / 2 + z * scale];
+      const px = Player.pos?.x || 0;
+      const pz = Player.pos?.z || 0;
+      return [cvs.width / 2 + (x - px) * scale, cvs.height / 2 + (z - pz) * scale];
     }
     function draw(){
       // 2× upscale: scale up everything proportionally
@@ -160,24 +168,39 @@
       ctx.lineJoin = 'round';
       for(const L of LANDMARKS){
         const [lx, ly] = w2c(L.x, L.z);
-        // Dot
-        // Dot
-        ctx.beginPath();
-        ctx.arc(lx, ly, dotR, 0, Math.PI * 2);
-        ctx.fillStyle = L.c;
-        ctx.fill();
-        ctx.lineWidth = 1.6 * SCALE / 2;
-        ctx.strokeStyle = 'rgba(0,0,0,.75)';
-        ctx.stroke();
-        // Label outline + fill
-        const labelFont = 'bold ' + (Math.max(13, 14 * SCALE / 2)) + 'px Outfit, sans-serif';
-        ctx.font = labelFont;
-        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-        ctx.lineWidth = 4 * SCALE / 2;
-        ctx.strokeStyle = 'rgba(0,0,0,.85)';
-        ctx.strokeText(L.l, lx + dotR + 4, ly);
-        ctx.fillStyle = '#fff';
-        ctx.fillText(L.l, lx + dotR + 4, ly);
+        if(L.e){
+          // Emoji symbol — soft dark backing circle for legibility,
+          // then the emoji centred on the landmark coord.
+          const r = Math.max(11, 12 * SCALE / 2);
+          ctx.beginPath();
+          ctx.arc(lx, ly, r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,0,0,.55)';
+          ctx.fill();
+          ctx.lineWidth = 1.4 * SCALE / 2;
+          ctx.strokeStyle = L.c || 'rgba(255,255,255,.6)';
+          ctx.stroke();
+          const emojiFont = (Math.max(16, 18 * SCALE / 2)) + 'px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+          ctx.font = emojiFont;
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(L.e, lx, ly + 1);
+        } else {
+          // Fallback for landmarks without an emoji
+          ctx.beginPath();
+          ctx.arc(lx, ly, dotR, 0, Math.PI * 2);
+          ctx.fillStyle = L.c;
+          ctx.fill();
+          ctx.lineWidth = 1.6 * SCALE / 2;
+          ctx.strokeStyle = 'rgba(0,0,0,.75)';
+          ctx.stroke();
+          const labelFont = 'bold ' + (Math.max(13, 14 * SCALE / 2)) + 'px Outfit, sans-serif';
+          ctx.font = labelFont;
+          ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+          ctx.lineWidth = 4 * SCALE / 2;
+          ctx.strokeStyle = 'rgba(0,0,0,.85)';
+          ctx.strokeText(L.l, lx + dotR + 4, ly);
+          ctx.fillStyle = '#fff';
+          ctx.fillText(L.l, lx + dotR + 4, ly);
+        }
       }
       try{
         const peers = window.peers || window.Peers || {};
@@ -214,28 +237,23 @@
       ctx.closePath();
       ctx.fillStyle = '#5ff09c';
       ctx.fill();
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 1.6 * SCALE / 2;
+      ctx.strokeStyle = 'rgba(0,0,0,.7)';
+      ctx.lineWidth = 2 * SCALE / 2;
       ctx.stroke();
       ctx.restore();
-      const mc = document.getElementById('mmCoord');
-      if(mc) mc.textContent = 'x:' + Math.round(Player.pos.x) + ' z:' + Math.round(Player.pos.z);
+      // Coord readout
+      document.getElementById('mmCoord').textContent =
+        'x:' + Math.round(Player.pos.x) + ' z:' + Math.round(Player.pos.z);
       requestAnimationFrame(draw);
     }
     requestAnimationFrame(draw);
-
     cvs.addEventListener('wheel', (e) => {
       e.preventDefault();
-      if(e.deltaY < 0) sizeIdx = Math.min(SIZES.length - 1, sizeIdx + 1);
-      else sizeIdx = Math.max(0, sizeIdx - 1);
-      applySize();
-    }, { passive: false });
-    window.addEventListener('keydown', (e) => {
-      if(e.code !== 'KeyM') return;
-      const a = document.activeElement;
-      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
-      fullscreen = !fullscreen;
-      root.classList.toggle('full', fullscreen);
+      if(e.deltaY < 0){
+        sizeIdx = Math.min(SIZES.length - 1, sizeIdx + 1);
+      } else {
+        sizeIdx = Math.max(0, sizeIdx - 1);
+      }
       applySize();
     }, { passive: false });
     window.addEventListener('keydown', (e) => {

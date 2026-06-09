@@ -134,8 +134,40 @@
     share.innerHTML = '<h3 id="fwShareTtl">Milestone!</h3><div class="lab" id="fwShareLab">You did it.</div><button class="btn-tweet" id="fwShareGo">\u{1D54F} Share on X</button><button class="btn-skip" id="fwShareSkip">Skip</button>';
     document.body.appendChild(share);
     document.getElementById('fwShareSkip').addEventListener('click', () => share.classList.remove('show'));
-    document.getElementById('fwShareGo').addEventListener('click', () => {
+    document.getElementById('fwShareGo').addEventListener('click', async () => {
       const txt = share._tweetText || '';
+      // Try to capture a screenshot of the game canvas. preserveDrawingBuffer
+      // is enabled in fartworld.html so canvas.toDataURL captures the last
+      // rendered frame. We attempt to copy the image to the clipboard so the
+      // user can paste it into the tweet; we also offer a download as a
+      // fallback in case clipboard access is denied.
+      let dataUrl = null;
+      try { dataUrl = window.snapGameCanvas ? window.snapGameCanvas() : null; } catch(_){}
+      if(dataUrl){
+        try {
+          const blob = await (await fetch(dataUrl)).blob();
+          if(navigator.clipboard && window.ClipboardItem){
+            await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+            window.floater?.('📸 Screenshot copied — paste it in your tweet', 'good');
+          } else {
+            // Fallback: download the file
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'fartworld-' + Date.now() + '.png';
+            document.body.appendChild(a); a.click(); a.remove();
+            window.floater?.('📸 Screenshot saved — attach it to the tweet', 'good');
+          }
+        } catch(_){
+          // Clipboard denied — fall back to download
+          try {
+            const a = document.createElement('a');
+            a.href = dataUrl;
+            a.download = 'fartworld-' + Date.now() + '.png';
+            document.body.appendChild(a); a.click(); a.remove();
+            window.floater?.('📸 Screenshot saved — attach it to the tweet', 'good');
+          } catch(_){}
+        }
+      }
       const url = 'https://twitter.com/intent/tweet?text=' + encodeURIComponent(txt);
       window.open(url, '_blank', 'noopener,noreferrer');
       share.classList.remove('show');
@@ -263,6 +295,8 @@
         world.sort((a, b) => b.vl - a.vl);
         rows = world.map((r, i) => ({ rk: i + 1, nm: r.nm, vl: r.vl.toLocaleString() + ' \u{1F4A8}', you: r.you }));
       } else if(tab === 'earners'){
+        // "Earned" = your current silver balance.
+        const youEarn = Number(State.credits) || 0;
         const world = [
           { nm: 'CoinFartlord',  vl: 8400000 }, { nm: 'PrintrPro',  vl: 6210000 },
           { nm: 'BonkLord',      vl: 4990000 }, { nm: 'SOLflexer',  vl: 3210000 },
@@ -270,9 +304,9 @@
           { nm: 'PhantomMooner', vl: 620000 },  { nm: 'WiffyWifey', vl: 410000 },
           { nm: 'FartFarmer',    vl: 198000 },
         ];
-        world.push({ nm: getHandle() + ' (you)', vl: you, you: true });
+        world.push({ nm: getHandle() + ' (you)', vl: youEarn, you: true });
         world.sort((a, b) => b.vl - a.vl);
-        rows = world.map((r, i) => ({ rk: i + 1, nm: r.nm, vl: r.vl.toLocaleString() + ' \u{1F948}', you: r.you }));
+        rows = world.map((r, i) => ({ rk: i + 1, nm: r.nm, vl: (Number(r.vl) || 0).toLocaleString() + ' \u{1F948}', you: r.you }));
       } else {
         const lb = lsGet('fw.referral.lb', {});
         const yourInvites = lb[myReferral] || 0;

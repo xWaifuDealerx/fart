@@ -484,12 +484,28 @@
       host.innerHTML = lines.length ? lines.join("") : '<div class="carlos-empty">Nothing here right now.</div>';
       host.querySelectorAll('.btn.buy').forEach(b => b.addEventListener('click', () => {
         const id = b.dataset.id, price = Number(b.dataset.price) || 0;
+        const name = window.ITEMS[id]?.name || id;
+        // Always go through the silver/cash/fake selector so the player
+        // can choose. Fake cash carries a 50% bust risk handled inside
+        // openPaySelector.
+        if(typeof window.openPaySelector === "function"){
+          window.openPaySelector(`1 ${name}`, price, (asset) => {
+            window.addItem(id, 1);
+            const tag = asset === "credits" ? "🥈 silver" : (asset === "paper" ? "💵 cash" : "🪙 fake");
+            const pop = document.getElementById('carlosPop');
+            if(pop){
+              pop.textContent = `-${price} ${tag} · +1 ${name}`;
+              pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
+              clearTimeout(window._carlosPopT);
+              window._carlosPopT = setTimeout(() => pop.classList.remove('show'), 2000);
+            }
+            window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.(); renderCarlos();
+          });
+          return;
+        }
+        // Fallback: silver only
         if((State.credits || 0) < price){ window.floater?.(`Need ${price} \u{1F948}`, "bad"); return; }
         State.credits -= price; window.addItem(id, 1);
-        const pop = document.getElementById('carlosPop');
-        pop.textContent = `-${price} \u{1F948} · +1 ${window.ITEMS[id].name}`;
-        pop.classList.remove('show'); void pop.offsetWidth; pop.classList.add('show');
-        clearTimeout(window._carlosPopT); window._carlosPopT = setTimeout(() => pop.classList.remove('show'), 2000);
         window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.(); renderCarlos();
       }));
       host.querySelectorAll('.btn.sell').forEach(b => b.addEventListener('click', () => {
@@ -557,31 +573,46 @@
       if(!n) return;
       if(n.kind === "market") openCarlos();
       else if(n.kind === "bank"){ const el = document.getElementById('bankBg'); if(el) el.classList.add('show'); }
-      else if(n.kind === "dock"){ if(typeof window.openWaveShop === "function") window.openWaveShop(); else window.floater?.("Walk into the dock and press E", "good"); }
+      else if(n.kind === "dock"){
+        // Wave's shop modal lives in seaplane.js — call it directly. If
+        // it's not loaded yet, retry briefly instead of telling the user
+        // to walk into the dock (we already ARE next to Wave).
+        const tryOpen = (attempt) => {
+          if(typeof window.openWaveShop === "function"){ window.openWaveShop(); return; }
+          if(attempt < 8) setTimeout(() => tryOpen(attempt + 1), 200);
+          else window.floater?.("Wave is loading — try again in a sec", "bad");
+        };
+        tryOpen(0);
+      }
       else if(n.kind === "pawn"){ if(typeof window.openGary === "function") window.openGary(); else window.floater?.("Gary's shop loading...", "bad"); }
     }
     document.getElementById('npcPopBtn').addEventListener('click', () => { if(nearNpc) tryHandle(nearNpc); });
     setInterval(() => {
-      let best = null, bestD = 4.0;
+      let best = null, bestD = 5.5;
       for(const n of StaticNPCs){
         const d = Math.hypot(Player.pos.x - n.x, Player.pos.z - n.z);
         if(d < bestD){ bestD = d; best = n; }
       }
       nearNpc = best;
+      const popEl = document.getElementById('npcPop');
+      if(!popEl) return;
       if(best){
-        document.getElementById('npcPopName').textContent = best.name;
-        const lines = { market: "Browse Carlos's stall...", bank: "Visit Moneycaller...", dock: "See Wave...", pawn: "Hey Gary..." };
-        document.getElementById('npcPopLine').textContent = lines[best.kind] || "Talk to them...";
-        document.getElementById('npcPopBtn').textContent = best.kind === "market" ? "Open Carlos's Market" : best.kind === "bank" ? "Open Bank" : best.kind === "dock" ? "Talk to Wave" : "Talk to Gary";
-        pop.classList.add('show');
-      } else { pop.classList.remove('show'); }
-    }, 160);
+        const nameEl = document.getElementById('npcPopName');
+        if(nameEl) nameEl.textContent = best.name || '';
+        const lines = { market: "Browse Carlos's stall", bank: "Visit Moneycaller", dock: "See Wave's boats", pawn: "Visit Gary's pawn shop" };
+        const lineEl = document.getElementById('npcPopLine');
+        if(lineEl) lineEl.textContent = lines[best.kind] || "Talk";
+        popEl.classList.add('show');
+      } else {
+        popEl.classList.remove('show');
+      }
+    }, 250);
     window.addEventListener('keydown', (e) => {
-      if(e.code !== "KeyE" || !nearNpc) return;
+      if(e.code !== 'KeyE') return;
       const a = document.activeElement;
-      if(a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA")) return;
-      tryHandle(nearNpc);
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      if(nearNpc) tryHandle(nearNpc);
     });
-    console.log('[static-npcs] ready');
+    console.log('[static-npcs] ready · ' + StaticNPCs.length + ' NPCs');
   }
 })();

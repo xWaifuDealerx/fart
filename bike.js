@@ -243,7 +243,7 @@
     document.getElementById('bkRide').addEventListener('click', () => { bkBg.classList.remove('show'); mountBike(); });
     const ejectBtn = document.createElement('button');
     ejectBtn.className = 'bk-eject';
-    ejectBtn.textContent = '\u{1F6B2} Eject';
+    ejectBtn.innerHTML = '\u{1F6B2} Eject · <span style="background:rgba(0,0,0,.35);padding:1px 7px;border-radius:5px;font-family:monospace;font-size:10px;margin-left:4px;">B</span>';
     document.body.appendChild(ejectBtn);
     setInterval(() => ejectBtn.classList.toggle('show', !!State.onBike), 200);
     function wireInvClick(){
@@ -251,7 +251,6 @@
       if(!grid){ setTimeout(wireInvClick, 600); return; }
       grid.addEventListener('click', (e) => {
         const slot = e.target.closest('.inv-slot[data-id="bike"]');
-        if(!slot) return;
         if(State.onBike){ window.floater?.("Already riding", "bad"); return; }
         bkBg.classList.add('show');
       });

@@ -77,10 +77,13 @@
 
     // ── Alexandre: bald guy printer ──
     const alex = new THREE.Group();
-    // Stand behind the desk — pushed out further on the customer-facing
-    // side so body and feet are visible to the player.
-    alex.position.set(ALEX_POS.x - 0.6, y0, ALEX_POS.z);
-    alex.rotation.y = Math.PI / 2 + Math.PI;
+    // Stand behind the desk — pushed further back so his body isn't
+    // clipping into the table. The desk + customer face the +x side
+    // (stand.rotation.y = -π/2), so "behind" the table is the -x side.
+    // Was at ALEX_POS.x - 1.4 which read as "in front" of the table from
+    // the user's POV. Flip to the +x side and face him back at the table.
+    alex.position.set(ALEX_POS.x + 1.4, y0, ALEX_POS.z);
+    alex.rotation.y = -Math.PI / 2;
     const skinMat = new THREE.MeshStandardMaterial({ color: 0xf2d2a8, roughness: 0.55 });
     const shirtMat = new THREE.MeshStandardMaterial({ color: 0x223060, roughness: 0.7 });
     const pantMat = new THREE.MeshStandardMaterial({ color: 0x101a2a, roughness: 0.85 });
@@ -173,7 +176,7 @@
       if(e.code !== 'KeyE' || !near) return;
       const a = document.activeElement;
       if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
-      else { document.getElementById('fcBg')?.classList.add('show'); }
+      if(typeof window.openFartCup === 'function'){ window.openFartCup(); }
     });
     console.log('[alexandre] ready');
   }

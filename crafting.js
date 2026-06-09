@@ -193,6 +193,9 @@
       const tier = rollJarTier();
       window.addItem(tier.id, 1);
       State.xp += 10;
+      State.tutorialFartedAtFFS = (State.tutorialFartedAtFFS || 0) + 1;
+      // CSGO-style reveal carousel — handled by extras-v6be.js
+      try { window.dispatchEvent(new CustomEvent('fw:jarRoll', { detail: { tierId: tier.id } })); } catch(_){}
       window.floater?.(`+1 ${ITEMS[tier.id].name}`, "good");
       window.playFartSound?.(0.7, false);
       window.saveState?.();
@@ -209,7 +212,7 @@
       const show = d < FFS_R;
       if(show){ ffSubUpdate(); }
       ffPop.classList.toggle('show', show);
-    }, 200);
+    }, 250);
     console.log('[crafting] ready');
   }
 })();

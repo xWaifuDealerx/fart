@@ -145,7 +145,7 @@
       { x: -38, z: -16, r: 6 },   // Bowling alley
       { x: -45, z:   8, r: 4 },   // Paper Mill
       { x:  -8, z: -16, r: 3 },   // Stats billboard
-      { x:  70, z:  70, r: 3 },   // Jail cell
+      { x:  55, z:  50, r: 3 },   // Jail cell
     ];
     function _forbidden(gx, gz){
       for(const a of NPC_AVOID){

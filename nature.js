@@ -44,7 +44,7 @@
       { x:  84, z:   0, r: 6 },   // Dock
       { x: -45, z:   8, r: 4 },   // Paper Mill
       { x:  -8, z: -16, r: 3 },   // Stats sign
-      { x:  70, z:  70, r: 4 },   // Jail
+      { x:  55, z:  50, r: 4 },   // Jail
       { x:  60, z:  60, r: 5 },   // Pawn
       { x: -55, z:  32, r: 4 },   // Fart Stn
       { x: -10.5, z: -45, r: 4 }, // Alexandre

@@ -411,6 +411,10 @@
     document.body.appendChild(proxEl);
     setInterval(() => {
       if(myPlane || myYacht){ proxEl.classList.remove('show'); return; }
+      // If the player is at Wave's dock, the main module already shows
+      // the green "WAVE'S DOCK · Press E" prompt — don't stack a second
+      // plane prompt on top of it.
+      if(window.nearbyDock){ proxEl.classList.remove('show'); return; }
       const pl = findBoardable();
       const yt = findBoardableYacht();
       if(pl){
@@ -679,7 +683,8 @@
         + (own.yacht ? '<button class="btn" id="waveGetYacht">Retrieve</button>' : '<button class="btn" id="waveBuyYacht">Buy</button>') + '</div>'
         + '<button class="cancel" id="waveCancel">Leave</button>'
         + '</div>';
-      if(cancel) cancel.addEventListener('click', () => waveBg.classList.remove('show'));
+      const cancelBtn = document.getElementById('waveCancel');
+      if(cancelBtn) cancelBtn.addEventListener('click', () => waveBg.classList.remove('show'));
     }
     function openWaveShop(){ renderWave(); waveBg.classList.add('show'); }
     function closeWave(){ waveBg.classList.remove('show'); }

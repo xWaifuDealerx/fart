@@ -17,7 +17,7 @@
   root.id = 'fwLoading';
   root.innerHTML = ''
     + '<style>'
-    + '#fwLoading{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at 50% 35%,#0a2010 0%,#040c08 70%,#000 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Outfit,Inter,sans-serif;color:#e6ffee;transition:opacity .6s ease}'
+    + '#fwLoading{position:fixed;inset:0;z-index:9999;background:radial-gradient(circle at 50% 35%,#0a2010 0%,#040c08 70%,#000 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:Outfit,Inter,sans-serif;color:#e6ffee;transition:opacity .6s ease;pointer-events:none}'
     + '#fwLoading.hide{opacity:0;pointer-events:none}'
     + '#fwLoading .logo{font-family:Bangers,Orbitron,sans-serif;font-size:62px;letter-spacing:5px;background:linear-gradient(135deg,#5ff09c 0%,#fff1c2 55%,#ffce4a 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 20px rgba(95,240,156,.3));margin-bottom:8px;text-align:center}'
     + '#fwLoading .tag{font-size:13px;letter-spacing:2px;color:rgba(230,255,238,.55);text-transform:uppercase;margin-bottom:36px}'
@@ -30,7 +30,7 @@
     + '#fwLoading .tips{position:absolute;bottom:36px;left:50%;transform:translateX(-50%);font-size:11px;color:rgba(230,255,238,.4);letter-spacing:.4px;max-width:80vw;text-align:center}'
     + '#fwLoading .tips b{color:#ffce4a}'
     + '</style>'
-    + '<div class="logo">FARTWORLD</div>'
+    + '<div class="logo">FARTPRINT</div>'
     + '<div class="tag">A Solana Brainrot MMO</div>'
     + '<div class="bar-wrap"><div class="bar" id="fwLoadingBar"></div></div>'
     + '<div class="pct" id="fwLoadingPct">0%</div>'
@@ -106,6 +106,5 @@
     if(document.getElementById('fwLoading')){
       root.classList.add('hide');
       setTimeout(() => { try { root.remove(); } catch(e){} }, 900);
-    }
-  }, 25000);
+    }  }, 25000);
 })();
