@@ -372,6 +372,11 @@
 
     let lastUse = 0;
     window.addEventListener('keydown', (e) => {
+      // ONLY fire on the dedicated "use tool" key (F). Earlier this
+      // listener fired on every keydown, which meant walking with the
+      // pickaxe equipped (after mining) re-triggered the metallic clink
+      // on each WASD press. Strange, persistent sounds while moving!
+      if(e.code !== 'KeyF') return;
       const a = document.activeElement;
       if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
       if(!State.equipped || !attachedTool) return;
@@ -391,14 +396,14 @@
       attachedTool.mesh.visible = !!visible;
     };
     window.autoEquipPickaxe = function(){
-      if(State.equipped === 'pickaxe') return true;
       if(!(State.inventory && State.inventory.pickaxe > 0)) return false;
       State.equipped = 'pickaxe';
-      try { attachToolToPlayer('pickaxe'); } catch(e){}
-      try { refreshHUD(); } catch(e){}
-      try { window.saveState?.(); } catch(e){}
+      attachToolToPlayer('pickaxe');
+      try { window.saveState?.(); } catch(_){}
+      refreshHUD();
       return true;
     };
+
     console.log('[equip] ready');
   }
 })();

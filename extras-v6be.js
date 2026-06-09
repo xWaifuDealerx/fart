@@ -364,19 +364,22 @@
       }
       const track = document.getElementById('fwCaseTrack');
       track.innerHTML = items.map(t => '<div class="item ' + t.cls + '">' + t.emoji + '</div>').join('');
-      // Each item is 110 + 8 = 118 px wide. Centre offset:
-      const ITEM_W = 118;
-      const finalOffset = -(50 * ITEM_W) + (track.parentElement.clientWidth / 2) - (ITEM_W / 2);
-      // Animate: start by snapping near left, then transition to the
-      // final offset over 4s with a deceleration cubic-bezier.
       track.style.transition = 'none';
       track.style.transform = 'translateX(0px)';
       caseBg.classList.add('show');
       document.getElementById('fwCaseResult').classList.remove('show');
       document.getElementById('fwCaseResult').textContent = '—';
       document.getElementById('fwCaseClose').classList.remove('show');
-      // Force reflow then animate
+      // Force reflow, THEN measure the winner's real centre (the modal is now
+      // visible so offsetLeft is valid). Measuring instead of assuming widths
+      // fixes the ~12px misalignment from the track's 12px padding that made
+      // the pin look like it landed on the neighbouring tier.
       void track.offsetWidth;
+      const winnerEl = track.children[50];
+      const stripW = track.parentElement.clientWidth;
+      const finalOffset = winnerEl
+        ? (stripW / 2) - (winnerEl.offsetLeft + winnerEl.offsetWidth / 2)
+        : -(50 * 118) + (stripW / 2) - 59;
       track.style.transition = 'transform 4.2s cubic-bezier(.13,.84,.18,1)';
       track.style.transform = 'translateX(' + finalOffset + 'px)';
       setTimeout(() => {

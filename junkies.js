@@ -337,37 +337,92 @@
     const tradeStyle = document.createElement('style');
     tradeStyle.textContent = '.junk-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:200;padding:18px;}.junk-bg.show{display:flex;}.junk-card{background:linear-gradient(180deg,rgba(20,32,12,.97),rgba(8,18,6,.97));border:2px solid rgba(155,197,90,.55);border-radius:18px;padding:22px;max-width:460px;width:100%;color:#fff1c2;font-family:Outfit,Inter,sans-serif;position:relative;box-shadow:0 24px 60px rgba(0,0,0,.6);}.junk-card h2{font-family:Bangers,Orbitron,sans-serif;font-size:24px;color:#c0e02a;letter-spacing:1.5px;margin-bottom:8px;text-align:center;}.junk-offer{font-size:12px;line-height:1.5;color:rgba(230,255,238,.75);margin-bottom:12px;text-align:center;}.junk-offer b{color:#c0e02a;}.junk-row{font-size:12px;display:flex;justify-content:space-between;margin-bottom:8px;color:rgba(230,255,238,.8);font-family:JetBrains Mono,monospace;}.junk-row b{color:#fff1c2;}.junk-slider-wrap{margin:12px 0;}.junk-slider-wrap input[type="range"]{width:100%;}.junk-mood{font-size:12px;color:#c0e02a;text-align:center;margin-top:6px;min-height:18px;}.junk-mood.angry{color:#ff7a6e;}.junk-mood.greedy{color:#ffd64d;}.junk-result{font-size:13px;color:#fff1c2;text-align:center;margin:10px 0;min-height:18px;font-weight:700;}.junk-result.win{color:#5ff09c;}.junk-result.lose{color:#ff7a6e;}.junk-btns{display:flex;gap:8px;justify-content:center;}.junk-btn{background:linear-gradient(135deg,#9bc55a,#c0e02a);color:#112000;border:0;padding:10px 22px;border-radius:10px;font-family:Outfit,sans-serif;font-weight:800;font-size:11.5px;letter-spacing:1.1px;cursor:pointer;text-transform:uppercase;}.junk-btn.cancel{background:transparent;color:rgba(230,255,238,.7);border:1px solid rgba(230,255,238,.25);}';
     document.head.appendChild(tradeStyle);
+    const junkPickStyle = document.createElement('style');
+    junkPickStyle.textContent = '.junk-pick-lbl{font-size:11px;letter-spacing:.5px;color:rgba(230,255,238,.6);text-align:center;margin:8px 0 4px;text-transform:uppercase;}.junk-strains{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:4px 0 10px;}.junk-strain{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:86px;background:rgba(155,197,90,.08);border:1px solid rgba(155,197,90,.3);border-radius:10px;padding:7px 9px;color:#fff1c2;cursor:pointer;font-family:Outfit,sans-serif;transition:all .12s;}.junk-strain:hover{border-color:rgba(155,197,90,.6);}.junk-strain.selected{background:rgba(192,224,42,.2);border-color:#c0e02a;box-shadow:0 0 12px rgba(192,224,42,.25);}.junk-strain .ic{font-size:22px;}.junk-strain .nm{font-size:11px;font-weight:700;}.junk-strain .c{font-size:9.5px;color:rgba(230,255,238,.7);font-family:JetBrains Mono,monospace;}.junk-empty{font-size:12px;color:rgba(230,255,238,.6);text-align:center;padding:8px;}';
+    document.head.appendChild(junkPickStyle);
     const tradeBg = document.createElement('div');
     tradeBg.className = 'junk-bg';
     tradeBg.id = 'junkBg';
-    tradeBg.innerHTML = '<div class="junk-card"><h2 id="junkName">Junkie</h2><div class="junk-offer" id="junkOffer">—</div><div class="junk-row"><span>Your \u{1F33F} Weed</span><b id="junkWeed">0</b></div><div class="junk-row"><span>Your \u{1F4B5} Cash</span><b id="junkCash">0</b></div><div class="junk-slider-wrap"><div class="junk-row"><span>Ask price (1 \u{1F33F})</span><b id="junkAsk">100</b> \u{1F4B5}</div><input id="junkSlider" type="range" min="50" max="200" step="5" value="100"><div class="junk-mood" id="junkMood">—</div></div><div class="junk-result" id="junkResult">—</div><div class="junk-btns"><button class="junk-btn cancel" id="junkCancel">Leave</button><button class="junk-btn" id="junkGo">Try to sell 1 \u{1F33F}</button></div></div>';
+    tradeBg.innerHTML = '<div class="junk-card"><h2 id="junkName">Junkie</h2><div class="junk-offer" id="junkOffer">—</div><div class="junk-row"><span>Your \u{1F33F} Weed</span><b id="junkWeed">0</b></div><div class="junk-row"><span>Your \u{1F4B5} Cash</span><b id="junkCash">0</b></div><div class="junk-pick-lbl">Choose a strain to sell</div><div class="junk-strains" id="junkStrains"></div><div class="junk-slider-wrap"><div class="junk-row"><span>Ask price (1 <span id="junkSelIcon">\u{1F33F}</span>)</span><b id="junkAsk">100</b> \u{1F4B5}</div><input id="junkSlider" type="range" min="50" max="200" step="5" value="100"><div class="junk-mood" id="junkMood">—</div></div><div class="junk-result" id="junkResult">—</div><div class="junk-btns"><button class="junk-btn cancel" id="junkCancel">Leave</button><button class="junk-btn" id="junkGo">Try to sell 1 \u{1F33F}</button></div></div>';
     document.body.appendChild(tradeBg);
     const PRICE_FAIR = 100;
     function rollMax(j){
       j._maxMult = 0.6 + Math.random() * 0.8;
       j._dealVibe = 0.85 + Math.random() * 0.30;
     }
+    // Pre-offer price hint shown while the player drags the slider. This is
+    // the PLAYER'S own read on the ask, NOT the junkie reacting — the junkie
+    // never rejects before an offer is actually made (no "No way, scram!"
+    // until the player clicks sell).
     function moodFor(mult){
-      if(mult <= 0.85) return { txt: '\u{1F60D} "Yesss, take my money!"', cls: '' };
-      if(mult <= 1.05) return { txt: '\u{1F914} "Hmm... maybe."', cls: 'greedy' };
-      if(mult <= 1.30) return { txt: '\u{1F62C} "Pricey..."', cls: 'greedy' };
-      return { txt: '\u{1F620} "No way, scram!"', cls: 'angry' };
+      if(mult <= 0.85) return { txt: '\u{1F91D} Generous — easy sell', cls: '' };
+      if(mult <= 1.05) return { txt: '⚖️ Around fair value', cls: '' };
+      if(mult <= 1.30) return { txt: '\u{1F4C8} Above fair — he may haggle', cls: 'greedy' };
+      return { txt: '\u{1F4B0} Premium ask', cls: 'greedy' };
     }
+    // ── Weed-strain helpers ──
+    // The harvest pipeline rolls the generic "weed" item into one of
+    // 5 tiered strains (weed_dirt … weed_unicorn). Junkies accept any
+    // strain; the rarer the strain, the more they pay. Selling order
+    // is "cheapest first" so the player keeps their stash of rare
+    // strains until they choose to drop them.
+    const WEED_STRAINS = [
+      "weed_dirt", "weed_pineapple", "weed_diesel", "weed_cosmic", "weed_unicorn",
+    ];
+    function totalWeedCount(){
+      const inv = State.inventory || {};
+      let n = (inv.weed || 0);
+      for(const id of WEED_STRAINS) n += (inv[id] || 0);
+      return n;
+    }
+    function pickCheapestWeed(){
+      const inv = State.inventory || {};
+      if((inv.weed || 0) > 0) return "weed";
+      for(const id of WEED_STRAINS){
+        if((inv[id] || 0) > 0) return id;
+      }
+      return null;
+    }
+    // Strain price multiplier on top of PRICE_FAIR. Junkies appreciate
+    // the good stuff. Numbers loosely mirror the rarity weights
+    // (60 / 25 / 10 / 4 / 1).
+    function strainMultiplier(id){
+      switch(id){
+        case "weed_unicorn":   return 30;
+        case "weed_cosmic":    return 12;
+        case "weed_diesel":    return 5;
+        case "weed_pineapple": return 2.4;
+        default:               return 1;   // weed_dirt + legacy "weed"
+      }
+    }
+    function fairPriceFor(id){
+      return Math.round(PRICE_FAIR * strainMultiplier(id));
+    }
+
     function openTrade(j){
       rollMax(j);
+      const sellId = pickCheapestWeed();
+      const fair   = sellId ? fairPriceFor(sellId) : PRICE_FAIR;
+      const ITEMS_ = window.ITEMS || {};
+      const strainName = sellId && ITEMS_[sellId] ? ITEMS_[sellId].name : "weed";
       document.getElementById('junkName').textContent = j.name + " \u{1F5A8}";
-      document.getElementById('junkOffer').innerHTML = 'Heyy man, gimme some o\' that <b>weed</b>. Fair price is <b>' + PRICE_FAIR + ' \u{1F4B5}</b>... try me.';
-      document.getElementById('junkWeed').textContent = State.inventory?.weed || 0;
+      document.getElementById('junkOffer').innerHTML = 'Heyy man, gimme some o\' that <b>' + strainName + '</b>. Fair price is <b>' + fair + ' \u{1F4B5}</b>... try me.';
+      document.getElementById('junkWeed').textContent = totalWeedCount();
       document.getElementById('junkCash').textContent = State.paper || 0;
       const slider = document.getElementById('junkSlider');
       const askEl  = document.getElementById('junkAsk');
       const moodEl = document.getElementById('junkMood');
-      slider.value = String(PRICE_FAIR);
-      askEl.textContent = String(PRICE_FAIR);
+      // Slider + max-he-pays scale with the strain you'd actually be
+      // selling — that way the rare strains command rare prices, and
+      // the slider's range matches the deal under negotiation.
+      const sliderMax = Math.max(fair * 4, PRICE_FAIR * 4);
+      slider.max   = String(sliderMax);
+      slider.value = String(fair);
+      askEl.textContent = String(fair);
       function updateMood(){
         const v = Number(slider.value);
         askEl.textContent = String(v);
-        const m = moodFor(v / PRICE_FAIR);
+        const m = moodFor(v / fair);
         moodEl.textContent = m.txt;
         moodEl.className = 'junk-mood ' + m.cls;
       }
@@ -376,25 +431,26 @@
       const res = document.getElementById('junkResult');
       res.classList.remove('win', 'lose'); res.textContent = '';
       const btn = document.getElementById('junkGo');
-      const have = (State.inventory?.weed || 0) > 0;
+      const have = totalWeedCount() > 0;
       btn.disabled = !have;
-      btn.textContent = have ? 'Try to sell 1 \u{1F33F}' : 'No \u{1F33F}';
+      btn.textContent = have ? 'Try to sell 1 ' + (ITEMS_[sellId]?.icon || '\u{1F33F}') : 'No \u{1F33F}';
       tradeBg.classList.add('show');
     }
     document.getElementById('junkCancel').addEventListener('click', () => tradeBg.classList.remove('show'));
     tradeBg.addEventListener('click', (e) => { if(e.target === tradeBg) tradeBg.classList.remove('show'); });
     document.getElementById('junkGo').addEventListener('click', () => {
       const j = nearJ; if(!j) return;
-      const have = (State.inventory?.weed || 0) > 0;
-      if(!have) return;
+      const sellId = pickCheapestWeed();
+      if(!sellId) return;
+      const fair  = fairPriceFor(sellId);
       const ask = Number(document.getElementById('junkSlider').value);
-      const maxHePays = Math.floor(PRICE_FAIR * (j._maxMult || 1));
+      const maxHePays = Math.floor(fair * (j._maxMult || 1));
       const res = document.getElementById('junkResult');
       const vibeOk = Math.random() <= (j._dealVibe || 0.9);
       if(ask <= maxHePays && vibeOk){
-        window.takeItem?.("weed", 1);
+        window.takeItem?.(sellId, 1);
         State.paper = (State.paper || 0) + ask;
-        State.xp = (State.xp || 0) + 6 + Math.max(0, ask - PRICE_FAIR);
+        State.xp = (State.xp || 0) + 6 + Math.max(0, ask - fair);
         j.jointUntil = Date.now() + 10 * 60 * 1000;
         res.textContent = 'SOLD! +' + ask + ' \u{1F4B5}';
         res.classList.add('win');
@@ -529,17 +585,17 @@
     };
 
     const wisStyle2 = document.createElement('style');
-    wisStyle2.textContent = '.wis-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:200;padding:18px;}.wis-bg.show{display:flex;}.wis-card{background:linear-gradient(180deg,rgba(20,8,30,.97),rgba(8,4,18,.97));border:2px solid rgba(155,106,197,.55);border-radius:18px;padding:24px;max-width:480px;width:100%;color:#fff1c2;font-family:Outfit,Inter,sans-serif;}.wis-card h3{font-family:Outfit,sans-serif;font-weight:800;font-size:14px;letter-spacing:1.2px;color:#c08ae0;text-transform:uppercase;margin-bottom:12px;text-align:center;}.wis-quote{font-size:17px;line-height:1.6;color:#fff1c2;background:rgba(155,106,197,.08);border:1px solid rgba(155,106,197,.3);border-radius:12px;padding:18px 22px;margin-bottom:16px;font-style:italic;}.wis-pay{text-align:center;font-size:12px;color:rgba(230,255,238,.6);margin-bottom:14px;font-family:JetBrains Mono,monospace;}.wis-btns{display:flex;gap:8px;justify-content:center;}.wis-btn{background:linear-gradient(135deg,#9b6ac5,#c08ae0);color:#0a0418;border:0;padding:10px 22px;border-radius:10px;font-family:Outfit,sans-serif;font-weight:800;font-size:11.5px;letter-spacing:1.1px;cursor:pointer;text-transform:uppercase;}.wis-btn.cancel{background:transparent;color:rgba(230,255,238,.7);border:1px solid rgba(230,255,238,.25);}';
+    wisStyle2.textContent = ".wis-bg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:200;padding:18px;}.wis-bg.show{display:flex;}.wis-card{background:linear-gradient(180deg,rgba(20,8,30,.97),rgba(8,4,18,.97));border:2px solid rgba(155,106,197,.55);border-radius:18px;padding:24px;max-width:480px;width:100%;color:#fff1c2;font-family:'Outfit','Inter',sans-serif;position:relative;}.wis-card h3{font-family:'Outfit',sans-serif;font-weight:800;font-size:14px;letter-spacing:1.2px;color:#c08ae0;text-transform:uppercase;margin-bottom:12px;text-align:center;}.wis-quote{font-size:17px;line-height:1.6;color:#fff1c2;background:rgba(155,106,197,.08);border:1px solid rgba(155,106,197,.3);border-radius:12px;padding:18px 22px;margin-bottom:16px;font-style:italic;}.wis-pay{text-align:center;font-size:12px;color:rgba(230,255,238,.6);margin-bottom:14px;font-family:'JetBrains Mono',monospace;}.wis-btns{display:flex;gap:8px;justify-content:center;}.wis-btn{background:linear-gradient(135deg,#9b6ac5,#c08ae0);color:#0a0418;border:0;padding:10px 22px;border-radius:10px;font-family:'Outfit',sans-serif;font-weight:800;font-size:11.5px;letter-spacing:1.1px;cursor:pointer;text-transform:uppercase;}.wis-btn.cancel{background:transparent;color:rgba(230,255,238,.7);border:1px solid rgba(230,255,238,.25);}";
     document.head.appendChild(wisStyle2);
     const wisBg = document.createElement('div');
     wisBg.className = 'wis-bg';
-    wisBg.innerHTML = '<div class="wis-card"><h3 id="wisHead">Word of Wisdom</h3><div class="wis-quote" id="wisQuote">—</div><div class="wis-pay" id="wisPay">Cost: 10 \u{1F948} Silver</div><div class="wis-btns"><button class="wis-btn cancel" id="wisCancel">Leave</button><button class="wis-btn" id="wisPay10">Pay 10 \u{1F948}</button></div></div>';
+    wisBg.innerHTML = '<div class="wis-card"><h3 id="wisHead">Word of Wisdom</h3><div class="wis-quote" id="wisQuote">-</div><div class="wis-pay" id="wisPay">Cost: 10 \u{1F948} Silver</div><div class="wis-btns"><button class="wis-btn cancel" id="wisCancel">Leave</button><button class="wis-btn" id="wisPay10">Pay 10 \u{1F948}</button></div></div>';
     document.body.appendChild(wisBg);
     let wisJunkie = null;
     function openWisdom(j){
       wisJunkie = j;
-      document.getElementById('wisHead').textContent = j.name + " · Word of Wisdom";
-      document.getElementById('wisQuote').textContent = "Pay 10 silver and I'll drop something on you, printer...";
+      document.getElementById('wisHead').textContent = j.name + " - Word of Wisdom";
+      document.getElementById('wisQuote').textContent = "Pay 10 silver and I will drop something on you, printer...";
       document.getElementById('wisPay').textContent = "Cost: 10 \u{1F948} Silver";
       document.getElementById('wisPay10').textContent = "Pay 10 \u{1F948}";
       wisBg.classList.add('show');
@@ -549,11 +605,11 @@
     document.getElementById('wisPay10').addEventListener('click', () => {
       if(!wisJunkie) return;
       if((State.credits || 0) < 10){ window.floater?.("Need 10 \u{1F948}", "bad"); return; }
-      const pool = WISDOM[wisJunkie.name] || WISDOM.Printrn;
-      const line = pool[Math.floor(Math.random() * pool.length)];
+      const pool = WISDOM[wisJunkie.name] || WISDOM.Printrn || [];
+      const line = pool[Math.floor(Math.random() * pool.length)] || "Stay zooted, printer.";
       State.credits -= 10;
       document.getElementById('wisQuote').textContent = line;
-      document.getElementById('wisPay').textContent = "-10 \u{1F948} paid · close when ready";
+      document.getElementById('wisPay').textContent = "-10 \u{1F948} paid - close when ready";
       document.getElementById('wisPay10').textContent = "Another (10 \u{1F948})";
       window.playPurchaseSound?.();
       window.saveState?.();

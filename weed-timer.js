@@ -145,11 +145,14 @@
         const distStr = dist < 1 ? 'here' : Math.round(dist) + 'm away';
         let body;
         if(t >= 1){
+          // READY — show the harvest banner + strain-rarity odds.
           let rarity = '';
-          if(plot.crop === 'weed_seed' || (item.name || '').toLowerCase().includes('weed')){
+          if(plot.crop === 'weed' || (item.name || '').toLowerCase().includes('weed')){
             rarity = '<div class="wt-rarity"><span class="wt-r green">60%</span><span class="wt-r blue">25%</span><span class="wt-r purple">10%</span><span class="wt-r orange">4%</span><span class="wt-r rainbow">1%</span></div>';
           }
-          body = '<div class="wt-ready">\u{1F389} READY · press <b>F</b> to harvest!</div>' + rarity;
+          body = '<div class="wt-ready">\u{1F389} READY · press <b>E</b> on the plot to harvest!</div>' + rarity;
+        } else {
+          // Still growing — show the live progress bar + time remaining.
           const remain = growMs * (1 - t);
           body = '<div class="wt-bar"><div class="wt-fill" style="width:' + (t * 100).toFixed(1) + '%"></div></div>'
                + '<div class="wt-sub"><span>' + (t * 100).toFixed(0) + '%</span><span>' + fmtTime(remain) + ' left</span></div>';

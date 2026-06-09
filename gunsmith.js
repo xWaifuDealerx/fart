@@ -715,9 +715,44 @@
       }
     }
 
-    // Click to fire — only in world view (ignore clicks over modals/UI)
+    // ── Fart-kill: any spider caught in a fart blast dies ──────────
+    // fartworld.html's tryFart() calls window.killSpidersNear(x, z, radius)
+    // but nothing defined it, so farts never hurt spiders. Define it here
+    // where the Spiders array + scene live. No weapon required — this is
+    // the "fart on a spider and it dies" mechanic.
+    window.killSpidersNear = function(x, z, radius){
+      const r = radius || 4;
+      let killed = 0;
+      for(let i = Spiders.length - 1; i >= 0; i--){
+        const s = Spiders[i];
+        if(!s || s.dead) continue;
+        const sx = (typeof s.x === 'number') ? s.x : (s.mesh ? s.mesh.position.x : 0);
+        const sz = (typeof s.z === 'number') ? s.z : (s.mesh ? s.mesh.position.z : 0);
+        if(Math.hypot(sx - x, sz - z) <= r){
+          s.dead = true;
+          try { scene.remove(s.mesh); } catch(_){}
+          Spiders.splice(i, 1);
+          killed++;
+        }
+      }
+      if(killed > 0){
+        State.spidersKilled = (State.spidersKilled || 0) + killed;
+        State.credits = (State.credits || 0) + killed * 5;
+        window.floater?.("\u{1F4A8}\u{1F578}\u{FE0F}\u{1F480} Fart wiped out " + killed + " spider" + (killed > 1 ? "s" : "") + "! +" + (killed * 5) + " \u{1F948}", "good");
+        window.saveState?.();
+        window.updateHUD?.();
+      }
+      return killed;
+    };
+
+    // Right-click to fire — only in world view (ignore clicks over modals/UI).
+    // Moved off left-click so left can drive the camera look-drag. The browser
+    // context menu is suppressed (here + globally) so no "Save image as…"
+    // popup interrupts a shot.
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('mousedown', (e) => {
-      if(e.button !== 0) return;
+      if(e.button !== 2) return;
+      e.preventDefault();
       // Block if a modal is open
       if(document.querySelector('.gs-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show, .fc-bg.show, .carlos-bg.show, .roki-bg.show')) return;
       // Block if click is on a button/UI element

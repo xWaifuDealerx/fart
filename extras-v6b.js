@@ -121,6 +121,18 @@
       },
     });
 
+    // One-time migration: older saves (and any harvest before the strain
+    // fix) stored weed under the generic "weed" id, which displays as just
+    // "Weed". Fold it into Dirt Weed so the inventory always names a strain.
+    try {
+      if(window.State && State.inventory && (State.inventory.weed || 0) > 0){
+        State.inventory.weed_dirt = (State.inventory.weed_dirt || 0) + State.inventory.weed;
+        delete State.inventory.weed;
+        window.saveState?.();
+        window.renderInventory?.();
+      }
+    } catch(_){}
+
     // ──────────────────────────────────────────────────────────────
     // 2) WEED HARVEST → random tier
     // ──────────────────────────────────────────────────────────────
@@ -141,20 +153,30 @@
       for(const t of WEED_TIERS){ r -= t.weight; if(r <= 0) return t.id; }
       return "weed_dirt";
     }
+    // Rarity ranking (rarest first) so we can report the best bud of a run.
+    const RARITY_ORDER = ["weed_unicorn", "weed_cosmic", "weed_diesel", "weed_pineapple", "weed_dirt"];
     const _origAddItem = window.addItem;
     window.addItem = function(id, qty){
       if(id === "weed"){
         // Re-roll each bud individually so a harvest of 10 can include
         // a mix of tiers (with a chance for that one Unicorn Poop).
         const ITEMS_ = window.ITEMS;
+        let rarestThisRun = null, rarestRank = 999;
         for(let i = 0; i < (qty || 1); i++){
           const tierId = rollWeedTier();
           _origAddItem(tierId, 1);
+          const rank = RARITY_ORDER.indexOf(tierId);
+          if(rank !== -1 && rank < rarestRank){ rarestRank = rank; rarestThisRun = tierId; }
           // Log the rarest of the run — keeps the floater interesting.
           if(i === 0 && tierId !== "weed_dirt"){
             window.floater?.(`+1 ${ITEMS_[tierId].name}`, "good");
           }
         }
+        // Stash the rarest strain ACTUALLY rolled this harvest so the reveal
+        // carousel lands on what the player really got — not the rarest bud
+        // they happen to already own (the old bug: own one unicorn and every
+        // future carousel falsely landed on unicorn).
+        window._lastWeedRollRarest = rarestThisRun || "weed_dirt";
         return;
       }
       return _origAddItem(id, qty);

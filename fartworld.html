@@ -41,6 +41,7 @@
 <script src="minimap.js?v=6bp" defer></script>
 <script src="compass.js?v=6bp" defer></script>
 <script src="weed-timer.js?v=6bp" defer></script>
+<script src="weed-reveal.js?v=6bp" defer></script>
 <script src="nature.js?v=6bp" defer></script>
 <script src="ui-polish.js?v=6bp" defer></script>
 <script src="dev.js?v=6bp" defer></script>
@@ -3304,6 +3305,20 @@ const STORE_KEY = "fartworld_state_v1";
 
 function saveState(){
   try {
+    // Snapshot the plots the player owns so their planted crops
+    // continue growing across sessions. We store ONLY plots where this
+    // player is the owner; everybody else's plots come from the room.
+    // `plantedAt` is a Date.now() millis stamp, so harvest readiness is
+    // always evaluated against real wall-clock time — a 10-minute weed
+    // crop is ready 10 real minutes after planting, even if the player
+    // closes the tab in between.
+    let plotSave = [];
+    try {
+      const me = State.username || State.wallet || "guest";
+      plotSave = (Array.isArray(window.Plots) ? window.Plots : [])
+        .filter(p => p && p.owner === me && p.crop && p.plantedAt)
+        .map(p => ({ x: p.x, z: p.z, crop: p.crop, plantedAt: p.plantedAt, rentedUntil: p.rentedUntil || 0 }));
+    } catch(_){}
     localStorage.setItem(STORE_KEY, JSON.stringify({
       wallet:   State.wallet,
       username: State.username,
@@ -3326,9 +3341,37 @@ function saveState(){
       flagImages:          State.flagImages || {},
       wornFlag:            State.wornFlag || null,
       jailUntil:           State.jailUntil || 0,
+      myPlots:             plotSave,
     }));
   } catch(_){}
 }
+// After the world's Plots array is populated, restore any planted
+// crops the player owned before disconnecting. Re-runs are cheap
+// because we de-dupe by plot.x/z. Called lazily once Plots[] exists.
+window._restoreMyPlots = function _restoreMyPlots(){
+  try {
+    if(!Array.isArray(window.Plots) || window.Plots.length === 0) return;
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return;
+    const j = JSON.parse(raw);
+    const saved = Array.isArray(j.myPlots) ? j.myPlots : [];
+    if(!saved.length) return;
+    const me = State.username || State.wallet || "guest";
+    for(const sp of saved){
+      const live = window.Plots.find(p => p && Math.abs(p.x - sp.x) < 0.5 && Math.abs(p.z - sp.z) < 0.5);
+      if(!live) continue;
+      // Don't stomp someone else's active rental.
+      if(live.owner && live.owner !== me) continue;
+      live.owner = me;
+      live.ownerName = State.username || me;
+      live.crop = sp.crop;
+      live.plantedAt = sp.plantedAt;
+      if(sp.rentedUntil) live.rentedUntil = sp.rentedUntil;
+    }
+  } catch(_){}
+};
+setTimeout(() => { try { window._restoreMyPlots?.(); } catch(_){} }, 2000);
+setTimeout(() => { try { window._restoreMyPlots?.(); } catch(_){} }, 6000);
 function loadState(){
   try {
     const j = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
@@ -3560,6 +3603,13 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// PERF: don't re-render the (expensive) 2048² sun shadow map every single
+// frame. We drive shadowMap.needsUpdate manually from the Perf controller
+// below — every 2nd frame normally, less often under load. The sun and most
+// shadow casters move slowly enough that a 20–30Hz shadow refresh is visually
+// indistinguishable from 60Hz while roughly halving the shadow-pass cost.
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 
 // Bloom for the neon-zone glow + farts
 const composer = new EffectComposer(renderer);
@@ -3577,7 +3627,110 @@ window.addEventListener('resize', () => {
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
   composer.setSize(innerWidth, innerHeight);
+  // Re-apply the current dynamic-resolution scale after a resize so the
+  // backbuffer is reallocated at the right size.
+  if(window.Perf) window.Perf.reapply();
 });
+
+// ─── PERF: adaptive frame controller ────────────────────────────
+// Desktop-first, FPS-first. Two levers, both invisible when the machine is
+// keeping up at 60fps (capable GPUs sit at full quality and never downscale):
+//   1) Dynamic resolution — drops the renderer/composer pixel ratio in small
+//      steps only when sustained FPS falls below target, restoring it when the
+//      machine recovers. Hysteresis + cooldown prevent thrashing.
+//   2) Shadow cadence — refresh the shadow map every Nth frame; N grows under
+//      load. Pairs with shadowMap.autoUpdate=false set above.
+// Toggle the FPS/res overlay with F9. The whole update() is called inside a
+// try/catch in the loop so a fault here can never freeze the world.
+const Perf = (() => {
+  const BASE_PR = Math.min(window.devicePixelRatio || 1, 1.75); // quality ceiling
+  const SCALES  = [1.0, 0.85, 0.72, 0.6];   // resolution multipliers, high → low
+  let scaleIdx = 0;          // 0 = full quality
+  let fps = 60;              // smoothed estimate
+  let frames = 0, acc = 0;   // 0.5s sampling window
+  let cooldown = 0;          // seconds until next resolution change is allowed
+  let frameCount = 0;
+  let shadowEvery = 2;       // refresh shadow map every Nth frame
+  let shadowRes = 2048;      // current sun shadow-map resolution
+  let overlay = null, overlayOn = false;
+
+  function currentPR(){ return +(BASE_PR * SCALES[scaleIdx]).toFixed(3); }
+  function applyScale(){
+    const pr = currentPR();
+    try {
+      renderer.setPixelRatio(pr);
+      if(composer.setPixelRatio) composer.setPixelRatio(pr);
+      renderer.setSize(innerWidth, innerHeight);
+      composer.setSize(innerWidth, innerHeight);
+    } catch(_){}
+  }
+  // Resize the sun's shadow map (cheaper map = cheaper shadow pass). Three
+  // only rebuilds the depth texture if we dispose the old one first.
+  function applyShadowRes(n){
+    if(n === shadowRes) return;
+    shadowRes = n;
+    try {
+      sun.shadow.mapSize.set(n, n);
+      if(sun.shadow.map){ sun.shadow.map.dispose(); sun.shadow.map = null; }
+      renderer.shadowMap.needsUpdate = true;
+    } catch(_){}
+  }
+
+  function toggleOverlay(){
+    overlayOn = !overlayOn;
+    if(overlayOn && !overlay){
+      overlay = document.createElement('div');
+      overlay.style.cssText = 'position:fixed;right:10px;top:10px;z-index:99999;'
+        + "font:11px/1.45 'JetBrains Mono',monospace;color:#9effc4;"
+        + 'background:rgba(4,14,8,.82);border:1px solid rgba(95,240,156,.5);'
+        + 'border-radius:8px;padding:6px 9px;pointer-events:none;white-space:pre;'
+        + 'box-shadow:0 6px 18px rgba(0,0,0,.5)';
+      document.body.appendChild(overlay);
+    }
+    if(overlay) overlay.style.display = overlayOn ? 'block' : 'none';
+  }
+  addEventListener('keydown', (e) => {
+    if(e.key === 'F9'){ e.preventDefault(); toggleOverlay(); }
+  });
+
+  function update(now, dt){
+    // 1) Shadow cadence — flag a shadow refresh on every Nth frame only.
+    renderer.shadowMap.needsUpdate = (frameCount % shadowEvery === 0);
+    frameCount++;
+
+    // 2) FPS sampling + adaptive resolution.
+    frames++; acc += dt;
+    if(cooldown > 0) cooldown -= dt;
+    if(acc >= 0.5){
+      const sample = frames / acc;
+      fps = fps * 0.5 + sample * 0.5;   // EMA smoothing
+      frames = 0; acc = 0;
+
+      if(cooldown <= 0){
+        if(fps < 50 && scaleIdx < SCALES.length - 1){
+          scaleIdx++; applyScale(); cooldown = 1.5;       // downscale fast
+        } else if(fps > 58 && scaleIdx > 0){
+          scaleIdx--; applyScale(); cooldown = 2.5;       // upscale cautiously
+        }
+      }
+      shadowEvery = fps < 40 ? 4 : fps < 52 ? 3 : 2;
+      // Drop the shadow map to 1024² when the machine is struggling, restore
+      // the crisp 2048² once it has comfortable headroom (hysteresis avoids
+      // flapping between the two).
+      if(fps < 45) applyShadowRes(1024);
+      else if(fps > 56) applyShadowRes(2048);
+
+      if(overlayOn && overlay){
+        overlay.textContent = 'FPS ' + fps.toFixed(0)
+          + '\nres ' + currentPR().toFixed(2) + 'x  (scale ' + SCALES[scaleIdx].toFixed(2) + ')'
+          + '\nshadow 1/' + shadowEvery + ' frames · ' + shadowRes + '²';
+      }
+    }
+  }
+
+  return { update, toggleOverlay, reapply: applyScale };
+})();
+window.Perf = Perf;
 
 // ─── Lighting ───────────────────────────────────────────────────
 const ambient = new THREE.HemisphereLight(0xb5fff0, 0x05140a, 0.45);
@@ -4072,6 +4225,29 @@ function makePrinterStation(x, z){
   [  3,  48], [-44,  38],
 ].forEach(([x,z]) => makePrinterStation(x, z));
 
+// ─── Crop grow-time resolver ────────────────────────────────────
+// growMs lives on the SEED item (weed_seed, carrot_seed), NOT on the
+// harvested crop (weed, carrot). Reading ITEMS[crop].growMs therefore
+// gives `undefined` → `t = NaN`, which (a) left the growth stage stuck
+// at 0 forever so plots never looked ready, and (b) — if a plot ever
+// held a crop id missing from ITEMS — threw `Cannot read properties of
+// undefined (reading 'growMs')` every second inside tickGameplaySystems,
+// freezing the whole game the moment a crop matured. This resolver is
+// TOTAL: it walks the seed catalog to find the seed whose `.harvest`
+// points back to the crop, and always returns a positive number, so a
+// crop can never strand the render loop or get permanently stuck.
+function cropGrowMs(cropId){
+  const FALLBACK = 10 * 60 * 1000; // 10 min — matches the seed defaults
+  if(!cropId) return FALLBACK;
+  const direct = ITEMS[cropId] && ITEMS[cropId].growMs;
+  if(direct) return direct;
+  for(const k in ITEMS){
+    const it = ITEMS[k];
+    if(it && it.harvest === cropId && it.growMs) return it.growMs;
+  }
+  return FALLBACK;
+}
+
 // ─── Land plots (buyable, farmable) ─────────────────────────────
 // Each plot is a brown square on the ground with a "FOR SALE" sign
 // when unowned. Buying claims it (50 $FART). Owners can plant crops
@@ -4266,8 +4442,7 @@ function plotStateChanged(plot){
   // Update plant
   while(plot.plantGroup.children.length) plot.plantGroup.remove(plot.plantGroup.children[0]);
   if(plot.crop && ITEMS[plot.crop]){
-    const item = ITEMS[plot.crop];
-    const t = Math.max(0, Math.min(1, (Date.now() - plot.plantedAt) / item.growMs));
+    const t = Math.max(0, Math.min(1, (Date.now() - plot.plantedAt) / cropGrowMs(plot.crop)));
     const stage = t >= 1 ? 2 : t >= 0.5 ? 1 : 0;
     plot.plantGroup.add(buildWeedPlant(stage));
   }
@@ -5231,10 +5406,12 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// Mouse look — drag anywhere on the canvas
+// Mouse look — LEFT-drag on the canvas (right mouse is reserved for firing
+// the Desert Eagle, so we ignore button 2 here to avoid the camera swinging
+// while you shoot).
 let mouseDown = false;
 let lastX = 0, lastY = 0;
-canvas.addEventListener('mousedown', (e) => { mouseDown = true; lastX = e.clientX; lastY = e.clientY; });
+canvas.addEventListener('mousedown', (e) => { if(e.button !== 0) return; mouseDown = true; lastX = e.clientX; lastY = e.clientY; });
 window.addEventListener('mouseup', () => { mouseDown = false; });
 window.addEventListener('mousemove', (e) => {
   if(!mouseDown) return;
@@ -8401,7 +8578,12 @@ function updatePlotPrompt(){
       const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / growMs));
       if(t >= 1){
         title.textContent = `✨ Harvest ready · Plot lease ${rentTag}`;
-        sub.innerHTML = `Press <kbd>E</kbd> to pick the <b>${ITEMS[item.harvest].name}</b>`;
+        // FIX: `item` IS the crop (e.g. ITEMS["weed"]) — crops don't
+        // have a `harvest` field (only seeds do), so the old
+        // ITEMS[item.harvest].name was reading undefined.name and
+        // throwing a TypeError every frame the prompt updated, which
+        // froze the whole render loop the moment a plot turned ready.
+        sub.innerHTML = `Press <kbd>E</kbd> to pick the <b>${item.name}</b>`;
       } else {
         const remainingMs = (1 - t) * growMs;
         const remainingLabel = remainingMs >= 60000
@@ -8534,22 +8716,82 @@ function tryInteract(){
   }
   // HARVEST? Crops can return more than one item via their `harvestQty`
   // field on the seed catalog. Weed gives 10 buds per harvest now.
-  const item = ITEMS[nearbyPlot.crop];
-  const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / item.growMs));
+  //
+  // growMs lives on the SEED item, not the harvest item — but earlier
+  // versions of this function read it off the crop directly which gave
+  // `undefined`, so `(now - plantedAt) / undefined = NaN`, the t >= 1
+  // check failed silently, and pressing E did nothing. Fall back to
+  // the seed's growMs (same pattern as the prompt), and as a final
+  // safety net use 10 minutes so a missing entry never strands the crop.
+  const item   = ITEMS[nearbyPlot.crop];
+  const seedKey = Object.keys(ITEMS).find(k => ITEMS[k].harvest === nearbyPlot.crop);
+  let   growMs  = (item && item.growMs) || (seedKey && ITEMS[seedKey].growMs) || (10 * 60 * 1000);
+  const t = Math.max(0, Math.min(1, (Date.now() - nearbyPlot.plantedAt) / growMs));
   if(t >= 1){
-    // Look up the seed that produced this crop to find its harvest yield.
-    const seedKey = Object.keys(ITEMS).find(k => ITEMS[k].harvest === nearbyPlot.crop);
     const qty = (seedKey && ITEMS[seedKey].harvestQty) || 1;
-    addItem(nearbyPlot.crop, qty);
+    const cropName = ITEMS[item.harvest || nearbyPlot.crop || ""]?.name || "crop";
+    if(nearbyPlot.crop === "weed"){
+      // Roll each bud into a specific strain so the REAL strain items
+      // (Dirt Weed … Unicorn Poop) land in inventory and show their name.
+      // We must roll here: the harvest calls the LOCAL addItem(), which the
+      // extras-v6b window.addItem strain-roll patch never sees — so without
+      // this every harvest dropped a generic "weed" that just read "Weed".
+      const strainsReady = !!ITEMS["weed_dirt"];   // registered by extras-v6b
+      let rarest = null, rarestRank = 999;
+      for(let i = 0; i < qty; i++){
+        const sid = strainsReady ? rollWeedStrain() : "weed";
+        addItem(sid, 1);
+        const rank = WEED_RARITY.indexOf(sid);
+        if(rank !== -1 && rank < rarestRank){ rarestRank = rank; rarest = sid; }
+      }
+      // Fire the CSGO-style reveal on the rarest strain actually rolled.
+      if(rarest){
+        try {
+          window.dispatchEvent(new CustomEvent('fw:weedRoll', { detail: { tierId: rarest } }));
+        } catch(_){}
+      }
+    } else {
+      addItem(nearbyPlot.crop, qty);
+    }
     nearbyPlot.crop = null;
     nearbyPlot.plantedAt = 0;
     plotStateChanged(nearbyPlot);
-    const cropName = ITEMS[item.harvest || nearbyPlot.crop || ""]?.name || "crop";
     floater(`+${qty} ${cropName}  +20 XP`, "good");
     State.xp += 20; checkLevelUp();
     saveState(); updateHUD();
     broadcastPlot(nearbyPlot);
+  } else {
+    // Not yet ready — give the player a clear floater so they don't
+    // mash E confused.
+    const left = Math.ceil((1 - t) * growMs / 1000);
+    floater(`${item?.name || "Crop"} needs ${left}s more`, "bad");
   }
+}
+
+// ── Weed strain roll (harvest) ──────────────────────────────────
+// Weighted strain table — mirrors extras-v6b.js / weed-reveal.js so a
+// harvested weed plot yields a specific strain item rather than the generic
+// "weed" id. WEED_RARITY is ordered rarest → most common for ranking.
+const WEED_STRAIN_WEIGHTS = [
+  ["weed_dirt", 60], ["weed_pineapple", 25], ["weed_diesel", 10],
+  ["weed_cosmic", 4], ["weed_unicorn", 1],
+];
+const WEED_RARITY = ["weed_unicorn", "weed_cosmic", "weed_diesel", "weed_pineapple", "weed_dirt"];
+function rollWeedStrain(){
+  const total = WEED_STRAIN_WEIGHTS.reduce((s, w) => s + w[1], 0);
+  let r = Math.random() * total;
+  for(const [id, w] of WEED_STRAIN_WEIGHTS){ r -= w; if(r <= 0) return id; }
+  return "weed_dirt";
+}
+
+// Returns the rarest weed tier the player owns right now. The carousel
+// uses this to pick which strain to "land on" for the reveal animation.
+function pickRarestNewWeedTier(){
+  const tiers = ["weed_unicorn", "weed_cosmic", "weed_diesel", "weed_pineapple", "weed_dirt"];
+  for(const id of tiers){
+    if((State.inventory?.[id] || 0) > 0) return id;
+  }
+  return "weed_dirt";
 }
 
 // E key + mobile (E for desktop, the touch fart button doubles as interact when
@@ -11199,8 +11441,7 @@ function tickGameplaySystems(dt){
     _plantGrowthAcc = 0;
     for(const p of Plots){
       if(!p.crop) continue;
-      const item = ITEMS[p.crop];
-      const t = (Date.now() - p.plantedAt) / item.growMs;
+      const t = (Date.now() - p.plantedAt) / cropGrowMs(p.crop);
       const newStage = t >= 1 ? 2 : t >= 0.5 ? 1 : 0;
       if(p._lastStage !== newStage){
         p._lastStage = newStage;
@@ -11283,6 +11524,10 @@ function loop(now){
   if(((now / 1000) | 0) !== ((lastTime / 1000 - dt) | 0)){
     saveState();
   }
+
+  // PERF controller (adaptive resolution + shadow cadence). Guarded so a
+  // fault here can never break the render loop.
+  try { Perf.update(now, dt); } catch(_){}
 
   composer.render();
   requestAnimationFrame(loop);
@@ -11615,74 +11860,20 @@ function fcRenderClaim(){
   });
   // Legacy "go" click handler kept as a no-op safety net
   host.querySelectorAll('.fc-claim-btn.go[data-code]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const coin = FARTCUP_COINS.find(c => c.code === btn.dataset.code);
-      if(coin) claimFlag(coin);
-    });
-  });
+});
 }
 
-function ensureFlagItem(coin){
-  const id = "flag_" + coin.code;
-  if(ITEMS[id]) return id;
-  ITEMS[id] = {
-    id,
-    name:    `Flag · ${coin.sym}`,
-    icon:    flagEmoji(coin.code),
-    color:   "#ffd64d",
-    type:    "wearable",
-    isNFT:   true,
-    coinSym: coin.sym,
-    code:    coin.code,
-    image:   _fcData[coin.ca]?.image || State.flagImages?.[coin.code] || null,
-  };
-  return id;
-}
-function grantFlag(coin){ if(!coin) return null; return ensureFlagItem(coin); }
-function claimFlag(coin){
-  if(!State.claimedFlags) State.claimedFlags = new Set();
-  if(State.claimedFlags.has(coin.code)){ floater("Already claimed!", "bad"); return; }
-  const id = grantFlag(coin);
-  if(!id) return;
-  State.claimedFlags.add(coin.code);
-  addItem(id, 1);
-  floater("+1 " + coin.sym + " Flag!", "good");
-  saveState();
-  if(typeof renderInventory === "function") renderInventory();
-}
-const _origRender = renderInventory;
-renderInventory = function(){
-  _origRender();
-  const grid = document.getElementById('invGrid');
-  if(grid){ /* flag badge decoration was here — omitted, base render still runs */ }
-};
+function openFartCup(){ /* fartcup.js replaces */ }
+function closeFartCup(){ /* fartcup.js replaces */ }
+// Stubs for grantFlag / claimFlag — the real implementations are
+// installed by fartcup.js at runtime. Without these placeholders, the
+// Object.assign(window, { ... grantFlag, claimFlag ... }) line below
+// throws ReferenceError, which means NONE of the globals get exposed,
+// which means every side file (NPCs, buildings, the printer itself)
+// fails its whenReady() poll and the world never renders.
+function grantFlag(){ /* fartcup.js replaces */ }
+function claimFlag(){ /* fartcup.js replaces */ }
 
-// Stub openFartCup / closeFartCup. The real ones come from fartcup.js
-// (the side file overrides window.openFartCup later). These stubs are
-// here so the Object.assign below doesn't ReferenceError on a fresh
-// load before fartcup.js has had a chance to init.
-function openFartCup(){
-  if(typeof window.openFartCup === 'function' && window.openFartCup !== openFartCup){
-    return window.openFartCup();
-  }
-  // Fartcup side file hasn't loaded — try a few times then give up quietly.
-  let n = 0;
-  const t = setInterval(() => {
-    if(typeof window.openFartCup === 'function' && window.openFartCup !== openFartCup){
-      clearInterval(t); window.openFartCup();
-    } else if(++n > 30) clearInterval(t);
-  }, 100);
-}
-function closeFartCup(){
-  const el = document.getElementById('fcBg');
-  if(el) el.classList.remove('show');
-}
-
-// Expose all globals that side files need to initialise. Without this
-// block, fartcup.js / gunsmith.js / static-npcs.js / minimap.js / etc.
-// can never finish their whenReady polling loop, and any function
-// referenced via window.X (including connectWallet wired by inline
-// onclick) silently fails.
 Object.assign(window, {
   State, ITEMS, addItem, takeItem, floater, showBuyToast,
   playPurchaseSound, ensureAudio, checkLevelUp, saveState, updateHUD,
