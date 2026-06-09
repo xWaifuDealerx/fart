@@ -14,6 +14,27 @@
 
   function init(){
     const State = window.State;
+    // ── New-player check ──
+    // The tutorial only ever runs on a player's FIRST session. Once it
+    // has been seen (or the player has any meaningful progress), we
+    // permanently skip showing the card. State.tutSeen is persisted via
+    // saveState so it survives reloads/logins.
+    const hasProgress = (Number(State.credits) || 0) > 0
+                     || (Number(State.paper)   || 0) > 0
+                     || (Number(State.gold)    || 0) > 0
+                     || (State.xp              || 0) > 0
+                     || (State.level           || 1) > 1
+                     || Object.keys(State.inventory || {}).length > 0;
+    if(State.tutSeen || hasProgress){
+      // Returning player — never show the tutorial UI again.
+      State.tutSeen = true;
+      try { window.saveState?.(); } catch(_){}
+      console.log('[tutorial] skipped — returning player');
+      return;
+    }
+    // First-ever session: mark seen immediately so future loads skip it.
+    State.tutSeen = true;
+    try { window.saveState?.(); } catch(_){}
     // ── State ──
     if(typeof State.tutStep !== "number") State.tutStep = 0;        // 0..5 (5 = complete)
     if(!State.tutFlags || typeof State.tutFlags !== "object") State.tutFlags = {};
@@ -281,6 +302,7 @@
         credits: Number(State.credits) || 0,
         paper: Number(State.paper) || 0,
       };
+      collapsed = false;
       window.saveState?.();
       renderStep();
       window.floater?.("Tutorial reset to step 1", "good");

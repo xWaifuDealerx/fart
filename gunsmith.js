@@ -365,6 +365,27 @@
       }
     }
 
+    // ── Spider safe zones ──
+    // Buildings the player can hide inside — spiders flee any time they
+    // get close. Each entry is { x, z, r } where r is the flee radius.
+    // The hotel and every apartment count, so the player can use them
+    // as panic rooms.
+    const SAFE_ZONES = [
+      { x: -64, z: 18,  r: 10 },  // Hotel
+      { x: 15,  z: -71, r: 8  },  // Soviet apartment
+      { x: -11, z: 37,  r: 8  },  // Middle apartment
+      { x: -13, z: 75,  r: 8  },  // Luxury penthouse
+    ];
+    function nearestSafeZone(x, z){
+      let best = null, bestPen = -Infinity;
+      for(const zn of SAFE_ZONES){
+        const d = Math.hypot(zn.x - x, zn.z - z);
+        const pen = zn.r - d;          // positive when inside flee radius
+        if(pen > bestPen){ bestPen = pen; best = { zn, d, pen }; }
+      }
+      return best && best.pen > 0 ? best : null;
+    }
+
     // Spider tick
     let lastT = performance.now();
     function tick(){
@@ -373,12 +394,24 @@
       for(let i = Spiders.length - 1; i >= 0; i--){
         const s = Spiders[i];
         if(s.dead) continue;
-        const dx = Player.pos.x - s.x;
-        const dz = Player.pos.z - s.z;
-        const d = Math.hypot(dx, dz);
+        let dx = Player.pos.x - s.x;
+        let dz = Player.pos.z - s.z;
+        let d  = Math.hypot(dx, dz);
+        // If the spider has entered a safe-zone (hotel / apartment),
+        // it instantly reverses course and sprints away from the zone
+        // centre instead of chasing the player. The flee speed is a
+        // little higher than normal chase so it visibly bolts.
+        const flee = nearestSafeZone(s.x, s.z);
+        if(flee){
+          dx = s.x - flee.zn.x;
+          dz = s.z - flee.zn.z;
+          d  = Math.hypot(dx, dz);
+        }
         if(d > 0.0001){
           s.yaw = Math.atan2(dx, dz);
-          const speed = d < SPIDER_CONTACT_R ? 0 : SPIDER_SPEED;
+          const speed = flee
+            ? SPIDER_SPEED * 1.6
+            : (d < SPIDER_CONTACT_R ? 0 : SPIDER_SPEED);
           s.x += (dx / d) * speed * dt;
           s.z += (dz / d) * speed * dt;
         }
@@ -396,13 +429,20 @@
         for(let li = 0; li < s.legs.length; li++){
           s.legs[li].rotation.y = Math.sin(s.legPhase + li * 0.7) * 0.25;
         }
-        // Contact knockback
-        if(d < SPIDER_CONTACT_R){
-          const k = SPIDER_KNOCKBACK * dt * 8;
-          Player.pos.x += (-dx / Math.max(0.01, d)) * k;
-          Player.pos.z += (-dz / Math.max(0.01, d)) * k;
-          // small camera shake floater
-          window.floater?.("\u{1F578}\u{FE0F} Bumped!", "bad");
+        // Contact knockback — use the real player-to-spider delta, not
+        // the flee delta we may have swapped in above. Skip entirely
+        // while the spider is in a safe zone so the player can chill.
+        if(!flee){
+          const pdx = Player.pos.x - s.x;
+          const pdz = Player.pos.z - s.z;
+          const pd  = Math.hypot(pdx, pdz);
+          if(pd < SPIDER_CONTACT_R){
+            const k = SPIDER_KNOCKBACK * dt * 8;
+            Player.pos.x += (-pdx / Math.max(0.01, pd)) * k;
+            Player.pos.z += (-pdz / Math.max(0.01, pd)) * k;
+            // small camera shake floater
+            window.floater?.("\u{1F578}\u{FE0F} Bumped!", "bad");
+          }
         }
       }
       requestAnimationFrame(tick);
@@ -675,40 +715,19 @@
       }
     }
 
+    // Click to fire — only in world view (ignore clicks over modals/UI)
     document.addEventListener('mousedown', (e) => {
       if(e.button !== 0) return;
+      // Block if a modal is open
       if(document.querySelector('.gs-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show, .fc-bg.show, .carlos-bg.show, .roki-bg.show')) return;
+      // Block if click is on a button/UI element
       const tgt = e.target;
       if(tgt && tgt.tagName && /^(BUTTON|A|INPUT|TEXTAREA|SELECT|LABEL)$/.test(tgt.tagName)) return;
       if(tgt && tgt.closest && tgt.closest('button, a, input, textarea, select, label, .gs-pop, .alex-pop, .roki-near, .plane-prox, .tut-card, .junk-pop, #npcPop')) return;
+      // Must have the gun
       if(!(State.inventory?.deagle > 0)) return;
-      if(isAimingAtNpc()){ return; }
       fire();
     });
-
-    // Public API: kill any spiders within `radius` meters of (x, z).
-    window.killSpidersNear = function(x, z, radius){
-      let killed = 0;
-      for(let i = Spiders.length - 1; i >= 0; i--){
-        const s = Spiders[i];
-        if(s.dead) continue;
-        const d = Math.hypot(s.x - x, s.z - z);
-        if(d <= radius){
-          s.dead = true;
-          try { scene.remove(s.mesh); } catch(_){}
-          Spiders.splice(i, 1);
-          killed++;
-        }
-      }
-      if(killed > 0){
-        State.spidersKilled = (State.spidersKilled || 0) + killed;
-        State.credits = (State.credits || 0) + 5 * killed;
-        window.floater?.("\u{1F578}\u{FE0F}\u{1F4A8} Fart kills " + killed + " spider" + (killed > 1 ? "s" : "") + "! +" + (5 * killed) + " \u{1F948}", "good");
-        window.saveState?.();
-        window.updateHUD?.();
-      }
-      return killed;
-    };
 
     console.log('[gunsmith] ready at', SHOP_POS);
   }

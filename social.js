@@ -180,7 +180,10 @@
       const handle = getHandle();
       const tag = ' #FartWorld $FARTPRINT @FART_PRINT';
       const refLine = '\n\nUse my code ' + myReferral + ' for free silver!';
-      return handle + ' just ' + label + ' on FartWorld! ' + (extras || '\u{1F4A8}') + tag + refLine;
+      // Tweets always start with "I just..." so they read naturally in first-person
+      // regardless of the user's handle or wallet name.
+      void handle;
+      return 'I just ' + label + ' on FartWorld! ' + (extras || '\u{1F4A8}') + tag + refLine;
     }
     function showShare(milestone){
       const label = milestone.label || 'hit a milestone';
@@ -326,6 +329,6 @@
     lbBg.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => renderLb(b.dataset.tab)));
     lbBtn.addEventListener('click', () => { renderLb('farters'); lbBg.classList.add('show'); });
 
-    console.log('[social] ready — referral', myReferral);
+    console.log('[social] ready — referral', myReferral, '| streak', streak);
   }
 })();

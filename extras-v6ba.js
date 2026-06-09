@@ -111,12 +111,28 @@
 
     // Spider damage — patch the existing knockback in gunsmith.js by
     // checking each spider every tick.
+    // Safe-zone list mirrors gunsmith.js — hotel + apartments. While
+    // the PLAYER is inside one, spiders can't bite (and gunsmith makes
+    // them flee), so the building works as a true panic room.
+    const BITE_SAFE = [
+      { x: -64, z: 18,  r: 10 },  // Hotel
+      { x: 15,  z: -71, r: 8  },  // Soviet apartment
+      { x: -11, z: 37,  r: 8  },  // Middle apartment
+      { x: -13, z: 75,  r: 8  },  // Luxury penthouse
+    ];
+    function playerInSafeZone(){
+      for(const zn of BITE_SAFE){
+        if(Math.hypot(zn.x - Player.pos.x, zn.z - Player.pos.z) < zn.r) return true;
+      }
+      return false;
+    }
     function spiderTick(){
       // Find spiders via window — gunsmith.js doesn't expose them so
       // we just check if any are very close to the player by reading
       // group children near the player position.
       const Spiders = window.Spiders || [];
       let bit = false;
+      const safe = playerInSafeZone();
       for(const s of Spiders){
         if(!s || s.dead) continue;
         const d = Math.hypot(s.x - Player.pos.x, s.z - Player.pos.z);
@@ -125,7 +141,7 @@
         }
         if(s._lastBite && performance.now() - s._lastBite > 1500){
           s._lastBite = performance.now();
-          bit = true;
+          if(!safe) bit = true;
         }
       }
       if(bit) window.damagePlayer(8, '🕷️ spider bite');
