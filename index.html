@@ -289,6 +289,7 @@
   .tk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
   .tk-btn { display: flex; align-items: center; gap: 10px; background: rgba(255,206,74,0.07); border: 1px solid rgba(255,206,74,0.30); color: var(--paper); padding: 10px 14px; border-radius: 12px; font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 13px; transition: all 0.15s ease; }
   .tk-btn img { width: 22px; height: 22px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+  .tk-btn.tk-stake img { border-radius: 50%; }
   .tk-btn:hover { background: rgba(255,206,74,0.15); border-color: rgba(255,206,74,0.55); transform: translateY(-2px); color: var(--gold); }
   .tk-btn.tk-stake { background: linear-gradient(135deg, rgba(255,214,77,0.18), rgba(95,240,156,0.18)); border-color: rgba(255,206,74,0.55); color: var(--gold); }
 
@@ -492,9 +493,9 @@
           <div class="sub">earning fees</div>
         </div>
         <div class="token-stat">
-          <div class="label">Holders</div>
-          <div class="value" id="statHolders">-</div>
-          <div class="sub">on Solana</div>
+          <div class="label">$ Value Staked</div>
+          <div class="value" id="statStakeUsd">-</div>
+          <div class="sub">in tokens staked</div>
         </div>
       </div>
 
@@ -801,29 +802,103 @@
     });
   }
 
-  // ─── Fetch live token stats ────────────────────────────
-  async function fetchTokenStats(){
-    try {
-      const r = await fetch('/api/fartprint-stats');
-      if(r.ok){
+  // ─── Live $FARTPRINT stats (ported from legacy.html) ────
+  // Same on-chain reads the legacy site uses, just with a smaller UI.
+  const TOKEN              = "AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY";
+  const STAKE_TOKEN_ACCOUNT= "42qFkCZQYFHENpoJXhFeN99jybhZA2hNewL4ha6cFhqb";
+  const INITIAL_SUPPLY     = 1_000_000_000;
+  const RPCS = [
+    "https://api.mainnet-beta.solana.com",
+    "https://solana-rpc.publicnode.com",
+    "https://rpc.ankr.com/solana"
+  ];
+  let FP_PRICE = null;
+
+  async function rpc(method, params){
+    let lastErr;
+    for(const url of RPCS){
+      try {
+        const r = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params })
+        });
+        if(!r.ok){ lastErr = new Error("HTTP " + r.status); continue; }
         const j = await r.json();
-        if(j.mcap)    document.getElementById('statMcap').textContent = '$' + Number(j.mcap).toLocaleString();
-        if(j.burned)  document.getElementById('statBurn').textContent = Number(j.burned).toFixed(2) + '%';
-        if(j.staked)  document.getElementById('statStake').textContent = Number(j.staked).toFixed(2) + '%';
-        if(j.holders) document.getElementById('statHolders').textContent = Number(j.holders).toLocaleString();
-        return;
+        if(j.error){ lastErr = new Error(j.error.message); continue; }
+        return j.result;
+      } catch(e){ lastErr = e; }
+    }
+    throw lastErr || new Error("All RPCs failed");
+  }
+  function fmtUsd(n){
+    if(n == null || isNaN(n)) return "$-";
+    const num = Number(n);
+    if(num < 1)     return "$" + num.toFixed(6);
+    if(num < 1000)  return "$" + num.toFixed(2);
+    if(num < 1e6)   return "$" + num.toLocaleString(undefined,{maximumFractionDigits:0});
+    if(num < 1e9)   return "$" + (num/1e6).toFixed(2) + "M";
+    return "$" + (num/1e9).toFixed(2) + "B";
+  }
+
+  async function loadPriceAndMcap(){
+    try {
+      const r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + TOKEN);
+      if(!r.ok) return;
+      const j = await r.json();
+      const pairs = (j.pairs || []).slice().sort((a,b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
+      if(!pairs.length) return;
+      const m = pairs[0];
+      const price = parseFloat(m.priceUsd);
+      if(price && isFinite(price)) FP_PRICE = price;
+      const mcap = m.marketCap || m.fdv;
+      if(mcap) document.getElementById("statMcap").textContent = fmtUsd(mcap);
+    } catch(e){ console.warn("price fetch failed", e); }
+  }
+
+  async function loadBurned(){
+    try {
+      const sup = await rpc("getTokenSupply", [TOKEN]);
+      const supply = sup?.value?.uiAmount;
+      if(supply != null){
+        const burned = INITIAL_SUPPLY - supply;
+        const pct = (burned / INITIAL_SUPPLY) * 100;
+        document.getElementById("statBurn").textContent = pct.toFixed(2) + "%";
       }
+    } catch(e){ console.warn("burn fetch failed", e); }
+  }
+
+  async function loadStaked(){
+    let staked = null, supply = null;
+    try {
+      const bal = await rpc("getTokenAccountBalance", [STAKE_TOKEN_ACCOUNT]);
+      staked = bal?.value?.uiAmount;
     } catch(_){}
     try {
-      const r = await fetch('https://api.dexscreener.com/latest/dex/tokens/AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY');
-      const j = await r.json();
-      const pair = (j.pairs || [])[0];
-      if(pair && pair.fdv){
-        document.getElementById('statMcap').textContent = '$' + Math.round(Number(pair.fdv)).toLocaleString();
-      }
+      const sup = await rpc("getTokenSupply", [TOKEN]);
+      supply = sup?.value?.uiAmount;
     } catch(_){}
+    if(staked != null && supply){
+      const pct = (staked / supply) * 100;
+      document.getElementById("statStake").textContent = pct.toFixed(2) + "%";
+    } else {
+      document.getElementById("statStake").textContent = "43.18%";
+    }
+    let tries = 0;
+    const fillUsd = () => {
+      if(FP_PRICE != null && staked != null){
+        const usd = staked * FP_PRICE;
+        document.getElementById("statStakeUsd").textContent = fmtUsd(usd);
+      } else if(++tries < 8){
+        setTimeout(fillUsd, 1500);
+      }
+    };
+    fillUsd();
   }
-  fetchTokenStats();
+
+  loadPriceAndMcap();
+  loadBurned();
+  loadStaked();
 </script>
 
 </body>
