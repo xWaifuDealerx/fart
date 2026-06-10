@@ -222,7 +222,7 @@
       const lvl = State.level || 1;
       if(lvl > lastLevel){
         window.dispatchEvent(new CustomEvent('fw:milestone', { detail: {
-          kind: 'level_up', title: 'Level ' + lvl + '!', label: 'leveled up to Lv ' + lvl, emoji: '\u{1F525}',
+          kind: 'level_up', title: 'Level ' + lvl + '!', label: 'leveled up to lvl ' + lvl, emoji: '\u{1F525}',
         }}));
         lastLevel = lvl;
       }

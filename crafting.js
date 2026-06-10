@@ -171,8 +171,18 @@
     document.head.appendChild(ffStyle);
     const ffPop = document.createElement('div');
     ffPop.className = 'ff-pop';
-    ffPop.innerHTML = '<div class="line">Fart Filling Station</div><button class="btn" id="ffFill">Fart into 1 jar</button><div class="sub" id="ffSub">Empty jars: 0</div>';
+    ffPop.innerHTML = '<div class="line">Fart Filling Station</div><div class="sub" style="margin-bottom:6px;">Press <kbd style="background:rgba(95,240,156,.22);border:1px solid rgba(95,240,156,.55);color:#5ff09c;padding:1px 7px;border-radius:5px;font-family:monospace;font-weight:700;">F</kbd> to interact</div><button class="btn" id="ffFill">\u{1F4A8} Fart into 1 jar</button><div class="sub" id="ffSub">Empty jars: 0</div>';
     document.body.appendChild(ffPop);
+    // Keyboard shortcut: F fills a jar while standing in the FFS popup range.
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyF') return;
+      if(!ffPop.classList.contains('show')) return;
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      e.preventDefault();
+      const btn = document.getElementById('ffFill');
+      if(btn && !btn.disabled) btn.click();
+    });
     // Rarity table for fart jars
     const JAR_TIERS = [
       { id: "fartjar_green",   weight: 60, name: "Green" },

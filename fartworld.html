@@ -58,6 +58,7 @@
 <script src="bike.js?v=6bp" defer></script>
 <script src="datacenter.js?v=6bp" defer></script>
 <script src="storage.js?v=6bp" defer></script>
+<script src="casino.js?v=6bp" defer></script>
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=6bp" defer></script>
 <script src="fartcup.js?v=6bp" defer></script>
@@ -3274,9 +3275,16 @@ const FWModels = (() => {
   const CFG = {
     deserteagle: { url: 'deserteagle.glb', fit: 0.55, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
     pickaxe:     { url: 'pickaxe.glb',     fit: 0.85, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
-    seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: 90,  rotXdeg: 0, anchor: 'bottom' },
-    yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: -90, rotXdeg: 0, anchor: 'bottom' },
+    seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: -90, rotXdeg: 0, anchor: 'bottom' },
+    yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: 90,  rotXdeg: 0, anchor: 'bottom' },
     treeboat:    { url: 'treeboat.glb',    fit: 3.2,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+  };
+  // Some files committed from Windows show up with their 8.3 short name on
+  // GitHub (e.g. deserteagle.glb -> DESERT~1.GLB). Try the long name first,
+  // then fall back to the uppercase 8.3 alias so the deployed build still
+  // finds the model.
+  const ALIASES = {
+    'deserteagle.glb': ['deserteagle.glb', 'DESERT~1.GLB'],
   };
   const loader = new GLTFLoader();
   const cache = {};   // name -> Promise<THREE.Group template>
@@ -3305,11 +3313,17 @@ const FWModels = (() => {
     const cfg = CFG[name];
     if(!cfg) return Promise.reject(new Error('unknown model ' + name));
     if(!cache[name]){
+      const urls = (ALIASES[cfg.url] || [cfg.url]).map(u => BASE + u);
       cache[name] = new Promise((resolve, reject) => {
-        loader.load(BASE + cfg.url,
-          (gltf) => { try { resolve(normalize(gltf.scene, cfg)); } catch(e){ reject(e); } },
-          undefined,
-          (err) => reject(err));
+        let i = 0;
+        const tryNext = () => {
+          if(i >= urls.length){ reject(new Error('all urls failed for ' + name)); return; }
+          loader.load(urls[i++],
+            (gltf) => { try { resolve(normalize(gltf.scene, cfg)); } catch(e){ reject(e); } },
+            undefined,
+            () => tryNext());   // try the next alias on failure
+        };
+        tryNext();
       });
     }
     return cache[name];
@@ -3647,7 +3661,9 @@ const scene    = new THREE.Scene();
 // swallows clicks on the Connect Phantom / Play as guest buttons.
 window.scene = scene;
 scene.background = new THREE.Color(0x0a1408);
-scene.fog = new THREE.Fog(0x0a1408, 60, 220);
+// Fog far pushed out so much more of the dark-blue ocean is visible around
+// the island before it fades to the horizon (was 220).
+scene.fog = new THREE.Fog(0x0a1408, 90, 420);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 600);
 camera.position.set(0, 6, 12);
@@ -8352,13 +8368,6 @@ function buildBoat(){
     window.FWModels.get('treeboat').then(model => {
       for(const ch of grp.children.slice()){ if(ch !== floor) ch.visible = false; }
       grp.add(model);
-      // Record the model's top surface (relative to the boat origin) so the
-      // rider sits ON TOP of the GLB hull instead of down inside it. updateBoat
-      // reads grp.userData.deckY. Tweak the *0.92 if he floats/sinks slightly.
-      try {
-        const box = new THREE.Box3().setFromObject(model);
-        grp.userData.deckY = box.max.y * 0.92;
-      } catch(_){}
     }).catch(() => {});
   }
   return grp;
@@ -8374,6 +8383,10 @@ const BOAT_PRICE   = 200;                  // Silver
 const BOAT_BOARD_RANGE = 6.0;
 const BOAT_SPEED   = 5.0;                  // m/s when paddling
 const BOAT_TURN    = 1.8;                  // rad/s
+// How high above the waterline the printer sits while riding the tree boat.
+// Simple, predictable knob: raise it if he sinks into the hull, lower it if
+// he floats above the deck.
+const BOAT_RIDER_Y = 1.25;
 function spawnBoatNearPlayer(){
   // Boats are bought at Wave's dock, so spawn the boat just off the dock head
   // in open water where the player will always find it. If the player happens
@@ -8381,7 +8394,7 @@ function spawnBoatNearPlayer(){
   let bx, bz, facing, sdx, sdz;
   const nearDock = Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < 16;
   if(nearDock){
-    bx = DOCK_POS.x + 7; bz = DOCK_POS.z;     // a few metres seaward (east) of the dock
+    bx = DOCK_POS.x + 15; bz = DOCK_POS.z;    // just past the dock head, in open water
     facing = Math.PI / 2; sdx = 1; sdz = 0;   // face / search toward open water (+x)
   } else {
     facing = Player.yaw + Math.PI;
@@ -8483,13 +8496,9 @@ function updateBoat(dt){
   b.mesh.rotation.y = b.yaw;
   b.mesh.rotation.z = Math.sin(Water.time * 1.6) * 0.04;
   // The player rides ON TOP of the boat — printer position locks to it.
-  // deckY = top of the GLB hull (set in buildBoat); falls back to the old
-  // seat height for the procedural boat so nothing regresses.
-  const deckY = (b.mesh.userData && typeof b.mesh.userData.deckY === 'number')
-                  ? b.mesh.userData.deckY : 0.67;
   Player.pos.x = b.x;
   Player.pos.z = b.z;
-  Player.pos.y = (WATER_LEVEL + 0.18 + bob) + deckY;
+  Player.pos.y = WATER_LEVEL + BOAT_RIDER_Y + bob;
   Player.yaw   = b.yaw;
   // The printer is SITTING in the boat — legs shouldn't pendulum.
   // animatePrinter() also checks Player.boat so it forces idle pose.

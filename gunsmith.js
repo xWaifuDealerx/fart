@@ -148,13 +148,9 @@
       hatBrim.position.y = 2.04; grp.add(hatBrim);
       const hatTop = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.32, 14), new THREE.MeshStandardMaterial({ color: 0x4a2a10, roughness: 0.85 }));
       hatTop.position.y = 2.22; grp.add(hatTop);
-      // Floating name tag
-      const tag = document.createElement('div');
-      tag.style.cssText = "position:absolute;transform:translate(-50%,-100%);background:rgba(40,20,8,.88);color:#ffce4a;padding:4px 10px;border:1px solid rgba(255,206,74,.55);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10.5px;pointer-events:none;z-index:9;white-space:nowrap;";
-      tag.textContent = "Smitty \u{1F52B}";
-      (document.getElementById('chatBubbles')?.parentElement || document.body).appendChild(tag);
+      // Floating "Smitty" name tag removed per request.
       scene.add(grp);
-      return { mesh: grp, tag, x, z };
+      return { mesh: grp, tag: null, x, z };
     }
     const smitty = buildSmitty();
 
@@ -162,6 +158,7 @@
     const _v = new THREE.Vector3();
     function projectTag(){
       try {
+        if(!smitty.tag) return;   // name tag removed
         if(!window.camera) return;
         _v.set(smitty.x, groundHeightAt(smitty.x, smitty.z) + 2.7, smitty.z).project(window.camera);
         if(_v.z < 1){
