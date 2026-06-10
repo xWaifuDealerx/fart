@@ -315,7 +315,22 @@
     }
     chooseBg.addEventListener('click', (e) => { if(e.target === chooseBg) chooseBg.classList.remove('show'); });
     document.getElementById('junkChooseClose').addEventListener('click', () => chooseBg.classList.remove('show'));
-    document.getElementById('junkChooseSell').addEventListener('click', () => { chooseBg.classList.remove('show'); if(nearJ) openTrade(nearJ); });
+    document.getElementById('junkChooseSell').addEventListener('click', () => {
+      chooseBg.classList.remove('show');
+      if(!nearJ) return;
+      // No weed at all? The junkie tells you straight instead of
+      // opening an empty trade window.
+      if(totalWeedCount() <= 0){
+        const lines = [
+          '"You got NOTHING to sell me, man… come back with some 🌿"',
+          '"Empty pockets?! Go harvest a plot first 🌱"',
+          '"No weed, no deal. My printer don’t run on promises."',
+        ];
+        window.floater?.('🗨️ ' + nearJ.name + ': ' + lines[Math.floor(Math.random() * lines.length)], 'bad');
+        return;
+      }
+      openTrade(nearJ);
+    });
     document.getElementById('junkChooseWisdom').addEventListener('click', () => { chooseBg.classList.remove('show'); if(nearJ) openWisdom(nearJ); });
     document.getElementById('junkPopBtn').addEventListener('click', () => { if(nearJ) openChoose(nearJ); });
     // Poll every 160ms to show/hide the popup based on nearJ

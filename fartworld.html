@@ -59,6 +59,11 @@
 <script src="datacenter.js?v=6bp" defer></script>
 <script src="storage.js?v=6bp" defer></script>
 <script src="casino.js?v=6bp" defer></script>
+<!-- Visual & performance upgrade pack: rest screen, popup restyle,
+     terrain detail, vehicle wake/spray, carousel FX. -->
+<script src="nextlevel.js?v=1" defer></script>
+<!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
+<script src="controls.js?v=1" defer></script>
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=6bp" defer></script>
 <script src="fartcup.js?v=6bp" defer></script>
@@ -2815,7 +2820,8 @@
   <div class="dm-waiting" id="dmWaiting" style="display:none;">
     <h2>⚔ DEATHMATCH ARENA</h2>
     <p><span class="dot"></span><span id="dmWaitingMsg">Waiting for an opponent to step in…</span></p>
-    <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins. Step outside the ring to leave.</p>
+    <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins — once the fight starts, the <b>WHOLE ISLAND</b> is the battleground. Bring a weapon 🔫. Step outside the ring before the countdown ends to leave.</p>
+    <button id="dmBotBtn" style="background:rgba(255,90,77,0.16); border:1px solid rgba(255,122,110,0.6); color:#ff7a6e; margin-right:8px;">🤖 Fight a Bot · 1v1</button>
     <button id="dmLeaveBtn">Leave arena</button>
   </div>
 </div>
@@ -3394,7 +3400,27 @@ const State = {
 };
 const STORE_KEY = "fartworld_state_v1";
 
+// saveState is DEBOUNCED: the JSON.stringify + synchronous localStorage
+// write caused visible frame hitches when called mid-gameplay (e.g. the
+// addItem() inside completeMining fired it every single ore). Calls
+// within 1.5s collapse into one trailing write; saveStateNow() forces it.
+let _saveStateT = null, _lastSaveStateAt = 0;
 function saveState(){
+  const since = Date.now() - _lastSaveStateAt;
+  if(since >= 1500){
+    _lastSaveStateAt = Date.now();
+    saveStateNow();
+    return;
+  }
+  if(_saveStateT) return;
+  _saveStateT = setTimeout(() => {
+    _saveStateT = null;
+    _lastSaveStateAt = Date.now();
+    saveStateNow();
+  }, 1500 - since);
+}
+window.addEventListener('beforeunload', () => { try { saveStateNow(); } catch(_){} });
+function saveStateNow(){
   try {
     // Snapshot the plots the player owns so their planted crops
     // continue growing across sessions. We store ONLY plots where this
@@ -3824,6 +3850,11 @@ const Perf = (() => {
   return { update, toggleOverlay, reapply: applyScale };
 })();
 window.Perf = Perf;
+// Expose render internals for the settings module (controls.js):
+// brightness/quality toggles need renderer + bloom + sun access.
+window.renderer = renderer;
+window.composer = composer;
+window.bloom = bloom;
 
 // ─── Lighting ───────────────────────────────────────────────────
 const ambient = new THREE.HemisphereLight(0xb5fff0, 0x05140a, 0.45);
@@ -4897,6 +4928,10 @@ function updateCamera(dt){
     target.z + cz
   );
   camera.lookAt(target);
+  // Post-hook for controls.js (aim FOV + FPS camera). The game script
+  // is a module, so outside files can't override updateCamera directly —
+  // they install window.fwCameraPost instead.
+  if(window.fwCameraPost){ try { window.fwCameraPost(dt); } catch(_){} }
 }
 
 // ─── Fart system ────────────────────────────────────────────────
@@ -5332,12 +5367,21 @@ function updateHUD(){
                                 "NEUTRAL";
 }
 
+let _floaterLastText = '', _floaterLastAt = 0, _floaterActive = 0;
 function floater(text, kind){
+  // Dedupe: identical message fired again within 600ms is dropped
+  // (fixes "double text" when two systems announce the same event).
+  const now = performance.now();
+  if(text === _floaterLastText && now - _floaterLastAt < 600) return;
+  _floaterLastText = text; _floaterLastAt = now;
   const el = document.createElement('div');
   el.className = 'floater ' + kind;
   el.textContent = text;
+  // Stack simultaneous floaters downward so they never overlap.
+  el.style.marginTop = (_floaterActive * 48) + 'px';
+  _floaterActive++;
   document.body.appendChild(el);
-  setTimeout(() => el.remove(), 1400);
+  setTimeout(() => { el.remove(); _floaterActive = Math.max(0, _floaterActive - 1); }, 1400);
 }
 
 function triggerShame(){
@@ -5468,7 +5512,15 @@ window.addEventListener('keydown', e => {
   // Don't capture WASD / Space / E when the chat input has focus
   if(isTypingInChat()) return;
   keys[e.code] = true;
-  if(e.code === "Space"){ tryFart(); e.preventDefault(); }
+  if(e.code === "Space"){
+    // Little hop with every fart (uses the existing airborne physics)
+    if(!e.repeat && !Player.airborne && !Player.boat && !Player.swimming){
+      Player.airborne = true;
+      Player.vy = 4.6;
+    }
+    tryFart();
+    e.preventDefault();
+  }
 });
 window.addEventListener('keyup', e => {
   if(isTypingInChat()) return;
@@ -6435,6 +6487,11 @@ const INV_SLOTS_V2 = 24;
 function renderInventory(){
   const grid = document.getElementById('invGrid');
   if(!grid) return;
+  // Skip the full DOM rebuild while the inventory modal is closed —
+  // openInventory() re-renders anyway. This was part of the post-mining
+  // frame hitch (every addItem rebuilt 24+ slots invisibly).
+  const bg = document.getElementById('invBg');
+  if(bg && !bg.classList.contains('show')) return;
   const ids = Object.keys(State.inventory).filter(id => State.inventory[id] > 0);
   const slots = [];
   const count = Math.max(INV_SLOTS_V2, ids.length);   // grow if you have a ton of items
@@ -11033,6 +11090,12 @@ function isInArena(x, z){
   return Math.hypot(x - ARENA_POS.x, z - ARENA_POS.z) <= ARENA_RADIUS;
 }
 
+// You must BRING A WEAPON to the arena — no gun, no fight.
+function dmHasWeapon(){
+  const inv = State.inventory || {};
+  return (inv.deagle || 0) > 0;
+}
+
 function dmShowOverlay(){
   document.getElementById('dmOverlay').classList.add('show');
 }
@@ -11058,10 +11121,25 @@ function dmAnnounce(text, small){
 }
 
 function dmEnter(){
+  // Weapon gate — you cannot queue or fight bare-handed.
+  if(!dmHasWeapon()){
+    Dm.phase  = "waiting";
+    Dm.inRing = true;
+    Dm.noWeapon = true;
+    document.getElementById('dmWaitingMsg').textContent =
+      "⛔ You need a weapon to fight! Buy a Desert Eagle at the Gunsmith 🔫 and come back.";
+    const bb = document.getElementById('dmBotBtn');
+    if(bb) bb.style.display = "none";
+    dmShowOverlay(); dmSetMatchHud(false);
+    return;
+  }
+  Dm.noWeapon = false;
+  const bb = document.getElementById('dmBotBtn');
+  if(bb) bb.style.display = "";
   if(Net.mode === "solo"){
     // Solo arena has no opponents — still let you peek inside, but
     // tell them it's a multiplayer feature.
-    document.getElementById('dmWaitingMsg').textContent = "Solo mode — invite a friend to a room to fight.";
+    document.getElementById('dmWaitingMsg').textContent = "Solo mode — fight the practice bot, or invite a friend to a room.";
     dmShowOverlay(); dmSetMatchHud(false);
     Dm.phase = "waiting";
     Dm.inRing = true;
@@ -11084,6 +11162,7 @@ function dmLeave(){
   Dm.inRing = false;
   if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
   Dm.ringPeers.clear();
+  dmBotCleanup();
   dmHideOverlay();
 }
 document.getElementById('dmLeaveBtn').addEventListener('click', dmLeave);
@@ -11131,6 +11210,8 @@ function dmStartMatch(){
   Player.pos.z = ARENA_POS.z + seed * (ARENA_RADIUS - 2);
   // Face toward arena center
   Player.yaw = Math.atan2(-seed * (ARENA_RADIUS - 2), -seed * (ARENA_RADIUS - 2));
+  // Bot match: park the bot in the opposite corner
+  if(Dm.isBot) dmBotOnMatchStart(-seed);
 }
 
 function dmRefreshHud(){
@@ -11151,15 +11232,60 @@ function dmCycleWeapon(dir){
   dmSwitchWeapon(Dm.weapon + (dir > 0 ? 1 : -1));
 }
 
+// ── Shot occlusion ──
+// Returns the distance to the first SOLID thing the ray hits (walls,
+// buildings, ground, props), or Infinity if the path is clear. Skips
+// transparent stuff (water, glow rings, foam), particles/sprites/lines,
+// and any subtree in ignoreRoots (shooter + target). Used so bullets
+// can't pass through establishments.
+const _blockRay = new THREE.Raycaster();
+function fwShotBlockDist(origin, dir, maxDist, ignoreRoots){
+  try {
+    _blockRay.set(origin, dir);
+    _blockRay.far = maxDist || 200;
+    _blockRay.near = 0.1;
+    const hits = _blockRay.intersectObjects(scene.children, true);
+    for(const h of hits){
+      const o = h.object;
+      if(!o.visible) continue;
+      if(o.isPoints || o.isSprite || o.isLine) continue;
+      const m = o.material;
+      if(m && m.transparent && typeof m.opacity === "number" && m.opacity < 0.85) continue;
+      let skip = false, p = o;
+      while(p){
+        if(ignoreRoots && ignoreRoots.indexOf(p) !== -1){ skip = true; break; }
+        if(!p.visible){ skip = true; break; }
+        p = p.parent;
+      }
+      if(skip) continue;
+      return h.distance;       // hits arrive sorted nearest-first
+    }
+  } catch(_){}
+  return Infinity;
+}
+window.fwShotBlockDist = fwShotBlockDist;
+
 function dmFire(){
   if(Dm.phase !== "active") return;
   const now = performance.now() / 1000;
   const w = WEAPONS[Dm.weapon];
   if(now - Dm.lastShotAt < w.cooldown) return;
   Dm.lastShotAt = now;
-  // Fire from the camera position forward along view direction.
+  // Fire from the camera position. In action mode the shot goes through
+  // the on-screen aim cursor (dynamic third-person aim); otherwise it
+  // goes straight along the view direction.
   const forward = new THREE.Vector3();
-  camera.getWorldDirection(forward);
+  if(window.FWAim && document.pointerLockElement && window.FWSettings && window.FWSettings.scheme === 'action'){
+    const _ndc = new THREE.Vector2(
+      (window.FWAim.x / innerWidth) * 2 - 1,
+      -(window.FWAim.y / innerHeight) * 2 + 1
+    );
+    const _rc = new THREE.Raycaster();
+    _rc.setFromCamera(_ndc, camera);
+    forward.copy(_rc.ray.direction);
+  } else {
+    camera.getWorldDirection(forward);
+  }
   for(let i = 0; i < w.pellets; i++){
     const dir = forward.clone();
     if(w.spread > 0){
@@ -11168,18 +11294,28 @@ function dmFire(){
       dir.z += (Math.random() - 0.5) * w.spread;
       dir.normalize();
     }
-    // Local hit check against opponent mesh
-    const opp = Net.peers.get(Dm.oppId);
-    if(opp && opp.mesh){
+    // Local hit check against opponent mesh (bot or remote player) —
+    // the shot only lands if no building/wall sits in front of them.
+    const oppMesh = (Dm.isBot && DmBot.mesh) ? DmBot.mesh : (Net.peers.get(Dm.oppId)?.mesh);
+    if(oppMesh){
       const raycaster = new THREE.Raycaster(camera.position, dir, 0, 80);
-      const hits = raycaster.intersectObject(opp.mesh, true);
+      const hits = raycaster.intersectObject(oppMesh, true);
+      let landed = false;
       if(hits.length){
-        dmBroadcastShot(dir, true);
-        dmBroadcastHit(Dm.oppId, w.dmg);
-      } else {
+        const blockD = fwShotBlockDist(camera.position, dir, hits[0].distance, [oppMesh, printer]);
+        landed = blockD >= hits[0].distance - 0.05;
+      }
+      if(landed){
+        if(Dm.isBot){
+          dmBotTakeHit(w.dmg);
+        } else {
+          dmBroadcastShot(dir, true);
+          dmBroadcastHit(Dm.oppId, w.dmg);
+        }
+      } else if(!Dm.isBot){
         dmBroadcastShot(dir, false);
       }
-    } else {
+    } else if(!Dm.isBot){
       dmBroadcastShot(dir, false);
     }
   }
@@ -11187,17 +11323,35 @@ function dmFire(){
 }
 
 function dmPlayShotSound(w){
+  // Proper gunshot: noise crack + low thump (replaces the old square pew)
   const ctx = ensureAudio(); if(!ctx) return;
-  const o = ctx.createOscillator();
-  o.type = "square";
-  const startF = w.id === "shotgun" ? 110 : (w.id === "smg" ? 320 : 220);
-  o.frequency.setValueAtTime(startF, ctx.currentTime);
-  o.frequency.exponentialRampToValueAtTime(60, ctx.currentTime + 0.12);
+  const now = ctx.currentTime;
+  const dur = w.id === "shotgun" ? 0.30 : w.id === "smg" ? 0.10 : 0.22;
+  const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+  const ch = buf.getChannelData(0);
+  for(let i = 0; i < ch.length; i++){
+    const t = i / ch.length;
+    ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, w.id === "smg" ? 2.0 : 2.6);
+  }
+  const src = ctx.createBufferSource(); src.buffer = buf;
+  const filt = ctx.createBiquadFilter();
+  filt.type = "bandpass";
+  filt.frequency.value = w.id === "shotgun" ? 500 : w.id === "smg" ? 1900 : 1100;
+  filt.Q.value = 0.7;
   const g = ctx.createGain();
-  g.gain.setValueAtTime(0.18, ctx.currentTime);
-  g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.14);
-  o.connect(g); g.connect(ctx.destination);
-  o.start(); o.stop(ctx.currentTime + 0.16);
+  g.gain.setValueAtTime(w.id === "smg" ? 0.30 : 0.5, now);
+  g.gain.exponentialRampToValueAtTime(0.001, now + dur);
+  src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+  src.start(now); src.stop(now + dur);
+  const o = ctx.createOscillator();
+  o.type = "sine";
+  o.frequency.setValueAtTime(w.id === "shotgun" ? 90 : 140, now);
+  o.frequency.exponentialRampToValueAtTime(35, now + 0.15);
+  const og = ctx.createGain();
+  og.gain.setValueAtTime(w.id === "smg" ? 0.18 : 0.45, now);
+  og.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  o.connect(og); og.connect(ctx.destination);
+  o.start(now); o.stop(now + 0.2);
 }
 
 function dmBroadcastShot(dir, didHit){
@@ -11251,7 +11405,8 @@ window.handleDmMessage = function(m){
       if(m.peerId === Net.peerId) return;
       Dm.ringPeers.set(m.peerId, { name: m.name, lastSeen: Date.now() });
       // If I'm waiting AND there's now a 2nd player in the ring, start countdown
-      if(Dm.phase === "waiting"){
+      // (never matchmake while weaponless — the gate in dmEnter)
+      if(Dm.phase === "waiting" && !Dm.noWeapon){
         for(const [pid, p] of Dm.ringPeers){
           if(pid === Net.peerId) continue;
           dmStartCountdown(pid, p.name);
@@ -11332,23 +11487,37 @@ function respawnMe(){
 function dmEndMatch(winnerId){
   Dm.phase = "ended";
   const iWon = winnerId === Net.peerId;
-  const xpReward = iWon ? 200 : 30;
+  const wasBot = !!Dm.isBot;
+  // Bot matches pay reduced rewards and never touch ELO / W-L record.
+  const xpReward = wasBot ? (iWon ? 100 : 20) : (iWon ? 200 : 30);
   State.xp += xpReward;
-  if(iWon){ State.credits += 50; State.dmWins++; } else { State.dmLosses++; }
+  if(wasBot){
+    if(iWon) State.credits += 25;
+  } else if(iWon){ State.credits += 50; State.dmWins++; } else { State.dmLosses++; }
   // ELO update — fixed K-factor 32, opponent assumed ~equal at this stage
   // (we don't reliably know their rating). A simple ±20 keeps it readable.
-  if(iWon){ State.elo += 20; } else { State.elo = Math.max(100, State.elo - 18); }
+  if(!wasBot){
+    if(iWon){ State.elo += 20; } else { State.elo = Math.max(100, State.elo - 18); }
+  }
   checkLevelUp();
   saveState(); updateHUD();
   dmAnnounce(iWon ? "VICTORY 🏆" : "DEFEAT 💀");
   setTimeout(() => {
-    floater(`${iWon ? "WIN" : "LOSS"}  +${xpReward} XP${iWon ? "  +50 🥈" : ""}  ·  ELO ${State.elo}`, iWon ? "good" : "bad");
+    floater(
+      wasBot
+        ? `${iWon ? "BOT WIN" : "BOT LOSS"}  +${xpReward} XP${iWon ? "  +25 🥈" : ""}  ·  practice (no ELO)`
+        : `${iWon ? "WIN" : "LOSS"}  +${xpReward} XP${iWon ? "  +50 🥈" : ""}  ·  ELO ${State.elo}`,
+      iWon ? "good" : "bad"
+    );
     dmHideOverlay();
     Dm.phase = "off";
     Dm.inRing = false;
     if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
-    publishScore();
-    publishEloRecord();
+    if(!wasBot){
+      publishScore();
+      publishEloRecord();
+    }
+    dmBotCleanup();
   }, 1800);
 }
 
@@ -11552,16 +11721,30 @@ function tickDeathmatch(dt){
     if(now - p.lastSeen > 4000) Dm.ringPeers.delete(pid);
   }
 
-  // While active, force the camera to lock behind the player (no orbit)
+  // Camera during an active match:
   if(Dm.phase === "active"){
-    Cam.yaw = Player.yaw + Math.PI;   // camera straight behind player
-    Cam.pitch = 0.25;
-    Cam.distance = 6;
+    if(window.FWControlsActive && window.FWSettings && window.FWSettings.scheme === 'action'){
+      // Action controls: the MOUSE aims. The camera stays free (pointer-
+      // lock look), the printer turns to face where you're looking, and
+      // you can zoom all the way into FPS for precision.
+      Player.yaw = Cam.yaw + Math.PI;
+    } else {
+      // Classic: lock the camera straight behind the player (no orbit)
+      Cam.yaw = Player.yaw + Math.PI;
+      Cam.pitch = 0.25;
+      Cam.distance = 6;
+    }
   }
+
+  // Bot opponent AI (no-op unless a bot match is running). Wrapped so a
+  // bot fault can never silently kill the rest of the frame's systems.
+  try { dmBotTick(dt); } catch(err){ console.error('[dmbot] tick', err); }
 }
 
-// Mouse click to fire (only during active match)
+// Mouse click to fire (only during active match) — left button only,
+// so the right button stays free for aiming in the action scheme.
 canvas.addEventListener('mousedown', (e) => {
+  if(e.button !== 0) return;
   if(Dm.phase === "active"){ dmFire(); }
 });
 // SMG/auto fire while holding
@@ -11575,6 +11758,9 @@ setInterval(() => {
 // Mouse wheel cycles weapons during active match (overrides camera zoom)
 canvas.addEventListener('wheel', (e) => {
   if(Dm.phase !== "active") return;
+  // Action scheme: the wheel keeps ZOOMING during a match (FPS mode
+  // works in deathmatch like everywhere else) — weapons via 1/2/3 keys.
+  if(window.FWControlsActive && window.FWSettings && window.FWSettings.scheme === 'action') return;
   dmCycleWeapon(e.deltaY);
   e.stopImmediatePropagation();
   e.preventDefault();
@@ -11588,6 +11774,252 @@ window.addEventListener('keydown', e => {
   if(e.code === "Digit2") dmSwitchWeapon(1);
   if(e.code === "Digit3") dmSwitchWeapon(2);
 });
+
+// =================================================================
+// ─── DM BOT — practice 1v1 against an AI opponent ───────────────
+// Works in solo AND room mode. Click "Fight a Bot" in the waiting
+// panel: 5s countdown, then the bot strafes around the arena and
+// trades shots with you. First to 10 kills, reduced rewards, no ELO.
+// =================================================================
+const DM_BOT_ID = "__dmbot__";
+const DmBot = {
+  active: false, hp: 100, dead: false,
+  mesh: null, x: 0, z: 0, yaw: 0,
+  strafe: 1, wantDist: 6, nextThink: 0, lastFire: 0, respawnAt: 0,
+};
+
+function dmBuildBotMesh(){
+  const grp = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.55, metalness: 0.35 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff2020, emissiveIntensity: 0.7, roughness: 0.4 });
+  // Body — a mean little combat printer
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.85, 0.75), bodyMat);
+  body.position.y = 0.95; body.castShadow = true; grp.add(body);
+  // Head
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.6), bodyMat);
+  head.position.y = 1.62; head.castShadow = true; grp.add(head);
+  // Red visor eye
+  const eye = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.12, 0.05), trimMat);
+  eye.position.set(0, 1.65, 0.31); grp.add(eye);
+  grp.userData.eye = eye;
+  // Shoulder cannons
+  for(const sx of [-0.62, 0.62]){
+    const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 8), bodyMat);
+    arm.rotation.x = Math.PI / 2;
+    arm.position.set(sx, 1.18, 0.1);
+    grp.add(arm);
+  }
+  // Track base
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.35, 0.9), new THREE.MeshStandardMaterial({ color: 0x16181c, roughness: 0.8 }));
+  base.position.y = 0.32; base.castShadow = true; grp.add(base);
+  // Warning stripe
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.97, 0.1, 0.77), trimMat);
+  stripe.position.y = 0.55; grp.add(stripe);
+  grp.visible = false;
+  scene.add(grp);
+  return grp;
+}
+
+function dmStartBotMatch(){
+  if(Dm.phase === "active" || Dm.phase === "countdown") return;
+  if(!Dm.inRing) return;
+  if(!dmHasWeapon()){
+    floater("🔫 You need a weapon — visit the Gunsmith first", "bad");
+    return;
+  }
+  try {
+    if(!DmBot.mesh) DmBot.mesh = dmBuildBotMesh();
+  } catch(err){
+    console.error('[dmbot] mesh build failed', err);
+    floater("Bot failed to spawn — check console", "bad");
+    return;
+  }
+  Dm.isBot = true;
+  DmBot.active = true;
+  DmBot.hp = 100;
+  DmBot.dead = false;
+  if(Dm.joinTimer){ clearInterval(Dm.joinTimer); Dm.joinTimer = null; }
+  dmStartCountdown(DM_BOT_ID, "MEAT-BOT");
+}
+document.getElementById('dmBotBtn').addEventListener('click', dmStartBotMatch);
+
+function dmBotOnMatchStart(botSeed){
+  try {
+    // Spawn the bot ~10m from the player on solid land — far more
+    // reliable than the old "opposite corner" placement (which could
+    // end up out of view and looked like the bot never appeared).
+    const a = Math.random() * Math.PI * 2;
+    let bx = Player.pos.x + Math.cos(a) * 10;
+    let bz = Player.pos.z + Math.sin(a) * 10;
+    if(groundHeightAt(bx, bz) <= WATER_LEVEL + 0.2){
+      bx = ARENA_POS.x + botSeed * (ARENA_RADIUS - 2);
+      bz = ARENA_POS.z + botSeed * (ARENA_RADIUS - 2);
+    }
+    DmBot.x = bx; DmBot.z = bz;
+    DmBot.hp = 100;
+    DmBot.dead = false;
+    DmBot.mesh.visible = true;
+    DmBot.mesh.position.set(DmBot.x, dmBotFloorY(), DmBot.z);
+    console.log('[dmbot] spawned at', bx.toFixed(1), bz.toFixed(1));
+  } catch(err){ console.error('[dmbot] spawn failed', err); }
+}
+
+// Arena floor height under the bot (raised walkable disc, not raw ground)
+function dmBotFloorY(){
+  try { return sampleSurfaceY(DmBot.x, DmBot.z); } catch(_){ return groundHeightAt(DmBot.x, DmBot.z); }
+}
+
+function dmBotCleanup(){
+  if(!Dm.isBot && !DmBot.active) return;
+  Dm.isBot = false;
+  DmBot.active = false;
+  if(DmBot.mesh) DmBot.mesh.visible = false;
+  if(_dmBotTracer) _dmBotTracer.visible = false;
+}
+
+function dmBotTakeHit(dmg){
+  if(Dm.phase !== "active" || DmBot.dead) return;
+  DmBot.hp -= dmg;
+  // visor flash on hit
+  try {
+    const eye = DmBot.mesh.userData.eye;
+    eye.material.emissiveIntensity = 2.5;
+    setTimeout(() => { eye.material.emissiveIntensity = 0.7; }, 90);
+  } catch(_){}
+  if(DmBot.hp <= 0){
+    DmBot.dead = true;
+    DmBot.respawnAt = performance.now() + 1300;
+    DmBot.mesh.visible = false;
+    Dm.myKills += 1;
+    dmRefreshHud();
+    dmAnnounce("KILL", true);
+    if(Dm.myKills >= Dm.killGoal){ dmEndMatch(Net.peerId); }
+  }
+}
+
+// Tracer line for bot shots
+let _dmBotTracer = null, _dmBotTracerUntil = 0;
+function dmBotTracerShow(){
+  if(!_dmBotTracer){
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    _dmBotTracer = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xff7a6e, transparent: true, opacity: 0.85 }));
+    _dmBotTracer.frustumCulled = false;
+    scene.add(_dmBotTracer);
+  }
+  const pos = _dmBotTracer.geometry.attributes.position;
+  pos.setXYZ(0, DmBot.x, dmBotFloorY() + 1.5, DmBot.z);
+  pos.setXYZ(1,
+    Player.pos.x + (Math.random() - 0.5) * 0.7,
+    (Player.pos.y || 0) + 1.1 + (Math.random() - 0.5) * 0.7,
+    Player.pos.z + (Math.random() - 0.5) * 0.7);
+  pos.needsUpdate = true;
+  _dmBotTracer.visible = true;
+  _dmBotTracerUntil = performance.now() + 70;
+}
+
+function dmBotTick(dt){
+  const now = performance.now();
+  if(_dmBotTracer && _dmBotTracer.visible && now > _dmBotTracerUntil){
+    _dmBotTracer.visible = false;
+  }
+  if(!Dm.isBot || !DmBot.active) return;
+  if(Dm.phase !== "active") return;
+  // ISLAND-WIDE deathmatch: once the fight starts, the whole island is
+  // the battleground — no ring confinement, no forfeit for leaving it.
+
+  if(DmBot.dead){
+    if(now >= DmBot.respawnAt){
+      DmBot.dead = false;
+      DmBot.hp = 100;
+      // Respawn near the player wherever they are on the island
+      const a = Math.random() * Math.PI * 2;
+      const rd = 12 + Math.random() * 8;
+      let rx = Player.pos.x + Math.cos(a) * rd;
+      let rz = Player.pos.z + Math.sin(a) * rd;
+      if(groundHeightAt(rx, rz) <= WATER_LEVEL + 0.2){ rx = DmBot.x; rz = DmBot.z; }
+      DmBot.x = rx; DmBot.z = rz;
+      DmBot.mesh.visible = true;
+    }
+    return;
+  }
+
+  // "Think" — re-pick strafe direction + preferred range
+  if(now > DmBot.nextThink){
+    DmBot.nextThink = now + 700 + Math.random() * 900;
+    DmBot.strafe = Math.random() > 0.5 ? 1 : -1;
+    DmBot.wantDist = 4 + Math.random() * 5;
+  }
+  const dx = Player.pos.x - DmBot.x, dz = Player.pos.z - DmBot.z;
+  const dist = Math.hypot(dx, dz) || 0.001;
+  DmBot.yaw = Math.atan2(dx, dz);
+
+  // Anti-kiting: if you outrun the bot for 3s straight, it drops back
+  // in ~15m from you (keeps the fight ON instead of a marathon).
+  if(dist > 45){
+    if(!DmBot._farSince) DmBot._farSince = now;
+    if(now - DmBot._farSince > 3000){
+      DmBot._farSince = 0;
+      const a2 = Math.random() * Math.PI * 2;
+      const cx2 = Player.pos.x + Math.cos(a2) * 15;
+      const cz2 = Player.pos.z + Math.sin(a2) * 15;
+      if(groundHeightAt(cx2, cz2) > WATER_LEVEL + 0.2){ DmBot.x = cx2; DmBot.z = cz2; }
+    }
+  } else {
+    DmBot._farSince = 0;
+  }
+
+  // Chase across the WHOLE ISLAND: sprints faster than a running
+  // printer when far, strafe-orbits up close
+  const SPEED = dist > 16 ? 8.2 : 4.6;
+  let mx = (-dz / dist) * DmBot.strafe * (dist > 16 ? 0.15 : 1);
+  let mz = ( dx / dist) * DmBot.strafe * (dist > 16 ? 0.15 : 1);
+  const dErr = Math.max(-1, Math.min(1, (dist - DmBot.wantDist) * 0.5));
+  mx += (dx / dist) * dErr;
+  mz += (dz / dist) * dErr;
+  const ml = Math.hypot(mx, mz) || 1;
+  let nx = DmBot.x + (mx / ml) * SPEED * dt;
+  let nz = DmBot.z + (mz / ml) * SPEED * dt;
+  // Stay on dry land — bounce off the shoreline instead of swimming
+  if(groundHeightAt(nx, nz) <= WATER_LEVEL + 0.2){
+    nx = DmBot.x; nz = DmBot.z;
+    DmBot.strafe *= -1;
+  }
+  DmBot.x = nx; DmBot.z = nz;
+  DmBot.mesh.position.set(DmBot.x, dmBotFloorY(), DmBot.z);
+  DmBot.mesh.rotation.y = DmBot.yaw;
+
+  // Fire — only within 34m AND with clear line of sight (the bot can't
+  // shoot through buildings either); accuracy drops with distance +
+  // your movement
+  if(dist < 34 && now - DmBot.lastFire > 380 + Math.random() * 420){
+    DmBot.lastFire = now;
+    const _bo = new THREE.Vector3(DmBot.x, dmBotFloorY() + 1.5, DmBot.z);
+    const _bd = new THREE.Vector3(Player.pos.x - _bo.x, (Player.pos.y + 1.1) - _bo.y, Player.pos.z - _bo.z);
+    const _bl = _bd.length() || 1;
+    _bd.divideScalar(_bl);
+    if(fwShotBlockDist(_bo, _bd, _bl, [DmBot.mesh, printer]) < _bl - 0.6){
+      return;   // wall between us — hold fire
+    }
+    dmBotTracerShow();
+    dmPlayShotSound(WEAPONS[0]);
+    const moveBonus = Player.walking ? 0.12 : 0;
+    const pHit = Math.max(0.10, 0.55 - dist * 0.022 - moveBonus);
+    if(Math.random() < pHit){
+      const dmg = 8 + Math.random() * 8;
+      Dm.myHp = Math.max(0, Dm.myHp - dmg);
+      dmRefreshHud();
+      const f = document.getElementById('flash');
+      f.classList.add('bad');
+      setTimeout(() => f.classList.remove('bad'), 80);
+      if(Dm.myHp <= 0){
+        Dm.oppKills += 1;
+        dmRefreshHud();
+        respawnMe();
+        if(Dm.oppKills >= Dm.killGoal){ dmEndMatch(DM_BOT_ID); }
+      }
+    }
+  }
+}
 
 // =================================================================
 // ─── GAME LOOP HOOKS ────────────────────────────────────────────
@@ -12050,7 +12482,7 @@ Object.assign(window, {
   refreshFartprintBalance, fcRenderTrade, fcRenderClaim,
   closeFartCup, openFartCup, grantFlag, claimFlag,
   fcFetchPrices, fcFetchBalances, poopFetchPrices,
-  THREE, scene, camera, Player, groundHeightAt, sampleSurfaceY,
+  THREE, scene, camera, Cam, Dm, Player, groundHeightAt, sampleSurfaceY,
   WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS,
   WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS,
   spawnBoatNearPlayer, printer, HOUSE_POS, Sky,

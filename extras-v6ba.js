@@ -52,6 +52,16 @@
     function renderHp(){
       const max = Math.max(1, State.maxHp);
       const hp  = Math.max(0, Math.min(max, State.hp));
+      // During an active deathmatch the pill mirrors your MATCH health
+      // so the bar above the minimap visibly drops when you're shot.
+      const dm = window.Dm;
+      if(dm && dm.phase === 'active'){
+        const mhp = Math.max(0, Math.round(dm.myHp));
+        document.getElementById('hpFill').style.width = mhp + '%';
+        document.getElementById('hpNum').textContent = mhp + '/100';
+        hpPill.classList.toggle('crit', mhp < 25);
+        return;
+      }
       document.getElementById('hpFill').style.width = (hp / max * 100) + '%';
       document.getElementById('hpNum').textContent = Math.round(hp) + '/' + max;
       hpPill.classList.toggle('crit', hp / max < 0.25);
@@ -63,7 +73,13 @@
     window.damagePlayer = function(amount, reason){
       if(!amount || amount <= 0) return;
       State.hp = Math.max(0, (State.hp || 0) - amount);
-      window.floater?.('-' + Math.round(amount) + ' HP' + (reason ? ' · ' + reason : ''), 'bad');
+      // Spider attacks: just a red screen flash — no text spam.
+      if(reason && /spider/i.test(String(reason))){
+        const fl = document.getElementById('flash');
+        if(fl){ fl.classList.add('bad'); setTimeout(() => fl.classList.remove('bad'), 110); }
+      } else {
+        window.floater?.('-' + Math.round(amount) + ' HP' + (reason ? ' · ' + reason : ''), 'bad');
+      }
       renderHp();
       window.saveState?.();
       if(State.hp <= 0){ try { onDeath(); } catch(_){} }

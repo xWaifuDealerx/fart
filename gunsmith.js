@@ -293,6 +293,10 @@
     // SPIDERS
     // ─────────────────────────────────────────────────────────────
     const Spiders = [];
+    // Expose for extras-v6ba's bite-damage system — it reads
+    // window.Spiders; without this line spider bites never actually
+    // damaged the player's HP bar.
+    window.Spiders = Spiders;
     const MAX_SPIDERS = 3;
     const SPIDER_SPEED = 1.6;        // m/s
     const SPIDER_KNOCKBACK = 4;      // m/s burst
@@ -437,8 +441,14 @@
             const k = SPIDER_KNOCKBACK * dt * 8;
             Player.pos.x += (-pdx / Math.max(0.01, pd)) * k;
             Player.pos.z += (-pdz / Math.max(0.01, pd)) * k;
-            // small camera shake floater
-            window.floater?.("\u{1F578}\u{FE0F} Bumped!", "bad");
+            // Red screen flash instead of the old "Bumped!" floater —
+            // throttled so continuous contact doesn't strobe.
+            const nowFx = performance.now();
+            if(!s._lastBumpFx || nowFx - s._lastBumpFx > 350){
+              s._lastBumpFx = nowFx;
+              const fl = document.getElementById('flash');
+              if(fl){ fl.classList.add('bad'); setTimeout(() => fl.classList.remove('bad'), 90); }
+            }
           }
         }
       }
@@ -551,6 +561,37 @@
       oscG.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
       osc.connect(oscG).connect(ctx.destination);
       osc.start(now); osc.stop(now + 0.22);
+      // .50AE supersonic CRACK — sharp high-passed snap on top
+      const crackDur = 0.06;
+      const cBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * crackDur), ctx.sampleRate);
+      const cch = cBuf.getChannelData(0);
+      for(let i = 0; i < cch.length; i++){
+        const t = i / cch.length;
+        cch[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 1.6);
+      }
+      const crack = ctx.createBufferSource(); crack.buffer = cBuf;
+      const cFilt = ctx.createBiquadFilter();
+      cFilt.type = 'highpass'; cFilt.frequency.value = 2800;
+      const cGain = ctx.createGain();
+      cGain.gain.setValueAtTime(0.5, now);
+      cGain.gain.exponentialRampToValueAtTime(0.0001, now + crackDur);
+      crack.connect(cFilt).connect(cGain).connect(ctx.destination);
+      crack.start(now); crack.stop(now + crackDur);
+      // Distant echo slap (the big-bore "boom rolling over the island")
+      const eBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.28), ctx.sampleRate);
+      const ech = eBuf.getChannelData(0);
+      for(let i = 0; i < ech.length; i++){
+        const t = i / ech.length;
+        ech[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 3.2);
+      }
+      const echo = ctx.createBufferSource(); echo.buffer = eBuf;
+      const eFilt = ctx.createBiquadFilter();
+      eFilt.type = 'lowpass'; eFilt.frequency.value = 900;
+      const eGain = ctx.createGain();
+      eGain.gain.setValueAtTime(0.16, now + 0.10);
+      eGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+      echo.connect(eFilt).connect(eGain).connect(ctx.destination);
+      echo.start(now + 0.10); echo.stop(now + 0.38);
     }
     function dryFireSound(){
       const ctx = getCtx(); if(!ctx) return;
@@ -569,7 +610,25 @@
 
     // ── Crosshair — follows the mouse so the player can aim freely. ──
     let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
-    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+    window.addEventListener('mousemove', (e) => {
+      // Under pointer lock the cursor is captive — aim through the
+      // virtual aim cursor from controls.js (dynamic in third person,
+      // centred in FPS), falling back to screen centre.
+      if(document.pointerLockElement){
+        const a = window.FWAim;
+        mouseX = a ? a.x : window.innerWidth / 2;
+        mouseY = a ? a.y : window.innerHeight / 2;
+        return;
+      }
+      mouseX = e.clientX; mouseY = e.clientY;
+    });
+    document.addEventListener('pointerlockchange', () => {
+      if(document.pointerLockElement){
+        const a = window.FWAim;
+        mouseX = a ? a.x : window.innerWidth / 2;
+        mouseY = a ? a.y : window.innerHeight / 2;
+      }
+    });
     const crosshair = document.createElement('div');
     crosshair.id = 'gsCrosshair';
     crosshair.style.cssText = 'position:fixed;left:0;top:0;width:34px;height:34px;pointer-events:none;z-index:55;display:none;will-change:transform;';
@@ -623,7 +682,13 @@
     }
     window._isAimingAtNpc = isAimingAtNpc; // expose so fire() can check
     function crosshairTick(){
-      if(State.inventory?.deagle > 0 && !isAimingAtNpc()){
+      // Hide the gun crosshair while a deathmatch owns the screen (the
+      // DM HUD has its own) and while the arena waiting panel is open.
+      const dmBusy = window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown');
+      const _dmw = document.getElementById('dmWaiting');
+      const dmPanel = _dmw && _dmw.style.display !== 'none' &&
+        document.getElementById('dmOverlay')?.classList.contains('show');
+      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !isAimingAtNpc()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';
       } else {
@@ -673,6 +738,7 @@
         -(mouseY / window.innerHeight) * 2 + 1
       );
       let killedI = -1;
+      let primaryDist = Infinity;
       let fwd = new THREE.Vector3();
       try {
         _raycaster.setFromCamera(ndc, cam);
@@ -683,7 +749,10 @@
         if(hits.length){
           let hitObj = hits[0].object;
           while(hitObj && !Spiders.find(s => s.mesh === hitObj)) hitObj = hitObj.parent;
-          if(hitObj) killedI = Spiders.findIndex(s => s.mesh === hitObj);
+          if(hitObj){
+            killedI = Spiders.findIndex(s => s.mesh === hitObj);
+            primaryDist = hits[0].distance;
+          }
         }
       } catch(_){
         cam.getWorldDirection(fwd);
@@ -705,6 +774,16 @@
           if(dist < bestT){ bestT = dist; bestI = i; }
         }
         killedI = bestI;
+        primaryDist = bestT;
+      }
+      // ── No shooting through walls — if anything solid sits between the
+      // camera and the spider, the shot is blocked.
+      if(killedI >= 0 && window.fwShotBlockDist){
+        try {
+          const ignore = [window.printer].concat(Spiders.map(s => s.mesh).filter(Boolean));
+          const blockD = window.fwShotBlockDist(cam.position, fwd, Math.min(primaryDist, 200), ignore);
+          if(blockD < primaryDist - 0.1) killedI = -1;
+        } catch(_){}
       }
       if(killedI >= 0){
         const s = Spiders[killedI];
@@ -716,9 +795,8 @@
         window.floater?.("\u{1F578}\u{FE0F}\u{1F480} Spider down! +10 \u{1F948}", "good");
         window.saveState?.();
         window.updateHUD?.();
-      } else {
-        window.floater?.("\u{1F4A8} miss", "bad");
       }
+      // (misses are silent — no "miss" text)
     }
 
     // ── Fart-kill: any spider caught in a fart blast dies ──────────
@@ -757,7 +835,25 @@
     // popup interrupts a shot.
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('mousedown', (e) => {
-      if(e.button !== 2) return;
+      // Action scheme fires with LEFT click (RMB = aim); classic keeps RMB.
+      // Only treat action mode as live when controls.js actually booted
+      // (FWControlsActive) — otherwise fall back to classic RMB so the gun
+      // can never go dead.
+      const actionLive = window.FWControlsActive && window.FWSettings && window.FWSettings.scheme === 'action';
+      const fireBtn = actionLive ? 0 : 2;
+      if(e.button !== fireBtn) return;
+      // In action scheme only shoot while the pointer is locked — a free-
+      // cursor left click is for UI / re-grabbing the mouse, not firing.
+      if(actionLive && document.pointerLockElement !== document.getElementById('canvas')) return;
+      // During a deathmatch the DM weapons own the trigger (unlimited
+      // ammo) — never fire/dry-fire the inventory Deagle on top of them.
+      if(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')) return;
+      // No shooting while piloting anything (plane / boat / yacht / rocket)
+      if(window.Player && window.Player.boat) return;
+      // Arena waiting panel open = it's a menu; let its buttons be clicked.
+      const _dmw = document.getElementById('dmWaiting');
+      if(_dmw && _dmw.style.display !== 'none' &&
+         document.getElementById('dmOverlay')?.classList.contains('show')) return;
       e.preventDefault();
       // Block if a modal is open
       if(document.querySelector('.gs-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show, .fc-bg.show, .carlos-bg.show, .roki-bg.show')) return;

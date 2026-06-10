@@ -275,8 +275,15 @@
       p.occupied = false;
       myPlane = null;
       Player.boat = null;
-      // Stop the plane in place
-      p.speed = 0; p.vy = 0; p.flying = false;
+      if(wasFlying){
+        // Ejected mid-air: the plane auto-glides down and lands on the
+        // water by itself (no more planes frozen in the sky).
+        p.autoLand = true;
+        p.speed = Math.max(4, p.speed * 0.8);
+      } else {
+        // Parked on the water — stop in place
+        p.speed = 0; p.vy = 0; p.flying = false;
+      }
       controls.classList.remove('show');
       window.floater?.("Stepped out of the plane", "good");
     }
@@ -317,6 +324,33 @@
         if(p.mesh?.userData?.prop){
           p.mesh.userData.prop.rotation.z += dt * (p.flying ? 30 : (p.speed > 0.2 ? 18 : 4));
         }
+      }
+      // Pilotless auto-landing — an ejected plane glides forward and
+      // down until it settles on open water.
+      for(const p of Planes){
+        if(!p.autoLand || p === myPlane) continue;
+        const nx = Math.sin(p.yaw), nz = Math.cos(p.yaw);
+        p.x -= nx * p.speed * dt;
+        p.z -= nz * p.speed * dt;
+        p.speed = Math.max(3.5, p.speed * Math.pow(0.985, dt * 60));
+        p.y -= 2.6 * dt;
+        const gY = groundHeightAt(p.x, p.z);
+        const floorY = Math.max(WATER_LEVEL + 0.4, gY + 1.4);
+        if(p.y <= floorY){
+          p.y = floorY;
+          if(gY <= WATER_LEVEL + 0.1){
+            // Splashed down on open water — done
+            p.autoLand = false;
+            p.flying = false;
+            p.speed = 0;
+            p.vy = 0;
+          }
+          // (over land: skim above the terrain and keep gliding to the sea)
+        }
+        p.mesh.position.set(p.x, p.y, p.z);
+        p.mesh.rotation.y = p.yaw;
+        p.mesh.rotation.x += ((p.autoLand ? 0.10 : 0) - p.mesh.rotation.x) * Math.min(1, 2 * dt);
+        p.mesh.rotation.z *= Math.max(0, 1 - 3 * dt);
       }
       if(myPlane){
         const p = myPlane;
@@ -387,13 +421,22 @@
         }
         // Sync mesh + player
         p.mesh.position.set(p.x, p.y, p.z);
+        // Gentle bob while floating on the water (not flying)
+        if(!p.flying){
+          p.mesh.position.y = p.y + Math.sin(t / 430) * 0.05;
+          p.mesh.rotation.x += (Math.sin(t / 620) * 0.02 - p.mesh.rotation.x) * Math.min(1, 2 * dt);
+        }
         p.mesh.rotation.y = p.yaw;
-        // Slight roll while turning
-        const roll = keys['KeyA'] ? 0.18 : keys['KeyD'] ? -0.18 : 0;
-        p.mesh.rotation.z += (roll - p.mesh.rotation.z) * Math.min(1, 4 * dt);
-        // Pitch up while climbing
-        const pitch = (p.flying && keys['Space']) ? -0.18 : (p.flying && (keys['ShiftLeft'] || keys['ShiftRight'])) ? 0.18 : 0;
-        p.mesh.rotation.x += (pitch - p.mesh.rotation.x) * Math.min(1, 3 * dt);
+        // Banking — rolls deeper the faster you fly, eased for a flowing feel
+        const spdK = Math.min(1, Math.abs(p.speed) / MAX_SPEED);
+        const roll = keys['KeyA'] ? (0.12 + 0.32 * spdK) : keys['KeyD'] ? -(0.12 + 0.32 * spdK) : 0;
+        p.mesh.rotation.z += (roll - p.mesh.rotation.z) * Math.min(1, 3.2 * dt);
+        // Pitch follows real vertical velocity — nose up in climbs,
+        // nose down in dives (reads far better than fixed key-pitch)
+        if(p.flying){
+          const pitch = Math.max(-0.30, Math.min(0.30, -(p.vy || 0) * 0.055));
+          p.mesh.rotation.x += (pitch - p.mesh.rotation.x) * Math.min(1, 3 * dt);
+        }
         Player.pos.x = p.x; Player.pos.z = p.z;
         Player.pos.y = p.y + 1.1;
         Player.yaw = p.yaw;
@@ -575,6 +618,11 @@
         y.y = WATER_LEVEL + 0.15 + Math.sin(t / 800) * 0.06;
         y.mesh.position.set(y.x, y.y, y.z);
         y.mesh.rotation.y = y.yaw;
+        // Lean into turns + slight bow-rise under throttle
+        const yawIn = keys['KeyA'] ? 1 : keys['KeyD'] ? -1 : 0;
+        const spdY = Math.min(1, Math.abs(y.speed) / YACHT_MAX);
+        y.mesh.rotation.z += (yawIn * 0.07 * spdY - y.mesh.rotation.z) * Math.min(1, 3 * dt);
+        y.mesh.rotation.x += (-0.045 * spdY - y.mesh.rotation.x) * Math.min(1, 2 * dt);
         Player.pos.x = y.x; Player.pos.z = y.z;
         Player.pos.y = y.y + 1.6;
       }
