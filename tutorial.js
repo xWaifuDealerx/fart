@@ -14,27 +14,35 @@
 
   function init(){
     const State = window.State;
-    // ── New-player check ──
-    // The tutorial only ever runs on a player's FIRST session. Once it
-    // has been seen (or the player has any meaningful progress), we
-    // permanently skip showing the card. State.tutSeen is persisted via
-    // saveState so it survives reloads/logins.
-    const hasProgress = (Number(State.credits) || 0) > 0
-                     || (Number(State.paper)   || 0) > 0
-                     || (Number(State.gold)    || 0) > 0
-                     || (State.xp              || 0) > 0
-                     || (State.level           || 1) > 1
-                     || Object.keys(State.inventory || {}).length > 0;
-    if(State.tutSeen || hasProgress){
-      // Returning player — never show the tutorial UI again.
-      State.tutSeen = true;
+    // ── New-player onboarding gate ──
+    // Show the tutorial until the player actually FINISHES it (tutStep reaches
+    // the end). We deliberately do NOT skip on starting silver or a couple of
+    // inventory items — brand-new players legitimately have those. The old
+    // logic both treated that as "progress" AND set tutSeen=true on the very
+    // first load, so once any prior session existed the card could never come
+    // back. That's why new players weren't seeing it.
+    const TUTORIAL_STEPS = 5;
+    // Console escape hatch — restart the tutorial any time, even past the
+    // guards below:  window.startTutorial()  (it reloads to re-run cleanly).
+    window.startTutorial = function(){
+      State.tutStep = 0; State.tutForce = true; State.tutDismissed = false;
       try { window.saveState?.(); } catch(_){}
-      console.log('[tutorial] skipped — returning player');
+      try { location.reload(); } catch(_){}
+    };
+    const finishedTutorial = (Number(State.tutStep) || 0) >= TUTORIAL_STEPS;
+    // Veteran guard — none of these are possible on a genuinely new account,
+    // so they safely suppress the beginner card for established players.
+    const looksVeteran = (Number(State.level) || 1) > 1
+                      || (Number(State.gold) || 0) > 0
+                      || (Number(State.credits) || 0) >= 200
+                      || (Number(State.pagesPrinted) || 0) > 0
+                      || (Number(State.totalFarts) || 0) > 50
+                      || anyFartJar();
+    if(!State.tutForce && (finishedTutorial || State.tutDismissed || looksVeteran)){
+      console.log('[tutorial] skipped — finished/dismissed/veteran');
       return;
     }
-    // First-ever session: mark seen immediately so future loads skip it.
-    State.tutSeen = true;
-    try { window.saveState?.(); } catch(_){}
+    State.tutForce = false;   // consume the force flag
     // ── State ──
     if(typeof State.tutStep !== "number") State.tutStep = 0;        // 0..5 (5 = complete)
     if(!State.tutFlags || typeof State.tutFlags !== "object") State.tutFlags = {};

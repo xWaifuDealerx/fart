@@ -399,70 +399,133 @@
       return Math.round(PRICE_FAIR * strainMultiplier(id));
     }
 
+    // Which strain the player is currently offering. Chosen via the picker.
+    let selectedStrain = null;
+    function strainCount(id){ return (State.inventory && State.inventory[id]) || 0; }
+    // Strains the player actually owns, common → rare (legacy "weed" first).
+    function ownedStrains(){
+      const inv = State.inventory || {};
+      const list = [];
+      if((inv.weed || 0) > 0) list.push("weed");
+      for(const id of WEED_STRAINS){ if((inv[id] || 0) > 0) list.push(id); }
+      return list;
+    }
+    // Live price hint as the slider moves — never a junkie rejection.
+    function updateMood(){
+      const slider = document.getElementById('junkSlider');
+      const v = Number(slider.value);
+      document.getElementById('junkAsk').textContent = String(v);
+      const fair = selectedStrain ? fairPriceFor(selectedStrain) : PRICE_FAIR;
+      const m = moodFor(v / fair);
+      const moodEl = document.getElementById('junkMood');
+      moodEl.textContent = m.txt;
+      moodEl.className = 'junk-mood ' + m.cls;
+      const btn = document.getElementById('junkGo');
+      const ITEMS_ = window.ITEMS || {};
+      if(btn && !btn.disabled){
+        btn.textContent = 'Offer 1 ' + ((ITEMS_[selectedStrain] && ITEMS_[selectedStrain].icon) || '\u{1F33F}') + ' for ' + v + ' \u{1F4B5}';
+      }
+    }
+    // Re-point the slider range / labels at the currently selected strain.
+    function refreshDeal(){
+      const ITEMS_ = window.ITEMS || {};
+      const id = selectedStrain;
+      const fair = id ? fairPriceFor(id) : PRICE_FAIR;
+      const slider = document.getElementById('junkSlider');
+      const iconEl = document.getElementById('junkSelIcon');
+      if(iconEl) iconEl.textContent = (id && ITEMS_[id] && ITEMS_[id].icon) || '\u{1F33F}';
+      slider.min   = String(Math.max(1, Math.round(fair * 0.3)));
+      slider.max   = String(Math.max(fair * 4, PRICE_FAIR * 2));
+      slider.step  = String(Math.max(1, Math.round(fair * 0.02)));
+      slider.value = String(fair);
+      const strainName = id && ITEMS_[id] ? ITEMS_[id].name : "weed";
+      document.getElementById('junkOffer').innerHTML = id
+        ? 'Choose your strain and name your price. <b>' + strainName + '</b> is worth about <b>' + fair + ' \u{1F4B5}</b> to him \u{2014} rarer strains fetch far more.'
+        : 'You have no weed to sell. Go harvest a plot \u{1F331}.';
+      const btn = document.getElementById('junkGo');
+      const have = !!id && strainCount(id) > 0;
+      btn.disabled = !have;
+      updateMood();
+      if(!have) btn.textContent = 'No \u{1F33F}';
+    }
+    // Build the clickable strain chips.
+    function renderStrainPicker(){
+      const host = document.getElementById('junkStrains');
+      const ITEMS_ = window.ITEMS || {};
+      const list = ownedStrains();
+      if(!list.length){
+        host.innerHTML = '<div class="junk-empty">Empty stash \u{2014} go harvest some weed \u{1F331}</div>';
+        return;
+      }
+      host.innerHTML = list.map(id => {
+        const it = ITEMS_[id] || {};
+        const sel = id === selectedStrain ? ' selected' : '';
+        return '<button class="junk-strain' + sel + '" data-id="' + id + '">'
+          + '<span class="ic">' + (it.icon || '\u{1F33F}') + '</span>'
+          + '<span class="nm">' + (it.name || 'Weed') + '</span>'
+          + '<span class="c">\u{00D7}' + strainCount(id) + ' \u{00B7} ~' + fairPriceFor(id) + ' \u{1F4B5}</span>'
+          + '</button>';
+      }).join('');
+      host.querySelectorAll('.junk-strain').forEach(b => {
+        b.addEventListener('click', () => {
+          selectedStrain = b.dataset.id;
+          renderStrainPicker();
+          refreshDeal();
+        });
+      });
+    }
     function openTrade(j){
       rollMax(j);
-      const sellId = pickCheapestWeed();
-      const fair   = sellId ? fairPriceFor(sellId) : PRICE_FAIR;
-      const ITEMS_ = window.ITEMS || {};
-      const strainName = sellId && ITEMS_[sellId] ? ITEMS_[sellId].name : "weed";
       document.getElementById('junkName').textContent = j.name + " \u{1F5A8}";
-      document.getElementById('junkOffer').innerHTML = 'Heyy man, gimme some o\' that <b>' + strainName + '</b>. Fair price is <b>' + fair + ' \u{1F4B5}</b>... try me.';
       document.getElementById('junkWeed').textContent = totalWeedCount();
       document.getElementById('junkCash').textContent = State.paper || 0;
-      const slider = document.getElementById('junkSlider');
-      const askEl  = document.getElementById('junkAsk');
-      const moodEl = document.getElementById('junkMood');
-      // Slider + max-he-pays scale with the strain you'd actually be
-      // selling — that way the rare strains command rare prices, and
-      // the slider's range matches the deal under negotiation.
-      const sliderMax = Math.max(fair * 4, PRICE_FAIR * 4);
-      slider.max   = String(sliderMax);
-      slider.value = String(fair);
-      askEl.textContent = String(fair);
-      function updateMood(){
-        const v = Number(slider.value);
-        askEl.textContent = String(v);
-        const m = moodFor(v / fair);
-        moodEl.textContent = m.txt;
-        moodEl.className = 'junk-mood ' + m.cls;
-      }
-      slider.oninput = updateMood;
-      updateMood();
+      // Default to the rarest strain owned (last in common→rare order).
+      const list = ownedStrains();
+      selectedStrain = list.length ? list[list.length - 1] : null;
+      document.getElementById('junkSlider').oninput = updateMood;
+      renderStrainPicker();
+      refreshDeal();
       const res = document.getElementById('junkResult');
       res.classList.remove('win', 'lose'); res.textContent = '';
-      const btn = document.getElementById('junkGo');
-      const have = totalWeedCount() > 0;
-      btn.disabled = !have;
-      btn.textContent = have ? 'Try to sell 1 ' + (ITEMS_[sellId]?.icon || '\u{1F33F}') : 'No \u{1F33F}';
       tradeBg.classList.add('show');
     }
     document.getElementById('junkCancel').addEventListener('click', () => tradeBg.classList.remove('show'));
     tradeBg.addEventListener('click', (e) => { if(e.target === tradeBg) tradeBg.classList.remove('show'); });
     document.getElementById('junkGo').addEventListener('click', () => {
       const j = nearJ; if(!j) return;
-      const sellId = pickCheapestWeed();
-      if(!sellId) return;
+      const sellId = selectedStrain;
+      if(!sellId || strainCount(sellId) <= 0) return;
       const fair  = fairPriceFor(sellId);
       const ask = Number(document.getElementById('junkSlider').value);
       const maxHePays = Math.floor(fair * (j._maxMult || 1));
       const res = document.getElementById('junkResult');
+      const ITEMS_ = window.ITEMS || {};
       const vibeOk = Math.random() <= (j._dealVibe || 0.9);
       if(ask <= maxHePays && vibeOk){
         window.takeItem?.(sellId, 1);
         State.paper = (State.paper || 0) + ask;
         State.xp = (State.xp || 0) + 6 + Math.max(0, ask - fair);
         j.jointUntil = Date.now() + 10 * 60 * 1000;
-        res.textContent = 'SOLD! +' + ask + ' \u{1F4B5}';
-        res.classList.add('win');
+        res.textContent = 'SOLD ' + ((ITEMS_[sellId] && ITEMS_[sellId].name) || 'weed') + '! +' + ask + ' \u{1F4B5}';
+        res.classList.remove('lose'); res.classList.add('win');
         window.playPurchaseSound?.();
         window.checkLevelUp?.();
-        setTimeout(() => tradeBg.classList.remove('show'), 1100);
+        document.getElementById('junkWeed').textContent = totalWeedCount();
+        document.getElementById('junkCash').textContent = State.paper || 0;
+        // If that strain is now gone, fall back to the next rarest owned.
+        if(strainCount(sellId) <= 0){
+          const list = ownedStrains();
+          selectedStrain = list.length ? list[list.length - 1] : null;
+        }
+        renderStrainPicker();
+        refreshDeal();
       } else {
+        // Rejection ONLY happens here, after a real offer is made.
         const lines = ask > maxHePays
           ? ['"Nahh too much. ' + maxHePays + ' \u{1F4B5} max."', '"You crazy man?!"']
           : ['"...Eh nah, not today."', '"Bzzt, deal fell through."'];
         res.textContent = lines[Math.floor(Math.random() * lines.length)];
-        res.classList.add('lose');
+        res.classList.remove('win'); res.classList.add('lose');
         rollMax(j);
       }
       window.saveState?.();

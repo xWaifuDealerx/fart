@@ -483,6 +483,15 @@
       tg.rotation.x = Math.PI / 2;
       tg.position.set(0, -0.04, 0.10);
       grp.add(tg);
+      // Swap in the GLB Desert Eagle when it loads (keep procedural as a
+      // fallback). The group is re-positioned/rotated each frame in
+      // tickHeldGun, so we only need to replace the visual children.
+      if(window.FWModels){
+        window.FWModels.get('deserteagle').then(model => {
+          while(grp.children.length) grp.remove(grp.children[0]);
+          grp.add(model);
+        }).catch(() => {});
+      }
       return grp;
     }
     function tickHeldGun(){

@@ -3256,6 +3256,71 @@ import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ─── GLB model loader (assets/models/) ──────────────────────────
+// Loads artist GLB models and normalises each (auto-scaled to a target size,
+// re-anchored, rotated) so it drops into the procedural slots. Loaded once,
+// cloned per use. If a model fails to load, consumers keep their procedural
+// fallback — a missing/blocked file can never break the world.
+//
+// TWEAKING: if a swapped model faces the wrong way or is the wrong size,
+// edit its entry below. `fit` = target longest-side length in metres;
+// `rotYdeg` spins it about the vertical axis (try 90 / 180 / -90 if it faces
+// the wrong way); `rotXdeg` tips it; `anchor` is 'bottom' (sits on
+// ground/water) or 'center' (held items).
+const FWModels = (() => {
+  const BASE = 'assets/models/';
+  const CFG = {
+    deserteagle: { url: 'deserteagle.glb', fit: 0.55, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
+    pickaxe:     { url: 'pickaxe.glb',     fit: 0.85, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
+    seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+    yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+    treeboat:    { url: 'treeboat.glb',    fit: 3.2,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+  };
+  const loader = new GLTFLoader();
+  const cache = {};   // name -> Promise<THREE.Group template>
+
+  function normalize(inner, cfg){
+    const wrap = new THREE.Group();
+    wrap.add(inner);
+    // Auto-scale so the longest side matches `fit`.
+    const box = new THREE.Box3().setFromObject(inner);
+    const size = new THREE.Vector3(); box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    inner.scale.setScalar(cfg.fit / maxDim);
+    // Re-measure, then re-anchor (centre on X/Z; Y per anchor mode).
+    const box2 = new THREE.Box3().setFromObject(inner);
+    const c = new THREE.Vector3(); box2.getCenter(c);
+    inner.position.x -= c.x;
+    inner.position.z -= c.z;
+    inner.position.y -= (cfg.anchor === 'bottom') ? box2.min.y : c.y;
+    // Orientation tweaks (artist models rarely match our forward axis).
+    wrap.rotation.y = (cfg.rotYdeg || 0) * Math.PI / 180;
+    wrap.rotation.x = (cfg.rotXdeg || 0) * Math.PI / 180;
+    inner.traverse(o => { if(o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+    return wrap;
+  }
+  function loadTemplate(name){
+    const cfg = CFG[name];
+    if(!cfg) return Promise.reject(new Error('unknown model ' + name));
+    if(!cache[name]){
+      cache[name] = new Promise((resolve, reject) => {
+        loader.load(BASE + cfg.url,
+          (gltf) => { try { resolve(normalize(gltf.scene, cfg)); } catch(e){ reject(e); } },
+          undefined,
+          (err) => reject(err));
+      });
+    }
+    return cache[name];
+  }
+  return {
+    cfg: CFG,
+    // Promise resolving to a fresh clone ready to add to the scene.
+    get(name){ return loadTemplate(name).then(tpl => tpl.clone(true)); }
+  };
+})();
+window.FWModels = FWModels;
 
 // =============================================================
 // FartWorld — single-file Three.js game
@@ -8276,6 +8341,18 @@ function buildBoat(){
     const blade = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.04, 0.12), trimMat);
     blade.position.set(0.9, 0.78, sz);
     grp.add(blade);
+  }
+  // Swap in the GLB tree-boat model when it loads. Keep the procedural `floor`
+  // for walkability + collision, hide the rest of the procedural hull, and add
+  // the model on top. The player's own printer keeps riding it visibly (the
+  // tree boat never hides the printer — only the yacht/seaplane do), so it
+  // stays seated facing the driving direction. Procedural remains as fallback
+  // if the model can't load.
+  if(window.FWModels){
+    window.FWModels.get('treeboat').then(model => {
+      for(const ch of grp.children.slice()){ if(ch !== floor) ch.visible = false; }
+      grp.add(model);
+    }).catch(() => {});
   }
   return grp;
 }

@@ -130,6 +130,16 @@
         grp.position.set(0.55, 1.1, 0.4);
         grp.rotation.set(0.25, -0.5, -0.3);
       }
+      // Swap the held pickaxe for the GLB model when it loads. The grp's
+      // position/rotation (and the mining swing, which drives grp.rotation.x)
+      // still animate it — we only replace the visual children. Procedural
+      // stays as a fallback if the model can't load.
+      if(id === 'pickaxe' && window.FWModels){
+        window.FWModels.get('pickaxe').then(model => {
+          while(grp.children.length) grp.remove(grp.children[0]);
+          grp.add(model);
+        }).catch(() => {});
+      }
       return grp;
     }
 

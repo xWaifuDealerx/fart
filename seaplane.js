@@ -120,6 +120,16 @@
       cock.position.set(0, 1.85, -0.2);
       grp.add(cock);
       scene.add(grp);
+      // Swap in the GLB seaplane when it loads (hide procedural, keep as a
+      // fallback). The player's printer is already hidden while flying, so the
+      // model is the whole vehicle.
+      if(window.FWModels){
+        window.FWModels.get('seaplane').then(model => {
+          for(const ch of grp.children.slice()){ ch.visible = false; }
+          grp.add(model);
+          grp.userData.prop = null;   // GLB owns the look now; stop spinning the hidden box
+        }).catch(() => {});
+      }
       return grp;
     }
 
@@ -508,6 +518,14 @@
         rail.position.set(dx, 1.62, 2.4); grp.add(rail);
       }
       scene.add(grp);
+      // Swap in the GLB yacht when it loads (hide procedural, keep as a
+      // fallback). The player's printer is hidden while aboard the yacht.
+      if(window.FWModels){
+        window.FWModels.get('yacht').then(model => {
+          for(const ch of grp.children.slice()){ ch.visible = false; }
+          grp.add(model);
+        }).catch(() => {});
+      }
       return grp;
     }
     const Yachts = [];
