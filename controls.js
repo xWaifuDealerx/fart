@@ -62,7 +62,8 @@
         + '.carlos-bg.show, .roki-bg.show, .wr-bg.show, .fw-case-bg.show, .uname-bg.show, '
         + '.casino-bg.show, #lbBg.show, .fw-set-bg.show, #login:not(.hidden), '
         + '#seedChBg.show, #paySelBg.show, #labBg.show, #millBg.show, #goldBg.show, '
-        + '#swapBg.show, #bowlBg.show, #launderBg.show, #pfBg.show, #junkBg.show, #bankBg.show'
+        + '#swapBg.show, #bowlBg.show, #launderBg.show, #pfBg.show, #junkBg.show, #bankBg.show, '
+        + '.fw-rest.show'
       )) return true;
       // Deathmatch waiting panel = a menu with buttons → release the mouse
       const dmw = document.getElementById('dmWaiting');
@@ -241,6 +242,8 @@
       if(!window.FWModels || !window.scene){ setTimeout(tryLoadGunModel, 500); return; }
       try { window.scene.add(camera); } catch(_){}   // camera children need the camera in the graph
       window.FWModels.get('deserteagle').then(m => {
+        if(gunModel) return;        // never attach twice (no double guns)
+        gunEl.classList.remove('show');
         m.position.set(GUN_BASE.x, GUN_BASE.y, GUN_BASE.z);
         m.rotation.set(0.02, Math.PI + 0.06, 0.02);  // muzzle forward, slightly angled in
         m.traverse(o => { if(o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
@@ -274,8 +277,16 @@
         camera.fov += (targetFov - camera.fov) * Math.min(1, 12 * dt);
         camera.updateProjectionMatrix();
       }
-      if(S.scheme !== 'action'){ gunEl.classList.remove('show'); return; }
-      if(Player.boat){ gunEl.classList.remove('show'); return; }   // vessels own the camera/printer
+      if(S.scheme !== 'action'){
+        gunEl.classList.remove('show');
+        if(gunModel) gunModel.visible = false;
+        return;
+      }
+      if(Player.boat){   // vessels own the camera/printer — hide ALL viewmodels
+        gunEl.classList.remove('show');
+        if(gunModel) gunModel.visible = false;
+        return;
+      }
       const fps = Cam.curDistance < FPS_AT;
       // Printer visibility follows camera distance
       try { if(window.printer) window.printer.visible = !fps; } catch(_){}

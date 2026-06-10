@@ -401,6 +401,19 @@
       if(!attachedTool) return;
       attachedTool.swing = Math.max(attachedTool.swing, amount || 0.8);
     };
+
+    // ── Bridges used by the mining system in fartworld.html ──
+    // startMiningSwing() calls these two; they were never defined, so
+    // the held pickaxe (assets/models/pickaxe.glb) never appeared.
+    window.autoEquipPickaxe = function(){
+      if(attachedTool && attachedTool.id === 'pickaxe') return;
+      attachToolToPlayer('pickaxe');
+    };
+    window.equipToolVisible = function(id, vis){
+      if(attachedTool && attachedTool.id === id){
+        attachedTool.mesh.visible = !!vis;
+      }
+    };
     window.equipToolVisible = function(id, visible){
       if(!attachedTool || attachedTool.id !== id) return;
       attachedTool.mesh.visible = !!visible;

@@ -100,9 +100,9 @@
   // ───────────────────────────────────────────────────────────────
   const REST_ZONES = [
     { x: -64, z: 18,  r: 6,  name: 'Hotel',                  emoji: '🏨', hotel: true },
-    { x: 15,  z: -71, r: 6,  name: 'Soviet Block Apartment', emoji: '🏚', hotel: false },
-    { x: -11, z: 37,  r: 6,  name: 'Middle-Class Apartment', emoji: '🏢', hotel: false },
-    { x: -13, z: 75,  r: 6,  name: 'Luxury Penthouse',       emoji: '🏢', hotel: false },
+    { x: 15,  z: -71, r: 6,  name: 'Soviet Block Apartment', emoji: '🏚', hotel: false, apt: 'apt_soviet' },
+    { x: -11, z: 37,  r: 6,  name: 'Middle-Class Apartment', emoji: '🏢', hotel: false, apt: 'apt_middle' },
+    { x: -13, z: 75,  r: 6,  name: 'Luxury Penthouse',       emoji: '🏢', hotel: false, apt: 'apt_luxury' },
   ];
   const TIPS = [
     'Your printer heals faster while resting in a safe zone.',
@@ -169,7 +169,10 @@
   let restShown = false, stillSince = 0, lastPX = 0, lastPZ = 0, tipIdx = 0, tipTimer = 0;
   function zoneAt(x, z){
     for(const zn of REST_ZONES){
-      if(Math.hypot(zn.x - x, zn.z - z) < zn.r) return zn;
+      if(Math.hypot(zn.x - x, zn.z - z) >= zn.r) continue;
+      // Apartments only count as a rest spot if the player OWNS them
+      if(zn.apt && !(window.State?.apartments?.[zn.apt]?.owned)) continue;
+      return zn;
     }
     return null;
   }

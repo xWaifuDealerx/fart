@@ -64,6 +64,8 @@
 <script src="nextlevel.js?v=1" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
 <script src="controls.js?v=1" defer></script>
+<!-- World collision: no walking through buildings/signs (doorways stay open) -->
+<script src="collide.js?v=1" defer></script>
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=6bp" defer></script>
 <script src="fartcup.js?v=6bp" defer></script>
@@ -5016,10 +5018,13 @@ function tryFart(){
     triggerShame();
     floater(`-${lostCredits} 🥈 Silver  · BAD FART`, "bad");
   } else {
-    // Neutral — tiny XP nibble
+    // Neutral — tiny XP nibble (no floater in FPS mode: it sits right
+    // in the middle of the aim view)
     State.xp += 3;
     State.cleanSeconds += 2;
-    floater(`+3 XP`, "good");
+    const inFps = window.FWControlsActive && window.FWSettings &&
+      window.FWSettings.scheme === 'action' && Cam.curDistance < 2.1;
+    if(!inFps) floater(`+3 XP`, "good");
     checkLevelUp();
   }
   updateHUD();
@@ -11123,19 +11128,17 @@ function dmAnnounce(text, small){
 function dmEnter(){
   // Weapon gate — you cannot queue or fight bare-handed.
   if(!dmHasWeapon()){
+    // Weaponless: still show the panel (and the bot button — clicking it
+    // explains the rule), but never matchmake.
     Dm.phase  = "waiting";
     Dm.inRing = true;
     Dm.noWeapon = true;
     document.getElementById('dmWaitingMsg').textContent =
       "⛔ You need a weapon to fight! Buy a Desert Eagle at the Gunsmith 🔫 and come back.";
-    const bb = document.getElementById('dmBotBtn');
-    if(bb) bb.style.display = "none";
     dmShowOverlay(); dmSetMatchHud(false);
     return;
   }
   Dm.noWeapon = false;
-  const bb = document.getElementById('dmBotBtn');
-  if(bb) bb.style.display = "";
   if(Net.mode === "solo"){
     // Solo arena has no opponents — still let you peek inside, but
     // tell them it's a multiplayer feature.
@@ -11790,6 +11793,7 @@ const DmBot = {
 
 function dmBuildBotMesh(){
   const grp = new THREE.Group();
+  grp.userData.fwDynamic = true;   // moving — excluded from collide.js snapshots
   const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.55, metalness: 0.35 });
   const trimMat = new THREE.MeshStandardMaterial({ color: 0xff4040, emissive: 0xff2020, emissiveIntensity: 0.7, roughness: 0.4 });
   // Body — a mean little combat printer

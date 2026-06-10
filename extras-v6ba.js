@@ -72,6 +72,10 @@
     // Damage API
     window.damagePlayer = function(amount, reason){
       if(!amount || amount <= 0) return;
+      // Respawn grace period — no damage for a few seconds after death,
+      // so the hospital teleport (fall-watcher) + camping spiders can't
+      // chain-kill you straight out of the respawn.
+      if(Date.now() < (State.invulnUntil || 0)) return;
       State.hp = Math.max(0, (State.hp || 0) - amount);
       // Spider attacks: just a red screen flash — no text spam.
       if(reason && /spider/i.test(String(reason))){
@@ -87,6 +91,7 @@
     function onDeath(){
       // Reset HP, ship to hospital, no inventory wipe (gunshot != bust).
       State.hp = State.maxHp;
+      State.invulnUntil = Date.now() + 5000;   // 5s respawn protection
       if(typeof window.respawnAtHospital === 'function') window.respawnAtHospital();
       window.floater?.('💀 You died — patched up at the hospital', 'bad');
       renderHp();
@@ -135,6 +140,7 @@
       { x: 15,  z: -71, r: 8  },  // Soviet apartment
       { x: -11, z: 37,  r: 8  },  // Middle apartment
       { x: -13, z: 75,  r: 8  },  // Luxury penthouse
+      { x: -64, z: -8,  r: 12 },  // Hospital — no spawn-camping the respawn
     ];
     function playerInSafeZone(){
       for(const zn of BITE_SAFE){
