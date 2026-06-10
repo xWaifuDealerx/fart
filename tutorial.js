@@ -7,7 +7,9 @@
 (function(){
   'use strict';
   function whenReady(){
-    if(!window.State || !window.ITEMS) { setTimeout(whenReady, 300); return; }
+    // Only gate on State — ITEMS isn't needed to show the card, and waiting on
+    // it was an extra way for the tutorial to never start.
+    if(!window.State) { setTimeout(whenReady, 300); return; }
     init();
   }
   whenReady();
@@ -22,27 +24,22 @@
     // first load, so once any prior session existed the card could never come
     // back. That's why new players weren't seeing it.
     const TUTORIAL_STEPS = 5;
-    // Console escape hatch — restart the tutorial any time, even past the
-    // guards below:  window.startTutorial()  (it reloads to re-run cleanly).
+    // Console escape hatch — restart the tutorial any time:
+    //   window.startTutorial()   (it reloads to re-run cleanly).
     window.startTutorial = function(){
-      State.tutStep = 0; State.tutForce = true; State.tutDismissed = false;
+      State.tutStep = 0; State.tutDismissed = false;
       try { window.saveState?.(); } catch(_){}
       try { location.reload(); } catch(_){}
     };
+    // GATE — keep this dead simple so new players ALWAYS get the tutorial.
+    // The only ways to skip it: you actually finished it (tutStep reached the
+    // end) or you permanently dismissed it. No silver/level/inventory guessing
+    // — those heuristics were wrongly hiding the card from brand-new players.
     const finishedTutorial = (Number(State.tutStep) || 0) >= TUTORIAL_STEPS;
-    // Veteran guard — none of these are possible on a genuinely new account,
-    // so they safely suppress the beginner card for established players.
-    const looksVeteran = (Number(State.level) || 1) > 1
-                      || (Number(State.gold) || 0) > 0
-                      || (Number(State.credits) || 0) >= 200
-                      || (Number(State.pagesPrinted) || 0) > 0
-                      || (Number(State.totalFarts) || 0) > 50
-                      || anyFartJar();
-    if(!State.tutForce && (finishedTutorial || State.tutDismissed || looksVeteran)){
-      console.log('[tutorial] skipped — finished/dismissed/veteran');
+    if(finishedTutorial || State.tutDismissed){
+      console.log('[tutorial] skipped — already completed/dismissed');
       return;
     }
-    State.tutForce = false;   // consume the force flag
     // ── State ──
     if(typeof State.tutStep !== "number") State.tutStep = 0;        // 0..5 (5 = complete)
     if(!State.tutFlags || typeof State.tutFlags !== "object") State.tutFlags = {};
@@ -294,6 +291,12 @@
         if(State.tutStep < STEPS.length){
           const step = STEPS[State.tutStep];
           if(step.check()) advance();
+        }
+        // Defensive re-show: init() can run while the lobby is still up, so
+        // the card may have been created behind it and never re-asserted once
+        // the player actually enters the world. Make sure it's visible here.
+        if(State.tutStep < STEPS.length && !collapsed && card && !card.classList.contains('show')){
+          card.classList.add('show');
         }
       } catch(e){ console.error('[tutorial] tick', e); }
     }, 1000);

@@ -3274,8 +3274,8 @@ const FWModels = (() => {
   const CFG = {
     deserteagle: { url: 'deserteagle.glb', fit: 0.55, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
     pickaxe:     { url: 'pickaxe.glb',     fit: 0.85, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
-    seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
-    yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+    seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: 90,  rotXdeg: 0, anchor: 'bottom' },
+    yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: -90, rotXdeg: 0, anchor: 'bottom' },
     treeboat:    { url: 'treeboat.glb',    fit: 3.2,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
   };
   const loader = new GLTFLoader();
@@ -8352,6 +8352,13 @@ function buildBoat(){
     window.FWModels.get('treeboat').then(model => {
       for(const ch of grp.children.slice()){ if(ch !== floor) ch.visible = false; }
       grp.add(model);
+      // Record the model's top surface (relative to the boat origin) so the
+      // rider sits ON TOP of the GLB hull instead of down inside it. updateBoat
+      // reads grp.userData.deckY. Tweak the *0.92 if he floats/sinks slightly.
+      try {
+        const box = new THREE.Box3().setFromObject(model);
+        grp.userData.deckY = box.max.y * 0.92;
+      } catch(_){}
     }).catch(() => {});
   }
   return grp;
@@ -8368,18 +8375,25 @@ const BOAT_BOARD_RANGE = 6.0;
 const BOAT_SPEED   = 5.0;                  // m/s when paddling
 const BOAT_TURN    = 1.8;                  // rad/s
 function spawnBoatNearPlayer(){
-  const facing = Player.yaw + Math.PI;
-  // Place in water 3 units ahead of the player toward the open water
-  // (use a fixed seaward direction if the player isn't on the dock)
-  const dx = Math.sin(facing) * 4.5;
-  const dz = Math.cos(facing) * 4.5;
-  let bx = Player.pos.x + dx;
-  let bz = Player.pos.z + dz;
-  // If the boat would spawn on land, push it seaward until we hit water
-  for(let i = 0; i < 40; i++){
+  // Boats are bought at Wave's dock, so spawn the boat just off the dock head
+  // in open water where the player will always find it. If the player happens
+  // to be elsewhere, fall back to spawning seaward of them.
+  let bx, bz, facing, sdx, sdz;
+  const nearDock = Math.hypot(Player.pos.x - DOCK_POS.x, Player.pos.z - DOCK_POS.z) < 16;
+  if(nearDock){
+    bx = DOCK_POS.x + 7; bz = DOCK_POS.z;     // a few metres seaward (east) of the dock
+    facing = Math.PI / 2; sdx = 1; sdz = 0;   // face / search toward open water (+x)
+  } else {
+    facing = Player.yaw + Math.PI;
+    sdx = Math.sin(facing); sdz = Math.cos(facing);
+    bx = Player.pos.x + sdx * 4.5;
+    bz = Player.pos.z + sdz * 4.5;
+  }
+  // Push outward until we're actually over water.
+  for(let i = 0; i < 60; i++){
     if(groundHeightAt(bx, bz) < WATER_LEVEL - 0.4) break;
-    bx += dx * 0.4;
-    bz += dz * 0.4;
+    bx += sdx * 0.5;
+    bz += sdz * 0.5;
   }
   const mesh = buildBoat();
   mesh.position.set(bx, WATER_LEVEL + 0.05, bz);
@@ -8387,6 +8401,7 @@ function spawnBoatNearPlayer(){
   scene.add(mesh);
   const boat = { mesh, x: bx, z: bz, yaw: facing, occupied: false };
   Boats.push(boat);
+  try { floater("\u{1F6F6} Tree boat launched by the dock — hop in!", "good"); } catch(_){}
   return boat;
 }
 
@@ -8467,10 +8482,14 @@ function updateBoat(dt){
   b.mesh.position.set(b.x, WATER_LEVEL + 0.18 + bob, b.z);
   b.mesh.rotation.y = b.yaw;
   b.mesh.rotation.z = Math.sin(Water.time * 1.6) * 0.04;
-  // The player rides on top of the boat — printer position locks to it
+  // The player rides ON TOP of the boat — printer position locks to it.
+  // deckY = top of the GLB hull (set in buildBoat); falls back to the old
+  // seat height for the procedural boat so nothing regresses.
+  const deckY = (b.mesh.userData && typeof b.mesh.userData.deckY === 'number')
+                  ? b.mesh.userData.deckY : 0.67;
   Player.pos.x = b.x;
   Player.pos.z = b.z;
-  Player.pos.y = WATER_LEVEL + 0.85 + bob;
+  Player.pos.y = (WATER_LEVEL + 0.18 + bob) + deckY;
   Player.yaw   = b.yaw;
   // The printer is SITTING in the boat — legs shouldn't pendulum.
   // animatePrinter() also checks Player.boat so it forces idle pose.
