@@ -17,9 +17,10 @@
     css.textContent = `
 #fwCompass{
   position:fixed;
-  top:8px;
-  left:50%;
-  transform:translateX(-50%);
+  /* Docked above the health bar by dockCompass() below. These are just
+     fallbacks until the HP pill / minimap is measured. */
+  bottom:210px;
+  right:14px;
   width:180px;
   height:30px;
   background:rgba(8,18,11,.94);
@@ -137,13 +138,34 @@
     }
     requestAnimationFrame(draw);
 
-    // Make sure the HUD sits below the compass without overlap. The
-    // compass is 30px tall + 8px top; nudge HUD to start at 46px so
-    // there's a clean gap.
-    try{
-      const hud = document.getElementById('hud');
-      if(hud){ hud.style.paddingTop = '46px'; }
-    }catch(e){}
+    // Dock the compass directly ABOVE the health bar (the .hp-pill, which
+    // extras-v6bb parks above the minimap). Match its width and sit just on
+    // top of it. Falls back to the minimap if the HP pill isn't up yet.
+    function dockCompass(){
+      try {
+        const r2 = root.getBoundingClientRect();
+        const ch = r2.height || 30;
+        const hp = document.querySelector('.hp-pill');
+        let anchor = null, lift = 8;
+        if(hp){
+          const r = hp.getBoundingClientRect();
+          if(r.width > 30){ anchor = r; lift = 8; }
+        }
+        if(!anchor){
+          const mm = document.querySelector('.mm-root');
+          if(mm){ const r = mm.getBoundingClientRect(); if(r.width > 30){ anchor = r; lift = 50; } }
+        }
+        if(!anchor) return;
+        root.style.left = anchor.left + 'px';
+        root.style.width = anchor.width + 'px';
+        root.style.right = 'auto';
+        root.style.bottom = 'auto';
+        root.style.transform = 'none';
+        root.style.top = Math.max(6, anchor.top - ch - lift) + 'px';
+      } catch(e){}
+    }
+    setInterval(dockCompass, 500);
+    setTimeout(dockCompass, 400);
 
     console.log('[compass] ready');
   }

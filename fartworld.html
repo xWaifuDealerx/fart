@@ -3121,6 +3121,12 @@
 </div>
 
 <!-- ─── Leaderboard modal ─── -->
+<style>
+.lb-tabs{display:flex;gap:6px;margin-bottom:12px}
+.lb-tabs .lb-tab{flex:1;background:rgba(95,240,156,.08);border:1px solid rgba(95,240,156,.3);color:rgba(230,255,238,.8);border-radius:9px;padding:9px 4px;font-family:'Outfit',sans-serif;font-weight:700;font-size:11.5px;cursor:pointer;transition:all .12s;letter-spacing:.3px}
+.lb-tabs .lb-tab:hover{background:rgba(95,240,156,.16)}
+.lb-tabs .lb-tab.active{background:rgba(95,240,156,.28);border-color:#5ff09c;color:#fff}
+</style>
 <div class="lb-bg" id="lbBg">
   <div class="lb-card">
     <div class="lb-head">
@@ -3130,8 +3136,14 @@
         <button class="close" id="lbClose">×</button>
       </div>
     </div>
+    <div class="lb-sub" style="font-size:11px;color:rgba(230,255,238,.55);margin-bottom:10px;text-align:center;">🌍 Live worldwide stats from real $FARTPRINT players</div>
+    <div class="lb-tabs" id="lbTabs">
+      <button class="lb-tab active" data-cat="farts">💨 Farters</button>
+      <button class="lb-tab" data-cat="earnings">🥈 Earners</button>
+      <button class="lb-tab" data-cat="refs">🤝 Referrers</button>
+    </div>
     <div class="lb-body" id="lbBody">
-      <div class="lb-empty">Loading global leaderboard…</div>
+      <div class="lb-empty">Loading worldwide leaderboard…</div>
     </div>
   </div>
 </div>
@@ -9555,17 +9567,14 @@ function openPaySelector(label, priceSilver, onPay){
   // losing ALL Silver + Cash + Fake. Gold and on-chain $FARTPRINT
   // are untouchable by the bust).
   document.getElementById('paySelSub').innerHTML =
-    `Price: <b>${priceSilver} 🥈 Silver</b>, <b>${priceSilver * paperPerSilver()} 💵 Cash</b>, or <b>${priceSilver * paperPerSilver()} 🪙 Fake</b> (risky!)`;
+    `Price: <b>${priceSilver} 🥈 Silver</b> or <b>${priceSilver * paperPerSilver()} 💵 Cash</b>`;
   const rows = document.getElementById('paySelRows');
   const haveS = State.credits   || 0;
   const haveC = State.paper     || 0;
-  const haveF = State.fakeMoney || 0;
-  // Cash/Fake cost use the current forward inflation rate (paperPerSilver())
+  // Cash cost uses the current forward inflation rate (paperPerSilver())
   const costC = priceSilver * paperPerSilver();
-  const costF = priceSilver * paperPerSilver();
   const okS = haveS >= priceSilver;
   const okC = haveC >= costC;
-  const okF = haveF >= costF;
   rows.innerHTML = `
     <div class="pay-row ${okS ? '' : 'disabled'}">
       <div><div class="lbl">🥈 Silver</div><div class="balance">balance: ${haveS}</div></div>
@@ -9576,11 +9585,6 @@ function openPaySelector(label, priceSilver, onPay){
       <div><div class="lbl">💵 Cash</div><div class="balance">balance: ${haveC} (from Bank / Laundry)</div></div>
       <div class="cost">−${costC} 💵</div>
       <button class="pay-btn" data-asset="cash" ${okC ? '' : 'disabled'}>Pay</button>
-    </div>
-    <div class="pay-row fake ${okF ? '' : 'disabled'}">
-      <div><div class="lbl">🪙 Fake Cash</div><div class="balance">balance: ${haveF} (50% bust risk!)</div></div>
-      <div class="cost">−${costF} 🪙</div>
-      <button class="pay-btn" data-asset="fake" ${okF ? '' : 'disabled'}>Pay</button>
     </div>
   `;
   rows.querySelectorAll('.pay-btn').forEach(btn => {
@@ -10654,13 +10658,28 @@ async function burnFartprint(uiAmount){
     data,
   });
 
+  // Sanity-check the token account exists and holds enough. A missing or empty
+  // associated token account is the usual reason Phantom's simulation fails and
+  // shows a scary generic warning (often only a SOL fee change) instead of a
+  // clean "Burn FARTPRINT" preview.
+  try {
+    const bal = await conn.getTokenAccountBalance(ata);
+    if(!bal || !bal.value || BigInt(bal.value.amount) < rawAmount){
+      throw new Error("Your $FARTPRINT balance in the standard token account is too low to burn this amount (or it's held in a non-standard account).");
+    }
+  } catch(e){
+    if(e && /token account|too low/i.test(e.message || "")) throw e;
+    throw new Error("Couldn't read your $FARTPRINT token account: " + ((e && e.message) || e));
+  }
+
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
-  const msg = new W3.TransactionMessage({
-    payerKey: owner,
-    recentBlockhash: blockhash,
-    instructions: [ix],
-  }).compileToV0Message();
-  const tx = new W3.VersionedTransaction(msg);
+  // Use a LEGACY transaction (not v0): wallet simulators decode a single SPL
+  // burn far more reliably this way, so Phantom shows the real "Burn FARTPRINT"
+  // preview rather than a generic "this might be malicious" / SOL-only warning.
+  const tx = new W3.Transaction();
+  tx.feePayer = owner;
+  tx.recentBlockhash = blockhash;
+  tx.add(ix);
 
   console.log("[Gold] sending burn tx for", uiAmount, "FARTPRINT");
   const res = await phantom.signAndSendTransaction(tx);
@@ -10684,8 +10703,9 @@ async function burnFartprint(uiAmount){
 // totalXp formula = sum of all prior levels' XP needed + current XP.
 // Each level needs `100 * level` XP, so prior-level sum =
 //   100 * sum(k=1..level-1) k = 100 * (level-1) * level / 2.
-const LB_TOPIC = "fartworld-leaderboard-v1-pub";
-const LB_State = { rows: [], lastPublish: 0 };
+const LB_TOPIC = "fartworld-leaderboard-v2-pub";   // v2 = fresh start, real players only from now on
+const LB_State = { rows: [], lastPublish: 0, cat: 'farts', timer: null };
+window.LB_TOPIC = LB_TOPIC;   // shared so social.js can publish referral events
 
 function totalXp(level, xp){
   const prior = 100 * (level - 1) * level / 2;
@@ -10707,6 +10727,8 @@ async function publishScore(){
         xp:      State.xp,
         totalXp: totalXp(State.level, State.xp),
         credits: State.credits,
+        farts:   State.totalFarts || 0,
+        code:    State.referralCode || null,
         ts:      now,
       }),
     });
@@ -10715,33 +10737,41 @@ async function publishScore(){
 
 async function fetchLeaderboard(){
   try {
-    const r = await fetch(`https://ntfy.sh/${LB_TOPIC}/json?poll=1&since=24h`);
+    const r = await fetch(`https://ntfy.sh/${LB_TOPIC}/json?poll=1&since=7d`);
     if(!r.ok) return [];
     const text = await r.text();
     if(!text.trim()) return [];
-    const players = new Map();
+    const players  = new Map();   // name -> latest score message (real, self-reported)
+    const refCount = new Map();   // referral code -> how many invitees used it
     for(const line of text.trim().split("\n")){
       try {
         const evt = JSON.parse(line);
         if(evt.event !== "message" || !evt.message) continue;
         const m = JSON.parse(evt.message);
-        if(m.kind !== "score" || !m.name) continue;
-        const cur = players.get(m.name);
-        if(!cur || (m.ts || 0) > (cur.ts || 0)) players.set(m.name, m);
+        if(m.kind === "score" && m.name){
+          const cur = players.get(m.name);
+          if(!cur || (m.ts || 0) > (cur.ts || 0)) players.set(m.name, m);
+        } else if(m.kind === "ref" && m.code){
+          refCount.set(m.code, (refCount.get(m.code) || 0) + 1);
+        }
       } catch(_){}
     }
-    // Include our own latest local score even before it's been published
+    // Always fold in my own latest local stats so I see myself update live.
     if(State.username){
-      const me = players.get(State.username);
-      const myTotal = totalXp(State.level, State.xp);
-      if(!me || (me.totalXp || 0) < myTotal){
-        players.set(State.username, {
-          name: State.username, level: State.level, xp: State.xp,
-          totalXp: myTotal, credits: State.credits, ts: Date.now(),
-        });
-      }
+      players.set(State.username, {
+        name: State.username, level: State.level, xp: State.xp,
+        totalXp: totalXp(State.level, State.xp), credits: State.credits,
+        farts: State.totalFarts || 0, code: State.referralCode || null, ts: Date.now(),
+      });
     }
-    return [...players.values()].sort((a, b) => (b.totalXp || 0) - (a.totalXp || 0)).slice(0, 50);
+    return [...players.values()].map(p => ({
+      name:    p.name,
+      level:   p.level || 1,
+      totalXp: p.totalXp || 0,
+      farts:   p.farts || 0,
+      credits: p.credits || 0,
+      refs:    (p.code && refCount.get(p.code)) || 0,
+    }));
   } catch(_){ return []; }
 }
 
@@ -10753,17 +10783,34 @@ window.handleScoreMessage = function(m){
   // top-N panel here in the future.)
 };
 
+// The three worldwide categories.
+const LB_CATS = {
+  farts:    { metric: r => r.farts,   fmt: v => v.toLocaleString() + ' 💨' },
+  earnings: { metric: r => r.credits, fmt: v => v.toLocaleString() + ' 🥈' },
+  refs:     { metric: r => r.refs,    fmt: v => v.toLocaleString() + ' 🤝' },
+};
+
 async function renderLeaderboard(){
   const host = document.getElementById('lbBody');
-  host.innerHTML = '<div class="lb-empty">Loading global leaderboard…</div>';
-  const rows = await fetchLeaderboard();
-  LB_State.rows = rows;
-  if(!rows.length){
-    host.innerHTML = '<div class="lb-empty">No scores published yet. Earn XP — you\'ll show up.</div>';
+  if(!LB_State.rows.length) host.innerHTML = '<div class="lb-empty">Loading worldwide leaderboard…</div>';
+  LB_State.rows = await fetchLeaderboard();
+  drawLeaderboard();
+}
+
+// Draw the currently-selected category from the cached rows (no network).
+function drawLeaderboard(){
+  const host = document.getElementById('lbBody');
+  if(!host) return;
+  const cat = LB_CATS[LB_State.cat] || LB_CATS.farts;
+  const ranked = LB_State.rows.slice()
+    .sort((a, b) => (cat.metric(b) || 0) - (cat.metric(a) || 0))
+    .slice(0, 50);
+  if(!ranked.length){
+    host.innerHTML = '<div class="lb-empty">No players yet — start playing and everyone shows up here in real time.</div>';
     return;
   }
   const me = State.username;
-  host.innerHTML = rows.map((r, i) => {
+  host.innerHTML = ranked.map((r, i) => {
     const rank = i + 1;
     const cls  = (rank <= 3 ? "r" + rank : "") + (r.name === me ? " you" : "");
     return `
@@ -10771,10 +10818,9 @@ async function renderLeaderboard(){
         <span class="rank">#${rank}</span>
         <div>
           <div class="name">${escHtml(r.name)}</div>
-          <div class="lv">Lv ${r.level || 1}  ·  ${r.xp || 0} XP</div>
+          <div class="lv">Lv ${r.level || 1}</div>
         </div>
-        <span class="xp">${(r.totalXp || 0).toLocaleString()}</span>
-        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:rgba(230,255,238,0.42);">🥈 ${r.credits || 0}</span>
+        <span class="xp">${cat.fmt(cat.metric(r) || 0)}</span>
       </div>
     `;
   }).join("");
@@ -10783,18 +10829,36 @@ async function renderLeaderboard(){
 function toggleLeaderboard(){
   const bg = document.getElementById('lbBg');
   if(bg.classList.contains('show')){
-    bg.classList.remove('show');
+    closeLeaderboard();
   } else {
     bg.classList.add('show');
     renderLeaderboard();
     publishScore();        // publish on open so my score is fresh
+    // Real-time: re-poll the worldwide topic every 12s while it's open.
+    clearInterval(LB_State.timer);
+    LB_State.timer = setInterval(() => {
+      if(document.getElementById('lbBg').classList.contains('show')) renderLeaderboard();
+      else closeLeaderboard();
+    }, 12000);
   }
 }
+function closeLeaderboard(){
+  document.getElementById('lbBg').classList.remove('show');
+  clearInterval(LB_State.timer); LB_State.timer = null;
+}
 document.getElementById('lbToggle').addEventListener('click', toggleLeaderboard);
-document.getElementById('lbClose').addEventListener('click', () => document.getElementById('lbBg').classList.remove('show'));
+document.getElementById('lbClose').addEventListener('click', closeLeaderboard);
 document.getElementById('lbRefresh').addEventListener('click', () => { renderLeaderboard(); publishScore(); });
 document.getElementById('lbBg').addEventListener('click', (e) => {
-  if(e.target.id === "lbBg") document.getElementById('lbBg').classList.remove('show');
+  if(e.target.id === "lbBg") closeLeaderboard();
+});
+// Category tabs (💨 Farters / 🥈 Earners / 🤝 Referrers)
+document.querySelectorAll('#lbTabs .lb-tab').forEach(t => {
+  t.addEventListener('click', () => {
+    LB_State.cat = t.dataset.cat;
+    document.querySelectorAll('#lbTabs .lb-tab').forEach(x => x.classList.toggle('active', x === t));
+    drawLeaderboard();
+  });
 });
 
 // =================================================================

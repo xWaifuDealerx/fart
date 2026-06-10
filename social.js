@@ -45,6 +45,15 @@
         const lb = lsGet('fw.referral.lb', {});
         lb[ref] = (lb[ref] || 0) + 1;
         lsSet('fw.referral.lb', lb);
+        // Publish a one-time referral event to the global leaderboard topic so
+        // the inviter shows up on the worldwide "Top Referrers" board.
+        try {
+          const topic = window.LB_TOPIC || 'fartworld-leaderboard-v2-pub';
+          fetch('https://ntfy.sh/' + topic, {
+            method: 'POST',
+            body: JSON.stringify({ kind: 'ref', code: ref, ts: Date.now() }),
+          });
+        } catch(_){}
       }
     } catch(e){}
 
