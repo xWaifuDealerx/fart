@@ -45,9 +45,11 @@
       // (-0.3..0.4), dry sand (0.4..1.1), sand→grass blend (1.1..1.7).
       // We accept up to 1.4 so the upper sandy-tan band still counts
       // but the green grass interior (>1.7) does not.
+      // G is shared with cat-feeding + item pickup — fail SILENTLY when
+      // the dig conditions aren't met (no "Need a Plastic Bag" spam).
       const onSand = gh > WATER_LEVEL - 0.35 && gh < WATER_LEVEL + 1.4;
-      if(!onSand){ window.floater?.("That's grass — stand on sandy ground to dig", "bad"); return; }
-      if(!(State.inventory.plastic_bag)){ window.floater?.("Need a \u{1F6CD} Plastic Bag", "bad"); return; }
+      if(!onSand) return;
+      if(!(State.inventory.plastic_bag)) return;
       window.takeItem("plastic_bag", 1);
       window.addItem("sand_bag", 1);
       State.xp += 3;

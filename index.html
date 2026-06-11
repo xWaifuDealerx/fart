@@ -374,6 +374,61 @@
   }
   footer .legacy:hover { background: rgba(95, 240, 156, 0.18); }
   footer .small { font-size: 11px; color: rgba(230, 255, 238, 0.35); margin-top: 18px; font-family: 'JetBrains Mono', monospace; letter-spacing: 1px; }
+
+  /* ─── v2026.6 — “next level” additions ─── */
+  .feature-ticker{
+    margin-top:26px; overflow:hidden; white-space:nowrap; position:relative;
+    border-top:1px solid rgba(255,214,77,.22); border-bottom:1px solid rgba(255,214,77,.22);
+    padding:10px 0; -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+            mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+  }
+  .feature-ticker .track{
+    display:inline-block; animation:tickerScroll 28s linear infinite;
+    font-family:'Cinzel',serif; font-weight:800; font-size:13px; letter-spacing:2.5px;
+    color:var(--gold);
+  }
+  .feature-ticker .track span{ margin:0 22px; opacity:.92; text-shadow:0 0 14px rgba(255,214,77,.35); }
+  @keyframes tickerScroll{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  .new-grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:16px; margin-top:34px;
+  }
+  .new-card{
+    position:relative; background:linear-gradient(165deg,rgba(20,36,22,.85),rgba(8,16,10,.92));
+    border:1px solid rgba(95,240,156,.22); border-radius:18px; padding:22px 20px 20px;
+    transition:transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    overflow:hidden;
+  }
+  .new-card::before{
+    content:''; position:absolute; inset:-40% -60%;
+    background:radial-gradient(circle at 30% 20%, rgba(95,240,156,.10), transparent 55%);
+    pointer-events:none;
+  }
+  .new-card:hover{
+    transform:translateY(-5px);
+    border-color:rgba(255,214,77,.55);
+    box-shadow:0 18px 44px rgba(0,0,0,.5), 0 0 34px rgba(255,214,77,.12);
+  }
+  .new-card .nc-ico{ font-size:32px; margin-bottom:10px; display:block; filter:drop-shadow(0 4px 10px rgba(0,0,0,.5)); }
+  .new-card h3{
+    font-family:'Cinzel',serif; font-size:16px; color:var(--paper); letter-spacing:1px; margin-bottom:7px;
+  }
+  .new-card p{ font-size:12.5px; line-height:1.6; color:var(--paper-soft); }
+  .new-card .badge{
+    position:absolute; top:13px; right:13px;
+    font-family:'Outfit',sans-serif; font-weight:900; font-size:9px; letter-spacing:1.5px;
+    color:#04140a; background:linear-gradient(135deg,var(--green),#9dffc8);
+    padding:3px 9px; border-radius:100px; box-shadow:0 0 14px rgba(95,240,156,.5);
+    animation:badgePulse 2s ease-in-out infinite;
+  }
+  .new-card .badge.event{ background:linear-gradient(135deg,var(--gold),#ffe9a8); box-shadow:0 0 14px rgba(255,214,77,.5); }
+  @keyframes badgePulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .hero-float{ position:absolute; font-size:26px; opacity:0; pointer-events:none; animation:heroFloat 9s linear infinite; }
+  @keyframes heroFloat{
+    0%{ opacity:0; transform:translateY(30px) rotate(-8deg) scale(.8); }
+    12%{ opacity:.5; }
+    85%{ opacity:.35; }
+    100%{ opacity:0; transform:translateY(-140px) rotate(10deg) scale(1.1); }
+  }
 </style>
 </head>
 
@@ -394,14 +449,14 @@
 
     <p class="intro-blurb">
       Play as a <b>sentient office printer</b>, stranded on a beautiful island.
-      Fart, mine ores, run scams, buy apartments and take the rocket to the moon.
-      Grind your way up in a <b>hypercapitalistic brainrot world</b>.
-      The Fartprint economy lives here.
+      Fart, mine ores, grow weed, duel in the island-wide <b>deathmatch</b>, gamble at the casino,
+      fly seaplanes past blimps, climb a <b>100-level skill tree</b> — and take the rocket to the moon.
+      Grind your way up in a <b>hypercapitalistic brainrot world</b>. The Fartprint economy lives here.
     </p>
 
     <div class="mobile-warn">
       🖥️ <b>Desktop Only</b>
-      <div>FartWorld is built for keyboard + mouse. Open this page on a laptop or desktop computer.</div>
+      <div>FartWorld is built for keyboard + mouse — 🎮 Xbox controller supported too. Open this page on a laptop or desktop computer.</div>
     </div>
 
     <div class="play-row">
@@ -410,7 +465,22 @@
         <span>Play Now</span>
         <span class="spark">✦</span>
       </a>
-      <div class="play-hint">Press play · enter the world</div>
+      <div class="play-hint">Free in your browser · no install · guest, Google or Phantom</div>
+    </div>
+
+    <!-- floating brainrot particles -->
+    <span class="hero-float" style="left:8%;  bottom:10%; animation-delay:0s">💨</span>
+    <span class="hero-float" style="left:90%; bottom:18%; animation-delay:2.2s">🥇</span>
+    <span class="hero-float" style="left:16%; bottom:30%; animation-delay:4.5s">🦄</span>
+    <span class="hero-float" style="left:80%; bottom:5%;  animation-delay:6.4s">🎰</span>
+    <span class="hero-float" style="left:50%; bottom:2%;  animation-delay:7.6s">🖨️</span>
+  </div>
+
+  <!-- scrolling feature ticker -->
+  <div class="feature-ticker">
+    <div class="track">
+      <span>🌳 100-LEVEL DESTINY BOARD</span><span>⚔️ ISLAND-WIDE DEATHMATCH</span><span>🎰 SLOTS · COINFLIP · ROULETTE</span><span>📜 EVENT MISSIONS</span><span>🛩️ SKY TRAFFIC</span><span>🪂 SKYDIVE FROM YOUR SEAPLANE</span><span>📦 PUBG-STYLE LOOT</span><span>🎮 XBOX CONTROLLER</span><span>🔑 GOOGLE SIGN-IN</span><span>🥇 GOLD RUSH — ENDS JAN 1 2027</span>
+      <span>🌳 100-LEVEL DESTINY BOARD</span><span>⚔️ ISLAND-WIDE DEATHMATCH</span><span>🎰 SLOTS · COINFLIP · ROULETTE</span><span>📜 EVENT MISSIONS</span><span>🛩️ SKY TRAFFIC</span><span>🪂 SKYDIVE FROM YOUR SEAPLANE</span><span>📦 PUBG-STYLE LOOT</span><span>🎮 XBOX CONTROLLER</span><span>🔑 GOOGLE SIGN-IN</span><span>🥇 GOLD RUSH — ENDS JAN 1 2027</span>
     </div>
   </div>
 </section>
@@ -448,6 +518,68 @@
         <div class="icon">⛓️</div>
         <h3>Optional Crypto Layer</h3>
         <p>By degens, for degens. Fartprint's optional crypto layer allows more hardcore users access to on-chain wearables, collectibles and yield-earning assets. Only on Solana.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────────────────────────────────────────── -->
+<!-- LATEST UPDATES -->
+<section>
+  <div class="container">
+    <div class="section-eyebrow">▼ Inside the World</div>
+    <h2 class="section-title">One island. Endless brainrot.</h2>
+    <p class="section-lead">
+      A full <b>MMO progression system</b>, a real <b>PvP mode</b>, a casino floor,
+      missions with deadlines, living skies and a working economy — everything below
+      is in the game, waiting for you.
+    </p>
+
+    <div class="new-grid">
+      <div class="new-card">
+        <span class="nc-ico">🌳</span>
+        <h3>The Destiny Board</h3>
+        <p>An Albion-style radial skill tree. <b>9 skills + ore &amp; weed specializations</b>, each Lv 1–100 — weeks of grind per line. Every 5 levels pays a silver milestone. Drag, zoom, and watch your branches light up.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">⚔️</span>
+        <h3>Island-Wide Deathmatch</h3>
+        <p>Step into the arena ring with a Desert Eagle — then the <b>whole island becomes the battleground</b>. Fight friends or the practice bot, first to 10 kills. Bullets don't go through walls. Bring a gun or you don't play.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">🎰</span>
+        <h3>Poop Casino — 3 Games</h3>
+        <p>Slots, a 3D <b>coinflip</b> (call 💩 or 🧻), and a real spinning <b>European roulette wheel</b> — 37 pockets, watch it decelerate under the pin. Green zero pays 36×. Cash only. The house remembers.</p>
+      </div>
+      <div class="new-card"><span class="badge event">⏳ LIMITED</span>
+        <span class="nc-ico">📜</span>
+        <h3>Missions &amp; Gold Rush</h3>
+        <p>Genesis missions teach the hustle; <b>Event missions expire forever</b>. First on the board: <b>Gold Rush</b> — convert ALL your silver to gold in one transaction before <b>Jan 1, 2027</b>.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">🛩️</span>
+        <h3>Living Skies</h3>
+        <p>An airplane, an airship, a spaceship and a hot-air balloon patrol the island day and night. They're solid — clip one in your seaplane and you're <b>crashing</b>. You can also <b>skydive</b> out mid-flight.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">📦</span>
+        <h3>PUBG-Style Loot</h3>
+        <p>A <b>Vicinity panel</b> shows everything on the ground around you — drag items out of your bag onto the island, or scoop loot back in. Spiders now drop <b>Spider Meat</b>. Equip slots for your hat &amp; weapon.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">🎯</span>
+        <h3>Action Controls + FPS</h3>
+        <p>Mouse-look without dragging, right-click to aim, scroll all the way in for <b>first-person mode</b> with a real Desert Eagle viewmodel. 🎮 <b>Xbox controller</b> support, fullscreen, brightness/contrast/quality settings.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">🔑</span>
+        <h3>Sign In Your Way</h3>
+        <p>Guest, <b>Google</b>, or Phantom wallet. Google players can link a Phantom later to unlock the trading venues — and keep their progress.</p>
+      </div>
+      <div class="new-card">
+        <span class="nc-ico">🥕</span>
+        <h3>A Farmer's Economy</h3>
+        <p>Rebalanced so the loops actually pay: weed plots return your investment even on dirt-tier rolls (rare strains print), and carrots sell to Roki at a real profit. Whole-number prices at Carlos's register.</p>
       </div>
     </div>
   </div>
@@ -567,25 +699,23 @@
     <!-- BASICS -->
     <div class="wiki-panel active" data-panel="basics">
       <h3>Getting Started</h3>
-      <p>You spawn on a green fantasy island as a sentient printer. Move with <b>WASD</b>, look around by dragging the mouse, scroll to zoom, press <b>SPACE</b> to fart, press <b>E</b> to interact.</p>
+      <p>You spawn on a green fantasy island as a sentient printer. Move with <b>WASD</b>, click the world once to grab the mouse and <b>look around freely</b> (Action controls — the default), scroll to zoom (all the way in = first-person), press <b>SPACE</b> to fart + hop, press <b>E</b> to interact.</p>
       <h4>First moves</h4>
       <ul>
-        <li>Follow the 5-step <b>tutorial</b> top-right: steal Gary's bike, melt sand into jars, fart in them, sell to Gary. Each step pays +50 silver, full completion pays +200 bonus.</li>
-        <li>Press <b>I</b> for inventory, <b>P</b> for portfolio, click 🏆 top-right for the worldwide leaderboard.</li>
-        <li>Visit the <b>Bank</b> (-22, -8) to swap silver / cash / gold.</li>
-        <li>Mine ore with a pickaxe, fart in jars, plant weed, run hustles in the Data Center.</li>
-        <li>When you die, you respawn at the <b>Hospital</b> (-64, -8). Heal for 30 silver.</li>
-        <li>When you get busted, you're locked up in <b>Jail</b> (55, 50) until your sentence runs out.</li>
+        <li>Open <b>📜 Missions</b> (right-side button) and start <b>"Welcome to Fartprint"</b> — the 5-step onboarding: steal Gary's bike, melt sand into jars, fart in them, sell to Gary.</li>
+        <li>Check the <b>🌳 Destiny Board</b> — 9 skills + ore/weed specializations, Lv 1–100 each, silver milestones every 5 levels. Everything you do trains something.</li>
+        <li>Press <b>I</b> for inventory (with the new <b>Vicinity</b> ground-loot panel + Equipment slots), <b>P</b> for portfolio, 🏆 for worldwide leaderboards.</li>
+        <li>Visit the <b>Bank</b> (-22, -8) to swap silver / cash / gold. Mine ore, fart in jars, plant weed, run hustles in the Data Center, gamble at the 🎰 Casino.</li>
+        <li>When you die, you respawn at the <b>Hospital</b> (-64, -8) with 5s of protection. Busted with fake cash? <b>Jail</b> (55, 50).</li>
       </ul>
-      <h4>Controls</h4>
+      <h4>Controls (Action scheme — default)</h4>
       <ul>
-        <li><b>WASD</b> - move · <b>SHIFT</b> - run · <b>SPACE</b> - fart / jump</li>
-        <li><b>E</b> - interact with NPCs, buildings, vehicles</li>
-        <li><b>F</b> - use equipped tool (pickaxe swing)</li>
-        <li><b>G</b> - scoop sand on the beach</li>
-        <li><b>B</b> - mount / eject bike</li>
-        <li><b>M</b> - fullscreen minimap · <b>L</b> - leaderboard</li>
-        <li><b>Left-click</b> - fire Desert Eagle (when owned)</li>
+        <li><b>WASD</b> - move · <b>SHIFT</b> - run · <b>SPACE</b> - fart + jump</li>
+        <li><b>Mouse</b> - free look (click once to grab) · <b>Left-click</b> - shoot · <b>Right-click (hold)</b> - precision aim</li>
+        <li><b>Scroll</b> - zoom · fully in = <b>FPS mode</b> with your Desert Eagle in view</li>
+        <li><b>E</b> - interact · <b>F</b> - mine / use tool · <b>G</b> - feed cats / scoop sand / pick up loot · <b>B</b> - bike</li>
+        <li><b>M</b> - big map · <b>L</b> - leaderboard · <b>⚙</b> - settings (Classic controls, brightness, contrast, quality)</li>
+        <li>🎮 <b>Xbox controller</b> fully supported — enable it in ⚙ Settings</li>
       </ul>
     </div>
 
@@ -631,6 +761,8 @@
         <div class="npc-card"><div class="name">🏚 Soviet Apartment</div><div class="role">(15, -71) · 1M🥈 to own. Rent out for 800🥈/day.</div></div>
         <div class="npc-card"><div class="name">🏢 Middle Apartment</div><div class="role">(-11, 37) · 3M🥈 to own. Rent out for 2,400🥈/day.</div></div>
         <div class="npc-card"><div class="name">🏨 Luxury Penthouse</div><div class="role">(-13, 75) · 10M🥈 to own. Rent out for 12,000🥈/day.</div></div>
+        <div class="npc-card"><div class="name">🎰 Poop Casino</div><div class="role">(-67, -27) · Slots, Coinflip and a real spinning Roulette wheel. Cash bets only.</div></div>
+        <div class="npc-card"><div class="name">⚔️ Deathmatch Arena</div><div class="role">(36, 36) · Step in armed to queue. Once it starts, the WHOLE island is the map. Practice bot available.</div></div>
         <div class="npc-card"><div class="name">🚨 Jail</div><div class="role">(55, 50) · 5-minute lockup when busted with fake cash.</div></div>
         <div class="npc-card"><div class="name">🚀 Rocket Pad</div><div class="role">(24, -22) · Unlocks at Level 30. Fly to the moon.</div></div>
       </div>
@@ -655,7 +787,7 @@
         <div class="npc-card"><div class="name">Junkies</div><div class="role">Zoomkins, Mastrprintr, Printrn. Trade for cash with negotiation slider. 99 wisdom lines.</div></div>
         <div class="npc-card"><div class="name">Cats (3)</div><div class="role">Wander the island. Fart on one → −25 XP per cat hit + flee animation.</div></div>
         <div class="npc-card"><div class="name">Roki the Rabbit</div><div class="role">White rabbit, hops island. Pays 5× silver-market price in cash for carrots.</div></div>
-        <div class="npc-card"><div class="name">Spiders</div><div class="role">Spawn only after buying Desert Eagle. Walk at player, knock back on contact, 8 HP per bite. Fart radius kills them too.</div></div>
+        <div class="npc-card"><div class="name">Spiders</div><div class="role">Spawn only after buying Desert Eagle. 8 HP per bite. Shoot them or gas them with a fart — every kill drops <b>Spider Meat</b> on the ground.</div></div>
       </div>
     </div>
 
@@ -679,11 +811,12 @@
         <li>Jar tiers (rarity): 🟢 Green (60%) · 🔵 Blue (25%) · 🟣 Purple (10%) · 🟠 Orange (4%) · 🌈 Rainbow (1%)</li>
       </ul>
 
-      <h4>Farming</h4>
+      <h4>Farming (now genuinely profitable)</h4>
       <ul>
-        <li>Buy a Plot from Carlos. Plant weed seeds. Wait the timer. Roll a tier when grown.</li>
-        <li>Weed tiers same as jars. Sell to Carlos or the Pawn.</li>
-        <li>Carrots can be sold to Roki at a premium.</li>
+        <li>Rent a plot (30🥈/24h). <b>Weed seed</b> (250🥈) → 10 buds in 10 min, each rolled for a strain: 🌱 Dirt (60%) · 🍍 Pineapple (25%) · ⛽ Diesel (10%) · 🌌 Cosmic (4%) · 🦄 Unicorn (1%).</li>
+        <li>Sell to the junkies — an <b>all-dirt harvest roughly returns your investment</b>; anything rarer prints. One Unicorn bud ≈ 1,000🥈-worth of cash.</li>
+        <li><b>Carrot seed</b> (25🥈) → 6 carrots per harvest. Roki pays a live-rate premium ≈ 12🥈-equivalent each — a steady ~30% profit for beginners.</li>
+        <li>Every harvest and sale trains your 🌳 <b>Weed Skills</b> (per-strain specializations included).</li>
       </ul>
 
       <h4>Wood / Paper</h4>
@@ -695,8 +828,20 @@
     <!-- MECHANICS -->
     <div class="wiki-panel" data-panel="mechanics">
       <h3>Mechanics</h3>
+      <h4>🌳 The Destiny Board (Skill Tree)</h4>
+      <p>An Albion-style radial board: <b>9 skills</b> (Mining, Weapons, Weed, Farting, Data, Gamba, Flying, Boating, Petting) plus per-ore and per-strain specialization nodes. Each runs Lv 1–100 on a steep curve — maxing one line takes weeks. <b>Every 5 levels pays a silver milestone</b> (mains up to 1,500🥈 a pop). Hover any node for its full story; drag &amp; zoom to explore.</p>
+
+      <h4>📜 Missions</h4>
+      <p><b>Genesis Missions</b> teach the game (start with "Welcome to Fartprint"). <b>Event Missions are limited-time and expire forever</b> — Gold Rush (convert ALL your silver to gold in one transaction) ends January 1st, 2027. One mission active at a time; completed missions can never be replayed.</p>
+
+      <h4>⚔️ Deathmatch</h4>
+      <p>Bring a weapon to the arena (36, 36) — no gun, no fight. Queue against another player or the practice bot. After the countdown <b>the entire island is the battleground</b>: first to 10 kills. Bullets are blocked by buildings, your shots draw tracers, wins pay XP + silver + ELO (bot matches pay reduced, no ELO). The bot hunts you across the map and can't be outrun forever.</p>
+
+      <h4>🎰 Casino</h4>
+      <p>Three games, cash only: <b>Slots</b> (match three, up to 12×), <b>Coinflip</b> (call 💩/🧻, 2×), and <b>Roulette</b> — a true 37-pocket European wheel that spins and decelerates under the pin. Red/Black 2×, green zero 36×. Every bet trains Gamba Skills.</p>
+
       <h4>Health Bar</h4>
-      <p>100 HP cap. Fall damage from drops > 4m. Spider bite = 8 HP per cycle. Passive regen = +1 HP / 30s. Hospital = full heal for 30🥈. Death = wake at Hospital with full HP (inventory preserved unless busted).</p>
+      <p>100 HP cap. Fall damage from drops > 4m (water landings are always soft — skydive over the sea!). Spider bite = 8 HP. Passive regen +1 HP / 30s. Death = wake at the Hospital with full HP and <b>5 seconds of respawn protection</b>. Flying the seaplane makes you immune to everything except mid-air collisions.</p>
 
       <h4>Bust Risk</h4>
       <p>Paying with Fake Cash carries a 50% chance of getting busted. Bust = 5 minutes in Jail, inventory wiped (except wearables / vault). Vault contents are always safe.</p>
@@ -705,7 +850,10 @@
       <p>24-hour cycle compressed in-game. Streetlights glow at night. The world is darker, mining is slower.</p>
 
       <h4>Hotel / Sleep / AFK</h4>
-      <p>Pay 25🥈/hour at the Hotel for a safe-zone bed up to 72 hours. Press E inside to sleep - movement locks, spiders can't reach you. Press E again to wake up.</p>
+      <p>Pay 25🥈/hour at the Hotel for a safe-zone bed up to 72 hours. Press E to sleep — you're tucked inside the building, completely untouchable, with the whole world still visible around you and a slim bedside timer with a one-click +1 hour extend. Press E to wake.</p>
+
+      <h4>Vehicles &amp; the Sky</h4>
+      <p>Tree Boat (200🥈), Sea Plane (600🥈) and Yacht (3500🥈) from Wave's Dock — all leave foam wakes, the plane banks into turns and you can <b>bail out mid-air and skydive</b>. Watch the skies: an airplane, airship, spaceship and hot-air balloon patrol overhead, and they are <b>solid</b> — collide and you crash. Air & sea time trains Flying / Boating skills.</p>
 
       <h4>Apartments (Own + Rent Out)</h4>
       <p>Once you buy an apartment it's yours forever. Sleep in it for free. Rent it out 1–365 days for daily passive silver income. Soviet 800🥈/day, Middle 2,400🥈/day, Luxury 12,000🥈/day.</p>

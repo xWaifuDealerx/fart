@@ -516,7 +516,7 @@
       const have = (State.inventory?.deagle || 0) > 0;
       const printer = window.printer || window.Player?.mesh;
       if(!printer){ requestAnimationFrame(tickHeldGun); return; }
-      const showGun = have && printer.visible && !window.fwSleeping;
+      const showGun = have && printer.visible && !window.fwSleeping && !window.fwGunHolstered;
       // animatePrinter raises the RIGHT arm while this flag is set
       window.fwHoldGun = showGun && !window.Player?.boat;
       if(showGun){
@@ -716,7 +716,10 @@
       const _dmw = document.getElementById('dmWaiting');
       const dmPanel = _dmw && _dmw.style.display !== 'none' &&
         document.getElementById('dmOverlay')?.classList.contains('show');
-      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !window.fwSleeping && !isAimingAtNpc()){
+      const inVehicle = !!(window.Player && window.Player.boat);   // seaplane/boat/yacht: no aim
+      const invOpen = document.getElementById('invBg')?.classList.contains('show');
+      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !window.fwSleeping &&
+         !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';
       } else {
@@ -887,6 +890,13 @@
       if(window.Player && window.Player.boat) return;
       // No shooting in your sleep
       if(window.fwSleeping) return;
+      // No shooting while the inventory is open
+      if(document.getElementById('invBg')?.classList.contains('show')) return;
+      // Weapon holstered (EQUIPMENT panel) → no firing
+      if(window.fwGunHolstered){
+        window.floater?.('🔫 Weapon holstered — draw it in your inventory’s EQUIPMENT panel', 'bad');
+        return;
+      }
       // Arena waiting panel open = it's a menu; let its buttons be clicked.
       const _dmw = document.getElementById('dmWaiting');
       if(_dmw && _dmw.style.display !== 'none' &&

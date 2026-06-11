@@ -19,7 +19,7 @@
 
   // ── Persisted settings ──
   const KEY = 'fw.settings.v1';
-  const DEFAULTS = { scheme: 'action', brightness: 100, contrast: 100, quality: 'perf', gamepad: false };
+  const DEFAULTS = { scheme: 'action', brightness: 100, contrast: 100, glow: 100, quality: 'perf', gamepad: false };
   let S = { ...DEFAULTS };
   try { S = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(_){}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_){} }
@@ -386,6 +386,9 @@
         <div class="lbl">CONTRAST</div>
         <input type="range" id="fwSetContrast" min="70" max="140" step="5">
         <div class="bval" id="fwSetContrastVal">100%</div>
+        <div class="lbl">GLOW · neon bloom (High End quality only)</div>
+        <input type="range" id="fwSetGlow" min="0" max="150" step="10">
+        <div class="bval" id="fwSetGlowVal">100%</div>
         <div class="lbl">QUALITY</div>
         <div class="fw-set-seg" id="fwSetQual">
           <button data-v="high">✨ High End<small>Bloom, shadows, full res</small></button>
@@ -412,6 +415,9 @@
       const c = bg.querySelector('#fwSetContrast');
       c.value = S.contrast;
       bg.querySelector('#fwSetContrastVal').textContent = S.contrast + '%';
+      const g = bg.querySelector('#fwSetGlow');
+      g.value = S.glow ?? 100;
+      bg.querySelector('#fwSetGlowVal').textContent = (S.glow ?? 100) + '%';
       bg.querySelectorAll('#fwSetPad button').forEach(b =>
         b.classList.toggle('on', (b.dataset.v === 'on') === !!S.gamepad));
     }
@@ -438,6 +444,11 @@
       bg.querySelector('#fwSetContrastVal').textContent = S.contrast + '%';
       applyBrightness();
     });
+    bg.querySelector('#fwSetGlow').addEventListener('input', (e) => {
+      S.glow = Number(e.target.value); save();
+      bg.querySelector('#fwSetGlowVal').textContent = S.glow + '%';
+      applyGlow();
+    });
     bg.querySelector('#fwSetPad').addEventListener('click', (e) => {
       const v = e.target.closest('button')?.dataset.v;
       if(!v) return;
@@ -459,10 +470,21 @@
       try { window.scene.traverse(o => { if(!sun && o.isDirectionalLight && o.castShadow !== undefined && o.shadow && o.shadow.mapSize.x >= 1024) sun = o; }); } catch(_){}
       return sun;
     }
+    // ── Apply: glow (neon bloom strength) ──
+    function applyGlow(){
+      try {
+        if(!window.bloom) return;
+        const perf = S.quality === 'perf';
+        const glow = S.glow ?? 100;
+        window.bloom.strength = 0.65 * (glow / 100);
+        window.bloom.enabled = !perf && glow > 0;
+      } catch(_){}
+    }
+
     let _sunHadShadow = null;
     function applyQuality(){
       const perf = S.quality === 'perf';
-      try { if(window.bloom) window.bloom.enabled = !perf; } catch(_){}
+      applyGlow();   // bloom on/off + strength follows quality AND glow
       try {
         const sun = findSun();
         if(sun){
@@ -483,9 +505,12 @@
     // Re-assert the perf cap after resizes (the resize handler calls Perf.reapply)
     window.addEventListener('resize', () => { if(S.quality === 'perf') setTimeout(applyQuality, 60); });
 
-    // Apply persisted settings on boot
+    // Apply persisted settings on boot (bloom may load late — retry)
     applyBrightness();
     applyQuality();
+    let _glowBoot = setInterval(() => {
+      if(window.bloom){ applyGlow(); clearInterval(_glowBoot); }
+    }, 800);
 
     // ──────────────────────────────────────────────────────────────
     // ⛶ FULLSCREEN — small button docked above the compass (right side)

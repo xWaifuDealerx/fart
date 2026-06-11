@@ -136,7 +136,7 @@
       function trySwapGlb(){
         if(!window.FWModels){ setTimeout(trySwapGlb, 500); return; }
         if(!window.FWModels.cfg.hospital){
-          window.FWModels.cfg.hospital = { url: 'hospital.glb', fit: 9.5, rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' };
+          window.FWModels.cfg.hospital = { url: 'hospital.glb', fit: 19, rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' };
         }
         window.FWModels.get('hospital').then(model => {
           for(const ch of grp.children.slice()){

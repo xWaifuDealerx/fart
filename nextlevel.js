@@ -230,6 +230,15 @@
   // ───────────────────────────────────────────────────────────────
   const carCss = document.createElement('style');
   carCss.textContent = `
+/* PERF: the reveal overlays used a fullscreen backdrop-filter blur over
+   the live WebGL canvas — that forces an expensive compositor pass the
+   moment the carousel opens (the "freeze when the case opens" hitch).
+   A darker plain background reads the same and costs nothing. */
+.wr-bg, .fw-case-bg {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: rgba(2, 4, 3, .94) !important;
+}
 /* richer strips */
 .wr-strip, .fw-case-strip {
   background: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.15) 30%, rgba(0,0,0,.15) 70%, rgba(0,0,0,.45)) !important;
