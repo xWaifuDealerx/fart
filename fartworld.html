@@ -5260,6 +5260,13 @@ function animatePrinter(dt){
     printer.rotation.z = 0;
   }
 
+  // Holding the Desert Eagle: RIGHT arm raised to carry it (gunsmith
+  // sets window.fwHoldGun while the held gun is visible). Applied after
+  // the state branches above so it wins over walk/idle arm swings.
+  if(window.fwHoldGun && ud.armR){
+    ud.armR.rotation.x = -1.05 + Math.sin(animTime * 1.6) * 0.04;
+  }
+
   // Always: paper sway
   if(ud.paperGrp){
     ud.paperGrp.rotation.z = Math.sin(animTime * 1.5) * 0.04;
@@ -5528,6 +5535,8 @@ window.addEventListener('keydown', e => {
   if(isTypingInChat()) return;
   keys[e.code] = true;
   if(e.code === "Space"){
+    // No farting/hopping in your sleep — the hotel room stays quiet.
+    if(window.fwSleeping){ e.preventDefault(); return; }
     // Little hop with every fart (uses the existing airborne physics)
     if(!e.repeat && !Player.airborne && !Player.boat && !Player.swimming){
       Player.airborne = true;
@@ -6091,10 +6100,12 @@ function hostRoom(name, handle){
 
 function joinRoom(room, handle){
   Net.mode      = "join";
-  Net.roomId    = room.id;
+  // Room IDs are ALWAYS lowercase on the wire — normalize every join
+  // path so typed invite codes work in any capitalization.
+  Net.roomId    = String(room.id || "").trim().toLowerCase();
   Net.roomName  = room.name;
   Net.handle    = handle || "guest";
-  Net.topicChat = `fartworld-room-${room.id}-v1`;
+  Net.topicChat = `fartworld-room-${Net.roomId}-v1`;
   startRoomConnection();
 }
 
@@ -6308,7 +6319,13 @@ function updatePeers(dt){
       p.mesh.userData.legL.rotation.x = 0;
       p.mesh.userData.legR.rotation.x = 0;
     }
-    // Project world position to screen for the name tag
+    // Project world position to screen for the name tag — but only
+    // within 35m; far-away players don't get a floating label.
+    const _tdx = p.x - Player.pos.x, _tdy = p.y - Player.pos.y, _tdz = p.z - Player.pos.z;
+    if(_tdx * _tdx + _tdy * _tdy + _tdz * _tdz > 35 * 35){
+      p.tag.style.display = "none";
+      continue;
+    }
     _projV.set(p.x, p.y + 2.5, p.z);
     _projV.project(camera);
     if(_projV.z < 1 && _projV.z > -1){
@@ -11194,6 +11211,12 @@ function dmBroadcastJoin(){
     });
   } catch(_){}
 }
+// HEARTBEAT — broadcastPos normally runs from the render loop, which
+// browsers PAUSE in background tabs. A host testing with two windows
+// became invisible to the joiner the moment their hosting window lost
+// focus. This interval (which still ticks ~1Hz when backgrounded)
+// keeps every player visible no matter what their tab is doing.
+setInterval(() => { try { broadcastPos(); } catch(_){} }, 1000);
 function dmBroadcastLeave(){
   if(Net.mode === "solo" || !Net.topicChat) return;
   try {

@@ -99,7 +99,7 @@
     // ── Proximity popup ──
     const prox = document.createElement('div');
     prox.className = 'cas-prox';
-    prox.innerHTML = '<div class="who">🎰 Poop Casino</div><div class="line">Press <kbd>E</kbd> to play the slots</div>';
+    prox.innerHTML = '<div class="who">🎰 Poop Casino</div><div class="line">Press <kbd>E</kbd> — Slots · Coinflip · Roulette</div>';
     document.body.appendChild(prox);
 
     // ── Slot modal ──
@@ -109,19 +109,63 @@
     let bet = 10;
     let spinning = false;
 
+    // Extra styles for the 3-game casino (tabs, coin, roulette wheel)
+    const css2 = document.createElement('style');
+    css2.textContent = `
+.cas-tabs{display:flex;gap:6px;margin:10px 0 12px}
+.cas-tab{flex:1;background:rgba(255,110,199,.08);border:1px solid rgba(255,110,199,.35);color:rgba(255,220,245,.8);
+  padding:8px 6px;border-radius:10px;font-family:'Outfit',sans-serif;font-weight:800;font-size:12px;cursor:pointer;
+  transition:all .15s ease;letter-spacing:.3px}
+.cas-tab.on{background:rgba(255,110,199,.25);border-color:#ff6ec7;color:#fff;box-shadow:0 0 14px rgba(255,110,199,.3)}
+.cas-coinwrap{display:flex;justify-content:center;margin:14px 0;perspective:700px;height:96px}
+.cas-coin{position:relative;width:92px;height:92px;transform-style:preserve-3d}
+.cas-coin .face{position:absolute;inset:0;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:46px;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:3px solid rgba(255,255,255,.35);
+  box-shadow:inset 0 -8px 14px rgba(0,0,0,.35)}
+.cas-coin .f{background:radial-gradient(circle at 35% 30%,#ffe9a8,#d6a832)}
+.cas-coin .b{background:radial-gradient(circle at 35% 30%,#f0f4f8,#9aa6b2);transform:rotateY(180deg)}
+.cas-flipbtns,.cas-roulbtns{display:flex;gap:8px;margin-top:10px}
+.cas-flipbtns .cas-btn,.cas-roulbtns .cas-btn{flex:1}
+.cas-btn.rb.red{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+.cas-btn.rb.black{background:linear-gradient(135deg,#34343c,#141418);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.cas-btn.rb.green{background:linear-gradient(135deg,#2ecc71,#1e8e4e);color:#fff}
+.cas-wheelwrap{position:relative;width:240px;margin:8px auto 0}
+.cas-wheelwrap canvas{display:block;width:240px;height:240px}
+.cas-pin{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-size:20px;color:#ffd64d;z-index:2;
+  text-shadow:0 0 10px rgba(255,214,77,.8),0 2px 2px rgba(0,0,0,.8)}
+`;
+    document.head.appendChild(css2);
+
     const bg = document.createElement('div');
     bg.className = 'cas-bg';
     bg.innerHTML = ''
       + '<div class="cas-card">'
-      + '  <h2>🎰 POOP SLOTS</h2>'
-      + '  <div class="cas-sub">Match three to win. Cash bets only 💵</div>'
-      + '  <div class="cas-reels"><div class="cas-reel" id="casR0">💩</div><div class="cas-reel" id="casR1">🚽</div><div class="cas-reel" id="casR2">🧻</div></div>'
-      + '  <div class="cas-result" id="casResult">Place your bet and spin!</div>'
+      + '  <h2>🎰 POOP CASINO</h2>'
+      + '  <div class="cas-tabs">'
+      + '    <button class="cas-tab on" data-g="slots">🎰 Slots</button>'
+      + '    <button class="cas-tab" data-g="flip">🪙 Coinflip</button>'
+      + '    <button class="cas-tab" data-g="roul">🎡 Roulette</button>'
+      + '  </div>'
+      + '  <div class="cas-pane" id="casPaneSlots">'
+      + '    <div class="cas-sub">Match three to win. Cash bets only 💵</div>'
+      + '    <div class="cas-reels"><div class="cas-reel" id="casR0">💩</div><div class="cas-reel" id="casR1">🚽</div><div class="cas-reel" id="casR2">🧻</div></div>'
+      + '    <div class="cas-pay">3× 🧻 pays 12× · 3× 🚽 pays 8× · 3× 💩 pays 5×</div>'
+      + '  </div>'
+      + '  <div class="cas-pane" id="casPaneFlip" style="display:none">'
+      + '    <div class="cas-sub">Call it in the air — a right call pays 2× 💵</div>'
+      + '    <div class="cas-coinwrap"><div class="cas-coin" id="casCoin"><div class="face f">💩</div><div class="face b">🧻</div></div></div>'
+      + '    <div class="cas-flipbtns"><button class="cas-btn spin" id="casFlipPoop">💩 POOP</button><button class="cas-btn spin" id="casFlipPaper">🧻 PAPER</button></div>'
+      + '  </div>'
+      + '  <div class="cas-pane" id="casPaneRoul" style="display:none">'
+      + '    <div class="cas-sub">Red / Black pay 2× · Green 0 pays 36× 💵</div>'
+      + '    <div class="cas-wheelwrap"><div class="cas-pin">▼</div><canvas id="casWheel" width="480" height="480"></canvas></div>'
+      + '    <div class="cas-roulbtns"><button class="cas-btn rb red" id="casBetRed">RED</button><button class="cas-btn rb green" id="casBetGreen">0</button><button class="cas-btn rb black" id="casBetBlack">BLACK</button></div>'
+      + '  </div>'
+      + '  <div class="cas-result" id="casResult">Place your bet!</div>'
       + '  <div class="cas-row"><span>Your 💵 Cash</span><b id="casCash">0</b></div>'
       + '  <div class="cas-row"><span>Bet (💵)</span><b id="casBet">10</b></div>'
       + '  <div class="cas-chips" id="casChips"></div>'
       + '  <div class="cas-btns"><button class="cas-btn close" id="casClose">Leave</button><button class="cas-btn spin" id="casSpin">Spin</button></div>'
-      + '  <div class="cas-pay">3× 🧻 pays 12× · 3× 🚽 pays 8× · 3× 💩 pays 5×</div>'
       + '</div>';
     document.body.appendChild(bg);
 
@@ -169,16 +213,28 @@
 
     function pick(){ return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
 
-    function spin(){
-      if(spinning) return;
-      if(bet <= 0){ setResult('Set a bet first 💵', 'lose'); return; }
-      if(cash() < bet){ setResult('Not enough cash 💵', 'lose'); return; }
+    // Shared bet handling for all three games
+    function placeBet(){
+      if(spinning) return false;
+      if(bet <= 0){ setResult('Set a bet first 💵', 'lose'); return false; }
+      if(cash() < bet){ setResult('Not enough cash 💵', 'lose'); return false; }
       spinning = true;
       spinBtn.disabled = true;
-      clearWinGlow();
       addCash(-bet);
       window.fwSkillXp?.('gamba', Math.max(1, Math.round(bet / 5)));
       window.updateHUD?.(); renderChips();
+      return true;
+    }
+    function endRound(){
+      spinning = false;
+      spinBtn.disabled = false;
+      window.updateHUD?.(); window.saveState?.();
+      renderChips();
+    }
+
+    function spin(){
+      if(!placeBet()) return;
+      clearWinGlow();
       setResult('Spinning…', '');
       const final = [pick(), pick(), pick()];
       const stopAt = [700, 1050, 1400];
@@ -193,8 +249,6 @@
     }
 
     function finish(final){
-      spinning = false;
-      spinBtn.disabled = false;
       if(final[0] === final[1] && final[1] === final[2]){
         const mult = PAYOUT[final[0]] || 5;
         const won = bet * mult;
@@ -205,13 +259,156 @@
       } else {
         setResult('No match — lost ' + bet + ' 💵. Spin again!', 'lose');
       }
-      window.updateHUD?.(); window.saveState?.();
-      renderChips();
+      endRound();
     }
 
     spinBtn.addEventListener('click', spin);
     document.getElementById('casClose').addEventListener('click', close);
     bg.addEventListener('click', (e) => { if(e.target === bg) close(); });
+
+    // ──────────────────────────────────────────────────────────────
+    // GAME TABS — Slots / Coinflip / Roulette
+    // ──────────────────────────────────────────────────────────────
+    let game = 'slots';
+    bg.querySelectorAll('.cas-tab').forEach(tb => {
+      tb.addEventListener('click', () => {
+        if(spinning) return;
+        game = tb.dataset.g;
+        bg.querySelectorAll('.cas-tab').forEach(b => b.classList.toggle('on', b === tb));
+        document.getElementById('casPaneSlots').style.display = game === 'slots' ? '' : 'none';
+        document.getElementById('casPaneFlip').style.display  = game === 'flip'  ? '' : 'none';
+        document.getElementById('casPaneRoul').style.display  = game === 'roul'  ? '' : 'none';
+        spinBtn.style.display = game === 'slots' ? '' : 'none';
+        setResult('Place your bet!', '');
+        if(game === 'roul') drawWheel(roulAngle);
+      });
+    });
+
+    // ──────────────────────────────────────────────────────────────
+    // COINFLIP — call 💩 or 🧻, right call pays 2×
+    // ──────────────────────────────────────────────────────────────
+    const coinEl = document.getElementById('casCoin');
+    function flip(call){
+      if(!placeBet()) return;
+      setResult('Flipping…', '');
+      const win = Math.random() < 0.49;                       // slight house edge
+      const landed = win ? call : (call === 'poop' ? 'paper' : 'poop');
+      coinEl.style.transition = 'none';
+      coinEl.style.transform = 'rotateY(0deg)';
+      void coinEl.offsetWidth;
+      coinEl.style.transition = 'transform 1.35s cubic-bezier(.22,.8,.3,1)';
+      coinEl.style.transform = 'rotateY(' + (1800 + (landed === 'paper' ? 180 : 0)) + 'deg)';
+      setTimeout(() => {
+        const em = landed === 'poop' ? '💩' : '🧻';
+        if(win){
+          const won = bet * 2;
+          addCash(won);
+          setResult('🎉 ' + em + ' — you called it! +' + won + ' 💵', 'win');
+          window.playPurchaseSound?.();
+        } else {
+          setResult(em + ' — wrong call. Lost ' + bet + ' 💵', 'lose');
+        }
+        endRound();
+      }, 1450);
+    }
+    document.getElementById('casFlipPoop').addEventListener('click', () => flip('poop'));
+    document.getElementById('casFlipPaper').addEventListener('click', () => flip('paper'));
+
+    // ──────────────────────────────────────────────────────────────
+    // ROULETTE — real spinning European wheel (37 pockets)
+    // ──────────────────────────────────────────────────────────────
+    const ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+    const RED = new Set([1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36]);
+    const SEG = (Math.PI * 2) / ORDER.length;
+    const wheelCvs = document.getElementById('casWheel');
+    const wctx = wheelCvs.getContext('2d');
+    let roulAngle = 0;
+    function drawWheel(angle){
+      const S = wheelCvs.width;             // 480 backing (240 css) — crisp
+      const c = S / 2, rOut = c - 6, rIn = rOut * 0.62;
+      wctx.clearRect(0, 0, S, S);
+      wctx.save();
+      wctx.translate(c, c);
+      wctx.rotate(angle);
+      for(let i = 0; i < ORDER.length; i++){
+        const n = ORDER[i];
+        const a0 = i * SEG, a1 = a0 + SEG;
+        wctx.beginPath();
+        wctx.moveTo(0, 0);
+        wctx.arc(0, 0, rOut, a0, a1);
+        wctx.closePath();
+        wctx.fillStyle = n === 0 ? '#1e8e4e' : (RED.has(n) ? '#c0392b' : '#17171c');
+        wctx.fill();
+        wctx.strokeStyle = 'rgba(255,214,77,.35)';
+        wctx.lineWidth = 1.5;
+        wctx.stroke();
+        // number label
+        wctx.save();
+        wctx.rotate(a0 + SEG / 2);
+        wctx.translate(rOut * 0.82, 0);
+        wctx.rotate(Math.PI / 2);
+        wctx.fillStyle = '#fff';
+        wctx.font = '700 ' + Math.round(S * 0.045) + 'px Outfit, sans-serif';
+        wctx.textAlign = 'center';
+        wctx.textBaseline = 'middle';
+        wctx.fillText(String(n), 0, 0);
+        wctx.restore();
+      }
+      // hub + trim
+      wctx.beginPath(); wctx.arc(0, 0, rIn, 0, Math.PI * 2);
+      wctx.fillStyle = '#241a2e'; wctx.fill();
+      wctx.lineWidth = 4; wctx.strokeStyle = '#ffd64d'; wctx.stroke();
+      wctx.beginPath(); wctx.arc(0, 0, rOut + 3, 0, Math.PI * 2);
+      wctx.lineWidth = 5; wctx.strokeStyle = '#ffd64d'; wctx.stroke();
+      wctx.font = Math.round(S * 0.12) + 'px serif';
+      wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
+      wctx.fillText('💩', 0, 0);
+      wctx.restore();
+    }
+    drawWheel(0);
+    function landedIndex(angle){
+      let local = (-Math.PI / 2 - angle) % (Math.PI * 2);
+      if(local < 0) local += Math.PI * 2;
+      return Math.floor(local / SEG) % ORDER.length;
+    }
+    function spinRoul(betOn){
+      if(!placeBet()) return;
+      setResult('No more bets — wheel is spinning…', '');
+      const ti = Math.floor(Math.random() * ORDER.length);
+      // final angle puts pocket ti's centre under the top pin
+      const targetLocal = (ti + 0.5) * SEG;
+      let delta = ((-Math.PI / 2 - targetLocal) - roulAngle) % (Math.PI * 2);
+      if(delta < 0) delta += Math.PI * 2;
+      const total = delta + Math.PI * 2 * (6 + Math.floor(Math.random() * 3));
+      const start = roulAngle;
+      const dur = 4400;
+      const t0 = performance.now();
+      function anim(t){
+        const k = Math.min(1, (t - t0) / dur);
+        const ease = 1 - Math.pow(1 - k, 3);     // decelerating, like a real wheel
+        roulAngle = start + total * ease;
+        drawWheel(roulAngle);
+        if(k < 1){ requestAnimationFrame(anim); return; }
+        const idx = landedIndex(roulAngle);
+        const n = ORDER[idx];
+        const color = n === 0 ? 'green' : (RED.has(n) ? 'red' : 'black');
+        const em = color === 'green' ? '🟢' : color === 'red' ? '🔴' : '⚫';
+        let won = 0;
+        if(betOn === color) won = bet * (color === 'green' ? 36 : 2);
+        if(won > 0){
+          addCash(won);
+          setResult('🎉 ' + em + ' ' + n + ' — WIN! +' + won + ' 💵', 'win');
+          window.playPurchaseSound?.();
+        } else {
+          setResult(em + ' ' + n + ' — house takes ' + bet + ' 💵', 'lose');
+        }
+        endRound();
+      }
+      requestAnimationFrame(anim);
+    }
+    document.getElementById('casBetRed').addEventListener('click', () => spinRoul('red'));
+    document.getElementById('casBetBlack').addEventListener('click', () => spinRoul('black'));
+    document.getElementById('casBetGreen').addEventListener('click', () => spinRoul('green'));
 
     // ── Proximity + interaction ──
     let near = false;

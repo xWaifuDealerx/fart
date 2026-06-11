@@ -19,7 +19,7 @@
 
   // ── Persisted settings ──
   const KEY = 'fw.settings.v1';
-  const DEFAULTS = { scheme: 'action', brightness: 100, contrast: 100, quality: 'high' };
+  const DEFAULTS = { scheme: 'action', brightness: 100, contrast: 100, quality: 'perf', gamepad: false };
   let S = { ...DEFAULTS };
   try { S = Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch(_){}
   function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_){} }
@@ -131,7 +131,7 @@
     // RMB = aim (hold)
     window.addEventListener('mousedown', (e) => {
       if(S.scheme !== 'action') return;
-      if(e.button === 2 && locked()) aiming = true;
+      if(e.button === 2 && (locked() || e._fwPad)) aiming = true;
     });
     window.addEventListener('mouseup', (e) => {
       if(e.button === 2) aiming = false;
@@ -293,7 +293,8 @@
       // FPS gun viewmodel: visible when zoomed in AND armed (owning a
       // Deagle, or any active deathmatch where weapons are unlimited).
       // Prefer the real GLB model; the SVG is only a loading fallback.
-      const armed = (window.State?.inventory?.deagle > 0) || (window.Dm?.phase === 'active');
+      const armed = !window.fwSleeping &&
+        ((window.State?.inventory?.deagle > 0) || (window.Dm?.phase === 'active'));
       if(gunModel){
         gunModel.visible = fps && armed;
         gunEl.classList.remove('show');
@@ -390,6 +391,11 @@
           <button data-v="high">✨ High End<small>Bloom, shadows, full res</small></button>
           <button data-v="perf">🚀 Performance<small>No bloom/shadows, capped res</small></button>
         </div>
+        <div class="lbl">XBOX CONTROLLER</div>
+        <div class="fw-set-seg" id="fwSetPad">
+          <button data-v="on">🎮 Enabled<small>Sticks move &amp; look · A fart · X interact · RT shoot</small></button>
+          <button data-v="off">🚫 Disabled<small>Keyboard + mouse only</small></button>
+        </div>
       </div>
     </div>`;
     document.body.appendChild(bg);
@@ -406,6 +412,8 @@
       const c = bg.querySelector('#fwSetContrast');
       c.value = S.contrast;
       bg.querySelector('#fwSetContrastVal').textContent = S.contrast + '%';
+      bg.querySelectorAll('#fwSetPad button').forEach(b =>
+        b.classList.toggle('on', (b.dataset.v === 'on') === !!S.gamepad));
     }
     bg.querySelector('#fwSetScheme').addEventListener('click', (e) => {
       const v = e.target.closest('button')?.dataset.v;
@@ -429,6 +437,12 @@
       S.contrast = Number(e.target.value); save();
       bg.querySelector('#fwSetContrastVal').textContent = S.contrast + '%';
       applyBrightness();
+    });
+    bg.querySelector('#fwSetPad').addEventListener('click', (e) => {
+      const v = e.target.closest('button')?.dataset.v;
+      if(!v) return;
+      S.gamepad = v === 'on'; save(); render();
+      window.floater?.(S.gamepad ? '🎮 Controller enabled — press any button' : '🎮 Controller disabled', 'good');
     });
 
     // ── Apply: brightness + contrast (one combined canvas filter) ──
@@ -472,6 +486,174 @@
     // Apply persisted settings on boot
     applyBrightness();
     applyQuality();
+
+    // ──────────────────────────────────────────────────────────────
+    // ⛶ FULLSCREEN — small button docked above the compass (right side)
+    // ──────────────────────────────────────────────────────────────
+    const fsCss = document.createElement('style');
+    fsCss.textContent = `
+#fwFsBtn{position:fixed;width:32px;height:32px;border-radius:10px;z-index:36;
+  background:rgba(8,18,11,.85);border:1.5px solid rgba(95,240,156,.45);color:#5ff09c;
+  font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;
+  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
+  box-shadow:0 6px 14px rgba(0,0,0,.4)}
+#fwFsBtn:hover{background:rgba(95,240,156,.18);border-color:#5ff09c;
+  box-shadow:0 0 14px rgba(95,240,156,.30);transform:scale(1.08)}
+`;
+    document.head.appendChild(fsCss);
+    const fsBtn = document.createElement('button');
+    fsBtn.id = 'fwFsBtn';
+    fsBtn.title = 'Fullscreen';
+    fsBtn.textContent = '⛶';
+    document.body.appendChild(fsBtn);
+    fsBtn.addEventListener('click', () => {
+      try {
+        if(document.fullscreenElement){
+          document.exitFullscreen();
+        } else {
+          document.documentElement.requestFullscreen();
+        }
+      } catch(err){ console.warn('[controls] fullscreen', err); }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      const on = !!document.fullscreenElement;
+      fsBtn.textContent = on ? '🗗' : '⛶';
+      fsBtn.title = on ? 'Exit fullscreen' : 'Fullscreen';
+    });
+    // Dock above the compass, aligned to its RIGHT edge (the compass
+    // repositions itself above the HP pill, so we follow it).
+    function dockFsBtn(){
+      const comp = document.getElementById('fwCompass');
+      if(!comp) return;
+      const r = comp.getBoundingClientRect();
+      if(r.width < 20) return;
+      fsBtn.style.left = (r.right - 32) + 'px';
+      fsBtn.style.top = Math.max(6, r.top - 38) + 'px';
+      fsBtn.style.right = 'auto';
+      fsBtn.style.bottom = 'auto';
+    }
+    setInterval(dockFsBtn, 500);
+    setTimeout(dockFsBtn, 600);
+
+    // ──────────────────────────────────────────────────────────────
+    // 🎮 XBOX CONTROLLER (Gamepad API) — enable in ⚙ Settings.
+    //   Left stick  move        Right stick  look
+    //   A  fart+jump            X  interact (E)
+    //   B  mine / use tool (F)  Y  inventory
+    //   RT shoot                LT aim
+    //   LB/RB zoom out/in       D-pad ↑ map · ↓ bike
+    //   Start ⚙ settings
+    // Implemented by feeding the game's existing key map + synthetic
+    // events, so every system (movement, planes, DM, mining) just works.
+    // ──────────────────────────────────────────────────────────────
+    const keysMap = () => window.keys || {};
+    const DEAD = 0.28;
+    const padPrev = {};
+    function padEdge(gp, idx){
+      const down = !!gp.buttons[idx]?.pressed;
+      const was = !!padPrev[idx];
+      padPrev[idx] = down;
+      return down && !was;
+    }
+    function padHeld(gp, idx){ return !!gp.buttons[idx]?.pressed; }
+    function synthKey(code){
+      try {
+        window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true }));
+        setTimeout(() => window.dispatchEvent(new KeyboardEvent('keyup', { code, bubbles: true })), 60);
+      } catch(_){}
+    }
+    function padShoot(){
+      // center the aim, then fire through the normal click paths
+      vAim.x = window.innerWidth / 2;
+      vAim.y = window.innerHeight / 2;
+      try {
+        const dn = new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        dn._fwPad = true;
+        canvas.dispatchEvent(dn);        // deathmatch fire (canvas listener)
+        const dn2 = new MouseEvent('mousedown', { button: 0, bubbles: true, cancelable: true });
+        dn2._fwPad = true;
+        document.dispatchEvent(dn2);     // deagle fire (document listener)
+        setTimeout(() => {
+          const up = new MouseEvent('mouseup', { button: 0, bubbles: true });
+          window.dispatchEvent(up);
+        }, 70);
+      } catch(_){}
+    }
+    let padSeen = false;
+    window.addEventListener('gamepadconnected', (e) => {
+      console.log('[controls] gamepad connected:', e.gamepad.id);
+      window.floater?.(S.gamepad
+        ? '🎮 Controller connected!'
+        : '🎮 Controller detected — enable it in ⚙ Settings', 'good');
+    });
+    const PAD_KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyZ', 'ShiftLeft'];
+    function padClearKeys(){
+      const k = keysMap();
+      for(const code of PAD_KEYS){ if(k['_pad_' + code]){ k[code] = false; k['_pad_' + code] = false; } }
+    }
+    function padSetKey(code, on){
+      const k = keysMap();
+      if(on){ k[code] = true; k['_pad_' + code] = true; }
+      else if(k['_pad_' + code]){ k[code] = false; k['_pad_' + code] = false; }
+    }
+    function padTick(){
+      requestAnimationFrame(padTick);
+      if(!S.gamepad){ if(padSeen){ padClearKeys(); padSeen = false; } return; }
+      let gp = null;
+      try {
+        for(const g of (navigator.getGamepads?.() || [])){ if(g && g.connected){ gp = g; break; } }
+      } catch(_){}
+      if(!gp){ if(padSeen){ padClearKeys(); padSeen = false; } return; }
+      padSeen = true;
+      const typing = document.activeElement &&
+        (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+      const inPlane = !!(Player.boat && Player.boat.isPlane);
+      // ── left stick → WASD ──
+      const lx = gp.axes[0] || 0, ly = gp.axes[1] || 0;
+      padSetKey('KeyW', ly < -DEAD);
+      padSetKey('KeyS', ly >  DEAD);
+      padSetKey('KeyA', lx < -DEAD);
+      padSetKey('KeyD', lx >  DEAD);
+      // ── right stick → camera ──
+      const rx = Math.abs(gp.axes[2] || 0) > 0.18 ? gp.axes[2] : 0;
+      const ry = Math.abs(gp.axes[3] || 0) > 0.18 ? gp.axes[3] : 0;
+      if(rx || ry){
+        const sens = aiming ? 0.022 : 0.045;
+        Cam.yaw -= rx * sens;
+        const fps = Cam.curDistance < FPS_AT;
+        const lo = fps ? -1.10 : 0.05, hi = fps ? 1.25 : 0.90;
+        Cam.pitch = THREE.MathUtils.clamp(Cam.pitch + ry * sens, lo, hi);
+        vAim.x = window.innerWidth / 2;
+        vAim.y = window.innerHeight / 2;
+      }
+      if(typing) return;          // buttons pause while chat is focused
+      // ── held semantics ──
+      padSetKey('Space', padHeld(gp, 0));               // A held = climb (plane)
+      padSetKey('KeyZ',  inPlane && padHeld(gp, 1));    // B held in plane = dive
+      // ── edge-triggered buttons ──
+      if(padEdge(gp, 0)) synthKey('Space');                              // A → fart+jump
+      if(padEdge(gp, 2)) synthKey('KeyE');                               // X → interact
+      if(padEdge(gp, 1) && !inPlane) synthKey('KeyF');                   // B → mine/use
+      if(padEdge(gp, 3)) document.getElementById('invToggle')?.click();  // Y → inventory
+      if(padEdge(gp, 12)) synthKey('KeyM');                              // D-pad ↑ → map
+      if(padEdge(gp, 13)) synthKey('KeyB');                              // D-pad ↓ → bike
+      if(padEdge(gp, 9)) btn.click();                                    // Start → settings
+      // LB/RB → zoom (through the normal wheel path: FPS + DM both work)
+      if(padEdge(gp, 4)) canvas.dispatchEvent(new WheelEvent('wheel', { deltaY:  120, cancelable: true }));
+      if(padEdge(gp, 5)) canvas.dispatchEvent(new WheelEvent('wheel', { deltaY: -120, cancelable: true }));
+      // RT → shoot · LT → aim
+      if(padEdge(gp, 7)) padShoot();
+      const lt = padHeld(gp, 6);
+      if(lt && !aiming){
+        const ev = new MouseEvent('mousedown', { button: 2, bubbles: true });
+        ev._fwPad = true;
+        window.dispatchEvent(ev);
+      } else if(!lt && aiming && padPrev['_lt']){
+        window.dispatchEvent(new MouseEvent('mouseup', { button: 2, bubbles: true }));
+      }
+      padPrev['_lt'] = lt;
+    }
+    requestAnimationFrame(padTick);
 
     console.log('[controls] ready · scheme=' + S.scheme);
   }

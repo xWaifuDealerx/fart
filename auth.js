@@ -63,13 +63,17 @@
     // ──────────────────────────────────────────────────────────────
     const css = document.createElement('style');
     css.textContent = `
-.fw-oauth{display:flex;flex-direction:column;gap:8px;margin-top:10px}
-.fw-oauth button{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;
-  padding:11px 16px;border-radius:100px;font-family:'Outfit','Inter',sans-serif;font-weight:700;
-  font-size:13px;cursor:pointer;letter-spacing:.3px;transition:transform .15s ease,box-shadow .15s ease}
-.fw-oauth button:hover{transform:translateY(-1px)}
-.fw-oauth .g{background:#fff;color:#1a1a1a;border:1px solid rgba(0,0,0,.15);box-shadow:0 4px 14px rgba(255,255,255,.12)}
-.fw-oauth .a{background:#000;color:#fff;border:1px solid rgba(255,255,255,.25);box-shadow:0 4px 14px rgba(0,0,0,.4)}
+/* Matches the Connect Phantom button's shape & typography exactly —
+   same pill radius, padding, Orbitron uppercase — in Google white. */
+.fw-oauth{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.fw-oauth button{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  padding:16px 28px;border-radius:100px;font-family:'Orbitron',sans-serif;font-weight:900;
+  font-size:14px;letter-spacing:1.6px;text-transform:uppercase;cursor:pointer;border:0;
+  transition:transform .15s ease,box-shadow .15s ease}
+.fw-oauth button:hover{transform:translateY(-2px)}
+.fw-oauth .g{background:linear-gradient(135deg,#ffffff 0%,#e8ecf2 100%);color:#1a1a1a;
+  box-shadow:0 0 0 0 rgba(255,255,255,.4),0 14px 36px rgba(255,255,255,.18)}
+.fw-oauth .g:hover{box-shadow:0 0 0 0 rgba(255,255,255,.4),0 18px 42px rgba(255,255,255,.26)}
 .fw-oauth .signed{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:rgba(230,255,238,.6);text-align:center}
 /* settings account section */
 .fw-acct{margin-top:14px;border-top:1px solid rgba(110,208,214,.18);padding-top:12px}
@@ -222,9 +226,9 @@
             + '<button class="btn link" id="fwAcctLink">Connect Phantom</button></div>';
         }
       } else if(A.provider === 'phantom' && wallet){
-        // Phantom-logged players never see a "connect" option — only unlink.
-        html += '<div class="row">🔗 This wallet is your login'
-          + '<button class="btn unlink" id="fwAcctUnlink">Unlink &amp; sign out</button></div>';
+        // Phantom IS the login — it can never be unlinked. (Only
+        // Google players who linked a wallet on top can unlink it.)
+        html += '<div class="row">🔗 This wallet is your login — it can’t be unlinked</div>';
       }
       acctHost.innerHTML = html;
       acctHost.querySelector('#fwAcctLink')?.addEventListener('click', linkWallet);
@@ -251,15 +255,18 @@
       }
     }
     function unlinkWallet(){
+      // Phantom-login players can NEVER unlink — the wallet IS the account.
+      if(A.provider === 'phantom'){
+        window.floater?.('👻 This wallet is your login — it can’t be unlinked', 'bad');
+        return;
+      }
       if(!confirm('Unlink this wallet? Trading venues will lock again until you re-link.')) return;
-      const wasPhantomLogin = A.provider === 'phantom';
       A.linkedWallet = null;
-      if(wasPhantomLogin){ A.provider = null; A.providerId = null; }
       save();
       if(window.State){ window.State.wallet = null; }
       try { window.saveState?.(); } catch(_){}
       try { (window.solana || window.phantom?.solana)?.disconnect?.(); } catch(_){}
-      window.floater?.('🔓 Wallet unlinked' + (wasPhantomLogin ? ' — signed out' : ''), 'good');
+      window.floater?.('🔓 Wallet unlinked', 'good');
       refreshAcct();
     }
     // (Re)build the section whenever the settings modal opens

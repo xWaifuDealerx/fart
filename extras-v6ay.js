@@ -130,6 +130,24 @@
       lt.position.set(0, 3.5, 0); grp.add(lt);
       scene.add(grp);
       window.HOSPITAL_POS = HOSPITAL_POS;
+      // Swap in the GLB hospital (assets/models/hospital.glb) when it
+      // loads — procedural stays as fallback. The floor slab + night
+      // light stay live (floor keeps the walkable surface working).
+      function trySwapGlb(){
+        if(!window.FWModels){ setTimeout(trySwapGlb, 500); return; }
+        if(!window.FWModels.cfg.hospital){
+          window.FWModels.cfg.hospital = { url: 'hospital.glb', fit: 9.5, rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' };
+        }
+        window.FWModels.get('hospital').then(model => {
+          for(const ch of grp.children.slice()){
+            if(ch === base || ch === lt) continue;   // keep floor + glow
+            ch.visible = false;
+          }
+          grp.add(model);
+          console.log('[extras-v6ay] hospital.glb swapped in');
+        }).catch(err => console.warn('[extras-v6ay] hospital.glb failed — using procedural', err));
+      }
+      trySwapGlb();
       console.log('[extras-v6ay] Hospital built at', HOSPITAL_POS);
     }
     try { buildHospital(); } catch(e){ console.error('[extras-v6ay] hospital', e); }

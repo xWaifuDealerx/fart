@@ -72,6 +72,12 @@
     // Damage API
     window.damagePlayer = function(amount, reason){
       if(!amount || amount <= 0) return;
+      // Asleep in the hotel — completely untouchable.
+      if(window.fwSleeping) return;
+      // Flying the seaplane — ONLY mid-air collisions (sky traffic)
+      // can hurt you. No more phantom damage from ground spiders or
+      // the fall-watcher misreading plane descents.
+      if(window.Player?.boat?.isPlane && !/mid-air/i.test(String(reason || ''))) return;
       // Respawn grace period — no damage for a few seconds after death,
       // so the hospital teleport (fall-watcher) + camping spiders can't
       // chain-kill you straight out of the respawn.
@@ -115,6 +121,13 @@
     // Fall damage — watch vertical landing impact
     let lastY = Player.pos.y, falling = false, fallStart = 0;
     setInterval(() => {
+      // Piloting anything (plane / boat / yacht / rocket): vertical
+      // moves are vehicle physics, never a "fall".
+      if(Player.boat || window.fwSleeping){
+        lastY = Player.pos.y;
+        falling = false;
+        return;
+      }
       const y = Player.pos.y;
       if(!falling && y < lastY - 0.4){
         falling = true; fallStart = lastY;
@@ -122,7 +135,11 @@
       if(falling && Player.airborne === false){
         const dropped = fallStart - y;
         falling = false;
-        if(dropped > 4){
+        // Splashing into WATER is always a soft landing — no damage
+        // (skydiving from the seaplane over the sea is safe).
+        const _gY = (window.groundHeightAt?.(Player.pos.x, Player.pos.z) ?? 0);
+        const _splash = Player.swimming || _gY <= ((window.WATER_LEVEL ?? 0) - 0.4);
+        if(dropped > 4 && !_splash){
           const dmg = Math.min(60, (dropped - 4) * 5);
           window.damagePlayer(dmg, '💥 fall');
         }
@@ -154,7 +171,8 @@
       // group children near the player position.
       const Spiders = window.Spiders || [];
       let bit = false;
-      const safe = playerInSafeZone();
+      // Vehicles + hotel sleep = unreachable: spiders never bite.
+      const safe = playerInSafeZone() || !!Player.boat || !!window.fwSleeping;
       for(const s of Spiders){
         if(!s || s.dead) continue;
         const d = Math.hypot(s.x - Player.pos.x, s.z - Player.pos.z);

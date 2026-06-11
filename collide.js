@@ -152,6 +152,8 @@
 
     function resolve(){
       if(Player.boat) return;                 // vessels manage their own position
+      if(window.fwSleeping) return;           // asleep in the hotel — don't shove
+
       const py = Player.pos.y;
       const k0x = Math.floor(Player.pos.x / CELL);
       const k0z = Math.floor(Player.pos.z / CELL);

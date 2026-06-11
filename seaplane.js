@@ -255,18 +255,24 @@
       // were flying, port to the dock so we don't ragdoll mid-air.
       const wasFlying = p.flying;
       if(wasFlying){
-        Player.pos.x = dockX;
-        Player.pos.z = dockZ;
-        Player.pos.y = (window.groundHeightAt?.(dockX, dockZ) ?? 0);
+        // SKYDIVE — you bail out right where the plane is and FALL
+        // (no more teleporting back to Mr Wave's dock). Water landings
+        // are a soft splash; land hits hurt.
+        Player.pos.x = p.x + Math.sin(p.yaw) * 2.5;
+        Player.pos.z = p.z + Math.cos(p.yaw) * 2.5;
+        Player.pos.y = Math.max((window.WATER_LEVEL ?? 0) + 1, p.y - 0.5);
+        Player.airborne = true;
+        Player.vy = 0;
+        window.floater?.("🪂 You bailed out mid-air!", "good");
       } else {
         // Step out onto the water surface next to the plane
         Player.pos.x = p.x;
         Player.pos.z = p.z + 2.0;
         Player.pos.y = (window.WATER_LEVEL ?? 0);
+        Player.airborne = false;
+        Player.vy = 0;
       }
       Player.yaw = 0;
-      Player.vy = 0;
-      Player.airborne = false;
       // Re-show the player printer when stepping out
       try {
         const pm = (window.printer || window.Player?.mesh);

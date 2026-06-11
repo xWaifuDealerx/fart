@@ -36,6 +36,25 @@
     // ── Build a tiny 3D mesh that represents a dropped item ──
     function buildDroppedMesh(item){
       const grp = new THREE.Group();
+      // Spider Meat: a black blob on the ground (no shiny cube)
+      if(item.id === 'spider_meat'){
+        const blob = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 10, 8),
+          new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.95 })
+        );
+        blob.scale.y = 0.5;
+        blob.position.y = 0.16;
+        blob.castShadow = true;
+        grp.add(blob);
+        const ring = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.34, 0.34, 0.03, 12),
+          new THREE.MeshStandardMaterial({ color: 0x303038, emissive: 0x202028, emissiveIntensity: 0.4, roughness: 0.8 })
+        );
+        ring.position.y = 0.015;
+        grp.add(ring);
+        grp.userData = { item, bobT: Math.random() * Math.PI * 2, body: blob };
+        return grp;
+      }
       // Pedestal ring on the ground
       const ring = new THREE.Mesh(
         new THREE.CylinderGeometry(0.32, 0.32, 0.04, 14),
@@ -59,6 +78,22 @@
 
     const Dropped = [];     // { mesh, x, z, y, id, qty }
 
+    // Spawn a ground item at an exact world position (spider meat
+    // drops, vicinity drops, etc.)
+    function dropAt(id, qty, x, z){
+      const item = ITEMS[id];
+      if(!item) return null;
+      const y = (groundHeightAt ? groundHeightAt(x, z) : 0) + 0.05;
+      const mesh = buildDroppedMesh(item);
+      mesh.position.set(x, y, z);
+      scene.add(mesh);
+      const d = { mesh, x, z, y, id, qty: qty || 1 };
+      Dropped.push(d);
+      return d;
+    }
+    window.fwDropAt = dropAt;
+    window.fwDropped = Dropped;
+
     function dropItem(id, qty){
       const item = ITEMS[id];
       if(!item) return;
@@ -67,14 +102,24 @@
       const yaw = Player.yaw || 0;
       const fx = Math.sin(yaw + Math.PI);
       const fz = Math.cos(yaw + Math.PI);
-      const dx = Player.pos.x + fx * 1.6;
-      const dz = Player.pos.z + fz * 1.6;
-      const y = (groundHeightAt ? groundHeightAt(dx, dz) : 0) + 0.05;
-      const mesh = buildDroppedMesh(item);
-      mesh.position.set(dx, y, dz);
-      scene.add(mesh);
-      Dropped.push({ mesh, x: dx, z: dz, y, id, qty });
+      dropAt(id, qty, Player.pos.x + fx * 1.6, Player.pos.z + fz * 1.6);
       window.floater?.('Dropped ' + qty + ' ' + (item.name || id), 'good');
+    }
+
+    // Pick a ground item up into the inventory
+    function pickUp(d){
+      if(!d) return;
+      const it = ITEMS[d.id];
+      if(it){
+        window.addItem?.(d.id, d.qty || 1);
+        window.floater?.('+' + (d.qty || 1) + ' ' + (it.name || d.id), 'good');
+      }
+      try { scene.remove(d.mesh); } catch(_){}
+      const idx = Dropped.indexOf(d);
+      if(idx >= 0) Dropped.splice(idx, 1);
+      window.saveState?.();
+      window.updateHUD?.();
+      renderVicinity();
     }
 
     // ── Hook drag events on inventory slots ──
@@ -101,16 +146,18 @@
           });
           el.addEventListener('dragend', (e) => {
             el.style.opacity = '';
-            // If the drop target is outside the inventory grid AND outside
-            // any other modal, treat it as "drop on the ground".
+            // Dropping onto the VICINITY panel OR outside the inventory
+            // entirely = put the item on the ground.
             const t = document.elementFromPoint(e.clientX, e.clientY);
+            const onVicinity = t && t.closest('#fwVicinity');
             const insideInventory = t && (t.closest('#invGrid') || t.closest('.inv-card') || t.closest('#invBg'));
-            if(!insideInventory && dragging){
+            if((onVicinity || !insideInventory) && dragging){
               dropItem(dragging, 1);
               // Remove from inventory
               if(typeof window.takeItem === 'function') window.takeItem(dragging, 1);
               if(typeof window.updateHUD === 'function') window.updateHUD();
               if(typeof window.renderInventory === 'function') window.renderInventory();
+              renderVicinity();
             }
             dragging = null;
           });
@@ -131,6 +178,105 @@
       document.body.addEventListener('dragover', (e) => { e.preventDefault(); });
     }
     wireInventory();
+
+    // ──────────────────────────────────────────────────────────────
+    // VICINITY (PUBG-style) — a panel docked LEFT of the inventory
+    // listing ground items within 6m. Drag a row into the inventory
+    // to pick it up (or double-click); drag inventory slots onto the
+    // panel to drop them on the ground.
+    // ──────────────────────────────────────────────────────────────
+    const VICINITY_R = 6;
+    const vicCss = document.createElement('style');
+    vicCss.textContent = `
+#fwVicinity{position:absolute;right:100%;top:0;margin-right:14px;width:215px;max-height:100%;
+  background:linear-gradient(180deg,rgba(8,20,13,.97),rgba(4,11,7,.97));
+  border:2px solid rgba(110,208,214,.45);border-radius:16px;padding:14px;
+  display:flex;flex-direction:column;color:#e6ffee;font-family:'Outfit','Inter',sans-serif;
+  box-shadow:0 16px 36px rgba(0,0,0,.5)}
+#fwVicinity h3{font-family:'Bangers','Orbitron',sans-serif;font-size:18px;color:#6ed0d6;
+  letter-spacing:1.6px;margin:0 0 4px}
+#fwVicinity .hint{font-size:9.5px;color:rgba(230,255,238,.45);letter-spacing:.3px;margin-bottom:10px;line-height:1.4}
+#fwVicList{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px}
+.fw-vic-row{display:flex;align-items:center;gap:8px;background:rgba(110,208,214,.07);
+  border:1px solid rgba(110,208,214,.25);border-radius:10px;padding:7px 10px;cursor:grab;
+  transition:border-color .15s ease,transform .15s ease;user-select:none}
+.fw-vic-row:hover{border-color:#6ed0d6;transform:translateX(2px)}
+.fw-vic-row .ic{font-size:18px}
+.fw-vic-row .nm{font-size:11.5px;font-weight:700;flex:1;letter-spacing:.2px}
+.fw-vic-row .q{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(230,255,238,.6)}
+.fw-vic-empty{font-size:11px;color:rgba(230,255,238,.4);text-align:center;padding:14px 4px;font-style:italic}
+`;
+    document.head.appendChild(vicCss);
+
+    let vicPanel = null, vicDragging = null;
+    function ensureVicinity(){
+      if(vicPanel) return true;
+      const card = document.querySelector('#invBg .inv-card');
+      if(!card) return false;
+      if(getComputedStyle(card).position === 'static') card.style.position = 'relative';
+      vicPanel = document.createElement('div');
+      vicPanel.id = 'fwVicinity';
+      vicPanel.innerHTML = '<h3>📦 VICINITY</h3>'
+        + '<div class="hint">Items on the ground near you. Drag into your bag to pick up — drag bag items HERE to drop them.</div>'
+        + '<div id="fwVicList"></div>';
+      card.appendChild(vicPanel);
+      // allow inventory-slot drops to land on us
+      vicPanel.addEventListener('dragover', (e) => e.preventDefault());
+      return true;
+    }
+    function nearbyDrops(){
+      const out = [];
+      for(const d of Dropped){
+        if(Math.hypot(Player.pos.x - d.x, Player.pos.z - d.z) <= VICINITY_R) out.push(d);
+      }
+      return out;
+    }
+    function renderVicinity(){
+      if(!ensureVicinity()) return;
+      const list = document.getElementById('fwVicList');
+      if(!list) return;
+      const near = nearbyDrops();
+      if(!near.length){
+        list.innerHTML = '<div class="fw-vic-empty">Nothing on the ground nearby…</div>';
+        return;
+      }
+      list.innerHTML = '';
+      near.forEach(d => {
+        const it = ITEMS[d.id] || {};
+        const row = document.createElement('div');
+        row.className = 'fw-vic-row';
+        row.setAttribute('draggable', 'true');
+        row.innerHTML = '<span class="ic">' + (it.icon || '🎁') + '</span>'
+          + '<span class="nm">' + (it.name || d.id) + '</span>'
+          + '<span class="q">×' + (d.qty || 1) + '</span>';
+        row.addEventListener('dblclick', () => { pickUp(d); window.renderInventory?.(); });
+        row.addEventListener('dragstart', (e) => {
+          vicDragging = d;
+          e.dataTransfer.setData('text/plain', d.id);
+          e.dataTransfer.effectAllowed = 'move';
+          row.style.opacity = '0.5';
+        });
+        row.addEventListener('dragend', (e) => {
+          row.style.opacity = '';
+          const t = document.elementFromPoint(e.clientX, e.clientY);
+          // dropped onto the inventory (grid or card, but NOT back on
+          // the vicinity panel) → pick it up
+          if(vicDragging && t && !t.closest('#fwVicinity') &&
+             (t.closest('#invGrid') || t.closest('.inv-card'))){
+            pickUp(vicDragging);
+            window.renderInventory?.();
+          }
+          vicDragging = null;
+        });
+        list.appendChild(row);
+      });
+    }
+    // keep the list fresh while the inventory is open (pause mid-drag)
+    setInterval(() => {
+      const bgOpen = document.getElementById('invBg')?.classList.contains('show');
+      if(!bgOpen || dragging || vicDragging) return;
+      renderVicinity();
+    }, 700);
 
     // ── Proximity popup ──
     const css = document.createElement('style');

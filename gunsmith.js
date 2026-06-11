@@ -45,6 +45,17 @@
         marketPrice: 500,
       };
     }
+    if(!ITEMS.spider_meat){
+      ITEMS.spider_meat = {
+        id: 'spider_meat',
+        name: 'Spider Meat',
+        icon: '⚫',
+        color: '#111111',
+        type: 'material',
+        isNFT: false,
+        suggestedPrice: 12,
+      };
+    }
     if(!ITEMS.ammo_deagle){
       ITEMS.ammo_deagle = {
         id: 'ammo_deagle',
@@ -433,7 +444,7 @@
         // Contact knockback — use the real player-to-spider delta, not
         // the flee delta we may have swapped in above. Skip entirely
         // while the spider is in a safe zone so the player can chill.
-        if(!flee){
+        if(!flee && !window.fwSleeping && !Player.boat){
           const pdx = Player.pos.x - s.x;
           const pdz = Player.pos.z - s.z;
           const pd  = Math.hypot(pdx, pdz);
@@ -505,19 +516,25 @@
       const have = (State.inventory?.deagle || 0) > 0;
       const printer = window.printer || window.Player?.mesh;
       if(!printer){ requestAnimationFrame(tickHeldGun); return; }
-      if(have){
+      const showGun = have && printer.visible && !window.fwSleeping;
+      // animatePrinter raises the RIGHT arm while this flag is set
+      window.fwHoldGun = showGun && !window.Player?.boat;
+      if(showGun){
         if(!heldGun){ heldGun = buildHeldGun(); scene.add(heldGun); }
-        // Place at right side of printer, slightly forward
+        // Place in the printer's RIGHT hand (facing +Z, right = −X),
+        // lifted to match the raised carrying arm.
         const yaw = printer.rotation.y || 0;
-        const off = { x: 0.85, y: 1.10, z: 0.55 };
+        const off = { x: -0.85, y: 1.42, z: 0.72 };
         const cs = Math.cos(yaw), sn = Math.sin(yaw);
         const wx = off.x * cs + off.z * sn;
         const wz = -off.x * sn + off.z * cs;
         heldGun.position.set(printer.position.x + wx, printer.position.y + off.y, printer.position.z + wz);
         heldGun.rotation.y = yaw;
+        heldGun.rotation.x = -0.06;     // slight ready tilt
       } else if(heldGun){
         scene.remove(heldGun);
         heldGun = null;
+        window.fwHoldGun = false;
       }
       requestAnimationFrame(tickHeldGun);
     }
@@ -545,22 +562,33 @@
       }
       const noise = ctx.createBufferSource(); noise.buffer = noiseBuf;
       const noiseFilt = ctx.createBiquadFilter();
-      noiseFilt.type = 'bandpass'; noiseFilt.frequency.value = 1200; noiseFilt.Q.value = 0.8;
+      noiseFilt.type = 'bandpass'; noiseFilt.frequency.value = 650; noiseFilt.Q.value = 0.6;
       const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.55, now);
+      noiseGain.gain.setValueAtTime(0.85, now);
       noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
       noise.connect(noiseFilt).connect(noiseGain).connect(ctx.destination);
       noise.start(now); noise.stop(now + dur);
-      // Sub thud
+      // Sub BOOM — the .50AE chest-thump
       const osc = ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(150, now);
-      osc.frequency.exponentialRampToValueAtTime(30, now + 0.18);
+      osc.frequency.setValueAtTime(110, now);
+      osc.frequency.exponentialRampToValueAtTime(28, now + 0.22);
       const oscG = ctx.createGain();
-      oscG.gain.setValueAtTime(0.6, now);
-      oscG.gain.exponentialRampToValueAtTime(0.0001, now + 0.20);
+      oscG.gain.setValueAtTime(0.9, now);
+      oscG.gain.exponentialRampToValueAtTime(0.0001, now + 0.26);
       osc.connect(oscG).connect(ctx.destination);
-      osc.start(now); osc.stop(now + 0.22);
+      osc.start(now); osc.stop(now + 0.28);
+      // Mechanical slide CLACK ~80ms after the shot (action cycling)
+      const clack = ctx.createOscillator();
+      clack.type = 'square';
+      clack.frequency.setValueAtTime(2400, now + 0.08);
+      clack.frequency.exponentialRampToValueAtTime(900, now + 0.13);
+      const clackG = ctx.createGain();
+      clackG.gain.setValueAtTime(0.0001, now);
+      clackG.gain.setValueAtTime(0.12, now + 0.08);
+      clackG.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      clack.connect(clackG).connect(ctx.destination);
+      clack.start(now + 0.08); clack.stop(now + 0.15);
       // .50AE supersonic CRACK — sharp high-passed snap on top
       const crackDur = 0.06;
       const cBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * crackDur), ctx.sampleRate);
@@ -571,9 +599,9 @@
       }
       const crack = ctx.createBufferSource(); crack.buffer = cBuf;
       const cFilt = ctx.createBiquadFilter();
-      cFilt.type = 'highpass'; cFilt.frequency.value = 2800;
+      cFilt.type = 'highpass'; cFilt.frequency.value = 2100;
       const cGain = ctx.createGain();
-      cGain.gain.setValueAtTime(0.5, now);
+      cGain.gain.setValueAtTime(0.9, now);
       cGain.gain.exponentialRampToValueAtTime(0.0001, now + crackDur);
       crack.connect(cFilt).connect(cGain).connect(ctx.destination);
       crack.start(now); crack.stop(now + crackDur);
@@ -588,8 +616,8 @@
       const eFilt = ctx.createBiquadFilter();
       eFilt.type = 'lowpass'; eFilt.frequency.value = 900;
       const eGain = ctx.createGain();
-      eGain.gain.setValueAtTime(0.16, now + 0.10);
-      eGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+      eGain.gain.setValueAtTime(0.24, now + 0.10);
+      eGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
       echo.connect(eFilt).connect(eGain).connect(ctx.destination);
       echo.start(now + 0.10); echo.stop(now + 0.38);
     }
@@ -688,7 +716,7 @@
       const _dmw = document.getElementById('dmWaiting');
       const dmPanel = _dmw && _dmw.style.display !== 'none' &&
         document.getElementById('dmOverlay')?.classList.contains('show');
-      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !isAimingAtNpc()){
+      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !window.fwSleeping && !isAimingAtNpc()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';
       } else {
@@ -790,6 +818,8 @@
         s.dead = true;
         try { scene.remove(s.mesh); } catch(_){}
         Spiders.splice(killedI, 1);
+        // Drop Spider Meat where it died — pick it up via Vicinity / G
+        try { window.fwDropAt?.('spider_meat', 1, s.x, s.z); } catch(_){}
         State.spidersKilled = (State.spidersKilled || 0) + 1;
         State.credits = (State.credits || 0) + 10;
         window.fwSkillXp?.('weapon', 10);
@@ -817,6 +847,8 @@
           s.dead = true;
           try { scene.remove(s.mesh); } catch(_){}
           Spiders.splice(i, 1);
+          // Fart kills drop Spider Meat too
+          try { window.fwDropAt?.('spider_meat', 1, sx, sz); } catch(_){}
           killed++;
         }
       }
@@ -846,12 +878,15 @@
       if(e.button !== fireBtn) return;
       // In action scheme only shoot while the pointer is locked — a free-
       // cursor left click is for UI / re-grabbing the mouse, not firing.
-      if(actionLive && document.pointerLockElement !== document.getElementById('canvas')) return;
+      // (Gamepad shots carry _fwPad and skip the lock requirement.)
+      if(actionLive && !e._fwPad && document.pointerLockElement !== document.getElementById('canvas')) return;
       // During a deathmatch the DM weapons own the trigger (unlimited
       // ammo) — never fire/dry-fire the inventory Deagle on top of them.
       if(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')) return;
       // No shooting while piloting anything (plane / boat / yacht / rocket)
       if(window.Player && window.Player.boat) return;
+      // No shooting in your sleep
+      if(window.fwSleeping) return;
       // Arena waiting panel open = it's a menu; let its buttons be clicked.
       const _dmw = document.getElementById('dmWaiting');
       if(_dmw && _dmw.style.display !== 'none' &&

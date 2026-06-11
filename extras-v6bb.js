@@ -161,6 +161,9 @@
         return;
       }
       sleeping = true;
+      // Global flag — collide.js stops pushing us out of the hotel
+      // walls, weapons/farts/spiders all stand down while we sleep.
+      window.fwSleeping = true;
       sleepBg.classList.add('show');
       // Hide the bottom-left mini timer when the central card is up.
       const t = document.querySelector('.hot-timer');
@@ -168,6 +171,7 @@
     }
     function exitSleep(){
       sleeping = false;
+      window.fwSleeping = false;
       sleepBg.classList.remove('show');
     }
     window.exitHotelSleep = exitSleep;
@@ -217,11 +221,16 @@
         return;
       }
     }, 500);
-    // Freeze movement: zero Player velocity + clamp to hotel centre
+    // Freeze movement: pin the player INSIDE the hotel (x, z AND y) —
+    // collide.js skips us while fwSleeping so the walls can't shove us
+    // back outside anymore.
     function freezeTick(){
       if(sleeping){
         Player.pos.x = HOTEL_POS.x;
         Player.pos.z = HOTEL_POS.z;
+        Player.pos.y = (window.groundHeightAt?.(HOTEL_POS.x, HOTEL_POS.z) ?? Player.pos.y);
+        Player.vy = 0;
+        Player.airborne = false;
         if(Player.vel){ Player.vel.set(0, 0, 0); }
       }
       requestAnimationFrame(freezeTick);
