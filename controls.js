@@ -97,6 +97,13 @@
     // Mouse-look while locked
     window.addEventListener('mousemove', (e) => {
       if(S.scheme !== 'action' || !locked()) return;
+      // HARD GUARD: any open panel (inventory etc.) = the camera is
+      // frozen and the lock is released, even if the timed unlock
+      // hasn't fired yet. The view must NEVER spin over a menu.
+      if(anyModalOpen()){
+        try { document.exitPointerLock(); } catch(_){}
+        return;
+      }
       const sens = (aiming ? 0.0011 : 0.0023);
       const mx = e.movementX || 0, my = e.movementY || 0;
       const fps = Cam.curDistance < FPS_AT;
