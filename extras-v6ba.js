@@ -474,7 +474,9 @@
     document.getElementById('hospPopBtn').addEventListener('click', tryHeal);
     let nearHosp = false;
     setInterval(() => {
-      nearHosp = Math.hypot(Player.pos.x - HOSPITAL_POS.x, Player.pos.z - HOSPITAL_POS.z) < HOSP_R;
+      // Interaction point = the door (outside the 2× model), not the centre
+      const _hd = window.HOSPITAL_DOOR || HOSPITAL_POS;
+      nearHosp = Math.hypot(Player.pos.x - _hd.x, Player.pos.z - _hd.z) < HOSP_R;
       hospPop.classList.toggle('show', nearHosp);
     }, 500);
     window.addEventListener('keydown', (e) => {

@@ -153,11 +153,15 @@
     try { buildHospital(); } catch(e){ console.error('[extras-v6ay] hospital', e); }
 
     // Respawn API — call window.respawnAtHospital() to relocate the player.
+    // The hospital model is 2× now — the door/interaction point sits
+    // outside the bigger footprint.
+    window.HOSPITAL_DOOR = { x: -58, z: -3 };
     window.respawnAtHospital = function(){
       try {
-        Player.pos.x = HOSPITAL_POS.x;
-        Player.pos.z = HOSPITAL_POS.z + 3;
-        Player.pos.y = (groundHeightAt(HOSPITAL_POS.x, HOSPITAL_POS.z + 3) || 0) + 0.05;
+        const door = window.HOSPITAL_DOOR || { x: -58, z: -3 };
+        Player.pos.x = door.x;
+        Player.pos.z = door.z;
+        Player.pos.y = (groundHeightAt(door.x, door.z) || 0) + 0.05;
         Player.airborne = false;
         Player.vy = 0;
         Player.boat = null;

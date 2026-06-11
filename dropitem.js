@@ -219,6 +219,9 @@
     const eqBoot = setInterval(() => {
       if(window.printer || Player.mesh){ applyEquip(); clearInterval(eqBoot); }
     }, 800);
+    // Public API — the Gunsmith auto-equips freshly bought guns with this
+    window.fwEquipGun = equipGun;
+    window.fwEquipHat = equipHat;
 
     // ──────────────────────────────────────────────────────────────
     // PANELS (Vicinity left · Equipped right) + styles
@@ -319,6 +322,16 @@
       vicList.addEventListener('dblclick', (e) => {
         const row = e.target.closest?.('.fw-vic-row');
         if(!row || !row._drop) return;
+        closeMenu();
+        pickUp(row._drop);
+        window.renderInventory?.();
+      });
+      // RIGHT-CLICK = instant pick up to inventory (no menu)
+      vicList.addEventListener('contextmenu', (e) => {
+        const row = e.target.closest?.('.fw-vic-row');
+        if(!row || !row._drop) return;
+        e.preventDefault();
+        e.stopPropagation();
         closeMenu();
         pickUp(row._drop);
         window.renderInventory?.();
@@ -585,7 +598,20 @@
         e.stopPropagation();
         menuForInv(el.dataset.id, e.clientX, e.clientY);
       });
-      console.log('[dropitem] inventory grid delegation armed (drag + click menu)');
+      // RIGHT-CLICK = instant drop to vicinity (no menu)
+      grid.addEventListener('contextmenu', (e) => {
+        const el = e.target.closest?.('.inv-slot[data-id]');
+        if(!el) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const id = el.dataset.id;
+        dropItem(id, 1);
+        window.takeItem?.(id, 1);
+        window.updateHUD?.();
+        window.renderInventory?.();
+        renderVicinity();
+      });
+      console.log('[dropitem] inventory grid delegation armed (drag + click menu + right-click)');
     }
     wireInventory();
 
