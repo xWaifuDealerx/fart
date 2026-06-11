@@ -294,7 +294,7 @@
       // Deagle, or any active deathmatch where weapons are unlimited).
       // Prefer the real GLB model; the SVG is only a loading fallback.
       const armed = !window.fwSleeping &&
-        ((window.State?.inventory?.deagle > 0) || (window.Dm?.phase === 'active'));
+        ((window.State?.inventory?.deagle > 0 && !window.fwGunHolstered) || (window.Dm?.phase === 'active'));
       if(gunModel){
         gunModel.visible = fps && armed;
         gunEl.classList.remove('show');
