@@ -320,6 +320,7 @@
       const reward = Math.round(act.min + Math.random() * (act.max - act.min));
       delete State.dcJobs[act.id];
       State.credits = (State.credits || 0) + reward;
+      window.fwSkillXp?.('data', 12);
       const sign = reward >= 0 ? "+" : "";
       if(reward >= 0){
         window.floater?.(sign + reward.toLocaleString() + " \u{1F948} · " + act.title, "good");

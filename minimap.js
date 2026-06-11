@@ -228,11 +228,14 @@
     applySize();
     document.getElementById('mmZoomIn').addEventListener('click', () => { sizeIdx = Math.min(SIZES.length - 1, sizeIdx + 1); applySize(); });
     document.getElementById('mmZoomOut').addEventListener('click', () => { sizeIdx = Math.max(0, sizeIdx - 1); applySize(); });
-    document.getElementById('mmFull').addEventListener('click', () => {
-      fullscreen = !fullscreen;
+    function setFullscreen(on){
+      fullscreen = on;
       root.classList.toggle('full', fullscreen);
       applySize();
-    });
+      if(on) window.fwPanels?.closeOthers('map');   // map open → close other panels
+    }
+    window.fwCloseMapFull = () => { if(fullscreen) setFullscreen(false); };
+    document.getElementById('mmFull').addEventListener('click', () => setFullscreen(!fullscreen));
 
     // Smoothed player position so the map glides rather than jitters
     const sm = { x: 0, z: 0, yaw: 0, init: false };
@@ -364,9 +367,7 @@
       if(e.code !== 'KeyM') return;
       const a = document.activeElement;
       if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
-      fullscreen = !fullscreen;
-      root.classList.toggle('full', fullscreen);
-      applySize();
+      setFullscreen(!fullscreen);
     });
     console.log('[minimap] ready (v2 cached-world)');
   }

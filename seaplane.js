@@ -128,7 +128,7 @@
           for(const ch of grp.children.slice()){ ch.visible = false; }
           grp.add(model);
           grp.userData.prop = null;   // GLB owns the look now; stop spinning the hidden box
-        }).catch(() => {});
+        }).catch(err => console.warn('[seaplane] seaplane.glb failed to load — check assets/models/seaplane.glb is uploaded', err));
       }
       return grp;
     }
@@ -567,7 +567,7 @@
         window.FWModels.get('yacht').then(model => {
           for(const ch of grp.children.slice()){ ch.visible = false; }
           grp.add(model);
-        }).catch(() => {});
+        }).catch(err => console.warn('[seaplane] yacht.glb failed to load — check assets/models/yacht.glb is uploaded', err));
       }
       return grp;
     }

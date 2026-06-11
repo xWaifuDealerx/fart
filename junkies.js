@@ -360,7 +360,19 @@
     tradeBg.id = 'junkBg';
     tradeBg.innerHTML = '<div class="junk-card"><h2 id="junkName">Junkie</h2><div class="junk-offer" id="junkOffer">—</div><div class="junk-row"><span>Your \u{1F33F} Weed</span><b id="junkWeed">0</b></div><div class="junk-row"><span>Your \u{1F4B5} Cash</span><b id="junkCash">0</b></div><div class="junk-pick-lbl">Choose a strain to sell</div><div class="junk-strains" id="junkStrains"></div><div class="junk-slider-wrap"><div class="junk-row"><span>Ask price (1 <span id="junkSelIcon">\u{1F33F}</span>)</span><b id="junkAsk">100</b> \u{1F4B5}</div><input id="junkSlider" type="range" min="50" max="200" step="5" value="100"><div class="junk-mood" id="junkMood">—</div></div><div class="junk-result" id="junkResult">—</div><div class="junk-btns"><button class="junk-btn cancel" id="junkCancel">Leave</button><button class="junk-btn" id="junkGo">Try to sell 1 \u{1F33F}</button></div></div>';
     document.body.appendChild(tradeBg);
-    const PRICE_FAIR = 100;
+    // ── ECONOMY PEG ──────────────────────────────────────────────
+    // A DIRT bud's fair cash price = 70 × the live cash/silver rate,
+    // worth ~35 silver after the bank's 2× cash→silver buyback toll.
+    // A full 10-bud all-dirt harvest ≈ 350 silver-equivalent at fair
+    // price — and since junkie haggling typically lands ~85% of fair,
+    // a realistic all-dirt run nets ~300 silver vs the ~280 silver
+    // cost of plot rent (30) + a weed seed (250): investment back
+    // plus a little, exactly as intended. Rarer strains multiply from
+    // there (Pineapple 2.4×, Diesel 5×, Cosmic 12×, Unicorn 30×).
+    function PRICE_FAIR(){
+      const pps = (typeof window.paperPerSilver === 'function') ? window.paperPerSilver() : 50;
+      return Math.round(70 * pps);
+    }
     function rollMax(j){
       j._maxMult = 0.6 + Math.random() * 0.8;
       j._dealVibe = 0.85 + Math.random() * 0.30;
@@ -411,7 +423,7 @@
       }
     }
     function fairPriceFor(id){
-      return Math.round(PRICE_FAIR * strainMultiplier(id));
+      return Math.round(PRICE_FAIR() * strainMultiplier(id));
     }
 
     // Which strain the player is currently offering. Chosen via the picker.
@@ -430,7 +442,7 @@
       const slider = document.getElementById('junkSlider');
       const v = Number(slider.value);
       document.getElementById('junkAsk').textContent = String(v);
-      const fair = selectedStrain ? fairPriceFor(selectedStrain) : PRICE_FAIR;
+      const fair = selectedStrain ? fairPriceFor(selectedStrain) : PRICE_FAIR();
       const m = moodFor(v / fair);
       const moodEl = document.getElementById('junkMood');
       moodEl.textContent = m.txt;
@@ -445,12 +457,12 @@
     function refreshDeal(){
       const ITEMS_ = window.ITEMS || {};
       const id = selectedStrain;
-      const fair = id ? fairPriceFor(id) : PRICE_FAIR;
+      const fair = id ? fairPriceFor(id) : PRICE_FAIR();
       const slider = document.getElementById('junkSlider');
       const iconEl = document.getElementById('junkSelIcon');
       if(iconEl) iconEl.textContent = (id && ITEMS_[id] && ITEMS_[id].icon) || '\u{1F33F}';
       slider.min   = String(Math.max(1, Math.round(fair * 0.3)));
-      slider.max   = String(Math.max(fair * 4, PRICE_FAIR * 2));
+      slider.max   = String(Math.max(fair * 4, PRICE_FAIR() * 2));
       slider.step  = String(Math.max(1, Math.round(fair * 0.02)));
       slider.value = String(fair);
       const strainName = id && ITEMS_[id] ? ITEMS_[id].name : "weed";
@@ -520,6 +532,10 @@
         window.takeItem?.(sellId, 1);
         State.paper = (State.paper || 0) + ask;
         State.xp = (State.xp || 0) + 6 + Math.max(0, ask - fair);
+        // Weed skill: rarer strains teach you more (+ strain specialization)
+        window.fwSkillXp?.('weed',
+          Math.min(40, 8 + Math.round(strainMultiplier(sellId) * 1.1)),
+          sellId === 'weed' ? 'weed_dirt' : sellId);
         j.jointUntil = Date.now() + 10 * 60 * 1000;
         res.textContent = 'SOLD ' + ((ITEMS_[sellId] && ITEMS_[sellId].name) || 'weed') + '! +' + ask + ' \u{1F4B5}';
         res.classList.remove('lose'); res.classList.add('win');

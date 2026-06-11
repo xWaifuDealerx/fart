@@ -117,7 +117,7 @@
   restCss.textContent = `
 .fw-rest{position:fixed;inset:0;z-index:120;pointer-events:none;opacity:0;transition:opacity 1.1s ease;visibility:hidden}
 .fw-rest.show{opacity:1;visibility:visible}
-.fw-rest .vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%, transparent 32%, rgba(2,6,4,.78) 100%)}
+.fw-rest .vig{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 45%, transparent 52%, rgba(2,6,4,.48) 100%)}
 .fw-rest .card{position:absolute;left:50%;top:12%;transform:translateX(-50%);text-align:center;font-family:'Outfit','Inter',sans-serif;color:#e6ffee}
 .fw-rest .zzz{font-size:46px;line-height:1;margin-bottom:6px;display:inline-block;animation:fwZzz 3s ease-in-out infinite}
 @keyframes fwZzz{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-10px) rotate(5deg)}}

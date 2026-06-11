@@ -220,6 +220,7 @@
             if((State.inventory[id] || 0) <= 0) return;
             window.takeItem?.(id, 1);
             State.credits = (State.credits || 0) + price;
+            window.fwSkillXp?.('fart', 5);   // selling jars trains Farting
             window.floater?.('+' + price + ' 🥈 · sold 1 ' + (ITEMS[id]?.name || id), 'good');
             window.playPurchaseSound?.();
             window.saveState?.();

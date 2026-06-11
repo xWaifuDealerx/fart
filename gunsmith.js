@@ -792,6 +792,7 @@
         Spiders.splice(killedI, 1);
         State.spidersKilled = (State.spidersKilled || 0) + 1;
         State.credits = (State.credits || 0) + 10;
+        window.fwSkillXp?.('weapon', 10);
         window.floater?.("\u{1F578}\u{FE0F}\u{1F480} Spider down! +10 \u{1F948}", "good");
         window.saveState?.();
         window.updateHUD?.();
@@ -822,6 +823,7 @@
       if(killed > 0){
         State.spidersKilled = (State.spidersKilled || 0) + killed;
         State.credits = (State.credits || 0) + killed * 5;
+        window.fwSkillXp?.('fart', killed * 8);
         window.floater?.("\u{1F4A8}\u{1F578}\u{FE0F}\u{1F480} Fart wiped out " + killed + " spider" + (killed > 1 ? "s" : "") + "! +" + (killed * 5) + " \u{1F948}", "good");
         window.saveState?.();
         window.updateHUD?.();

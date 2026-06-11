@@ -66,6 +66,14 @@
 <script src="controls.js?v=1" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=1" defer></script>
+<!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
+<script src="skills.js?v=1" defer></script>
+<!-- Missions: Genesis (tutorial etc.) + limited-time Event missions -->
+<script src="missions.js?v=1" defer></script>
+<!-- Google sign-in + Phantom wallet linking -->
+<script src="auth.js?v=1" defer></script>
+<!-- Ambient sky traffic: airplane / airship / spaceship / hot air balloon -->
+<script src="skytraffic.js?v=1" defer></script>
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=6bp" defer></script>
 <script src="fartcup.js?v=6bp" defer></script>
@@ -3543,6 +3551,7 @@ const ITEMS = {
     isNFT:   false,
     growMs:  10 * 60 * 1000,   // 10 minutes — entry-level crop, fast turnaround
     harvest: "carrot",
+    harvestQty: 6,             // 6 carrots per harvest — keeps the Roki loop profitable
     marketPrice: 25,
   },
   carrot: {
@@ -4962,6 +4971,7 @@ function tryFart(){
   Player.farting = true;
   Player.fartTimer = 0.6 + power * 0.5;
   State.totalFarts++;
+  window.fwSkillXp?.('fart', 2 + Math.round(power * 4));
 
   spawnFartParticles(power, Player.zone === "danger");
   playFartSound(power, Player.zone === "danger");
@@ -9002,6 +9012,7 @@ function tryFeedCat(){
   if(!nearest) return;
   takeItem("cat_food", 1);
   State.xp += 35;
+  window.fwSkillXp?.('petting', 20);
   floater(`Fed ${nearest.name} 🐈 +35 XP`, "good");
   showBuyToast(`${nearest.name} loved it! +35 XP`);
   playPurchaseSound();
@@ -9147,6 +9158,7 @@ function completeMining(){
     State.xp += 4;
     floater(`Ore crumbled! ⛏ dull (${State.tools.pickaxe.durability}%) — sharpen at Tool Service`, "bad");
   }
+  window.fwSkillXp?.('mining', gotOre ? 14 : 5, ore.kind);   // per-ore specialization node
   const ctx = ensureAudio();
   if(ctx){
     const o = ctx.createOscillator();
@@ -9628,13 +9640,13 @@ function openPaySelector(label, priceSilver, onPay){
   // (printed at print stations — 50% chance of getting caught and
   // losing ALL Silver + Cash + Fake. Gold and on-chain $FARTPRINT
   // are untouchable by the bust).
+  // Whole numbers ONLY at the register — no decimal payments.
+  const costC = Math.round(priceSilver * paperPerSilver());
   document.getElementById('paySelSub').innerHTML =
-    `Price: <b>${priceSilver} 🥈 Silver</b> or <b>${priceSilver * paperPerSilver()} 💵 Cash</b>`;
+    `Price: <b>${priceSilver} 🥈 Silver</b> or <b>${costC.toLocaleString()} 💵 Cash</b>`;
   const rows = document.getElementById('paySelRows');
   const haveS = State.credits   || 0;
   const haveC = State.paper     || 0;
-  // Cash cost uses the current forward inflation rate (paperPerSilver())
-  const costC = priceSilver * paperPerSilver();
   const okS = haveS >= priceSilver;
   const okC = haveC >= costC;
   rows.innerHTML = `
@@ -10441,8 +10453,11 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
   // 4-decimal gold so fractional buys are precise. Spend the exact silver
   // the player typed; what they get in gold is the proportional amount.
   const gold = +((silver / rate).toFixed(4));
+  const _silverBefore = State.credits;
   State.credits -= silver;
   State.gold = +((State.gold || 0) + gold).toFixed(4);
+  // Missions hook (e.g. "Gold Rush": convert ALL silver in one transaction)
+  try { window.dispatchEvent(new CustomEvent('fw:goldConvert', { detail: { spent: silver, before: _silverBefore } })); } catch(_){}
   floater(`+${gold.toFixed(4)} 🥇 Gold · -${silver.toLocaleString()} 🥈`, "good");
   showBuyToast(`Spent ${silver.toLocaleString()} Silver → ${gold.toFixed(4)} Gold`);
   playPurchaseSound();
@@ -11268,6 +11283,29 @@ function fwShotBlockDist(origin, dir, maxDist, ignoreRoots){
 }
 window.fwShotBlockDist = fwShotBlockDist;
 
+// My own shot tracer — a brief bright line so YOUR bullets are visible
+// too (enemies' shots already render via their broadcasts / bot tracer).
+let _dmMyTracer = null, _dmMyTracerUntil = 0;
+function dmMyTracerShow(dir, color){
+  if(!_dmMyTracer){
+    const g = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]);
+    _dmMyTracer = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xffd64d, transparent: true, opacity: 0.9 }));
+    _dmMyTracer.frustumCulled = false;
+    scene.add(_dmMyTracer);
+  }
+  try { _dmMyTracer.material.color.setHex(color || 0xffd64d); } catch(_){}
+  const pos = _dmMyTracer.geometry.attributes.position;
+  // Muzzle: slightly below-right of the camera so it reads as "from my gun"
+  const ox = camera.position.x + dir.x * 0.8,
+        oy = camera.position.y - 0.25 + dir.y * 0.8,
+        oz = camera.position.z + dir.z * 0.8;
+  pos.setXYZ(0, ox, oy, oz);
+  pos.setXYZ(1, ox + dir.x * 60, oy + dir.y * 60, oz + dir.z * 60);
+  pos.needsUpdate = true;
+  _dmMyTracer.visible = true;
+  _dmMyTracerUntil = performance.now() + 60;
+}
+
 function dmFire(){
   if(Dm.phase !== "active") return;
   const now = performance.now() / 1000;
@@ -11289,6 +11327,8 @@ function dmFire(){
   } else {
     camera.getWorldDirection(forward);
   }
+  // Visible tracer for my own shot (weapon-coloured)
+  try { dmMyTracerShow(forward, w.color); } catch(_){}
   for(let i = 0; i < w.pellets; i++){
     const dir = forward.clone();
     if(w.spread > 0){
@@ -11455,6 +11495,7 @@ window.handleDmMessage = function(m){
       // Opponent reported their own death, attribute the kill to whoever shot them
       if(m.killer === Net.peerId && Dm.phase === "active"){
         Dm.myKills += 1;
+        window.fwSkillXp?.('weapon', 20);
         dmRefreshHud();
         dmAnnounce("KILL", true);
         if(Dm.myKills >= Dm.killGoal){
@@ -11502,6 +11543,7 @@ function dmEndMatch(winnerId){
   if(!wasBot){
     if(iWon){ State.elo += 20; } else { State.elo = Math.max(100, State.elo - 18); }
   }
+  if(iWon) window.fwSkillXp?.('weapon', 40);
   checkLevelUp();
   saveState(); updateHUD();
   dmAnnounce(iWon ? "VICTORY 🏆" : "DEFEAT 💀");
@@ -11895,6 +11937,7 @@ function dmBotTakeHit(dmg){
     DmBot.respawnAt = performance.now() + 1300;
     DmBot.mesh.visible = false;
     Dm.myKills += 1;
+    window.fwSkillXp?.('weapon', 15);
     dmRefreshHud();
     dmAnnounce("KILL", true);
     if(Dm.myKills >= Dm.killGoal){ dmEndMatch(Net.peerId); }
@@ -11925,6 +11968,9 @@ function dmBotTick(dt){
   const now = performance.now();
   if(_dmBotTracer && _dmBotTracer.visible && now > _dmBotTracerUntil){
     _dmBotTracer.visible = false;
+  }
+  if(_dmMyTracer && _dmMyTracer.visible && now > _dmMyTracerUntil){
+    _dmMyTracer.visible = false;
   }
   if(!Dm.isBot || !DmBot.active) return;
   if(Dm.phase !== "active") return;

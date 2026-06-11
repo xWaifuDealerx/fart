@@ -262,19 +262,8 @@
       }
     }, 1500);
 
-    // ── Referral card (top-left, under HUD) ──
-    const refCard = document.createElement('div');
-    refCard.className = 'fw-referral-card show';
-    refCard.innerHTML = '<div class="ttl">\u{1F517} Your Referral Code</div><div class="code" id="fwRefCode">' + myReferral + '</div><div class="copy-hint">Click to copy your invite link</div><div class="stat" id="fwRefStat">Streak: ' + streak + ' days</div>';
-    document.body.appendChild(refCard);
-    document.getElementById('fwRefCode').addEventListener('click', () => {
-      const link = window.location.origin + window.location.pathname + '?ref=' + myReferral;
-      navigator.clipboard?.writeText(link).then(() => {
-        window.floater?.('Link copied!', 'good');
-      }).catch(() => {
-        window.floater?.(link, 'good');
-      });
-    });
+    // (The old always-on referral card was removed — referral code +
+    // invite link live in the 🤝 Referrals panel instead.)
 
     // ── Leaderboard ──
     const lbBtn = document.createElement('button');

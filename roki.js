@@ -207,9 +207,13 @@
 
     let runTotal = 0;
     function premiumPrice(item){
-      const base = item.marketPrice || item.suggestedPrice || 6;
-      // Roki pays 5× the silver market price → premium in cash
-      return Math.max(20, Math.round(base * 5));
+      // Pegged to the LIVE cash↔silver rate so carrot farming stays
+      // genuinely profitable: Roki pays 24×pps cash per carrot, which
+      // is worth ~12 silver after the bank's 2× cash→silver buyback
+      // toll. A 6-carrot harvest ≈ 72 silver-equivalent vs the ~55
+      // silver cost of plot rent + a carrot seed.
+      const pps = (typeof window.paperPerSilver === 'function') ? window.paperPerSilver() : 50;
+      return Math.max(20, Math.round(24 * pps));
     }
     function carrotIds(){
       // Anything that's a "carrot" — by id or by name. Keeps it future-proof.

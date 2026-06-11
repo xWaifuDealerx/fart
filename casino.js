@@ -177,6 +177,7 @@
       spinBtn.disabled = true;
       clearWinGlow();
       addCash(-bet);
+      window.fwSkillXp?.('gamba', Math.max(1, Math.round(bet / 5)));
       window.updateHUD?.(); renderChips();
       setResult('Spinning…', '');
       const final = [pick(), pick(), pick()];

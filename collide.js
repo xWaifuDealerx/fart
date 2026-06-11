@@ -64,20 +64,43 @@
       return false;
     }
 
+    // Snapshot is CHUNKED (200 meshes per timeout slice) and uses the
+    // cached geometry bounding box instead of Box3.setFromObject —
+    // the old full-scene vertex scan froze the game for seconds every
+    // 20s (players blamed mining, which often coincided).
+    let _snapBusy = false;
     function snapshot(){
+      if(_snapBusy) return;
+      _snapBusy = true;
       const dyn = dynamicRoots();
       const walkable = new Set(window.WalkableSurfaces || []);
       const g = new Map();
       let n = 0;
-      scene.traverse(o => {
+      const list = [];
+      try { scene.traverse(o => { if(o.isMesh) list.push(o); }); } catch(_){}
+      let idx = 0;
+
+      function addBox(o){
         if(!o.isMesh || !o.visible) return;
         if(o.isPoints || o.isSprite || o.isLine) return;
         if(walkable.has(o)) return;                       // floors stay walkable
         const m = o.material;
-        if(m && m.transparent && typeof m.opacity === 'number' && m.opacity < 0.85) return;
+        if(m){
+          // Anything see-through or glowy is NOT a wall: zone light
+          // columns (ShaderMaterial), rings, holo domes, glass, foam…
+          if(m.isShaderMaterial) return;
+          if(m.transparent) return;
+          if(m.depthWrite === false) return;
+        }
         if(isExcluded(o, dyn)) return;
+        const geo = o.geometry;
+        if(!geo) return;
+        if(!geo.boundingBox){ try { geo.computeBoundingBox(); } catch(_){ return; } }
+        if(!geo.boundingBox) return;
         let bb;
-        try { bb = _box.setFromObject(o); } catch(_){ return; }
+        try {
+          bb = _box.copy(geo.boundingBox).applyMatrix4(o.matrixWorld);
+        } catch(_){ return; }
         if(!isFinite(bb.min.x) || !isFinite(bb.max.x)) return;
         const sx = bb.max.x - bb.min.x;
         const sz = bb.max.z - bb.min.z;
@@ -105,16 +128,27 @@
           }
         }
         n++;
-      });
-      grid = g;
-      boxCount = n;
-      console.log('[collide] snapshot: ' + n + ' solid boxes');
+      }
+
+      // Process 200 meshes per slice — never blocks a frame for long
+      function chunk(){
+        const end = Math.min(list.length, idx + 200);
+        for(; idx < end; idx++){
+          try { addBox(list[idx]); } catch(_){}
+        }
+        if(idx < list.length){ setTimeout(chunk, 0); return; }
+        grid = g;
+        boxCount = n;
+        _snapBusy = false;
+        console.log('[collide] snapshot: ' + n + ' solid boxes (' + list.length + ' meshes scanned)');
+      }
+      chunk();
     }
 
     // World keeps building for a while after boot — snapshot late, then
     // refresh periodically to pick up new structures.
     setTimeout(snapshot, 9000);
-    setInterval(snapshot, 20000);
+    setInterval(snapshot, 45000);
 
     function resolve(){
       if(Player.boat) return;                 // vessels manage their own position

@@ -40,6 +40,28 @@
       console.log('[tutorial] skipped — already completed/dismissed');
       return;
     }
+    // MISSIONS GATE — the tutorial is now the "Welcome to Fartprint"
+    // mission. Its top-right card only appears after the player STARTS
+    // that mission from the 📜 Missions panel (no more auto-showing).
+    let _missionStarted = false;
+    try {
+      const _m = JSON.parse(localStorage.getItem('fw.missions.v1') || '{}');
+      _missionStarted = !!(_m.started && _m.started.welcome);
+    } catch(_){}
+    if(!_missionStarted){
+      console.log('[tutorial] dormant — start "Welcome to Fartprint" in 📜 Missions');
+      // No page reload needed: missions.js calls this and the tutorial
+      // card boots on the spot.
+      window.fwStartTutorialNow = function(){
+        if(window._fwTutBooted) return;
+        State.tutStep = 0;
+        State.tutDismissed = false;
+        try { window.saveState?.(); } catch(_){}
+        init();   // gates pass now (mission flag was saved before this call)
+      };
+      return;
+    }
+    window._fwTutBooted = true;
     // ── State ──
     if(typeof State.tutStep !== "number") State.tutStep = 0;        // 0..5 (5 = complete)
     if(!State.tutFlags || typeof State.tutFlags !== "object") State.tutFlags = {};

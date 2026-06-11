@@ -63,7 +63,7 @@
         + '.casino-bg.show, #lbBg.show, .fw-set-bg.show, #login:not(.hidden), '
         + '#seedChBg.show, #paySelBg.show, #labBg.show, #millBg.show, #goldBg.show, '
         + '#swapBg.show, #bowlBg.show, #launderBg.show, #pfBg.show, #junkBg.show, #bankBg.show, '
-        + '.fw-rest.show'
+        + '.fw-rest.show, .cas-bg.show, .fw-msn-bg.show, .fw-skill-bg.show'
       )) return true;
       // Deathmatch waiting panel = a menu with buttons → release the mouse
       const dmw = document.getElementById('dmWaiting');
