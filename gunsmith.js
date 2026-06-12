@@ -245,6 +245,8 @@
             window.addItem('ammo_deagle', 6);
           }
           State.gunsmithUnlocked = true;
+          // Fresh guns come out of the box EQUIPPED — straight to hand
+          setTimeout(() => { try { window.fwEquipGun?.(true); } catch(_){} }, 50);
           window.floater?.("\u{1F52B} Desert Eagle acquired", "good");
           window.playPurchaseSound?.();
           window.saveState?.();
@@ -398,6 +400,25 @@
       return best && best.pen > 0 ? best : null;
     }
 
+    // Give a spider a roam target that heads AWAY from the nearest
+    // building (well past its flee radius) with a little random spread.
+    // Used when the player is unreachable so the spider leaves the wall
+    // instead of pacing back and forth against it.
+    function pickWander(s){
+      let zn = SAFE_ZONES[0], best = Infinity;
+      for(const z of SAFE_ZONES){
+        const dd = Math.hypot(z.x - s.x, z.z - s.z);
+        if(dd < best){ best = dd; zn = z; }
+      }
+      const ang = Math.atan2(s.z - zn.z, s.x - zn.x) + (Math.random() - 0.5) * 1.4;
+      const dist = (zn.r || 8) + 8 + Math.random() * 10;
+      let tx = s.x + Math.cos(ang) * dist;
+      let tz = s.z + Math.sin(ang) * dist;
+      const rr = Math.hypot(tx, tz);
+      if(rr > ISLAND_R - 3){ tx = tx / rr * (ISLAND_R - 3); tz = tz / rr * (ISLAND_R - 3); }
+      s._wander = { x: tx, z: tz };
+    }
+
     // Spider tick
     let lastT = performance.now();
     function tick(){
@@ -406,26 +427,43 @@
       for(let i = Spiders.length - 1; i >= 0; i--){
         const s = Spiders[i];
         if(s.dead) continue;
-        let dx = Player.pos.x - s.x;
-        let dz = Player.pos.z - s.z;
-        let d  = Math.hypot(dx, dz);
-        // If the spider has entered a safe-zone (hotel / apartment),
-        // it instantly reverses course and sprints away from the zone
-        // centre instead of chasing the player. The flee speed is a
-        // little higher than normal chase so it visibly bolts.
+        // Decide this spider's movement intent:
+        //   flee         → inside a building's flee radius: bolt straight out
+        //   playerHidden → player is asleep / in a panic room / on a boat:
+        //                  give up the chase and roam AWAY, so it doesn't
+        //                  pace back and forth against the wall
+        //   otherwise    → chase the player
         const flee = nearestSafeZone(s.x, s.z);
+        const playerHidden = !!window.fwSleeping || !!Player.boat
+          || !!nearestSafeZone(Player.pos.x, Player.pos.z);
+        let mvx, mvz, speed = SPIDER_SPEED;
         if(flee){
-          dx = s.x - flee.zn.x;
-          dz = s.z - flee.zn.z;
-          d  = Math.hypot(dx, dz);
+          mvx = s.x - flee.zn.x;
+          mvz = s.z - flee.zn.z;
+          speed = SPIDER_SPEED * 1.6;   // visibly bolt out of the zone
+          s._wander = null;             // re-roll a roam point once it's clear
+        } else if(playerHidden){
+          if(!s._wander) pickWander(s);
+          mvx = s._wander.x - s.x;
+          mvz = s._wander.z - s.z;
+          if(Math.hypot(mvx, mvz) < 2){ // reached the roam point — pick another
+            pickWander(s);
+            mvx = s._wander.x - s.x;
+            mvz = s._wander.z - s.z;
+          }
+          speed = SPIDER_SPEED * 0.8;   // a calm amble while you're safe
+        } else {
+          s._wander = null;
+          mvx = Player.pos.x - s.x;
+          mvz = Player.pos.z - s.z;
+          const dpd = Math.hypot(mvx, mvz);
+          speed = dpd < SPIDER_CONTACT_R ? 0 : SPIDER_SPEED;
         }
-        if(d > 0.0001){
-          s.yaw = Math.atan2(dx, dz);
-          const speed = flee
-            ? SPIDER_SPEED * 1.6
-            : (d < SPIDER_CONTACT_R ? 0 : SPIDER_SPEED);
-          s.x += (dx / d) * speed * dt;
-          s.z += (dz / d) * speed * dt;
+        const md = Math.hypot(mvx, mvz);
+        if(md > 0.0001 && speed > 0){
+          s.yaw = Math.atan2(mvx, mvz);
+          s.x += (mvx / md) * speed * dt;
+          s.z += (mvz / md) * speed * dt;
         }
         // clamp to island
         if(Math.hypot(s.x, s.z) >= ISLAND_R - 2){
@@ -443,8 +481,8 @@
         }
         // Contact knockback — use the real player-to-spider delta, not
         // the flee delta we may have swapped in above. Skip entirely
-        // while the spider is in a safe zone so the player can chill.
-        if(!flee && !window.fwSleeping && !Player.boat){
+        // while the spider is fleeing or the player is hidden/asleep.
+        if(!flee && !playerHidden){
           const pdx = Player.pos.x - s.x;
           const pdz = Player.pos.z - s.z;
           const pd  = Math.hypot(pdx, pdz);

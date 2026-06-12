@@ -596,10 +596,12 @@
       nearNpc = best;
       const popEl = document.getElementById('npcPop');
       if(!popEl) return;
-      if(best){
+      if(best && best.kind !== 'dock'){
+        // (Wave/dock excluded: the main module already shows the dock
+        // prompt there — both at once made a double popup.)
         const nameEl = document.getElementById('npcPopName');
         if(nameEl) nameEl.textContent = best.name || '';
-        const lines = { market: "Browse Carlos's stall", bank: "Visit Moneycaller", dock: "See Wave's boats", pawn: "Visit Gary's pawn shop" };
+        const lines = { market: "Browse Carlos's stall", bank: "Visit Moneycaller", pawn: "Visit Gary's pawn shop" };
         const lineEl = document.getElementById('npcPopLine');
         if(lineEl) lineEl.textContent = lines[best.kind] || "Talk";
         popEl.classList.add('show');

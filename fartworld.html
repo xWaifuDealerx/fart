@@ -40,7 +40,7 @@
 <script src="alexandre.js?v=8" defer></script>
 <script src="minimap.js?v=8" defer></script>
 <script src="compass.js?v=8" defer></script>
-<script src="weed-timer.js?v=8" defer></script>
+<script src="weed-timer.js?v=9" defer></script>
 <script src="weed-reveal.js?v=8" defer></script>
 <script src="nature.js?v=8" defer></script>
 <script src="ui-polish.js?v=8" defer></script>
@@ -52,18 +52,18 @@
 <script src="moon.js?v=8" defer></script>
 <script src="social.js?v=8" defer></script>
 <script src="mobile.js?v=8" defer></script>
-<script src="dropitem.js?v=8" defer></script>
+<script src="dropitem.js?v=16" defer></script>
 <script src="establishments.js?v=8" defer></script>
 <script src="streetlights.js?v=8" defer></script>
-<script src="bike.js?v=8" defer></script>
+<script src="bike.js?v=9" defer></script>
 <script src="datacenter.js?v=8" defer></script>
 <script src="storage.js?v=8" defer></script>
-<script src="casino.js?v=8" defer></script>
+<script src="casino.js?v=9" defer></script>
 <!-- Visual & performance upgrade pack: rest screen, popup restyle,
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
-<script src="controls.js?v=8" defer></script>
+<script src="controls.js?v=11" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
@@ -77,9 +77,9 @@
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=8" defer></script>
+<script src="gunsmith.js?v=9" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
-<script src="extras-v6ba.js?v=8" defer></script>
+<script src="extras-v6ba.js?v=9" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
 <script src="extras-v6bd.js?v=8" defer></script>
 <script src="extras-v6be.js?v=8" defer></script>
@@ -2830,9 +2830,8 @@
   <div class="dm-waiting" id="dmWaiting" style="display:none;">
     <h2>⚔ DEATHMATCH ARENA</h2>
     <p><span class="dot"></span><span id="dmWaitingMsg">Waiting for an opponent to step in…</span></p>
-    <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins — once the fight starts, the <b>WHOLE ISLAND</b> is the battleground. Bring a weapon 🔫. Step outside the ring before the countdown ends to leave.</p>
-    <button id="dmBotBtn" style="background:rgba(255,90,77,0.16); border:1px solid rgba(255,122,110,0.6); color:#ff7a6e; margin-right:8px;">🤖 Fight a Bot · 1v1</button>
-    <button id="dmLeaveBtn">Leave arena</button>
+    <p style="font-size:11px; color:rgba(230,255,238,0.42); margin-top:4px;">First to <b>10 kills</b> wins — once the fight starts, the <b>WHOLE ISLAND</b> is the battleground. <span style="white-space:nowrap;">Bring a weapon 🔫.</span> Step outside the ring before the countdown ends to leave.</p>
+    <button id="dmBotBtn" style="background:rgba(255,90,77,0.16); border:1px solid rgba(255,122,110,0.6); color:#ff7a6e;">🤖 Fight a Bot · 1v1</button>
   </div>
 </div>
 
@@ -2959,8 +2958,12 @@
 <div class="launder-bg" id="launderBg">
   <div class="launder-card">
     <h2>🕵 LAUNDERING ROOM</h2>
-    <p>You found the back office. Exchange fake bills for clean Cash at the criminal rate: <b>1 🪙 Fake → 0.3 💵 Cash</b>. Cuts your wad in two-thirds but it's spendable real money.</p>
+    <p>You found the back office. Wash dirty fakes into clean Cash, or buy a stack of fakes to spread around — criminal rates: <b>1 🪙 Fake → 0.5 💵 Cash</b> · <b>1 💵 Cash → 2 🪙 Fake</b>.</p>
     <p style="margin-top:8px;">Holding <b id="launderFakeQty">0</b> fake bills · <b id="launderSilverQty">0</b> 💵 Cash</p>
+    <div class="row" style="gap:6px;">
+      <button class="ghost" id="launderDirF2C" style="flex:1;">🪙 Fake → 💵 Cash</button>
+      <button class="ghost" id="launderDirC2F" style="flex:1;">💵 Cash → 🪙 Fake</button>
+    </div>
     <div class="row">
       <input id="launderInput" type="number" min="1" placeholder="fake bills"/>
       <span class="preview" id="launderPreview" style="font-family:'JetBrains Mono',monospace;font-size:11.5px;color:rgba(230,255,238,0.65);">→ 0 💵</span>
@@ -3710,11 +3713,14 @@ const scene    = new THREE.Scene();
 // swallows clicks on the Connect Phantom / Play as guest buttons.
 window.scene = scene;
 scene.background = new THREE.Color(0x0a1408);
-// Fog far pushed out so much more of the dark-blue ocean is visible around
-// the island before it fades to the horizon (was 220).
-scene.fog = new THREE.Fog(0x0a1408, 90, 420);
+// The dark-blue ocean fades into the SKY colour (see tickDayNight) so
+// sea and sky meet seamlessly at the horizon — the ocean reads as
+// endless. Fog far is pushed out so roughly twice as much open water is
+// visible before the haze; it's still a SINGLE water plane, so there's
+// no z-fighting / flicker.
+scene.fog = new THREE.Fog(0x0a1408, 140, 1200);
 
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 600);
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 1500);
 camera.position.set(0, 6, 12);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: "high-performance", preserveDrawingBuffer: true });
@@ -4856,8 +4862,17 @@ function buildOreDeposit(x, z, kind){
     lump.receiveShadow = true;
     grp.add(lump);
   }
-  // Tiny blue sparkle to telegraph "interactable"
-  const spark = new THREE.PointLight(0x9bb3ff, 0.55, 6);
+  // Tiny blue sparkle to telegraph "interactable".
+  // IMPORTANT: this must NOT be a real light. A per-deposit PointLight
+  // changes the scene's light count every time a deposit is mined
+  // (removed) or respawns (added), and THREE.js recompiles EVERY
+  // material's shader synchronously when the light count changes — that
+  // was the multi-second freeze right after finishing an ore. An
+  // unlit emissive mesh gives the same glow with zero lighting cost.
+  const spark = new THREE.Mesh(
+    new THREE.SphereGeometry(0.13, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0x9bb3ff, transparent: true, opacity: 0.9 })
+  );
   spark.position.y = 1.4;
   grp.add(spark);
   grp.position.set(x, groundHeightAt(x, z), z);
@@ -5599,8 +5614,20 @@ let mouseDown = false;
 let lastX = 0, lastY = 0;
 canvas.addEventListener('mousedown', (e) => { if(e.button !== 0) return; mouseDown = true; lastX = e.clientX; lastY = e.clientY; });
 window.addEventListener('mouseup', () => { mouseDown = false; });
+// mouseup can be SWALLOWED (native drag&drop, pointer-lock changes,
+// releasing outside the window) which left mouseDown stuck on true —
+// after that EVERY mouse move rotated the camera, even over the
+// inventory ("it drags me around the world behind my inventory").
+window.addEventListener('dragstart', () => { mouseDown = false; });
+window.addEventListener('blur', () => { mouseDown = false; });
+document.addEventListener('pointerlockchange', () => { mouseDown = false; });
 window.addEventListener('mousemove', (e) => {
   if(!mouseDown) return;
+  // Live button check — the definitive stuck-flag guard. e.buttons
+  // reports the REAL current state; if LMB isn't held, stop.
+  if((e.buttons & 1) === 0){ mouseDown = false; return; }
+  // Never rotate while a UI panel owns the screen.
+  if(document.getElementById('invBg')?.classList.contains('show')){ mouseDown = false; return; }
   const dx = e.clientX - lastX;
   const dy = e.clientY - lastY;
   lastX = e.clientX; lastY = e.clientY;
@@ -6980,10 +7007,11 @@ buildRefinery();
 // doesn't blow out in the post pass.
 const Water = { mesh: null, time: 0 };
 function buildWater(){
-  // Bigger sea so float-equipped craft (Sea Plane) have a long open
-  // runway in any direction before hitting the visible horizon. 1400m
-  // square keeps the player ~700m from the water edge at any angle.
-  const size = 1400;
+  // Big sea so the dark-blue water reaches far past the fog horizon in
+  // every direction — the edge is always beyond the fog, so it never
+  // visibly "stops". ~2800m square = ~1400m from the player to the edge
+  // along any axis (twice the old reach, especially toward the corners).
+  const size = 2800;
   const segs = 128;
   const geo = new THREE.PlaneGeometry(size, size, segs, segs);
   geo.rotateX(-Math.PI / 2);
@@ -7014,10 +7042,13 @@ function tickWater(dt){
   for(let i = 0; i < pos.count; i++){
     const x = base[i * 3];
     const z = base[i * 3 + 2];
+    // Lower spatial frequencies (longer wavelengths) so the ripple
+    // stays well-sampled on the larger plane — undersampled waves would
+    // crawl/shimmer. Same animation speed, gentler ocean swell.
     const y =
-      Math.sin(x * 0.18 + t * 1.4) * 0.12 +
-      Math.cos(z * 0.22 + t * 1.7) * 0.08 +
-      Math.sin((x + z) * 0.11 + t * 0.9) * 0.06;
+      Math.sin(x * 0.09 + t * 1.4) * 0.12 +
+      Math.cos(z * 0.11 + t * 1.7) * 0.08 +
+      Math.sin((x + z) * 0.055 + t * 0.9) * 0.06;
     pos.setY(i, y);
   }
   pos.needsUpdate = true;
@@ -7093,7 +7124,11 @@ function tickDayNight(dt){
     skyC = SKY_NIGHT; fogC = FOG_NIGHT;
   }
   scene.background = skyC.clone();
-  if(scene.fog) scene.fog.color.copy(fogC);
+  // Fog fades to the SKY colour (not a separate fog tint) so the distant
+  // ocean melts into the sky at the horizon with no visible seam — the
+  // key to the sea looking endless. Blend mostly toward sky, keeping a
+  // hint of the fog tint for atmosphere.
+  if(scene.fog) scene.fog.color.copy(fogC).lerp(skyC, 0.75);
   // Stars fade in at night
   if(Sky.starsMesh){
     Sky.starsMesh.material.opacity = Math.max(0, 1 - Math.max(0, sunY) * 2.4) * 0.75;
@@ -8282,7 +8317,8 @@ buildBank();
 // with a 5m radius that comfortably covers the 9×9 footprint.
 const LAUNDER_POS = { x: HOUSE_POS.x, z: HOUSE_POS.z };
 const LAUNDER_RADIUS  = 5.0;
-const LAUNDER_RATE    = 0.3;          // 1 fake → 0.3 paper (clean cash)
+const LAUNDER_RATE    = 0.5;          // 1 fake → 0.5 clean Cash (improved from 0.3)
+const CASH_TO_FAKE_RATE = 2;          // 1 clean Cash → 2 fake bills (reverse trade)
 
 // Hover detection — raycast against any cat mesh on mousemove and
 // show a CSS tooltip with the cat's name positioned at the cursor.
@@ -10585,33 +10621,67 @@ document.getElementById('bankVaultCashWd')?.addEventListener('click', () => {
 });
 
 // ── Launder modal ──
+// 'f2c' = fake bills → clean Cash · 'c2f' = clean Cash → fake bills
+let launderDir = 'f2c';
+function launderRefreshUI(){
+  const f2c = launderDir === 'f2c';
+  const bF = document.getElementById('launderDirF2C');
+  const bC = document.getElementById('launderDirC2F');
+  // Highlight the active direction
+  bF.style.borderColor = f2c ? '#5ff09c' : '';
+  bF.style.color       = f2c ? '#5ff09c' : '';
+  bC.style.borderColor = f2c ? '' : '#5ff09c';
+  bC.style.color       = f2c ? '' : '#5ff09c';
+  const inp = document.getElementById('launderInput');
+  inp.placeholder = f2c ? 'fake bills 🪙' : 'cash 💵';
+  document.getElementById('launderGo').textContent = f2c ? 'Launder it' : 'Buy fakes';
+  launderUpdatePreview();
+}
+function launderUpdatePreview(){
+  const n = Math.max(0, Math.floor(Number(document.getElementById('launderInput').value) || 0));
+  if(launderDir === 'f2c'){
+    document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * LAUNDER_RATE)} 💵`;
+  } else {
+    document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * CASH_TO_FAKE_RATE)} 🪙`;
+  }
+}
 function openLaunder(){
   document.getElementById('launderBg').classList.add('show');
   document.getElementById('launderFakeQty').textContent = State.fakeMoney || 0;
-  // Label shows current Paper holdings now (was Silver) — laundering pays
-  // in clean cash, since fake bills exchange to real bills, not coins.
   document.getElementById('launderSilverQty').textContent = State.paper || 0;
   document.getElementById('launderInput').value = "";
-  document.getElementById('launderPreview').textContent = "→ 0 💵";
+  launderRefreshUI();
 }
 function closeLaunder(){ document.getElementById('launderBg').classList.remove('show'); }
 document.getElementById('launderClose').addEventListener('click', closeLaunder);
 document.getElementById('launderBg').addEventListener('click', (e) => {
   if(e.target.id === "launderBg") closeLaunder();
 });
-document.getElementById('launderInput').addEventListener('input', (e) => {
-  const n = Math.max(0, Math.floor(Number(e.target.value) || 0));
-  document.getElementById('launderPreview').textContent = `→ ${Math.floor(n * LAUNDER_RATE)} 💵`;
+document.getElementById('launderDirF2C').addEventListener('click', () => {
+  launderDir = 'f2c'; document.getElementById('launderInput').value = ''; launderRefreshUI();
 });
+document.getElementById('launderDirC2F').addEventListener('click', () => {
+  launderDir = 'c2f'; document.getElementById('launderInput').value = ''; launderRefreshUI();
+});
+document.getElementById('launderInput').addEventListener('input', launderUpdatePreview);
 document.getElementById('launderGo').addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('launderInput').value) || 0));
-  if(n <= 0){ floater("Enter a fake-bill amount", "bad"); return; }
-  if((State.fakeMoney || 0) < n){ floater("Not enough fake bills", "bad"); return; }
-  const cash = Math.floor(n * LAUNDER_RATE);
-  State.fakeMoney -= n;
-  State.paper = (State.paper || 0) + cash;
-  floater(`Laundered ${n} 🪙 → +${cash} 💵 Cash`, "good");
-  showBuyToast(`Laundered ${n} fake → ${cash} Cash`);
+  if(n <= 0){ floater("Enter an amount", "bad"); return; }
+  if(launderDir === 'f2c'){
+    if((State.fakeMoney || 0) < n){ floater("Not enough fake bills", "bad"); return; }
+    const cash = Math.floor(n * LAUNDER_RATE);
+    State.fakeMoney -= n;
+    State.paper = (State.paper || 0) + cash;
+    floater(`Laundered ${n} 🪙 → +${cash} 💵 Cash`, "good");
+    showBuyToast(`Laundered ${n} fake → ${cash} Cash`);
+  } else {
+    if((State.paper || 0) < n){ floater("Not enough Cash", "bad"); return; }
+    const fake = Math.floor(n * CASH_TO_FAKE_RATE);
+    State.paper -= n;
+    State.fakeMoney = (State.fakeMoney || 0) + fake;
+    floater(`Bought ${fake} 🪙 fake bills for ${n} 💵`, "good");
+    showBuyToast(`${n} Cash → ${fake} fake bills`);
+  }
   playPurchaseSound();
   saveState(); updateHUD(); openLaunder();
 });
@@ -11221,7 +11291,7 @@ function dmLeave(){
   dmBotCleanup();
   dmHideOverlay();
 }
-document.getElementById('dmLeaveBtn').addEventListener('click', dmLeave);
+document.getElementById('dmLeaveBtn')?.addEventListener('click', dmLeave);   // button removed — walk out of the ring to leave
 
 function dmBroadcastJoin(){
   if(Net.mode === "solo" || !Net.topicChat) return;

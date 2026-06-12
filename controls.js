@@ -106,6 +106,11 @@
       }
       const sens = (aiming ? 0.0011 : 0.0023);
       const mx = e.movementX || 0, my = e.movementY || 0;
+      // Ignore absurd jumps. When pointer lock (re)engages or the tab
+      // regains focus, browsers occasionally emit one giant movementX/Y,
+      // which snapped the camera ("skipped back to where I started").
+      // Real mouse motion is never this large in a single event.
+      if(Math.abs(mx) > 180 || Math.abs(my) > 180) return;
       const fps = Cam.curDistance < FPS_AT;
       if(fps){
         // FPS: static centre aim, camera rotates directly
@@ -114,24 +119,20 @@
         Cam.yaw -= mx * sens;
         Cam.pitch = THREE.MathUtils.clamp(Cam.pitch + my * sens, -1.10, 1.25);
       } else {
-        // Third person: dynamic cursor + gentle camera follow
+        // Third person: DYNAMIC aim cursor — the gun aims wherever the
+        // cursor is (FWAim), so you can aim off-centre. The camera eases
+        // toward where you're pointing, smoothly stronger as the cursor
+        // nears the screen edge. The old version used a hard centre
+        // dead-zone whose edge made the turn speed JUMP suddenly; this
+        // ramps continuously so there's no abrupt "acceleration", while
+        // keeping the dynamic aim. (First-person stays centred/static.)
         vAim.x = Math.max(0, Math.min(window.innerWidth,  vAim.x + mx));
         vAim.y = Math.max(0, Math.min(window.innerHeight, vAim.y + my));
-        Cam.yaw -= mx * sens * 0.45;
-        Cam.pitch = THREE.MathUtils.clamp(Cam.pitch + my * sens * 0.45, 0.05, 0.90);
-        // Pushing past the inner zone turns the camera fully and the
-        // cursor rides the zone edge
-        const zx = window.innerWidth * 0.30, zy = window.innerHeight * 0.26;
-        const cx = window.innerWidth / 2,  cy = window.innerHeight / 2;
-        const ox = vAim.x - cx, oy = vAim.y - cy;
-        if(Math.abs(ox) > zx){
-          Cam.yaw -= (ox - Math.sign(ox) * zx) * sens;
-          vAim.x = cx + Math.sign(ox) * zx;
-        }
-        if(Math.abs(oy) > zy){
-          Cam.pitch = THREE.MathUtils.clamp(Cam.pitch + (oy - Math.sign(oy) * zy) * sens, 0.05, 0.90);
-          vAim.y = cy + Math.sign(oy) * zy;
-        }
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+        const fx = (vAim.x - cx) / cx;   // -1 (left) .. 1 (right)
+        const fy = (vAim.y - cy) / cy;   // -1 (up)   .. 1 (down)
+        Cam.yaw   -= mx * sens * (0.45 + Math.abs(fx) * 0.9);
+        Cam.pitch = THREE.MathUtils.clamp(Cam.pitch + my * sens * (0.45 + Math.abs(fy) * 0.9), 0.05, 0.90);
       }
     });
 

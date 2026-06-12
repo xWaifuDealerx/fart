@@ -174,14 +174,21 @@
       // Vehicles + hotel sleep = unreachable: spiders never bite.
       const safe = playerInSafeZone() || !!Player.boat || !!window.fwSleeping;
       for(const s of Spiders){
-        if(!s || s.dead) continue;
+        if(!s || s.dead){ continue; }
         const d = Math.hypot(s.x - Player.pos.x, s.z - Player.pos.z);
-        if(d < 1.4 && !s._lastBite){
-          s._lastBite = performance.now();
-        }
-        if(s._lastBite && performance.now() - s._lastBite > 1500){
-          s._lastBite = performance.now();
-          if(!safe) bit = true;
+        if(d < 1.4){
+          // Spider is actually ON the player. Arm on first contact, then
+          // bite at most once every 1.5s WHILE it stays in range.
+          if(!s._lastBite){
+            s._lastBite = performance.now();
+          } else if(performance.now() - s._lastBite > 1500){
+            s._lastBite = performance.now();
+            if(!safe) bit = true;
+          }
+        } else {
+          // Out of range — disarm. Without this a spider that touched you
+          // once kept "biting" from anywhere on the map (phantom damage).
+          s._lastBite = 0;
         }
       }
       if(bit) window.damagePlayer(8, '🕷️ spider bite');

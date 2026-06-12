@@ -108,6 +108,18 @@
         return;
       }
       panel.classList.add('show');
+      // Sit directly BELOW the chat window so the two never overlap,
+      // however many crops are listed. Re-measured each tick so it
+      // tracks the chat being collapsed/expanded or the window resized.
+      let topPx = 200;
+      const chat = document.getElementById('chatPanel');
+      if(chat && chat.style.display !== 'none'){
+        const r = chat.getBoundingClientRect();
+        if(r.height > 0) topPx = r.bottom + 12;
+      }
+      panel.style.top = topPx + 'px';
+      panel.style.maxHeight = 'calc(100vh - ' + (topPx + 24) + 'px)';
+      panel.style.overflowY = 'auto';
       const lines = [];
       // Sort: ready first, then closest
       function resolveGrowMs(crop){

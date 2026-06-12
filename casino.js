@@ -105,8 +105,8 @@
     // ── Slot modal ──
     const SYMBOLS = ['💩', '🚽', '🧻'];
     const PAYOUT  = { '💩': 5, '🚽': 8, '🧻': 12 };   // multiplier for 3-of-a-kind
-    const CHIPS   = [10, 50, 100];
-    let bet = 10;
+    const CHIPS   = [100, 500, 1000, 5000, 10000];
+    let bet = 100;
     let spinning = false;
 
     // Extra styles for the 3-game casino (tabs, coin, roulette wheel)
@@ -163,7 +163,7 @@
       + '  </div>'
       + '  <div class="cas-result" id="casResult">Place your bet!</div>'
       + '  <div class="cas-row"><span>Your 💵 Cash</span><b id="casCash">0</b></div>'
-      + '  <div class="cas-row"><span>Bet (💵)</span><b id="casBet">10</b></div>'
+      + '  <div class="cas-row"><span>Bet (💵)</span><b id="casBet">100</b></div>'
       + '  <div class="cas-chips" id="casChips"></div>'
       + '  <div class="cas-btns"><button class="cas-btn close" id="casClose">Leave</button><button class="cas-btn spin" id="casSpin">Spin</button></div>'
       + '</div>';
@@ -203,7 +203,7 @@
     function clearWinGlow(){ R.forEach(el => el.classList.remove('win')); }
 
     function open(){
-      bet = Math.min(bet || 10, cash()) || (cash() >= 10 ? 10 : cash());
+      bet = Math.min(bet || 100, cash()) || (cash() >= 100 ? 100 : cash());
       clearWinGlow();
       setResult('Place your bet and spin!', '');
       renderChips();

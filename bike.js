@@ -164,6 +164,24 @@
       window.saveState?.();
     }
 
+    // ── Public: park a REAL rideable bike at a world position ──
+    // Used when the player drops a bike from their inventory to the
+    // vicinity. Instead of a generic ground pickup, this places the
+    // same mountable bike the proximity "press B to ride" logic uses,
+    // so a dropped bike is immediately usable (just like Gary's).
+    window.fwParkBikeAt = function(x, z, yaw){
+      try {
+        if(bike){ scene.remove(bike); bike = null; }   // one parked bike at a time
+        const m = buildBikeMesh();
+        const gy = (typeof groundHeightAt === "function") ? groundHeightAt(x, z) : 0;
+        m.position.set(x, (gy || 0) + 0.05, z);
+        m.rotation.y = (yaw || 0);
+        scene.add(m);
+        bike = m;
+        return m;
+      } catch(e){ console.error('[bike] fwParkBikeAt failed', e); return null; }
+    };
+
     // ── Build the held bike that follows the player while mounted ──
     let heldBike = null;
     function tickRide(){
