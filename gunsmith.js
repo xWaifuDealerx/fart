@@ -70,6 +70,111 @@
       };
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // WEAPONS — AK-47 (assault) & M40 (sniper) + magazines / reload.
+    // Each weapon draws from its own ammo type and has a magazine that
+    // must be reloaded (R) from your reserve ammo. Switch with 1/2/3.
+    // ─────────────────────────────────────────────────────────────
+    if(!ITEMS.ak47){ ITEMS.ak47 = { id:'ak47', name:'AK-47', icon:'\u{1F52B}', color:'#6a5a3a', type:'weapon', isNFT:false, marketPrice:2000, suggestedPrice:1800 }; }
+    if(!ITEMS.m40){ ITEMS.m40 = { id:'m40', name:'M40 Sniper', icon:'\u{1F3AF}', color:'#3a4a3a', type:'weapon', isNFT:false, marketPrice:3500, suggestedPrice:3200 }; }
+    if(!ITEMS.ammo_ak){ ITEMS.ammo_ak = { id:'ammo_ak', name:'7.62 Ammo (30)', icon:'\u{1F4A5}', color:'#9a7a4a', type:'ammo', isNFT:false, marketPrice:90, suggestedPrice:80, stackBundle:30 }; }
+    if(!ITEMS.ammo_m40){ ITEMS.ammo_m40 = { id:'ammo_m40', name:'.308 Ammo (10)', icon:'\u{1F4A5}', color:'#7a8a6a', type:'ammo', isNFT:false, marketPrice:150, suggestedPrice:130, stackBundle:10 }; }
+
+    const WEAPONS = {
+      deagle: { id:'deagle', name:'Desert Eagle .50AE', ammoId:'ammo_deagle', mag:7,  price:500,  ammoPrice:50,  ammoQty:12, icon:'\u{1F52B}', scope:false, auto:false, rof:0,   recoil:0.012, desc:'Hand cannon · one-shot kill' },
+      ak47:   { id:'ak47',   name:'AK-47',              ammoId:'ammo_ak',     mag:30, price:2000, ammoPrice:90,  ammoQty:30, icon:'\u{1F52B}', scope:false, auto:true,  rof:95,  recoil:0.017, desc:'Assault rifle · full-auto · hold to spray' },
+      m40:    { id:'m40',    name:'M40 Sniper',         ammoId:'ammo_m40',    mag:5,  price:3500, ammoPrice:150, ammoQty:10, icon:'\u{1F3AF}', scope:true,  auto:false, rof:0,   recoil:0.034, desc:'Sniper · scope when you aim (FPS)' },
+    };
+    const WORDER = ['deagle', 'ak47', 'm40'];
+    const MAGKEY = 'fw.weap.v1';
+    let MAG = { deagle:0, ak47:0, m40:0 };
+    let ACTIVE = 'deagle';
+    try { const o = JSON.parse(localStorage.getItem(MAGKEY)); if(o){ if(o.mag) MAG = Object.assign(MAG, o.mag); if(o.active) ACTIVE = o.active; } } catch(_){}
+    function saveMag(){ try { localStorage.setItem(MAGKEY, JSON.stringify({ mag: MAG, active: ACTIVE })); } catch(_){} }
+    function owned(id){ return (State.inventory?.[id] || 0) > 0; }
+    function reserve(id){ const w = WEAPONS[id]; return w ? (State.inventory?.[w.ammoId] || 0) : 0; }
+    function anyWeapon(){ return WORDER.some(owned); }
+    function ensureActive(){ if(!owned(ACTIVE)){ ACTIVE = WORDER.find(owned) || 'deagle'; saveMag(); } }
+    window.fwActiveWeapon = () => ACTIVE;
+    window.fwHasActiveWeapon = () => owned(ACTIVE);
+    window.fwAnyWeapon = anyWeapon;
+
+    function reloadSound(){
+      const ctx = getCtx(); if(!ctx) return; const now = ctx.currentTime;
+      for(const [t, f] of [[0, 1500], [0.12, 850], [0.24, 1900]]){
+        const o = ctx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(f, now + t);
+        const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, now + t); g.gain.linearRampToValueAtTime(0.1, now + t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.08);
+        o.connect(g).connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.1);
+      }
+    }
+    function reload(){
+      ensureActive();
+      const w = WEAPONS[ACTIVE]; if(!w || !owned(ACTIVE)) return;
+      const need = w.mag - (MAG[ACTIVE] || 0);
+      if(need <= 0){ window.floater?.('Magazine full', 'bad'); return; }
+      const have = reserve(ACTIVE);
+      if(have <= 0){ window.floater?.('No ' + (ITEMS[w.ammoId]?.name || 'ammo') + ' — buy some at the Gunsmith', 'bad'); return; }
+      const take = Math.min(need, have);
+      window.takeItem?.(w.ammoId, take);
+      MAG[ACTIVE] = (MAG[ACTIVE] || 0) + take;
+      saveMag(); reloadSound(); updateAmmoHud();
+      window.floater?.('\u{1F504} Reloaded — ' + MAG[ACTIVE] + '/' + w.mag, 'good');
+      window.saveState?.(); window.updateHUD?.();
+    }
+    function switchWeapon(id){
+      if(!owned(id)){ window.floater?.("You don't own that weapon", 'bad'); return; }
+      ACTIVE = id; saveMag();
+      if(id === 'deagle'){ try { window.fwEquipGun?.(true); } catch(_){} }
+      else { window.fwGunHolstered = false; }
+      updateAmmoHud();
+      window.floater?.(WEAPONS[id].icon + ' ' + WEAPONS[id].name + ' equipped', 'good');
+    }
+    window.fwSwitchWeapon = switchWeapon;
+    window.addEventListener('keydown', (e) => {
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      if(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')) return;
+      if(e.code === 'KeyR'){ reload(); }
+      else if((e.code === 'Digit1' || e.code === 'Numpad1') && owned('deagle')){ switchWeapon('deagle'); }
+      else if((e.code === 'Digit2' || e.code === 'Numpad2') && owned('ak47')){ switchWeapon('ak47'); }
+      else if((e.code === 'Digit3' || e.code === 'Numpad3') && owned('m40')){ switchWeapon('m40'); }
+    });
+
+    // ── Ammo HUD ──
+    const ammoCss = document.createElement('style');
+    ammoCss.textContent = "#fwAmmoHud{position:fixed;right:262px;bottom:18px;z-index:46;display:none;background:rgba(8,18,11,.82);border:1px solid rgba(255,206,74,.4);border-radius:12px;padding:8px 13px;color:#fff1c2;font-family:'Outfit','Inter',sans-serif;text-align:right;box-shadow:0 6px 16px rgba(0,0,0,.4)}#fwAmmoHud .wn{font-size:11px;color:#ffce4a;font-weight:700}#fwAmmoHud .am{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:800}#fwAmmoHud .am b{color:#fff}#fwAmmoHud .am span{font-size:10px;color:rgba(230,255,238,.55)}#fwAmmoHud .hint{font-size:9px;color:rgba(230,255,238,.4);margin-top:2px}";
+    document.head.appendChild(ammoCss);
+    const ammoHud = document.createElement('div'); ammoHud.id = 'fwAmmoHud'; document.body.appendChild(ammoHud);
+    function updateAmmoHud(){
+      ensureActive();
+      const drawn = owned(ACTIVE) && !window.fwGunHolstered && !window.fwSleeping && !(window.Player && window.Player.boat) && !(window.Dm && window.Dm.phase === 'active');
+      if(!anyWeapon() || !drawn){ ammoHud.style.display = 'none'; return; }
+      const w = WEAPONS[ACTIVE];
+      ammoHud.style.display = 'block';
+      ammoHud.innerHTML = '<div class="wn">' + w.icon + ' ' + w.name + '</div>'
+        + '<div class="am"><b>' + (MAG[ACTIVE] || 0) + '</b>/' + w.mag + ' <span>· ' + reserve(ACTIVE) + ' left</span></div>'
+        + '<div class="hint">R reload · 1/2/3 switch</div>';
+    }
+    setInterval(updateAmmoHud, 400);
+
+    // ── M40 sniper scope (shown when you aim down sights in FPS mode) ──
+    const scopeCss = document.createElement('style');
+    scopeCss.textContent = "#fwScope{position:fixed;inset:0;z-index:90;display:none;pointer-events:none;background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 35vh, rgba(0,0,0,.5) 35vh 37vh, rgba(0,0,0,.98) 40vh)}#fwScope .ring{position:absolute;left:50%;top:50%;width:74vh;height:74vh;transform:translate(-50%,-50%);border:3px solid rgba(0,0,0,.9);border-radius:50%;box-shadow:inset 0 0 0 2px rgba(70,70,70,.5)}#fwScope .v{position:absolute;left:50%;top:50%;width:1px;height:74vh;transform:translate(-50%,-50%);background:rgba(15,15,15,.85)}#fwScope .h{position:absolute;left:50%;top:50%;height:1px;width:74vh;transform:translate(-50%,-50%);background:rgba(15,15,15,.85)}#fwScope .dot{position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;background:#ff2a2a;transform:translate(-50%,-50%);box-shadow:0 0 5px rgba(255,42,42,.9)}";
+    document.head.appendChild(scopeCss);
+    const scope = document.createElement('div'); scope.id = 'fwScope';
+    scope.innerHTML = '<div class="ring"></div><div class="v"></div><div class="h"></div><div class="dot"></div>';
+    document.body.appendChild(scope);
+    function scopedNow(){
+      const fps = window.Cam && typeof window.Cam.curDistance === 'number' && window.Cam.curDistance < 2.1;
+      return ACTIVE === 'm40' && owned('m40') && !!window.fwAiming && fps && !window.fwGunHolstered && !window.fwSleeping && !(window.Player && window.Player.boat);
+    }
+    window.fwScoped = scopedNow;   // controls.js reads this for the zoom FOV
+    function scopeTick(){
+      scope.style.display = scopedNow() ? 'block' : 'none';
+      requestAnimationFrame(scopeTick);
+    }
+    requestAnimationFrame(scopeTick);
+
     // ── Building ──
     const SHOP_POS = { x: 35, z: -70 };
     const SHOP_R = 5;
@@ -218,52 +323,43 @@
     function render(){
       const body = document.getElementById('gsBody');
       if(!body) return;
-      const haveGun = (State.inventory?.deagle || 0) > 0;
-      const ammo = State.inventory?.ammo_deagle || 0;
-      body.innerHTML = ''
-        + '<div class="gs-row">'
-        + '  <div class="ico">\u{1F52B}</div>'
-        + '  <div><div class="nm">Desert Eagle .50AE</div><div class="sub">500 \u{1F948} · one-shot kill on spiders</div></div>'
-        + (haveGun
-            ? '<div class="owned">✓ OWNED</div>'
-            : '<button class="btn" id="gsBuyGun">Buy</button>')
-        + '</div>'
-        + '<div class="gs-row">'
-        + '  <div class="ico">\u{1F4A5}</div>'
-        + '  <div><div class="nm">.50 AE Ammo Box</div><div class="sub">50 \u{1F948} · 12 rounds · you have ' + ammo + '</div></div>'
-        + '  <button class="btn" id="gsBuyAmmo">Buy</button>'
-        + '</div>';
-      const g = document.getElementById('gsBuyGun');
-      if(g){
-        g.addEventListener('click', () => {
-          if((State.credits || 0) < 500){ window.floater?.("Need 500 \u{1F948}", "bad"); return; }
-          State.credits -= 500;
-          window.addItem('deagle', 1);
-          // First-time purchase: give 6 free starter rounds so the player
-          // can immediately try shooting.
-          if((State.inventory.ammo_deagle || 0) === 0){
-            window.addItem('ammo_deagle', 6);
-          }
-          State.gunsmithUnlocked = true;
-          // Fresh guns come out of the box EQUIPPED — straight to hand
-          setTimeout(() => { try { window.fwEquipGun?.(true); } catch(_){} }, 50);
-          window.floater?.("\u{1F52B} Desert Eagle acquired", "good");
-          window.playPurchaseSound?.();
-          window.saveState?.();
-          window.updateHUD?.();
-          render();
-        });
+      let html = '';
+      for(const id of WORDER){
+        const w = WEAPONS[id];
+        const have = owned(id);
+        html += '<div class="gs-row"><div class="ico">' + w.icon + '</div>'
+          + '<div><div class="nm">' + w.name + (have ? ' <span style="color:#5ff09c">✓</span>' : '') + '</div><div class="sub">' + w.price + ' \u{1F948} · ' + w.desc + '</div></div>'
+          + '<button class="btn" data-buy-weapon="' + id + '">' + (have ? 'Buy again' : 'Buy') + '</button>'
+          + '</div>'
+          + '<div class="gs-row"><div class="ico">\u{1F4A5}</div>'
+          + '<div><div class="nm">' + (ITEMS[w.ammoId]?.name || 'Ammo') + '</div><div class="sub">' + w.ammoPrice + ' \u{1F948} · ' + w.ammoQty + ' rounds · you have ' + reserve(id) + '</div></div>'
+          + '<button class="btn" data-buy-ammo="' + id + '">Buy</button></div>';
       }
-      document.getElementById('gsBuyAmmo')?.addEventListener('click', () => {
-        if((State.credits || 0) < 50){ window.floater?.("Need 50 \u{1F948}", "bad"); return; }
-        State.credits -= 50;
-        window.addItem('ammo_deagle', 12);
-        window.floater?.("+12 rounds", "good");
-        window.playPurchaseSound?.();
-        window.saveState?.();
-        window.updateHUD?.();
-        render();
-      });
+      body.innerHTML = html;
+      body.querySelectorAll('[data-buy-weapon]').forEach(b => b.addEventListener('click', () => buyWeapon(b.getAttribute('data-buy-weapon'))));
+      body.querySelectorAll('[data-buy-ammo]').forEach(b => b.addEventListener('click', () => buyAmmo(b.getAttribute('data-buy-ammo'))));
+    }
+    function buyWeapon(id){
+      const w = WEAPONS[id]; if(!w) return;   // re-buying allowed
+      if((State.credits || 0) < w.price){ window.floater?.('Need ' + w.price + ' \u{1F948}', 'bad'); return; }
+      State.credits -= w.price;
+      window.addItem?.(id, 1);
+      window.addItem?.(w.ammoId, w.ammoQty);   // starter reserve
+      MAG[id] = w.mag; saveMag();               // comes loaded
+      State.gunsmithUnlocked = true;
+      setTimeout(() => { try { switchWeapon(id); } catch(_){} }, 40);
+      window.floater?.(w.icon + ' ' + w.name + ' acquired', 'good');
+      window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.();
+      render();
+    }
+    function buyAmmo(id){
+      const w = WEAPONS[id]; if(!w) return;
+      if((State.credits || 0) < w.ammoPrice){ window.floater?.('Need ' + w.ammoPrice + ' \u{1F948}', 'bad'); return; }
+      State.credits -= w.ammoPrice;
+      window.addItem?.(w.ammoId, w.ammoQty);
+      window.floater?.('+' + w.ammoQty + ' rounds', 'good');
+      window.playPurchaseSound?.(); window.saveState?.(); window.updateHUD?.();
+      render();
     }
     function openShop(){ render(); bg.classList.add('show'); }
     window.openGunsmith = openShop;
@@ -516,8 +612,39 @@
     }, 5000);
 
     // ── Held gun model ──
-    let heldGun = null;
-    function buildHeldGun(){
+    let heldGun = null, heldGunFor = null;
+    function buildHeldGun(id){
+      id = id || ACTIVE;
+      if(id === 'ak47') return buildAKHeld();
+      if(id === 'm40') return buildM40Held();
+      return buildDeagleHeld();
+    }
+    function buildAKHeld(){
+      const g = new THREE.Group();
+      const wood = new THREE.MeshStandardMaterial({ color: 0x6a4528, roughness: 0.7 });
+      const metal = new THREE.MeshStandardMaterial({ color: 0x2a2a2e, metalness: 0.7, roughness: 0.4 });
+      const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.13, 0.46), metal); body.position.set(0, 0.04, 0.12); g.add(body);
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.5, 8), metal); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.06, 0.5); g.add(barrel);
+      const hg = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.08, 0.26), wood); hg.position.set(0, 0.04, 0.34); g.add(hg);
+      const mag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.1), metal); mag.position.set(0, -0.12, 0.16); mag.rotation.x = 0.4; g.add(mag);
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.38), wood); stock.position.set(0, 0.01, -0.22); g.add(stock);
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.07), metal); grip.position.set(0, -0.1, 0.02); grip.rotation.x = 0.3; g.add(grip);
+      return g;
+    }
+    function buildM40Held(){
+      const g = new THREE.Group();
+      const wood = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.7 });
+      const metal = new THREE.MeshStandardMaterial({ color: 0x23231f, metalness: 0.6, roughness: 0.4 });
+      const glass = new THREE.MeshStandardMaterial({ color: 0x88bbff, metalness: 0.3, roughness: 0.1, emissive: 0x113355, emissiveIntensity: 0.3 });
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.019, 0.022, 0.78, 8), metal); barrel.rotation.x = Math.PI / 2; barrel.position.set(0, 0.05, 0.5); g.add(barrel);
+      const stock = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.12, 0.66), wood); stock.position.set(0, 0.0, -0.04); g.add(stock);
+      const scopeT = new THREE.Mesh(new THREE.CylinderGeometry(0.034, 0.034, 0.3, 10), metal); scopeT.rotation.x = Math.PI / 2; scopeT.position.set(0, 0.15, 0.14); g.add(scopeT);
+      const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), glass); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.15, 0.29); g.add(lens);
+      for(const z of [0.04, 0.24]){ const mnt = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 0.02), metal); mnt.position.set(0, 0.1, z); g.add(mnt); }
+      const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), wood); grip.position.set(0, -0.09, 0.0); grip.rotation.x = 0.3; g.add(grip);
+      return g;
+    }
+    function buildDeagleHeld(){
       const grp = new THREE.Group();
       const metal = new THREE.MeshStandardMaterial({ color: 0xa08060, metalness: 0.8, roughness: 0.35 });
       const grip = new THREE.MeshStandardMaterial({ color: 0x2a1a08, roughness: 0.85 });
@@ -550,15 +677,49 @@
       }
       return grp;
     }
+    // ── FPS viewmodels for AK / M40 (camera-attached). The deagle keeps
+    //    its GLB viewmodel from controls.js; controls.js hides that GLB
+    //    whenever a non-deagle weapon is active, and these show instead. ──
+    let fpsAK = null, fpsM40 = null, fpsAttached = false;
+    function ensureFpsModels(){
+      const cam = window.camera; if(!cam) return;
+      if(!fpsAttached){ try { window.scene?.add(cam); } catch(_){} fpsAttached = true; }
+      if(!fpsAK){
+        fpsAK = buildAKHeld(); fpsAK.scale.set(1.55, 1.55, 1.55);
+        fpsAK.position.set(0.34, -0.42, -0.75); fpsAK.rotation.set(0.04, Math.PI, 0); fpsAK.visible = false;
+        fpsAK.traverse(o => { if(o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+        cam.add(fpsAK);
+      }
+      if(!fpsM40){
+        fpsM40 = buildM40Held(); fpsM40.scale.set(1.4, 1.4, 1.4);
+        fpsM40.position.set(0.32, -0.44, -0.78); fpsM40.rotation.set(0.04, Math.PI, 0); fpsM40.visible = false;
+        fpsM40.traverse(o => { if(o.isMesh){ o.castShadow = false; o.receiveShadow = false; } });
+        cam.add(fpsM40);
+      }
+    }
+    function tickFpsModels(){
+      ensureFpsModels();
+      const fps = window.Cam && typeof window.Cam.curDistance === 'number' && window.Cam.curDistance < 2.1;
+      const armed = owned(ACTIVE) && !window.fwGunHolstered && !window.fwSleeping && !(window.Player && window.Player.boat);
+      const scoped = !!(window.fwScoped && window.fwScoped());
+      if(fpsAK) fpsAK.visible = !!(fps && armed && ACTIVE === 'ak47');
+      if(fpsM40) fpsM40.visible = !!(fps && armed && ACTIVE === 'm40' && !scoped);
+      requestAnimationFrame(tickFpsModels);
+    }
+    requestAnimationFrame(tickFpsModels);
+
     function tickHeldGun(){
-      const have = (State.inventory?.deagle || 0) > 0;
+      const have = owned(ACTIVE);
       const printer = window.printer || window.Player?.mesh;
       if(!printer){ requestAnimationFrame(tickHeldGun); return; }
       const showGun = have && printer.visible && !window.fwSleeping && !window.fwGunHolstered;
       // animatePrinter raises the RIGHT arm while this flag is set
       window.fwHoldGun = showGun && !window.Player?.boat;
       if(showGun){
-        if(!heldGun){ heldGun = buildHeldGun(); scene.add(heldGun); }
+        if(!heldGun || heldGunFor !== ACTIVE){
+          if(heldGun){ try { scene.remove(heldGun); } catch(_){} }
+          heldGun = buildHeldGun(ACTIVE); heldGunFor = ACTIVE; scene.add(heldGun);
+        }
         // Place in the printer's RIGHT hand (facing +Z, right = −X),
         // lifted to match the raised carrying arm.
         const yaw = printer.rotation.y || 0;
@@ -756,8 +917,8 @@
         document.getElementById('dmOverlay')?.classList.contains('show');
       const inVehicle = !!(window.Player && window.Player.boat);   // seaplane/boat/yacht: no aim
       const invOpen = document.getElementById('invBg')?.classList.contains('show');
-      if(State.inventory?.deagle > 0 && !dmBusy && !dmPanel && !window.fwSleeping &&
-         !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc()){
+      if(owned(ACTIVE) && !dmBusy && !dmPanel && !window.fwSleeping &&
+         !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc() && !window.fwScoped?.()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';
       } else {
@@ -784,17 +945,26 @@
 
     const _raycaster = new THREE.Raycaster();
     function fire(){
-      if(!(State.inventory?.deagle > 0)){
+      ensureActive();
+      if(!owned(ACTIVE)){
         window.floater?.("No weapon equipped", "bad");
         return;
       }
-      const ammo = State.inventory?.ammo_deagle || 0;
-      if(ammo <= 0){
+      if((MAG[ACTIVE] || 0) <= 0){
         dryFireSound();
-        window.floater?.("Out of ammo", "bad", { small: true });
+        window.floater?.("\u{1F504} Empty — press R to reload", "bad", { small: true });
         return;
       }
-      window.takeItem('ammo_deagle', 1);
+      MAG[ACTIVE]--; saveMag(); updateAmmoHud();
+      // recoil — kick the view upward a touch (stronger for the AK / M40),
+      // plus the FPS viewmodel kick. The AK climbs as you spray.
+      try {
+        const kick = WEAPONS[ACTIVE].recoil || 0.012;
+        if(window.Cam && typeof window.Cam.pitch === 'number'){
+          window.Cam.pitch = Math.max(-1.05, Math.min(1.2, window.Cam.pitch - kick));
+        }
+        window.fwGunKick?.();
+      } catch(_){}
       muzzleFlash();
       gunshotSound();
       const cam = window.camera;
@@ -868,6 +1038,38 @@
         window.saveState?.();
         window.updateHUD?.();
       }
+      // ── Also let the shot kill huntable animals (rats / pigs) ──
+      // Only if the bullet didn't already drop a spider this shot.
+      if(killedI < 0 && Array.isArray(window.fwHuntables) && window.fwHuntables.length){
+        const H = window.fwHuntables;
+        let hi = -1;
+        try {
+          const objs = H.map(a => a.mesh).filter(Boolean);
+          const hits = _raycaster.intersectObjects(objs, true);
+          if(hits.length){
+            let o = hits[0].object;
+            while(o && !H.find(a => a.mesh === o)) o = o.parent;
+            if(o) hi = H.findIndex(a => a.mesh === o);
+          }
+        } catch(_){}
+        if(hi < 0){
+          // aim-assist cone (same as spiders) so you don't need pixel-perfect aim
+          const fLen = Math.hypot(fwd.x, fwd.z) || 1;
+          const dx = fwd.x / fLen, dz = fwd.z / fLen;
+          let bestT = 1e9;
+          for(let i = 0; i < H.length; i++){
+            const a = H[i]; if(!a || a.dead) continue;
+            const ddx = a.x - Player.pos.x, ddz = a.z - Player.pos.z;
+            const dist = Math.hypot(ddx, ddz);
+            if(dist > 50) continue;
+            if(dist < 4){ if(dist < bestT){ bestT = dist; hi = i; } continue; }
+            const dot = (ddx * dx + ddz * dz) / Math.max(0.01, dist);
+            if(dot < Math.cos(0.70)) continue;
+            if(dist < bestT){ bestT = dist; hi = i; }
+          }
+        }
+        if(hi >= 0 && typeof H[hi].onKill === 'function'){ try { H[hi].onKill(); } catch(_){} }
+      }
       // (misses are silent — no "miss" text)
     }
 
@@ -908,6 +1110,26 @@
     // Moved off left-click so left can drive the camera look-drag. The browser
     // context menu is suppressed (here + globally) so no "Save image as…"
     // popup interrupts a shot.
+    // ── Full-auto fire (AK-47): hold the trigger to spray ──
+    let autoTimer = null;
+    function autoBlocked(){
+      return !owned(ACTIVE) || window.fwGunHolstered || window.fwSleeping
+        || (window.Player && window.Player.boat)
+        || (window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown'))
+        || document.getElementById('invBg')?.classList.contains('show');
+    }
+    function startAuto(){
+      stopAuto();
+      const w = WEAPONS[ACTIVE]; if(!w || !w.auto) return;
+      autoTimer = setInterval(() => {
+        if(autoBlocked() || (MAG[ACTIVE] || 0) <= 0){ stopAuto(); return; }
+        fire();
+      }, w.rof || 100);
+    }
+    function stopAuto(){ if(autoTimer){ clearInterval(autoTimer); autoTimer = null; } }
+    window.addEventListener('mouseup', (e) => { if(e.button === 0) stopAuto(); });
+    window.addEventListener('blur', stopAuto);
+
     document.addEventListener('contextmenu', (e) => e.preventDefault());
     document.addEventListener('mousedown', (e) => {
       // Action scheme fires with LEFT click (RMB = aim); classic keeps RMB.
@@ -946,9 +1168,10 @@
       const tgt = e.target;
       if(tgt && tgt.tagName && /^(BUTTON|A|INPUT|TEXTAREA|SELECT|LABEL)$/.test(tgt.tagName)) return;
       if(tgt && tgt.closest && tgt.closest('button, a, input, textarea, select, label, .gs-pop, .alex-pop, .roki-near, .plane-prox, .tut-card, .junk-pop, #npcPop')) return;
-      // Must have the gun
-      if(!(State.inventory?.deagle > 0)) return;
+      // Must own the active weapon
+      if(!owned(ACTIVE)) return;
       fire();
+      if(WEAPONS[ACTIVE] && WEAPONS[ACTIVE].auto) startAuto();   // hold to spray
     });
 
     console.log('[gunsmith] ready at', SHOP_POS);

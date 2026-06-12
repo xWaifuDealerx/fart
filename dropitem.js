@@ -159,7 +159,11 @@
       return grp;
     }
     function applyEquip(){
-      window.fwGunHolstered = !EQ.gun;
+      // Only the deagle's draw state is driven by EQ.gun here. When an
+      // AK/M40 is the active weapon, the gunsmith weapon system owns
+      // fwGunHolstered — don't override it (it would holster the rifle).
+      const activeIsDeagle = (typeof window.fwActiveWeapon !== 'function') || window.fwActiveWeapon() === 'deagle';
+      if(activeIsDeagle) window.fwGunHolstered = !EQ.gun;
       const wearCap = EQ.hat === 'cap' && (State.inventory?.cap || 0) > 0;
       const m = wearCap ? ensureCapMesh() : capMesh;
       if(m) m.visible = wearCap;
@@ -190,8 +194,9 @@
     window.fwEquipGun = equipGun;
     window.fwEquipHat = equipHat;
 
+    const WEAPON_IDS = ['deagle', 'ak47', 'm40'];
     function equipKind(id){
-      if(id === 'deagle') return 'gun';
+      if(WEAPON_IDS.indexOf(id) >= 0) return 'gun';
       if(id === 'cap') return 'hat';
       return null;
     }
@@ -199,8 +204,26 @@
       const it = ITEMS[id] || {};
       let icon = it.icon, name = it.name, color = it.color;
       if(id === 'deagle'){ icon = icon || '🔫'; name = name || 'Desert Eagle .50AE'; color = color || '#d6b35a'; }
+      if(id === 'ak47'){ icon = icon || '🔫'; name = name || 'AK-47'; color = color || '#6a5a3a'; }
+      if(id === 'm40'){ icon = icon || '🎯'; name = name || 'M40 Sniper'; color = color || '#3a4a3a'; }
       if(id === 'cap'){ icon = icon || '🧢'; name = name || 'Trucker Cap'; color = color || '#3a78c2'; }
       return { icon: icon || '🎁', name: name || id, color: color || '#cfe' };
+    }
+    // ── Weapons unify with gunsmith.js's weapon system ──
+    // The active drawn weapon (deagle/ak47/m40), or null when holstered.
+    function activeWeapon(){
+      const id = (typeof window.fwActiveWeapon === 'function') ? window.fwActiveWeapon() : 'deagle';
+      const owned = (State.inventory?.[id] || 0) > 0;
+      return (owned && !window.fwGunHolstered) ? id : null;
+    }
+    function ownsAnyWeapon(){ return WEAPON_IDS.some(id => (State.inventory?.[id] || 0) > 0); }
+    function equipWeapon(id){
+      if(typeof window.fwSwitchWeapon === 'function') window.fwSwitchWeapon(id);
+      else equipGun(true);   // fallback (deagle only)
+    }
+    function holsterWeapon(id){
+      if(id === 'deagle') equipGun(false);
+      else window.fwGunHolstered = true;
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -303,10 +326,11 @@
     // visually "move" into the EQUIPPED slots, PUBG-style).
     function bagItems(){
       const out = [];
+      const aw = activeWeapon();
       for(const id of Object.keys(State.inventory || {})){
         let qty = State.inventory[id] || 0;
         if(qty <= 0) continue;
-        if(id === 'deagle' && EQ.gun) qty -= 1;
+        if(id === aw) qty -= 1;
         if(id === 'cap' && EQ.hat === 'cap') qty -= 1;
         if(qty <= 0) continue;
         out.push({ id, qty });
@@ -401,14 +425,16 @@
     }
 
     function renderEq(){
-      const hasGun = (State.inventory?.deagle || 0) > 0, gunOn = hasGun && EQ.gun;
+      const aw = activeWeapon();
       const hasCap = (State.inventory?.cap || 0) > 0, hatOn = EQ.hat === 'cap' && hasCap;
       const w = root.querySelector('#fw2Weap'), h = root.querySelector('#fw2Hat');
-      w.classList.toggle('filled', gunOn);
-      w.dataset.filled = gunOn ? '1' : '';
-      w.innerHTML = gunOn
-        ? '<div class="fw2-slotlb">WEAPON</div><div class="fw2-slotitem"><span class="ic">🔫</span><span class="nm">Desert Eagle .50AE</span></div><div class="fw2-slothint">drag to bag to unequip</div>'
-        : '<div class="fw2-slotlb">WEAPON</div><div class="fw2-slotempty">🔫</div><div class="fw2-slothint">' + (hasGun ? 'drag a gun here to equip' : 'buy one at the Gunsmith') + '</div>';
+      w.classList.toggle('filled', !!aw);
+      w.dataset.filled = aw ? '1' : '';
+      w.dataset.wid = aw || '';
+      const wm = aw ? itemMeta(aw) : null;
+      w.innerHTML = aw
+        ? '<div class="fw2-slotlb">WEAPON</div><div class="fw2-slotitem"><span class="ic">' + wm.icon + '</span><span class="nm">' + wm.name + '</span></div><div class="fw2-slothint">drag to bag to holster</div>'
+        : '<div class="fw2-slotlb">WEAPON</div><div class="fw2-slotempty">🔫</div><div class="fw2-slothint">' + (ownsAnyWeapon() ? 'drag a gun here to equip' : 'buy one at the Gunsmith') + '</div>';
       h.classList.toggle('filled', hatOn);
       h.dataset.filled = hatOn ? '1' : '';
       h.innerHTML = hatOn
@@ -535,7 +561,7 @@
       const vic = t.closest('.fw2-row[data-src="vic"]');
       if(vic && vic._drop){ const m = itemMeta(vic._drop.id); return { src: 'vic', drop: vic._drop, el: vic, icon: m.icon, name: m.name }; }
       const w = t.closest('#fw2Weap');
-      if(w && w.dataset.filled === '1') return { src: 'weapon', id: 'deagle', el: w, icon: '🔫', name: 'Desert Eagle' };
+      if(w && w.dataset.filled === '1'){ const id = w.dataset.wid || 'deagle'; const m = itemMeta(id); return { src: 'weapon', id, el: w, icon: m.icon, name: m.name }; }
       const h = t.closest('#fw2Hat');
       if(h && h.dataset.filled === '1') return { src: 'hat', id: 'cap', el: h, icon: '🧢', name: 'Trucker Cap' };
       return null;
@@ -625,17 +651,17 @@
     function handleDrop(ds, zone){
       if(ds.src === 'inv'){
         if(zone === 'vicinity') dropToGround(ds.id, 1);
-        else if(zone === 'weapon'){ if(ds.id === 'deagle') equipGun(true); else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
+        else if(zone === 'weapon'){ if(equipKind(ds.id) === 'gun') equipWeapon(ds.id); else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
         else if(zone === 'hat'){ if(ds.id === 'cap') equipHat(true); else window.floater?.('Only headwear fits the HAT slot', 'bad'); }
         // 'inventory' or null = no-op
       } else if(ds.src === 'vic'){
         if(zone === 'inventory') pickUp(ds.drop);
-        else if(zone === 'weapon'){ if(ds.drop.id === 'deagle'){ pickUp(ds.drop); equipGun(true); } else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
+        else if(zone === 'weapon'){ if(equipKind(ds.drop.id) === 'gun'){ pickUp(ds.drop); equipWeapon(ds.drop.id); } else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
         else if(zone === 'hat'){ if(ds.drop.id === 'cap'){ pickUp(ds.drop); equipHat(true); } else window.floater?.('Only headwear fits the HAT slot', 'bad'); }
         // 'vicinity' or null = leave it on the ground
       } else if(ds.src === 'weapon'){
-        if(zone === 'inventory') equipGun(false);
-        else if(zone === 'vicinity'){ equipGun(false); dropToGround('deagle', 1); }
+        if(zone === 'inventory') holsterWeapon(ds.id);
+        else if(zone === 'vicinity'){ holsterWeapon(ds.id); dropToGround(ds.id, 1); }
         // null / 'weapon' / 'hat' = cancel
       } else if(ds.src === 'hat'){
         if(zone === 'inventory') equipHat(false);
@@ -685,19 +711,19 @@
       const actions = [];
       if(s.src === 'inv'){
         const k = equipKind(s.id);
-        if(k === 'gun') actions.push({ label: '🔫 Equip weapon', run: () => equipGun(true) });
+        if(k === 'gun') actions.push({ label: '🔫 Equip weapon', run: () => equipWeapon(s.id) });
         if(k === 'hat') actions.push({ label: '🧢 Wear it', run: () => equipHat(true) });
         actions.push({ label: '📦 Drop to vicinity', warn: true, run: () => { dropToGround(s.id, 1); afterAction(); } });
         actions.push({ label: '🔍 Examine', run: () => examine(s.id) });
       } else if(s.src === 'vic'){
         actions.push({ label: '🎒 Pick up', run: () => pickUp(s.drop) });
         const k = equipKind(s.drop.id);
-        if(k === 'gun') actions.push({ label: '🔫 Pick up & equip', run: () => { pickUp(s.drop); equipGun(true); } });
+        if(k === 'gun') actions.push({ label: '🔫 Pick up & equip', run: () => { pickUp(s.drop); equipWeapon(s.drop.id); } });
         if(k === 'hat') actions.push({ label: '🧢 Pick up & wear', run: () => { pickUp(s.drop); equipHat(true); } });
         actions.push({ label: '🔍 Examine', run: () => examine(s.drop.id) });
       } else if(s.src === 'weapon'){
-        actions.push({ label: '🎒 Unequip (to bag)', run: () => equipGun(false) });
-        actions.push({ label: '📦 Drop to vicinity', warn: true, run: () => { equipGun(false); dropToGround('deagle', 1); afterAction(); } });
+        actions.push({ label: '🎒 Holster (to bag)', run: () => holsterWeapon(s.id) });
+        actions.push({ label: '📦 Drop to vicinity', warn: true, run: () => { holsterWeapon(s.id); dropToGround(s.id, 1); afterAction(); } });
       } else if(s.src === 'hat'){
         actions.push({ label: '🎒 Unequip (to bag)', run: () => equipHat(false) });
         actions.push({ label: '📦 Drop to vicinity', warn: true, run: () => { equipHat(false); dropToGround('cap', 1); afterAction(); } });
@@ -719,8 +745,8 @@
       const s = itemSourceAt(e.target);
       if(!s) return;
       if(s.src === 'vic') pickUp(s.drop);
-      else if(s.src === 'inv'){ const k = equipKind(s.id); if(k === 'gun') equipGun(true); else if(k === 'hat') equipHat(true); }
-      else if(s.src === 'weapon') equipGun(false);
+      else if(s.src === 'inv'){ const k = equipKind(s.id); if(k === 'gun') equipWeapon(s.id); else if(k === 'hat') equipHat(true); }
+      else if(s.src === 'weapon') holsterWeapon(s.id);
       else if(s.src === 'hat') equipHat(false);
     });
 

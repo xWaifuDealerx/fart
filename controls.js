@@ -63,7 +63,7 @@
         + '.casino-bg.show, #lbBg.show, .fw-set-bg.show, #login:not(.hidden), '
         + '#seedChBg.show, #paySelBg.show, #labBg.show, #millBg.show, #goldBg.show, '
         + '#swapBg.show, #bowlBg.show, #launderBg.show, #pfBg.show, #junkBg.show, #bankBg.show, '
-        + '.fw-rest.show, .cas-bg.show, .fw-msn-bg.show, .fw-skill-bg.show'
+        + '.fw-rest.show, .cas-bg.show, .fw-msn-bg.show, .fw-skill-bg.show, .church-bg.show'
       )) return true;
       // Deathmatch waiting panel = a menu with buttons → release the mouse
       const dmw = document.getElementById('dmWaiting');
@@ -139,10 +139,10 @@
     // RMB = aim (hold)
     window.addEventListener('mousedown', (e) => {
       if(S.scheme !== 'action') return;
-      if(e.button === 2 && (locked() || e._fwPad)) aiming = true;
+      if(e.button === 2 && (locked() || e._fwPad)){ aiming = true; window.fwAiming = true; }
     });
     window.addEventListener('mouseup', (e) => {
-      if(e.button === 2) aiming = false;
+      if(e.button === 2){ aiming = false; window.fwAiming = false; }
     });
     document.addEventListener('contextmenu', (e) => {
       if(S.scheme === 'action') e.preventDefault();
@@ -274,13 +274,22 @@
       gunEl.classList.add('kick');
       setTimeout(() => gunEl.classList.remove('kick'), 140);
     });
+    // Per-shot recoil kick — gunsmith.js calls this for every round fired
+    // (so full-auto sprays kick each shot, not just on the initial click).
+    window.fwGunKick = function(){
+      gunRecoil = 1;
+      if(!gunEl.classList.contains('show')) return;
+      gunEl.classList.remove('kick'); void gunEl.offsetWidth; gunEl.classList.add('kick');
+      setTimeout(() => gunEl.classList.remove('kick'), 140);
+    };
 
     // ── Camera post-hook (called by updateCamera inside the game
     //    module each frame): aim FOV + FPS mode ──
     let lastFps = false;
     window.fwCameraPost = function(dt){
-      // Smooth aim zoom
-      const targetFov = aiming ? 38 : 60;
+      // Smooth aim zoom — the M40 sniper scope zooms in much further.
+      const scoped = !!(window.fwScoped && window.fwScoped());
+      const targetFov = scoped ? 13 : (aiming ? 38 : 60);
       if(Math.abs(camera.fov - targetFov) > 0.15){
         camera.fov += (targetFov - camera.fov) * Math.min(1, 12 * dt);
         camera.updateProjectionMatrix();
@@ -302,9 +311,12 @@
       // Deagle, or any active deathmatch where weapons are unlimited).
       // Prefer the real GLB model; the SVG is only a loading fallback.
       const armed = !window.fwSleeping &&
-        ((window.State?.inventory?.deagle > 0 && !window.fwGunHolstered) || (window.Dm?.phase === 'active'));
+        (((window.fwHasActiveWeapon ? window.fwHasActiveWeapon() : window.State?.inventory?.deagle > 0) && !window.fwGunHolstered) || (window.Dm?.phase === 'active'));
+      // The deagle GLB only represents the Desert Eagle — hide it when a
+      // rifle is active (gunsmith.js shows the AK/M40 viewmodels instead).
+      const activeIsDeagle = !window.fwActiveWeapon || window.fwActiveWeapon() === 'deagle';
       if(gunModel){
-        gunModel.visible = fps && armed;
+        gunModel.visible = fps && armed && activeIsDeagle;
         gunEl.classList.remove('show');
         // recoil kick + idle sway
         gunRecoil = Math.max(0, gunRecoil - dt * 7);
@@ -316,7 +328,7 @@
         );
         gunModel.rotation.x = 0.02 - gunRecoil * 0.22;
       } else {
-        gunEl.classList.toggle('show', fps && armed);
+        gunEl.classList.toggle('show', fps && armed && activeIsDeagle);
       }
       if(fps){
         // First-person: camera at eye height, free pitch
