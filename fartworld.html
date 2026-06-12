@@ -53,9 +53,10 @@
 <script src="social.js?v=8" defer></script>
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=21" defer></script>
-<script src="brainrot.js?v=7" defer></script>
+<script src="brainrot.js?v=9" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=1" defer></script>
+<script src="slide.js?v=8" defer></script>
 <script src="establishments.js?v=8" defer></script>
 <script src="streetlights.js?v=8" defer></script>
 <script src="bike.js?v=9" defer></script>
@@ -8894,6 +8895,8 @@ function tryInteract(){
   // you're standing at a base or a toilet (brainrot.js handles it).
   if(window.fwBrainrotInteract && window.fwBrainrotInteract()) return;
   if(window.fwChurchInteract && window.fwChurchInteract()) return;
+  // Fart Slide portal on the beach (slide.js) — E rides the secret slide.
+  if(window.fwSlideInteract && window.fwSlideInteract()) return;
   // If you're already in a boat, E disembarks you.
   // Yacht / plane stub objects: delegate to seaplane.js so we don't try
   // to step out of a vessel that's drifting at sea.
@@ -12272,6 +12275,11 @@ function loop(now){
   const dt = Math.min(0.05, (now - lastTime) / 1000);
   lastTime = now;
 
+  // While the secret FART SLIDE level is running (slide.js), park the main
+  // game: it runs its own scene/renderer/loop on top of us. We keep the rAF
+  // alive (so we resume instantly on return) but skip all updates + render.
+  if (window.fwSlideActive){ requestAnimationFrame(loop); return; }
+
   updateMovement(dt);
   Player.zone = detectZone();
   if(Player.zone !== Player.prevZone){
@@ -12665,7 +12673,7 @@ Object.assign(window, {
   THREE, scene, camera, Cam, Dm, Player, groundHeightAt, sampleSurfaceY,
   WalkableSurfaces, escHtml, playFartSound, JAIL_POS, ISLAND_RADIUS,
   WATER_LEVEL, SEED_SHOP, keys, Cats, Plots, FOOTBALL_POS, DOCK_POS,
-  spawnBoatNearPlayer, printer, HOUSE_POS, Sky,
+  spawnBoatNearPlayer, printer, buildPrinter, HOUSE_POS, Sky,
   silverPerGold, paperPerSilver, cashPerSilverBack,
   connectWallet, enterLobby, enterGame, renderInventory,
 });

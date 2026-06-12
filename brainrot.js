@@ -40,6 +40,37 @@
     function spendSilver(n){ if(silver() < n) return false; State.credits -= n; hud(); return true; }
     function meId(){ return (window.Net && window.Net.peerId) || State.username || 'me'; }
 
+    // ── POOP ORB SILVER BONUS ───────────────────────────────────────
+    // Each Poop Orb (won on the Fart Slide) you spend at your base adds +5%
+    // to silver earnings for 10 minutes. Spending more stacks the % and
+    // refreshes the timer. Persisted on State so it survives reloads.
+    const BONUS_PCT = 1, BONUS_MS = 10 * 60 * 1000;
+    function bonusState(){
+      if(!State.poopBonus) State.poopBonus = { until: 0, pct: 0 };
+      return State.poopBonus;
+    }
+    function activeBonusPct(){
+      const b = bonusState();
+      if(Date.now() >= b.until){ b.pct = 0; return 0; }
+      return b.pct;
+    }
+    function bonusMult(){ return 1 + activeBonusPct() / 100; }
+    function usePoopOrb(){
+      const have = (State.inventory && State.inventory.poop_orb) || 0;
+      if(have <= 0){ floater('No Poop Orbs — win them on the Fart Slide 🛝', 'bad'); return; }
+      if(!window.takeItem || !window.takeItem('poop_orb', 1)){ floater('No Poop Orbs', 'bad'); return; }
+      const b = bonusState();
+      // stack the percentage FIRST (while the old window may still be active),
+      // then refresh to a fresh 10 minutes.
+      b.pct = (Date.now() < b.until ? b.pct : 0) + BONUS_PCT;
+      b.until = Date.now() + BONUS_MS;
+      save();
+      floater('💩 Poop Orb used! +' + b.pct + '% silver for 10:00', 'good');
+    }
+    // expose for other systems / debugging
+    window.fwSilverBonusMult = bonusMult;
+    window.fwUsePoopOrb = usePoopOrb;
+
     // ── material helpers ──
     function mat(color, emi, ei, rough){
       return new THREE.MeshStandardMaterial({
@@ -592,9 +623,12 @@
       // yield accrual for all owned/squatter bases
       for(const b of Bases){
         if(!b.owner) continue;
-        if(b.owner === meId() && Date.now() >= b.until){ clearPlayerBase(true); continue; }
+        // Don't expire/clear the base while the player is busy in the Fart
+        // Slide — the lease keeps running and yielding silver in the background.
+        if(b.owner === meId() && Date.now() >= b.until && !window.fwSlideActive){ clearPlayerBase(true); continue; }
         const yps = occupiedYps(b);
-        if(yps > 0){ b.pending += yps * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
+        // Poop Orb bonus multiplies silver earnings for everyone's owned bases.
+        if(yps > 0){ b.pending += yps * bonusMult() * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
       }
       // keep the floating base signs facing the player (yaw billboard)
       if(window.camera){
@@ -630,7 +664,10 @@
           const t = BRAINROTS[nt.b.toilets[nt.i]];
           setPrompt('<span class="k">E</span> steal ' + t.name + '<div class="sub">' + t.rarity + ' · ~' + Math.round(t.steal / 1000) + 's</div>');
         } else if(nb && nb.owner === meId()){
-          setPrompt('<span class="k">E</span> claim <b>' + Math.floor(nb.pending) + ' 🥈</b>');
+          const orbs = (State.inventory && State.inventory.poop_orb) || 0;
+          let html = '<span class="k">E</span> claim <b>' + Math.floor(nb.pending) + ' 🥈</b>';
+          if(orbs > 0) html += '<div class="sub"><span class="k">O</span> use Poop Orb 💩 (+1% silver / 10min) · ' + orbs + ' left</div>';
+          setPrompt(html);
         } else if(nb && !nb.owner){
           setPrompt('<span class="k">E</span> rent this base<div class="sub">' + RENT_COST + ' 🥈 / hour · 6 toilets</div>');
         } else if(nr){
@@ -642,12 +679,26 @@
       if(mine){
         basePill.style.display = 'block';
         const occ = mine.toilets.filter(Boolean).length;
-        basePill.innerHTML = '🚽 <b>Your base</b> · ' + occ + '/6 · <b>' + Math.floor(mine.pending) + ' 🥈</b> ready · ' + fmtMs(mine.until - Date.now()) + ' left';
+        let pill = '🚽 <b>Your base</b> · ' + occ + '/6 · <b>' + Math.floor(mine.pending) + ' 🥈</b> ready · ' + fmtMs(mine.until - Date.now()) + ' left';
+        const bp = activeBonusPct();
+        if(bp > 0) pill += '<br>💩 <b>+' + bp + '%</b> silver bonus · ' + fmtMs(bonusState().until - Date.now()) + ' left';
+        basePill.innerHTML = pill;
       } else basePill.style.display = 'none';
 
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+
+    // P → spend a Poop Orb for the silver bonus (only when standing at your
+    // own base, and not while a text input / menu is focused).
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyO') return;
+      if(window.fwSlideActive) return;
+      const el = document.activeElement;
+      if(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) return;
+      const nb = nearestBaseCentre();
+      if(nb && nb.owner === meId()) usePoopOrb();
+    });
 
     // expose a tiny API for debugging / future MP
     window.fwBrainrots = { Bases, Roamers, BRAINROTS, get carry(){ return carry; } };
