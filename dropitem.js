@@ -153,7 +153,7 @@
       const btn = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8),
         new THREE.MeshStandardMaterial({ color: 0xffd64d, roughness: 0.5 }));
       btn.position.y = 0.42; grp.add(btn);
-      grp.position.set(0, 2.32, 0);
+      grp.position.set(0, 1.52, 0);   // rests on the printer's head
       printer.add(grp);
       capMesh = grp;
       return grp;
@@ -163,6 +163,8 @@
       const wearCap = EQ.hat === 'cap' && (State.inventory?.cap || 0) > 0;
       const m = wearCap ? ensureCapMesh() : capMesh;
       if(m) m.visible = wearCap;
+      // Hide the white paper sheet on top of the printer while the cap is on.
+      try { const pg = window.printer?.userData?.paperGrp; if(pg) pg.visible = !wearCap; } catch(_){}
     }
     function equipGun(on){
       if(on && !(State.inventory?.deagle > 0)){

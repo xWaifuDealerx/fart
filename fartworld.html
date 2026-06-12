@@ -38,7 +38,7 @@
 <script src="seaplane.js?v=8" defer></script>
 <script src="roki.js?v=8" defer></script>
 <script src="alexandre.js?v=8" defer></script>
-<script src="minimap.js?v=8" defer></script>
+<script src="minimap.js?v=10" defer></script>
 <script src="compass.js?v=8" defer></script>
 <script src="weed-timer.js?v=9" defer></script>
 <script src="weed-reveal.js?v=8" defer></script>
@@ -52,7 +52,8 @@
 <script src="moon.js?v=8" defer></script>
 <script src="social.js?v=8" defer></script>
 <script src="mobile.js?v=8" defer></script>
-<script src="dropitem.js?v=16" defer></script>
+<script src="dropitem.js?v=20" defer></script>
+<script src="brainrot.js?v=7" defer></script>
 <script src="establishments.js?v=8" defer></script>
 <script src="streetlights.js?v=8" defer></script>
 <script src="bike.js?v=9" defer></script>
@@ -77,7 +78,7 @@
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=9" defer></script>
+<script src="gunsmith.js?v=10" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=9" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -92,8 +93,8 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.168.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.168.0/examples/jsm/"
+    "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
   }
 }
 </script>
@@ -5060,13 +5061,10 @@ function tryFart(){
     triggerShame();
     floater(`-${lostCredits} 🥈 Silver  · BAD FART`, "bad");
   } else {
-    // Neutral — tiny XP nibble (no floater in FPS mode: it sits right
-    // in the middle of the aim view)
+    // Neutral — tiny XP nibble, granted silently. Fart XP/penalty text
+    // is only shown in the green (safe) and red (danger) zones.
     State.xp += 3;
     State.cleanSeconds += 2;
-    const inFps = window.FWControlsActive && window.FWSettings &&
-      window.FWSettings.scheme === 'action' && Cam.curDistance < 2.1;
-    if(!inFps) floater(`+3 XP`, "good");
     checkLevelUp();
   }
   updateHUD();
@@ -5297,6 +5295,12 @@ function animatePrinter(dt){
   // state branches above so it wins over walk/idle arm swings.
   if(window.fwHoldGun && ud.armL){
     ud.armL.rotation.x = -1.05 + Math.sin(animTime * 1.6) * 0.04;
+  }
+
+  // Carrying a Brainrot: raise the RIGHT arm up to hold it aloft.
+  // Applied after the state branches so it wins over walk/idle swings.
+  if(window.fwCarryBrainrot && ud.armR){
+    ud.armR.rotation.x = -1.25 + Math.sin(animTime * 1.6) * 0.04;
   }
 
   // Always: paper sway
@@ -8884,6 +8888,9 @@ function sharpenCost(durability){
 }
 
 function tryInteract(){
+  // Steal-a-Brainrot: rent / plant / claim / steal take E priority when
+  // you're standing at a base or a toilet (brainrot.js handles it).
+  if(window.fwBrainrotInteract && window.fwBrainrotInteract()) return;
   // If you're already in a boat, E disembarks you.
   // Yacht / plane stub objects: delegate to seaplane.js so we don't try
   // to step out of a vessel that's drifting at sea.
