@@ -93,7 +93,8 @@
     function saveMag(){ try { localStorage.setItem(MAGKEY, JSON.stringify({ mag: MAG, active: ACTIVE })); } catch(_){} }
     // ── real gunshot .mp3s (assets/sounds/) per weapon; cloned so rapid
     //    AK shots overlap instead of cutting each other off. ──
-    const WEAP_SND = { deagle: 'deserteagle', ak47: 'ak47', m40: 'm40' };
+    // short filenames (<=8 chars) so they survive Windows/Git 8.3 truncation
+    const WEAP_SND = { deagle: 'deagle', ak47: 'ak47', m40: 'm40' };
     const _gsSndBase = {};
     function playWeaponSound(){
       try {

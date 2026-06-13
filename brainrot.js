@@ -402,17 +402,22 @@
     }
 
     restorePlayerBase();
-    seedSquatters();
+    // No pre-seeded "Toilet Cartel" squatters — bases start FREE and only the
+    // wandering printer-NPCs (printerbots.js) ever claim them.
+    // seedSquatters();
 
     // ──────────────────────────────────────────────────────────────
     // CARRYING (G to pick up / drop) — held in the printer's LEFT HAND
     // ──────────────────────────────────────────────────────────────
     let carry = null;   // { t, mesh }
-    // ── brainrot voice clips (assets/sounds/<name>.mp3) on pickup ──
+    // ── brainrot voice clips on pickup. SHORT filenames (<=8 chars) so they
+    //    survive Windows/Git 8.3 truncation when deployed to GitHub. ──
+    const BR_SND = { fartbubu: 'fartbubu', baldur: 'baldur', fartolero: 'fartol',
+                     fartitos: 'fartit', popofanto: 'popof', fartifito: 'fito' };
     const _brSnd = {};
     function playBrainrotSound(t){
       try {
-        const f = (t && t.name ? t.name : '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const f = t && BR_SND[t.id];
         if(!f) return;
         let a = _brSnd[f];
         if(!a){ a = new Audio('assets/sounds/' + f + '.mp3'); _brSnd[f] = a; }
