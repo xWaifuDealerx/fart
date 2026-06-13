@@ -107,7 +107,8 @@
 .fw-share .lab b{color:#ffd64d}
 .fw-share button{font-family:Outfit,sans-serif;letter-spacing:.6px;border:0;cursor:pointer}
 .fw-share .btn-tweet{background:linear-gradient(135deg,#1da1f2,#5ff09c);color:#061a1c;padding:11px 22px;border-radius:100px;font-weight:900;font-size:13px;text-transform:uppercase;box-shadow:0 8px 20px rgba(29,161,242,.4);margin-right:6px}
-.fw-share .btn-skip{background:transparent;border:1px solid rgba(230,255,238,.3);color:rgba(230,255,238,.6);padding:9px 18px;border-radius:100px;font-size:11px}
+.fw-share .btn-skip{background:transparent;border:1px solid rgba(230,255,238,.3);color:rgba(230,255,238,.6);padding:9px 18px;border-radius:100px;font-size:11px;display:inline-flex;align-items:center;gap:7px}
+.fw-share .btn-skip .kb{background:rgba(230,255,238,.14);border:1px solid rgba(230,255,238,.4);border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#eaffd6;letter-spacing:.5px}
 .fw-share .btn-tweet:hover{filter:brightness(1.07)}
 .fw-share .btn-skip:hover{color:#fff}
 .fw-referral-card{position:fixed;right:14px;top:340px;display:none;background:linear-gradient(180deg,rgba(8,18,11,.96),rgba(5,14,9,.96));border:2px solid rgba(95,240,156,.5);border-radius:14px;padding:11px 14px;z-index:32;color:#e6ffee;font-family:'Outfit','Inter','JetBrains Mono',sans-serif;font-size:11.5px;min-width:210px;box-shadow:0 14px 28px rgba(0,0,0,.55)}
@@ -140,9 +141,14 @@
     // Share modal
     const share = document.createElement('div');
     share.className = 'fw-share';
-    share.innerHTML = '<h3 id="fwShareTtl">Milestone!</h3><div class="lab" id="fwShareLab">You did it.</div><button class="btn-tweet" id="fwShareGo">\u{1D54F} Share on X</button><button class="btn-skip" id="fwShareSkip">Skip</button>';
+    share.innerHTML = '<h3 id="fwShareTtl">Milestone!</h3><div class="lab" id="fwShareLab">You did it.</div><button class="btn-tweet" id="fwShareGo">\u{1D54F} Share on X</button><button class="btn-skip" id="fwShareSkip">Skip <kbd class="kb">Esc</kbd></button>';
     document.body.appendChild(share);
-    document.getElementById('fwShareSkip').addEventListener('click', () => share.classList.remove('show'));
+    function skipShare(){ share.classList.remove('show'); }
+    document.getElementById('fwShareSkip').addEventListener('click', skipShare);
+    // pressing Esc while the milestone popup is open skips it (matches the badge)
+    window.addEventListener('keydown', (e) => {
+      if(e.code === 'Escape' && share.classList.contains('show')){ e.preventDefault(); e.stopPropagation(); skipShare(); }
+    }, true);
     document.getElementById('fwShareGo').addEventListener('click', async () => {
       const txt = share._tweetText || '';
       // Try to capture a screenshot of the game canvas. preserveDrawingBuffer
