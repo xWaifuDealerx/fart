@@ -378,7 +378,7 @@
         const have = owned(id);
         html += '<div class="gs-row"><div class="ico">' + w.icon + '</div>'
           + '<div><div class="nm">' + w.name + (have ? ' <span style="color:#5ff09c">✓</span>' : '') + '</div><div class="sub">' + w.price + ' \u{1F948} · ' + w.desc + '</div></div>'
-          + '<button class="btn" data-buy-weapon="' + id + '">' + (have ? 'Buy again' : 'Buy') + '</button>'
+          + '<button class="btn" data-buy-weapon="' + id + '">Buy</button>'
           + '</div>'
           + '<div class="gs-row"><div class="ico">\u{1F4A5}</div>'
           + '<div><div class="nm">' + (ITEMS[w.ammoId]?.name || 'Ammo') + '</div><div class="sub">' + w.ammoPrice + ' \u{1F948} · ' + w.ammoQty + ' rounds · you have ' + reserve(id) + '</div></div>'
