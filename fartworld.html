@@ -57,7 +57,7 @@
 <script src="sfx.js?v=2" defer></script>
 <script src="brainrot.js?v=17" defer></script>
 <script src="printerbots.js?v=2" defer></script>
-<script src="dailyhub.js?v=4" defer></script>
+<script src="dailyhub.js?v=5" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=1" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
@@ -5797,6 +5797,9 @@ function enterGame(){
   if(!window._lbPublishTimer){
     window._lbPublishTimer = setInterval(publishScore, 30_000);
   }
+  // tell side-modules (dailyhub.js) that the player is now in a server
+  window.fwInGame = true;
+  try { window.dispatchEvent(new CustomEvent('fw:entergame')); } catch(_){}
 }
 
 // Expose immediately so the inline onclick handlers on the login
