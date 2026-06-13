@@ -202,6 +202,9 @@
     // Expose the rocket mesh + eject so moon.js can detect collisions
     // and force an eject when the player crashes into the moon.
     window.rocketGrp = rocketGrp;
+    // expose current altitude + whether you're flying it (moon.js reads these)
+    window.rocketAltitude = function(){ return state.altitude; };
+    window.rocketOnboard  = function(){ return !!state.onboard; };
     window.rocketEject = function(){
       if(!state.onboard) return;
       state.onboard = false;

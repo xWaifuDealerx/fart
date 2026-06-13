@@ -89,7 +89,7 @@
         id:    'apt_luxury',
         name:  'Luxury Penthouse',
         kind:  'luxury',
-        pos:   { x: -13, z: 75 },
+        pos:   { x: 12, z: 69 },
         price: 10000000,
         rentPerDay: 12000,    // 12k/day — better return than the middle class
         color: { wall: 0xf0e6c8, trim: 0xffd64d, sign: '#ffd64d' },

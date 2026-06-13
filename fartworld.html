@@ -48,13 +48,15 @@
 <script src="equip.js?v=8" defer></script>
 <script src="bank-fix.js?v=8" defer></script>
 <script src="house-walls.js?v=8" defer></script>
-<script src="rocket.js?v=8" defer></script>
-<script src="moon.js?v=8" defer></script>
-<script src="social.js?v=9" defer></script>
+<script src="rocket.js?v=9" defer></script>
+<script src="moon.js?v=13" defer></script>
+<script src="moondc.js?v=1" defer></script>
+<script src="social.js?v=10" defer></script>
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=21" defer></script>
-<script src="brainrot.js?v=12" defer></script>
-<script src="printerbots.js?v=1" defer></script>
+<script src="brainrot.js?v=15" defer></script>
+<script src="printerbots.js?v=2" defer></script>
+<script src="dailyhub.js?v=4" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=1" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
@@ -84,7 +86,7 @@
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=14" defer></script>
+<script src="gunsmith.js?v=18" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=9" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -92,7 +94,7 @@
 <script src="extras-v6be.js?v=8" defer></script>
 <script src="extras-v6bg.js?v=8" defer></script>
 <script src="extras-v6bh.js?v=8" defer></script>
-<script src="extras-v6bi.js?v=8" defer></script>
+<script src="extras-v6bi.js?v=9" defer></script>
 <script src="loading.js?v=6bp"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -8900,6 +8902,8 @@ function tryInteract(){
   if(window.fwChurchInteract && window.fwChurchInteract()) return;
   // Fart Slide portal on the beach (slide.js) — E rides the secret slide.
   if(window.fwSlideInteract && window.fwSlideInteract()) return;
+  // Town Leaderboard board (dailyhub.js) — E opens the rankings.
+  if(window.fwBoardInteract && window.fwBoardInteract()) return;
   // If you're already in a boat, E disembarks you.
   // Yacht / plane stub objects: delegate to seaplane.js so we don't try
   // to step out of a vessel that's drifting at sea.
@@ -11352,6 +11356,8 @@ function dmStartMatch(){
   dmSetMatchHud(true);
   dmRefreshHud();
   dmSwitchWeapon(0);
+  // start the match with a full magazine in your real weapon
+  try { window.fwDmRefill && window.fwDmRefill(); } catch(_){}
   // Teleport me to a corner of the arena, opponent to the opposite
   const seed = Net.peerId < Dm.oppId ? 1 : -1;
   Player.pos.x = ARENA_POS.x + seed * (ARENA_RADIUS - 2);
@@ -11439,9 +11445,26 @@ function dmMyTracerShow(dir, color){
 function dmFire(){
   if(Dm.phase !== "active") return;
   const now = performance.now() / 1000;
-  const w = WEAPONS[Dm.weapon];
-  if(now - Dm.lastShotAt < w.cooldown) return;
-  Dm.lastShotAt = now;
+  // Use the player's REAL gunsmith weapon (Deagle / AK-47 / M40) so the arena
+  // has the SAME feel as the world: magazine + reload, recoil, and the M40
+  // scope. Falls back to the legacy arena weapons only if none is owned.
+  let w;
+  const useGun = (typeof window.fwHasActiveWeapon === 'function' && window.fwHasActiveWeapon() && typeof window.fwDmShot === 'function');
+  if(useGun){
+    const cd = window.fwDmWeaponCooldown ? window.fwDmWeaponCooldown() : 0.3;
+    if(now - Dm.lastShotAt < cd) return;
+    const shot = window.fwDmShot();
+    if(!shot.ok){
+      if(shot.empty){ Dm.lastShotAt = now; try { window.floater?.('🔫 Mag empty — press R to reload', 'bad'); } catch(_){} }
+      return;
+    }
+    Dm.lastShotAt = now;
+    w = { id: shot.soundId, dmg: shot.dmg, cooldown: shot.cooldown, color: shot.color, pellets: 1, spread: shot.spread };
+  } else {
+    w = WEAPONS[Dm.weapon];
+    if(now - Dm.lastShotAt < w.cooldown) return;
+    Dm.lastShotAt = now;
+  }
   // Fire from the camera position. In action mode the shot goes through
   // the on-screen aim cursor (dynamic third-person aim); otherwise it
   // goes straight along the view direction.
@@ -11492,7 +11515,8 @@ function dmFire(){
       dmBroadcastShot(dir, false);
     }
   }
-  dmPlayShotSound(w);
+  // when firing your real weapon, the gunsmith already played its .mp3
+  if(!useGun) dmPlayShotSound(w);
 }
 
 function dmPlayShotSound(w){
@@ -11907,7 +11931,10 @@ function tickDeathmatch(dt){
       // Classic: lock the camera straight behind the player (no orbit)
       Cam.yaw = Player.yaw + Math.PI;
       Cam.pitch = 0.25;
-      Cam.distance = 6;
+      // When aiming the M40, pull into FPS so the sniper scope engages.
+      const _scoping = (typeof window.fwActiveWeapon === 'function' && window.fwActiveWeapon() === 'm40' &&
+                        typeof window.fwHasActiveWeapon === 'function' && window.fwHasActiveWeapon() && window.fwAiming);
+      Cam.distance = _scoping ? 1.4 : 6;
     }
   }
 
@@ -11927,7 +11954,14 @@ let _dmFireHold = false;
 window.addEventListener('mousedown', () => { _dmFireHold = true; });
 window.addEventListener('mouseup',   () => { _dmFireHold = false; });
 setInterval(() => {
-  if(_dmFireHold && Dm.phase === "active" && WEAPONS[Dm.weapon].id === "smg") dmFire();
+  if(!(_dmFireHold && Dm.phase === "active")) return;
+  // auto-fire while held for: your gunsmith full-auto weapon (AK-47), or the
+  // legacy arena SMG when you don't have a gunsmith weapon.
+  const gunAuto = (typeof window.fwHasActiveWeapon === 'function' && window.fwHasActiveWeapon() &&
+                   typeof window.fwDmWeaponAuto === 'function' && window.fwDmWeaponAuto());
+  const legacyAuto = (typeof window.fwHasActiveWeapon !== 'function' || !window.fwHasActiveWeapon()) &&
+                     WEAPONS[Dm.weapon] && WEAPONS[Dm.weapon].id === "smg";
+  if(gunAuto || legacyAuto) dmFire();
 }, 60);
 
 // Mouse wheel cycles weapons during active match (overrides camera zoom)

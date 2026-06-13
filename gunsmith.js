@@ -91,6 +91,18 @@
     let ACTIVE = 'deagle';
     try { const o = JSON.parse(localStorage.getItem(MAGKEY)); if(o){ if(o.mag) MAG = Object.assign(MAG, o.mag); if(o.active) ACTIVE = o.active; } } catch(_){}
     function saveMag(){ try { localStorage.setItem(MAGKEY, JSON.stringify({ mag: MAG, active: ACTIVE })); } catch(_){} }
+    // ── real gunshot .mp3s (assets/sounds/) per weapon; cloned so rapid
+    //    AK shots overlap instead of cutting each other off. ──
+    const WEAP_SND = { deagle: 'deserteagle', ak47: 'ak47', m40: 'm40' };
+    const _gsSndBase = {};
+    function playWeaponSound(){
+      try {
+        const f = WEAP_SND[ACTIVE]; if(!f) return;
+        let base = _gsSndBase[f];
+        if(!base){ base = new Audio('assets/sounds/' + f + '.mp3'); _gsSndBase[f] = base; }
+        const a = base.cloneNode(); a.volume = 0.5; a.play().catch(() => {});
+      } catch(_){}
+    }
     function owned(id){ return (State.inventory?.[id] || 0) > 0; }
     function reserve(id){ const w = WEAPONS[id]; return w ? (State.inventory?.[w.ammoId] || 0) : 0; }
     function anyWeapon(){ return WORDER.some(owned); }
@@ -107,11 +119,19 @@
         o.connect(g).connect(ctx.destination); o.start(now + t); o.stop(now + t + 0.1);
       }
     }
+    function dmActive(){ return !!(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')); }
     function reload(){
       ensureActive();
       const w = WEAPONS[ACTIVE]; if(!w || !owned(ACTIVE)) return;
       const need = w.mag - (MAG[ACTIVE] || 0);
       if(need <= 0){ window.floater?.('Magazine full', 'bad'); return; }
+      // In a deathmatch you have UNLIMITED reserve ammo — reload always tops
+      // the mag to full (no reserve needed), but you still have to reload.
+      if(dmActive()){
+        MAG[ACTIVE] = w.mag; saveMag(); reloadSound(); updateAmmoHud();
+        window.floater?.('\u{1F504} Reloaded — ' + MAG[ACTIVE] + '/' + w.mag, 'good');
+        return;
+      }
       const have = reserve(ACTIVE);
       if(have <= 0){ window.floater?.('No ' + (ITEMS[w.ammoId]?.name || 'ammo') + ' — buy some at the Gunsmith', 'bad'); return; }
       const take = Math.min(need, have);
@@ -133,7 +153,12 @@
     window.addEventListener('keydown', (e) => {
       const a = document.activeElement;
       if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
-      if(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')) return;
+      // During a match only RELOAD is allowed (R) — weapon switching is the
+      // arena's job. Without this, R never reached reload() in deathmatch.
+      if(window.Dm && (window.Dm.phase === 'active' || window.Dm.phase === 'countdown')){
+        if(e.code === 'KeyR') reload();
+        return;
+      }
       if(e.code === 'KeyR'){ reload(); }
       else if((e.code === 'Digit1' || e.code === 'Numpad1') && owned('deagle')){ switchWeapon('deagle'); }
       else if((e.code === 'Digit2' || e.code === 'Numpad2') && owned('ak47')){ switchWeapon('ak47'); }
@@ -174,6 +199,34 @@
       requestAnimationFrame(scopeTick);
     }
     requestAnimationFrame(scopeTick);
+
+    // ── DEATHMATCH bridge ─────────────────────────────────────────────
+    // The arena drives shooting through these so your REAL weapon (with its
+    // magazine/reload and recoil) is what fires in PvP — not a separate set.
+    const DM_STATS = {
+      deagle: { dmg: 48,  cooldown: 0.30, spread: 0.005 },
+      ak47:   { dmg: 19,  cooldown: 0.11, spread: 0.022 },
+      m40:    { dmg: 100, cooldown: 1.10, spread: 0.0008 },
+    };
+    // top the active weapon's mag to full (called when a match starts)
+    window.fwDmRefill = function(){ const w = WEAPONS[ACTIVE]; if(w && owned(ACTIVE)){ MAG[ACTIVE] = w.mag; saveMag(); updateAmmoHud(); } };
+    window.fwDmWeaponCooldown = function(){ const s = DM_STATS[ACTIVE]; return s ? s.cooldown : 0.3; };
+    window.fwDmWeaponAuto = function(){ return !!(WEAPONS[ACTIVE] && WEAPONS[ACTIVE].auto); };
+    // Fire the active weapon for the arena: consumes a round (so reload
+    // matters), applies recoil + viewmodel kick. Returns combat stats, or
+    // { ok:false, empty:true } when the mag is empty (prompting a reload).
+    window.fwDmShot = function(){
+      const id = ACTIVE, w = WEAPONS[id];
+      if(!w || !owned(id)) return { ok:false };
+      if((MAG[id] || 0) <= 0) return { ok:false, empty:true };
+      MAG[id]--; saveMag(); updateAmmoHud();
+      try { if(window.Cam) window.Cam.pitch = Math.max(-1.05, Math.min(1.2, window.Cam.pitch - w.recoil)); } catch(_){}
+      try { window.fwGunKick && window.fwGunKick(); } catch(_){}
+      playWeaponSound();   // real gun .mp3 in the arena too
+      const s = DM_STATS[id] || DM_STATS.deagle;
+      return { ok:true, id, dmg:s.dmg, cooldown:s.cooldown, spread:s.spread, auto:!!w.auto,
+               soundId: w.auto ? 'smg' : 'pistol', color: 0xffe066 };
+    };
 
     // ── Building ──
     const SHOP_POS = { x: 35, z: -70 };
@@ -966,7 +1019,7 @@
         window.fwGunKick?.();
       } catch(_){}
       muzzleFlash();
-      gunshotSound();
+      playWeaponSound();
       const cam = window.camera;
       if(!cam) return;
       // ── Primary: raycast from camera through the crosshair pixel ──

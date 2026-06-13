@@ -102,7 +102,8 @@
         name, mesh, tag: makeTag(name),
         x: sx, z: sz, yaw: Math.random() * Math.PI * 2, speed: 3.0 + Math.random() * 0.8,
         baseIdx: null, carry: null, carryMesh: null,
-        task: null, linger: 1 + Math.random() * 2, stealT: 0, walking: false, bob: Math.random() * 6.28,
+        task: null, linger: 1 + Math.random() * 2, walking: false, bob: Math.random() * 6.28,
+        stealing: false, stealSlot: 0, stealId: null, stealUntil: 0,
       };
     }
 
@@ -198,24 +199,21 @@
         }
         bot.linger = 2 + Math.random() * 2;
       } else if (t.kind === 'steal') {
-        // stand at the player's base for a few seconds, then snatch one
-        bot.stealT += 0.2;   // accumulates while we keep returning here
+        // Begin a raid: it takes as long as the brainrot's OWN steal timer
+        // (rarer = longer). The countdown runs in the tick while the bot
+        // stands at your base.
         const pb = playerBase();
-        if (pb) {
-          const slot = occupiedToilet(pb);
-          if (slot >= 0) {
-            const stolen = pb.toilets[slot];
-            pb.toilets[slot] = null;
-            try { BR.setToiletHead && BR.setToiletHead(pb, slot, null); } catch (_) {}
-            try { BR.paintSign && BR.paintSign(pb); } catch (_) {}
-            try { BR.syncStateBase && BR.syncStateBase(pb); } catch (_) {}
-            const t2 = BR.BRAINROTS[stolen];
-            attachCarry(bot, t2 || randType());
-            try { window.floater && window.floater('🥷 ' + bot.name + ' stole ' + (t2 ? t2.name : 'a brainrot') + ' from your base!', 'bad'); } catch (_) {}
-            try { window.playFartSound && window.playFartSound(0.5, true); } catch (_) {}
-          }
+        const slot = pb ? occupiedToilet(pb) : -1;
+        if (pb && slot >= 0) {
+          bot.stealing = true;
+          bot.stealSlot = slot;
+          bot.stealId = pb.toilets[slot];
+          const dur = (BR.BRAINROTS[bot.stealId] && BR.BRAINROTS[bot.stealId].steal) || 10000;
+          bot.stealUntil = performance.now() + dur;
+          try { window.floater && window.floater('\u{1F977} ' + bot.name + ' is raiding your base! (' + Math.round(dur / 1000) + 's)', 'bad'); } catch (_) {}
+        } else {
+          bot.linger = 1 + Math.random();
         }
-        bot.linger = 1 + Math.random();
       } else {
         // wander — just hang out a moment
         bot.linger = 2 + Math.random() * 3;
@@ -233,7 +231,25 @@
 
       for (const bot of bots) {
         if (!inSlide) {
-          if (bot.linger > 0) {
+          if (bot.stealing) {
+            // Standing at your base, raiding — takes as long as the brainrot's
+            // own steal timer. Cancels if the brainrot is gone (you claimed it).
+            bot.walking = false;
+            const pb = playerBase();
+            const id = (pb && Array.isArray(pb.toilets)) ? pb.toilets[bot.stealSlot] : null;
+            if (!pb || id !== bot.stealId) {
+              bot.stealing = false; bot.linger = 0.5;
+            } else if (now >= bot.stealUntil) {
+              pb.toilets[bot.stealSlot] = null;
+              try { BR.setToiletHead && BR.setToiletHead(pb, bot.stealSlot, null); } catch (_) {}
+              try { BR.paintSign && BR.paintSign(pb); } catch (_) {}
+              try { BR.syncStateBase && BR.syncStateBase(pb); } catch (_) {}
+              const t2 = BR.BRAINROTS[bot.stealId];
+              attachCarry(bot, t2 || randType());
+              try { window.floater && window.floater('\u{1F977} ' + bot.name + ' stole ' + (t2 ? t2.name : 'a brainrot') + ' from your base!', 'bad'); } catch (_) {}
+              bot.stealing = false; bot.linger = 1.5;
+            }
+          } else if (bot.linger > 0) {
             bot.linger -= dt; bot.walking = false;
           } else {
             if (!bot.task) bot.task = decide(bot);

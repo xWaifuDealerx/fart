@@ -261,7 +261,7 @@
     const BASE_POS = [
       { x:-72, z:36 }, { x:37, z:-9 }, { x:67, z:-21 },
       { x:29, z:67 },  { x:-5, z:62 }, { x:-1, z:-39 },
-      { x:-12, z:69 }, { x:29, z:-81 }, { x:62, z:-44 },
+      { x:-13, z:71 }, { x:29, z:-81 }, { x:62, z:-44 },
     ];
     const RENT_MS = 60 * 60 * 1000;     // 1 hour
     const RENT_COST = 1000;             // silver
@@ -408,10 +408,23 @@
     // CARRYING (G to pick up / drop) — held in the printer's LEFT HAND
     // ──────────────────────────────────────────────────────────────
     let carry = null;   // { t, mesh }
+    // ── brainrot voice clips (assets/sounds/<name>.mp3) on pickup ──
+    const _brSnd = {};
+    function playBrainrotSound(t){
+      try {
+        const f = (t && t.name ? t.name : '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if(!f) return;
+        let a = _brSnd[f];
+        if(!a){ a = new Audio('assets/sounds/' + f + '.mp3'); _brSnd[f] = a; }
+        a.currentTime = 0; a.volume = 0.9; a.play().catch(() => {});
+      } catch(_){}
+    }
+
     // Held in the printer's RIGHT arm (raised up — see animatePrinter).
     function printerArm(){ const p = window.printer; return p && p.userData ? p.userData.armR : null; }
-    function attachCarry(t){
+    function attachCarry(t, silent){
       const arm = printerArm();
+      if(!silent) playBrainrotSound(t);
       const mesh = makeBody(t);
       mesh.scale.set(0.45, 0.45, 0.45);
       // Counter the raised arm's tilt (-1.25) so the brainrot stands
@@ -471,7 +484,7 @@
     }
     if(State.brCarry && BRAINROTS[State.brCarry]){
       // re-grab whatever we were holding when we logged out
-      setTimeout(() => { if(!carry) attachCarry(BRAINROTS[State.brCarry]); }, 1200);
+      setTimeout(() => { if(!carry) attachCarry(BRAINROTS[State.brCarry], true); }, 1200);
     }
 
     function nearestRoamer(){
@@ -638,6 +651,47 @@
     function fmtMs(ms){ const s = Math.max(0, Math.floor(ms / 1000)); const m = Math.floor(s / 60); return m + ':' + String(s % 60).padStart(2, '0'); }
 
     // ──────────────────────────────────────────────────────────────
+    // ── little GREEN FART puffs from the brainrots (purely visual, no sound) ──
+    const FART_N = 150;
+    const fartGeo = new THREE.BufferGeometry();
+    const fartPos = new Float32Array(FART_N * 3);
+    for(let i = 0; i < FART_N; i++) fartPos[i * 3 + 1] = -9999;   // park off-screen
+    fartGeo.setAttribute('position', new THREE.BufferAttribute(fartPos, 3));
+    const fartPts = new THREE.Points(fartGeo, new THREE.PointsMaterial({
+      color: 0x8fe060, size: 0.5, transparent: true, opacity: 0.55,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }));
+    fartPts.frustumCulled = false;
+    scene.add(fartPts);
+    const fartP = [];
+    for(let i = 0; i < FART_N; i++) fartP.push({ life: 0, max: 0, vx: 0, vy: 0, vz: 0 });
+    let fartHead = 0;
+    function emitFart(x, y, z){
+      for(let k = 0; k < 3; k++){
+        const i = fartHead; fartHead = (fartHead + 1) % FART_N;
+        const p = fartP[i];
+        p.life = 0; p.max = 0.8 + Math.random() * 0.7;
+        p.vx = (Math.random() - 0.5) * 0.5; p.vy = 0.45 + Math.random() * 0.55; p.vz = (Math.random() - 0.5) * 0.5;
+        fartPos[i * 3]     = x + (Math.random() - 0.5) * 0.3;
+        fartPos[i * 3 + 1] = y + (Math.random() - 0.5) * 0.2;
+        fartPos[i * 3 + 2] = z + (Math.random() - 0.5) * 0.3;
+      }
+    }
+    function updateFarts(dt){
+      for(let i = 0; i < FART_N; i++){
+        const p = fartP[i];
+        if(p.life < p.max){
+          p.life += dt;
+          fartPos[i * 3]     += p.vx * dt;
+          fartPos[i * 3 + 1] += p.vy * dt;
+          fartPos[i * 3 + 2] += p.vz * dt;
+        } else if(fartPos[i * 3 + 1] > -9000){
+          fartPos[i * 3 + 1] = -9999;
+        }
+      }
+      fartGeo.attributes.position.needsUpdate = true;
+    }
+
     // MAIN TICK
     // ──────────────────────────────────────────────────────────────
     let lastT = performance.now();
@@ -660,6 +714,23 @@
       }
       // keep population up
       if(Roamers.filter(r => !r.idle).length < MAX_ROAMERS && Math.random() < dt * 0.3) spawnRoamer();
+
+      // brainrots toot little green fart puffs (no sound)
+      if(Roamers.length && Math.random() < dt * 3.5){
+        const r = Roamers[(Math.random() * Roamers.length) | 0];
+        if(r && r.mesh) emitFart(r.x, r.mesh.position.y + 0.35, r.z);
+      }
+      if(Math.random() < dt * 3){
+        for(const b of Bases){
+          if(!b.owner) continue;
+          const i = (Math.random() * 6) | 0;
+          if(b.toilets[i] && b.toiletMeshes && b.toiletMeshes[i]){
+            const tm = b.toiletMeshes[i];
+            emitFart(tm.userData.wx, (b.y || 0) + 1.7, tm.userData.wz);
+          }
+        }
+      }
+      updateFarts(dt);
 
       // yield accrual for all owned/squatter bases
       for(const b of Bases){

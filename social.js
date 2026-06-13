@@ -141,13 +141,13 @@
     // Share modal
     const share = document.createElement('div');
     share.className = 'fw-share';
-    share.innerHTML = '<h3 id="fwShareTtl">Milestone!</h3><div class="lab" id="fwShareLab">You did it.</div><button class="btn-tweet" id="fwShareGo">\u{1D54F} Share on X</button><button class="btn-skip" id="fwShareSkip">Skip <kbd class="kb">Esc</kbd></button>';
+    share.innerHTML = '<h3 id="fwShareTtl">Milestone!</h3><div class="lab" id="fwShareLab">You did it.</div><button class="btn-tweet" id="fwShareGo">\u{1D54F} Share on X</button><button class="btn-skip" id="fwShareSkip">Skip <kbd class="kb">U</kbd></button>';
     document.body.appendChild(share);
     function skipShare(){ share.classList.remove('show'); }
     document.getElementById('fwShareSkip').addEventListener('click', skipShare);
-    // pressing Esc while the milestone popup is open skips it (matches the badge)
+    // pressing U while the milestone popup is open skips it (matches the badge)
     window.addEventListener('keydown', (e) => {
-      if(e.code === 'Escape' && share.classList.contains('show')){ e.preventDefault(); e.stopPropagation(); skipShare(); }
+      if(e.code === 'KeyU' && share.classList.contains('show')){ e.preventDefault(); e.stopPropagation(); skipShare(); }
     }, true);
     document.getElementById('fwShareGo').addEventListener('click', async () => {
       const txt = share._tweetText || '';

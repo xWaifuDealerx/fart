@@ -68,30 +68,42 @@
     // Disc sits on the +Y pole. It's parented to its own world-anchored
     // group so the WalkableSurfaces raycaster can find it without
     // intersecting the sphere directly.
-    const SURFACE_Y = MOON_POS.y + MOON_RADIUS - 1.5;
+    // ── The WALKABLE moon is its own area FAR from the spawn world, so the
+    //    home island is well beyond the camera's far plane (1500) and you're
+    //    surrounded only by the black starry dome — a real "other planet". ──
+    // A big white "blank island" FAR from the spawn world. Kept at LOW Y
+    // (below the floor-ray origin at y=40) so the player physics actually
+    // latch onto it instead of falling through. The far X keeps the home
+    // island beyond the camera far plane (1500) and the opaque star dome
+    // hides everything else — a real empty moon copy of the world.
+    const SURF = { x: 3000, y: 2, z: 0 };
+    const ISLAND_R = (typeof window.ISLAND_RADIUS === 'number') ? window.ISLAND_RADIUS : 90;
+    const SURFACE_Y = SURF.y + 2;             // top of the white ground slab
     const surface = new THREE.Mesh(
-      new THREE.CylinderGeometry(20, 22, 2.5, 32),
-      new THREE.MeshStandardMaterial({ color: 0xeae0d0, roughness: 0.92, flatShading: true })
+      new THREE.CylinderGeometry(ISLAND_R, ISLAND_R + 6, 4, 64),
+      new THREE.MeshStandardMaterial({ color: 0xf2efe8, roughness: 0.96, flatShading: true })
     );
-    surface.position.set(MOON_POS.x, SURFACE_Y, MOON_POS.z);
+    surface.position.set(SURF.x, SURF.y, SURF.z);
     surface.receiveShadow = true;
     scene.add(surface);
     if(window.WalkableSurfaces) window.WalkableSurfaces.push(surface);
-    // Scatter craters on the disc top
-    for(let i = 0; i < 18; i++){
-      const r = 1 + Math.random() * 3;
+    // expose the moon surface so other modules (moondc.js) can place things on it
+    window.fwMoonSurface = { x: SURF.x, y: SURFACE_Y, z: SURF.z, r: ISLAND_R };
+    // Scatter shallow craters across the white surface
+    for(let i = 0; i < 60; i++){
+      const r = 2 + Math.random() * 7;
       const c = new THREE.Mesh(
-        new THREE.CylinderGeometry(r, r * 1.2, 0.3, 12),
-        new THREE.MeshStandardMaterial({ color: 0x9a8f7a, roughness: 0.95 })
+        new THREE.CylinderGeometry(r, r * 1.2, 0.4, 14),
+        new THREE.MeshStandardMaterial({ color: 0xdcd6ca, roughness: 0.97 })
       );
       const ang = Math.random() * Math.PI * 2;
-      const dist = Math.random() * 15;
-      c.position.set(MOON_POS.x + Math.cos(ang) * dist, SURFACE_Y + 1.3, MOON_POS.z + Math.sin(ang) * dist);
+      const dist = Math.random() * (ISLAND_R - 6);
+      c.position.set(SURF.x + Math.cos(ang) * dist, SURFACE_Y + 0.02, SURF.z + Math.sin(ang) * dist);
       scene.add(c);
     }
 
-    // ── "EARTH" rocket return pad on the moon disc ──
-    const RETURN_PAD = { x: MOON_POS.x + 10, y: SURFACE_Y + 1.3, z: MOON_POS.z + 4 };
+    // ── "EARTH" rocket return pad on the moon surface ──
+    const RETURN_PAD = { x: SURF.x + 12, y: SURFACE_Y + 0.1, z: SURF.z + 6 };
     const padG = new THREE.Group();
     padG.position.set(RETURN_PAD.x, RETURN_PAD.y, RETURN_PAD.z);
     const pSlab = new THREE.Mesh(new THREE.CylinderGeometry(4.0, 4.0, 0.3, 18),
@@ -179,6 +191,70 @@
     let onMoon = false;
     Player.onMoon = false;
 
+    // ── Starry-sky dome (only visible while you're ON the moon) ──
+    const starDome = (function(){
+      const cvs = document.createElement('canvas'); cvs.width = 1024; cvs.height = 512;
+      const ctx = cvs.getContext('2d');
+      ctx.fillStyle = '#05060f'; ctx.fillRect(0, 0, 1024, 512);
+      for(let i = 0; i < 900; i++){
+        const x = Math.random() * 1024, y = Math.random() * 512, r = Math.random() * 1.3;
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.4 + Math.random() * 0.6) + ')';
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      }
+      for(let i = 0; i < 40; i++){
+        const x = Math.random() * 1024, y = Math.random() * 512;
+        ctx.fillStyle = '#cfe6ff';
+        ctx.beginPath(); ctx.arc(x, y, 1.5 + Math.random() * 1.2, 0, Math.PI * 2); ctx.fill();
+      }
+      const tex = new THREE.CanvasTexture(cvs);
+      // opaque black dome → black starry sky in every direction, no fog so it
+      // never washes out. Sits over the far surface; from the spawn world it's
+      // beyond the camera far plane, so it's only ever seen on the moon.
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(320, 40, 28),
+        new THREE.MeshBasicMaterial({ map: tex, side: THREE.BackSide, fog: false, depthWrite: false }));
+      dome.position.set(SURF.x, SURF.y, SURF.z);
+      dome.visible = true;
+      scene.add(dome);
+      // a soft fill light so the white surface reads well under the dark sky
+      const moonLight = new THREE.DirectionalLight(0xdfe8ff, 0.7);
+      moonLight.position.set(SURF.x + 60, SURF.y + 120, SURF.z + 40);
+      scene.add(moonLight);
+      return dome;
+    })();
+
+    // ── "Enter Moon" button — appears once the rocket passes 1000 m ──
+    const enterBtn = document.createElement('button');
+    enterBtn.id = 'moonEnterBtn';
+    enterBtn.textContent = '\u{1F319} Enter Moon';
+    enterBtn.style.cssText =
+      'position:fixed;left:50%;top:38%;transform:translateX(-50%);display:none;z-index:56;cursor:pointer;' +
+      'font-family:Bangers,Orbitron,sans-serif;font-size:26px;letter-spacing:2px;color:#06122a;' +
+      'background:linear-gradient(135deg,#cfe6ff,#a8e0ff);border:2px solid #fff;border-radius:14px;' +
+      'padding:14px 30px;box-shadow:0 0 36px rgba(168,224,255,.7),0 10px 24px rgba(0,0,0,.5);' +
+      'animation:moonB .5s cubic-bezier(.2,.7,.4,1)';
+    document.body.appendChild(enterBtn);
+
+    function enterMoon(){
+      if(onMoon) return;
+      onMoon = true; Player.onMoon = true;
+      try { if(window.rocketEject) window.rocketEject(); } catch(_){}
+      Player.pos.x = SURF.x - 6; Player.pos.z = SURF.z; Player.pos.y = SURFACE_Y + 1.3;
+      Player.yaw = 0; Player.vy = 0; Player.airborne = false;
+      try { const pm = (window.printer || window.Player?.mesh); if(pm) pm.visible = true; } catch(_){}
+      enterBtn.style.display = 'none';
+      showBanner('\u{1F319} WELCOME TO THE MOON', 2800);
+    }
+    enterBtn.addEventListener('click', enterMoon);
+    window.fwEnterMoon = enterMoon;
+    // ENTER key also triggers the button when it's showing
+    window.addEventListener('keydown', (e) => {
+      if((e.code === 'Enter' || e.code === 'NumpadEnter') && enterBtn.style.display !== 'none' && !onMoon){
+        const a = document.activeElement;
+        if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+        e.preventDefault(); enterMoon();
+      }
+    }, true);
+
     // ── Lunar landing detection — uses the rocket's world position ──
     // Looks for the rocket mesh exposed via window.rocketGrp (set in
     // rocket.js below); if missing we just skip.
@@ -198,9 +274,9 @@
               // Crash landing: eject onto the moon disc
               onMoon = true; Player.onMoon = true;
               if(typeof window.rocketEject === 'function') window.rocketEject();
-              // Teleport player onto the moon disc
-              Player.pos.x = MOON_POS.x - 3;
-              Player.pos.z = MOON_POS.z;
+              // Teleport player onto the far moon surface
+              Player.pos.x = SURF.x - 6;
+              Player.pos.z = SURF.z;
               Player.pos.y = SURFACE_Y + 1.3;
               Player.yaw = 0; Player.vy = 0; Player.airborne = false;
               try { const pm = (window.printer || window.Player?.mesh); if(pm) pm.visible = true; } catch(e){}
@@ -214,8 +290,13 @@
       if(onMoon){
         const d = Math.hypot(Player.pos.x - RETURN_PAD.x, Player.pos.z - RETURN_PAD.z);
         proxEl.classList.toggle('show', d < 5);
+        enterBtn.style.display = 'none';
       } else {
         proxEl.classList.remove('show');
+        // "Enter Moon" button appears once the rocket climbs past 1000 m
+        const onb = (typeof window.rocketOnboard === 'function') ? window.rocketOnboard() : !!(Player.boat && Player.boat.isRocket);
+        const alt = (typeof window.rocketAltitude === 'function') ? window.rocketAltitude() : 0;
+        enterBtn.style.display = (onb && alt >= 1000) ? 'block' : 'none';
       }
     }, 150);
 
