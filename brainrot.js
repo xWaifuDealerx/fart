@@ -426,7 +426,47 @@
       if(!carry) return;
       try { carry.mesh.parent && carry.mesh.parent.remove(carry.mesh); } catch(_){}
       carry = null; window.fwCarryBrainrot = false;
+      if(fpView) fpView.visible = false;
       State.brCarry = null; save();
+    }
+
+    // ── FIRST-PERSON HELD VIEW ──────────────────────────────────────
+    // In 3rd person the brainrot sits on the printer's raised hand. In 1st
+    // person the printer is hidden, so we show a camera-attached copy in the
+    // lower-LEFT of the screen (mirrors how the held item reads up close).
+    const FPS_AT = 2.1;
+    let fpView = null, fpViewType = null;
+    function updateCarryFpView(){
+      const cam = window.camera, THREE = window.THREE;
+      if(!cam || !THREE) return;
+      const fps = !!(window.Cam && window.Cam.curDistance < FPS_AT);
+      if(!carry || !fps){ if(fpView) fpView.visible = false; return; }
+      // (re)build when we start carrying a different brainrot
+      if(!fpView || fpViewType !== carry.t.id){
+        if(fpView){ try { cam.remove(fpView); } catch(_){} fpView = null; }
+        fpView = new THREE.Group();
+        const body = makeBody(carry.t);
+        body.scale.set(0.4, 0.4, 0.4);
+        fpView.add(body);
+        // tucked into the LOWER-LEFT corner, close to the camera
+        fpView.position.set(-0.78, -0.78, -1.25);
+        fpView.rotation.set(0.12, 0.5, 0.06);
+        // Always draw the held item ON TOP of the world (no sea/horizon bleed):
+        // disable depth test + write, mark transparent, and give it a high
+        // render order so it paints last, after the (transparent) ocean.
+        fpView.traverse(o => {
+          if(o.isMesh){ o.renderOrder = 9999; o.frustumCulled = false; }
+          const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+          mats.forEach(m => { m.depthTest = false; m.depthWrite = false; m.transparent = true; m.needsUpdate = true; });
+        });
+        cam.add(fpView);
+        fpViewType = carry.t.id;
+      }
+      fpView.visible = true;
+      // gentle idle bob so it feels held
+      const t = performance.now() / 1000;
+      fpView.position.y = -0.78 + Math.sin(t * 2.2) * 0.015;
+      fpView.rotation.z = 0.06 + Math.sin(t * 1.7) * 0.02;
     }
     if(State.brCarry && BRAINROTS[State.brCarry]){
       // re-grab whatever we were holding when we logged out
@@ -684,6 +724,9 @@
         if(bp > 0) pill += '<br>💩 <b>+' + bp + '%</b> silver bonus · ' + fmtMs(bonusState().until - Date.now()) + ' left';
         basePill.innerHTML = pill;
       } else basePill.style.display = 'none';
+
+      // keep the first-person held-brainrot view in sync
+      updateCarryFpView();
 
       requestAnimationFrame(tick);
     }
