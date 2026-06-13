@@ -414,15 +414,9 @@
     //    survive Windows/Git 8.3 truncation when deployed to GitHub. ──
     const BR_SND = { fartbubu: 'fartbubu', baldur: 'baldur', fartolero: 'fartol',
                      fartitos: 'fartit', popofanto: 'popof', fartifito: 'fito' };
-    const _brSnd = {};
     function playBrainrotSound(t){
-      try {
-        const f = t && BR_SND[t.id];
-        if(!f) return;
-        let a = _brSnd[f];
-        if(!a){ a = new Audio('assets/sounds/' + f + '.mp3'); _brSnd[f] = a; }
-        a.currentTime = 0; a.volume = 0.9; a.play().catch(() => {});
-      } catch(_){}
+      const f = t && BR_SND[t.id];
+      if(f && window.fwSfx) window.fwSfx(f, 0.9);
     }
 
     // Held in the printer's RIGHT arm (raised up — see animatePrinter).

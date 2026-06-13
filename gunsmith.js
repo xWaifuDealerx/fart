@@ -91,18 +91,13 @@
     let ACTIVE = 'deagle';
     try { const o = JSON.parse(localStorage.getItem(MAGKEY)); if(o){ if(o.mag) MAG = Object.assign(MAG, o.mag); if(o.active) ACTIVE = o.active; } } catch(_){}
     function saveMag(){ try { localStorage.setItem(MAGKEY, JSON.stringify({ mag: MAG, active: ACTIVE })); } catch(_){} }
-    // ── real gunshot .mp3s (assets/sounds/) per weapon; cloned so rapid
-    //    AK shots overlap instead of cutting each other off. ──
-    // short filenames (<=8 chars) so they survive Windows/Git 8.3 truncation
+    // ── gunshot .mp3s via the shared POOLED player (sfx.js): a small reused
+    //    element pool, so rapid AK fire never exhausts media elements and the
+    //    audio never dies. Short filenames survive Git 8.3 truncation. ──
     const WEAP_SND = { deagle: 'deagle', ak47: 'ak47', m40: 'm40' };
-    const _gsSndBase = {};
     function playWeaponSound(){
-      try {
-        const f = WEAP_SND[ACTIVE]; if(!f) return;
-        let base = _gsSndBase[f];
-        if(!base){ base = new Audio('assets/sounds/' + f + '.mp3'); _gsSndBase[f] = base; }
-        const a = base.cloneNode(); a.volume = 0.5; a.play().catch(() => {});
-      } catch(_){}
+      const f = WEAP_SND[ACTIVE];
+      if(f && window.fwSfx) window.fwSfx(f, 0.5);
     }
     function owned(id){ return (State.inventory?.[id] || 0) > 0; }
     function reserve(id){ const w = WEAPONS[id]; return w ? (State.inventory?.[w.ammoId] || 0) : 0; }
