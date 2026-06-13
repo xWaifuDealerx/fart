@@ -261,6 +261,7 @@
     const BASE_POS = [
       { x:-72, z:36 }, { x:37, z:-9 }, { x:67, z:-21 },
       { x:29, z:67 },  { x:-5, z:62 }, { x:-1, z:-39 },
+      { x:-12, z:69 }, { x:29, z:-81 }, { x:62, z:-44 },
     ];
     const RENT_MS = 60 * 60 * 1000;     // 1 hour
     const RENT_COST = 1000;             // silver
@@ -743,8 +744,12 @@
       if(nb && nb.owner === meId()) usePoopOrb();
     });
 
-    // expose a tiny API for debugging / future MP
-    window.fwBrainrots = { Bases, Roamers, BRAINROTS, get carry(){ return carry; } };
+    // expose a tiny API for debugging / future MP / the printer-bot sim
+    window.fwBrainrots = {
+      Bases, Roamers, BRAINROTS, get carry(){ return carry; },
+      paintSign, setToiletHead, makeBody, occupiedYps,
+      meId, syncStateBase,
+    };
     console.log('[brainrot] ★ Steal a Brainrot ready — ' + Bases.length + ' bases, ' + Roamers.length + ' roaming');
   }
 })();

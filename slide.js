@@ -642,6 +642,7 @@
         printerMesh.position.set(0, 0.4, -0.2);
         printerMesh.rotation.y = Math.PI;          // face forward (down the slide)
         printerMesh.scale.setScalar(0.85);
+        applySledLook(printerMesh);   // carry over equipped cosmetics (cap)
         g.add(printerMesh);
       } else {
         // fallback simple printer if the host builder isn't exposed
@@ -651,6 +652,35 @@
       }
       g.userData.printer = printerMesh;
       return g;
+    }
+
+    // Mirror the player's equipped cosmetics onto the slide printer. Called on
+    // build AND at the start of every ride (in case you changed hats between
+    // rides). Currently handles the Trucker Cap.
+    function applySledLook(printerMesh) {
+      if (!printerMesh) return;
+      const old = printerMesh.getObjectByName ? printerMesh.getObjectByName('slideCap') : null;
+      if (old) printerMesh.remove(old);
+      let wearCap = false;
+      try {
+        const eq = JSON.parse(localStorage.getItem('fw.equip.v1') || '{}');
+        const hasCap = ((window.State && window.State.inventory && window.State.inventory.cap) || 0) > 0;
+        wearCap = eq.hat === 'cap' && hasCap;
+      } catch (_) {}
+      if (wearCap) {
+        const capMat = new THREE.MeshStandardMaterial({ color: 0x3a78c2, roughness: 0.7 });
+        const cap = new THREE.Group(); cap.name = 'slideCap';
+        cap.add(new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), capMat));
+        const brim = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.05, 0.42), capMat);
+        brim.position.set(0, 0.04, 0.5); cap.add(brim);
+        const btn = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8),
+          new THREE.MeshStandardMaterial({ color: 0xffd64d, roughness: 0.5 }));
+        btn.position.y = 0.42; cap.add(btn);
+        cap.position.set(0, 1.52, 0);
+        printerMesh.add(cap);
+      }
+      const pg = printerMesh.userData && printerMesh.userData.paperGrp;
+      if (pg) pg.visible = !wearCap;
     }
 
     // ========================================================================
@@ -804,6 +834,8 @@
 
     function startSlide() {
       if (!SL) SL = buildSlideWorld();
+      // refresh the rider's cosmetics in case the hat changed between rides
+      try { applySledLook(SL.sled.userData.printer); } catch (_) {}
       window.fwSlideActive = true;
 
       // reset run
