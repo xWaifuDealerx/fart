@@ -49,7 +49,11 @@
       radial-gradient(circle at 88% 78%, rgba(255, 138, 60, 0.16) 0%, transparent 55%),
       url('hero.png') center / cover no-repeat;
     filter: blur(48px) brightness(0.45) saturate(1.15);
-    transform: scale(1.18);  /* hides blur edges */
+    /* Promote to its own GPU layer so the expensive blur is rasterised ONCE
+       and just composited on scroll — kills the scroll-back-up jank. */
+    transform: scale(1.18) translateZ(0);
+    will-change: transform;
+    backface-visibility: hidden;
     z-index: 0;
     pointer-events: none;
   }
@@ -91,6 +95,10 @@
       radial-gradient(circle at 50% 30%, rgba(95, 240, 156, 0.25) 0%, transparent 55%),
       radial-gradient(circle at 15% 80%, rgba(106, 58, 160, 0.20) 0%, transparent 45%),
       radial-gradient(circle at 85% 70%, rgba(177, 48, 48, 0.18) 0%, transparent 45%);
+    /* fade the glow out toward the bottom so the hero blends into the next
+       section instead of ending in a hard horizontal line */
+    -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 0%, #000 68%, transparent 100%);
     pointer-events: none;
   }
   .hero::after {
@@ -534,22 +542,22 @@
       <div class="new-card">
         <span class="nc-ico">🌳</span>
         <h3>The Destiny Board</h3>
-        <p>An Albion-style radial skill tree. <b>9 skills + ore &amp; weed specializations</b>, each Lv 1–100 — weeks of grind per line. Every 5 levels pays a silver milestone. Drag, zoom, and watch your branches light up.</p>
+        <p>Classical MMO skill tree. Master different specializations, conquer levels and reap skills and skin rewards. Drag, zoom, and watch your branches light up.</p>
       </div>
       <div class="new-card">
         <span class="nc-ico">⚔️</span>
-        <h3>Island-Wide Deathmatch</h3>
-        <p>Step into the arena ring with a Desert Eagle — then the <b>whole island becomes the battleground</b>. Fight friends or the practice bot, first to 10 kills. Bullets don't go through walls. Bring a gun or you don't play.</p>
+        <h3>Deathmatch</h3>
+        <p>Step into the arena ring with a weapon and the <b>whole island becomes the battleground</b>. Fight friends or the practice bot, first to 10 kills. Don't step into a gunfight without a gun!</p>
       </div>
       <div class="new-card">
         <span class="nc-ico">🎰</span>
         <h3>Poop Casino</h3>
         <p>Slots, a 3D <b>coinflip</b> (call 💩 or 🧻), and a real spinning <b>European roulette wheel</b> — 37 pockets, watch it decelerate under the pin. Green zero pays 36×. Cash only. The house remembers.</p>
       </div>
-      <div class="new-card"><span class="badge event">⏳ LIMITED</span>
+      <div class="new-card">
         <span class="nc-ico">📜</span>
         <h3>Missions</h3>
-        <p>Genesis missions teach the hustle; <b>Event missions expire forever</b>. First on the board: <b>Gold Rush</b> — convert ALL your silver to gold in one transaction before <b>Jan 1, 2027</b>.</p>
+        <p>Guided <b>genesis missions</b> teach you the hustle and pay out <b>XP and rewards</b> as you go — from your first fart jar to renting a brainrot base, finishing the slide, and beyond. An on-screen objective card guides you step by step.</p>
       </div>
       <div class="new-card">
         <span class="nc-ico">🛩️</span>
@@ -558,18 +566,18 @@
       </div>
       <div class="new-card">
         <span class="nc-ico">📦</span>
-        <h3>PUBG-Style Loot</h3>
-        <p>A <b>Vicinity panel</b> shows everything on the ground around you — drag items out of your bag onto the island, or scoop loot back in. Spiders now drop <b>Spider Meat</b>. Equip slots for your hat &amp; weapon.</p>
+        <h3>Open World Loot</h3>
+        <p>A <b>vicinity panel</b> shows everything on the ground around you. Pick up items you find in the world and trade your way up in the society. Equip slots for your weapons &amp; wearables.</p>
       </div>
       <div class="new-card">
         <span class="nc-ico">🎯</span>
-        <h3>Action Controls + FPS</h3>
+        <h3>Action Controls</h3>
         <p>Mouse-look without dragging, right-click to aim, scroll all the way in for <b>first-person mode</b> with a real Desert Eagle viewmodel. 🎮 <b>Xbox controller</b> support, fullscreen, brightness/contrast/quality settings.</p>
       </div>
       <div class="new-card">
         <span class="nc-ico">🥕</span>
         <h3>A Farmer's Economy</h3>
-        <p>Rebalanced so the loops actually pay: weed plots return your investment even on dirt-tier rolls (rare strains print), and carrots sell to Roki at a real profit. Whole-number prices at Carlos's register.</p>
+        <p>Farming game loops that pay: weed plots return your investment even on dirt-tier rolls (rare strains print), and carrots sell to rabbits at a real profit. Rent a plot and get to work!</p>
       </div>
     </div>
   </div>
@@ -822,7 +830,7 @@
       <p>An Albion-style radial board: <b>9 skills</b> (Mining, Weapons, Weed, Farting, Data, Gamba, Flying, Boating, Petting) plus per-ore and per-strain specialization nodes. Each runs Lv 1–100 on a steep curve — maxing one line takes weeks. <b>Every 5 levels pays a silver milestone</b> (mains up to 1,500🥈 a pop). Hover any node for its full story; drag &amp; zoom to explore.</p>
 
       <h4>📜 Missions</h4>
-      <p><b>Genesis Missions</b> teach the game (start with "Welcome to Fartprint"). <b>Event Missions are limited-time and expire forever</b> — Gold Rush (convert ALL your silver to gold in one transaction) ends January 1st, 2027. One mission active at a time; completed missions can never be replayed.</p>
+      <p><b>Genesis Missions</b> walk you through the game — starting with "Welcome to Fartprint" and moving on to mining &amp; selling ore, growing and selling weed, hunting with a gun, printing &amp; laundering fake cash, running a brainrot base, the casino, the church, hotels and more. Each pays <b>XP and rewards</b>, with an on-screen objective card and a pop-up for every task you complete. One mission active at a time.</p>
 
       <h4>⚔️ Deathmatch</h4>
       <p>Bring a weapon to the arena (36, 36) — no gun, no fight. Queue against another player or the practice bot. After the countdown <b>the entire island is the battleground</b>: first to 10 kills. Bullets are blocked by buildings, your shots draw tracers, wins pay XP + silver + ELO (bot matches pay reduced, no ELO). The bot hunts you across the map and can't be outrun forever.</p>
