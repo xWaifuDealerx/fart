@@ -232,7 +232,12 @@
     position: absolute;
     top: 14px; left: 14px; right: 14px;
     display: grid;
-    grid-template-columns: 1fr auto auto auto auto;
+    /* One column per visible card (player + up to 5 money/wallet cards) so
+       nothing wraps onto a 2nd row. `justify-items:start` keeps every card
+       sized to its content — without it, a card landing in the 1fr track
+       stretches into a long empty bar. */
+    grid-template-columns: 1fr auto auto auto auto auto;
+    justify-items: start;
     gap: 10px; align-items: start;
   }
   @media (max-width: 900px) {
@@ -2692,7 +2697,6 @@
 
 <!-- ─── HUD ─── -->
 <div id="hud" class="hidden">
-  <a class="home-pill" href="index.html">← Ecosystem</a>
   <div class="hud-top">
     <div class="hud-card hud-player">
       <div class="lv">Lv <span id="hudLv">1</span></div>
@@ -3313,6 +3317,11 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 // ground/water) or 'center' (held items).
 const FWModels = (() => {
   const BASE = 'assets/models/';
+  // Cache-buster for the GLB files. The browser (and the CDN in front of the
+  // deployed site) caches models by URL — so when you replace a .glb with a
+  // new upload under the SAME filename, the OLD cached model keeps loading.
+  // Bump this number whenever you re-upload a model and the old one still shows.
+  const MVER = '?v=3';
   const CFG = {
     deserteagle: { url: 'deserteagle.glb', fit: 0.55, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
     pickaxe:     { url: 'pickaxe.glb',     fit: 0.85, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
@@ -3354,7 +3363,7 @@ const FWModels = (() => {
     const cfg = CFG[name];
     if(!cfg) return Promise.reject(new Error('unknown model ' + name));
     if(!cache[name]){
-      const urls = (ALIASES[cfg.url] || [cfg.url]).map(u => BASE + u);
+      const urls = (ALIASES[cfg.url] || [cfg.url]).map(u => BASE + u + MVER);
       cache[name] = new Promise((resolve, reject) => {
         let i = 0;
         const tryNext = () => {
