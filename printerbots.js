@@ -80,17 +80,21 @@
 
     // ── name tags (same container the multiplayer peers use) ──
     const tagHost = document.getElementById('nameTags') || document.body;
-    function makeTag(name) {
+    function makeTag(name, iconSVG) {
       const t = document.createElement('div');
       t.className = 'name-tag';
-      t.textContent = name;
+      // Rank/prestige ICON only, in front of the name (like a real player's tag).
+      const ico = iconSVG
+        ? '<span style="display:inline-flex;vertical-align:middle;margin-right:4px;width:16px;height:16px">' + iconSVG + '</span>'
+        : '';
+      t.innerHTML = ico + name;
       t.style.display = 'none';
       tagHost.appendChild(t);
       return t;
     }
 
     // ── build one bot ──
-    function makeBot(name, accent) {
+    function makeBot(name, accent, level, prestige) {
       const mesh = window.buildPrinter();
       // a subtle accent so the two are distinguishable but still "default-ish"
       try {
@@ -106,8 +110,11 @@
       }
       mesh.position.set(sx, gH(sx, sz), sz);
       scene.add(mesh);
+      const lvl = level || 30, pres = prestige || 0;
+      const iconSVG = (window.fwPrestige && window.fwPrestige.iconFor)
+        ? window.fwPrestige.iconFor(lvl, pres, 16) : '';
       return {
-        name, mesh, tag: makeTag(name),
+        name, level: lvl, prestige: pres, mesh, tag: makeTag(name, iconSVG),
         x: sx, z: sz, yaw: Math.random() * Math.PI * 2, speed: 3.0 + Math.random() * 0.8,
         baseIdx: null, carry: null, carryMesh: null,
         task: null, linger: 1 + Math.random() * 2, walking: false, bob: Math.random() * 6.28,
@@ -119,8 +126,8 @@
     }
 
     const bots = [
-      makeBot('Toiletcarta', 0xff6ad5),
-      makeBot('Skibidireaper', 0x9cff5a),
+      makeBot('Toiletcarta', 0xff6ad5, 38, 0),
+      makeBot('Skibidireaper', 0x9cff5a, 52, 2),
     ];
 
     // ── carry visuals (a small brainrot on the raised right arm) ──
@@ -356,7 +363,8 @@
       bot.dead = true; bot.deadUntil = performance.now() + 35000;   // back in 35s
       bot.tag.style.display = 'none';
       try { scene.remove(bot.mesh); } catch (_) {}
-      // Reward the defender
+      // Reward the defender — counts as a PVP kill (defending your base).
+      try { window.fwProfile && window.fwProfile.addPvpKill(bot.name); } catch (_) {}
       try { window.State.credits = (window.State.credits || 0) + 50; } catch (_) {}
       try { window.fwSkillXp && window.fwSkillXp('weapon', 20); } catch (_) {}
       try { window.fwSfx && window.fwSfx('deagle', 0.4); } catch (_) {}

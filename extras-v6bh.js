@@ -37,10 +37,19 @@
     document.head.appendChild(lvCss);
     const gate = document.createElement('div');
     gate.className = 'fw-rocketgate';
-    gate.innerHTML = '<div class="card"><h2>🚀 ROCKET LOCKED</h2><div class="sub">The moon mission is reserved for veteran printers. Keep farting, mining, and printing to level up.</div><div class="lv" id="fwRocketLv">Lv ? / 30</div><button class="ok" id="fwRocketOk">GOT IT</button></div>';
+    gate.innerHTML = '<div class="card"><h2>🚀 ROCKET LOCKED</h2><div class="sub">The moon mission is reserved for veteran printers. Keep farting, mining, and printing to level up.</div><div class="lv" id="fwRocketLv">Lv ? / 30</div><button class="ok" id="fwRocketOk">GOT IT</button><div class="sub" style="margin:11px 0 0;font-size:10.5px;opacity:.75">Press <b>Esc</b> or <b>Enter</b> to close</div></div>';
     document.body.appendChild(gate);
-    document.getElementById('fwRocketOk').addEventListener('click', () => gate.classList.remove('show'));
-    gate.addEventListener('click', (e) => { if(e.target === gate) gate.classList.remove('show'); });
+    function closeGate(){ gate.classList.remove('show'); }
+    document.getElementById('fwRocketOk').addEventListener('click', closeGate);
+    gate.addEventListener('click', (e) => { if(e.target === gate) closeGate(); });
+    // Esc / Enter closes the gate (capture phase so it beats other key handlers).
+    window.addEventListener('keydown', (e) => {
+      if(!gate.classList.contains('show')) return;
+      if(e.code === 'Escape' || e.code === 'Enter' || e.code === 'NumpadEnter'){
+        e.preventDefault(); e.stopImmediatePropagation();
+        closeGate();
+      }
+    }, true);
     function showGate(){
       const lv = State.level || 1;
       document.getElementById('fwRocketLv').textContent = 'Lv ' + lv + ' / ' + ROCKET_LV;

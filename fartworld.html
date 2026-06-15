@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="FARTPRINT">
 <meta name="description" content="FartWorld — the $FARTPRINT 3D virtual world. Play as a sentient office printer, rip farts in safe zones, earn XP and $FART credits, complete quests. Built with Three.js.">
-<script src="desktop-only.js?v=6bp"></script>
+<script src="desktop-only.js?v=6bq"></script>
 <script src="mwa-shim.js?v=8" defer></script>
 <!-- Bowling minigame lives in its own file so the main game's HTML stays
      under the editor size limit. Loaded with defer so it runs after the
@@ -40,7 +40,7 @@
 <script src="alexandre.js?v=8" defer></script>
 <script src="minimap.js?v=10" defer></script>
 <script src="compass.js?v=11" defer></script>
-<script src="hunger.js?v=10" defer></script>
+<script src="hunger.js?v=11" defer></script>
 <script src="weed-timer.js?v=9" defer></script>
 <script src="weed-reveal.js?v=8" defer></script>
 <script src="nature.js?v=9" defer></script>
@@ -50,14 +50,14 @@
 <script src="bank-fix.js?v=8" defer></script>
 <script src="house-walls.js?v=8" defer></script>
 <script src="rocket.js?v=10" defer></script>
-<script src="moon.js?v=13" defer></script>
+<script src="moon.js?v=14" defer></script>
 <script src="moondc.js?v=5" defer></script>
 <script src="social.js?v=10" defer></script>
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=21" defer></script>
-<script src="printerbots.js?v=4" defer></script>
+<script src="brainrot.js?v=23" defer></script>
+<script src="printerbots.js?v=7" defer></script>
 <script src="dailyhub.js?v=5" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=1" defer></script>
@@ -70,7 +70,7 @@
 <script src="datacenter.js?v=9" defer></script>
 <script src="bakery.js?v=3" defer></script>
 <script src="storage.js?v=8" defer></script>
-<script src="casino.js?v=9" defer></script>
+<script src="casino.js?v=10" defer></script>
 <!-- Visual & performance upgrade pack: rest screen, popup restyle,
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
@@ -80,7 +80,7 @@
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
 <script src="skills.js?v=9" defer></script>
-<script src="prestige.js?v=4" defer></script>
+<script src="prestige.js?v=6" defer></script>
 <!-- Missions: Genesis (tutorial etc.) + limited-time Event missions -->
 <script src="missions.js?v=13" defer></script>
 <!-- Google sign-in + Phantom wallet linking -->
@@ -90,16 +90,20 @@
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=24" defer></script>
+<script src="gunsmith.js?v=25" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
-<script src="extras-v6ba.js?v=9" defer></script>
+<script src="extras-v6ba.js?v=10" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
 <script src="extras-v6bd.js?v=8" defer></script>
 <script src="extras-v6be.js?v=8" defer></script>
 <script src="extras-v6bg.js?v=8" defer></script>
-<script src="extras-v6bh.js?v=8" defer></script>
+<script src="extras-v6bh.js?v=9" defer></script>
 <script src="extras-v6bi.js?v=10" defer></script>
-<script src="loading.js?v=6bp"></script>
+<!-- Player profile window + lifetime stats + motto -->
+<script src="profile.js?v=1" defer></script>
+<!-- Second landmass: the PVP island (free-for-all zone) -->
+<script src="pvpzone.js?v=1" defer></script>
+<script src="loading.js?v=6bq"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
 <script type="importmap">
@@ -3480,6 +3484,9 @@ function saveStateNow(){
       moonJobs:     State.moonJobs || {},
       hunger:       (typeof State.hunger === 'number' ? State.hunger : 100),
       edibleSlot:   State.edibleSlot || null,
+      profile:      State.profile || {},
+      spidersKilled:State.spidersKilled || 0,
+      deaths:       State.deaths || 0,
       credits:  State.credits,
       gold:     State.gold,
       paper:    State.paper,
@@ -4071,6 +4078,7 @@ scene.add(printer);
 // at module init and the whole script aborts (login buttons stop
 // working because their event listeners never attach).
 const WalkableSurfaces = [];
+window.WalkableSurfaces = WalkableSurfaces;   // exposed so side modules (pvpzone.js) can add docks/platforms
 const _floorRay  = new THREE.Raycaster();
 const _floorDown = new THREE.Vector3(0, -1, 0);
 
@@ -4095,6 +4103,20 @@ function islandFalloff(r){
   if(r <= ISLAND_RADIUS) return 1;
   if(r >= ISLAND_RADIUS + ISLAND_FALLOFF) return 0;
   const t = (r - ISLAND_RADIUS) / ISLAND_FALLOFF;
+  return 1 - (t * t * (3 - 2 * t));     // smoothstep
+}
+
+// ─── PVP ISLAND ─────────────────────────────────────────────────
+// A second, smaller landmass to the east. Its NEAREST edge to the
+// mainland sits at (276, 18); the island is half the mainland radius.
+// pvpzone.js builds the terrain mesh + dock to match these numbers
+// and flags the zone for free-for-all combat.
+const PVP_ISLAND = { x: 276 + 45, z: 18, r: 45, falloff: 20 };   // center, radius, shore falloff
+window.FW_PVP_ISLAND = PVP_ISLAND;
+function pvpIslandFalloff(d){
+  if(d <= PVP_ISLAND.r) return 1;
+  if(d >= PVP_ISLAND.r + PVP_ISLAND.falloff) return 0;
+  const t = (d - PVP_ISLAND.r) / PVP_ISLAND.falloff;
   return 1 - (t * t * (3 - 2 * t));     // smoothstep
 }
 
@@ -4228,7 +4250,16 @@ function groundHeightAt(x, z){
   let y = BASE_GROUND + n;
   // Island falloff — outside the shore, sink to WATER_DEPTH
   const isl = islandFalloff(r);
-  return y * isl + WATER_DEPTH * (1 - isl);
+  let h = y * isl + WATER_DEPTH * (1 - isl);
+  // Second landmass: the PVP island to the east. Take whichever is higher
+  // so the player walks on it just like the mainland.
+  const pd = Math.hypot(x - PVP_ISLAND.x, z - PVP_ISLAND.z);
+  if(pd < PVP_ISLAND.r + PVP_ISLAND.falloff){
+    const pIsl = pvpIslandFalloff(pd);
+    const ph = (BASE_GROUND + n) * pIsl + WATER_DEPTH * (1 - pIsl);
+    if(ph > h) h = ph;
+  }
+  return h;
 }
 
 // Grid overlay (subtle neon lines on the ground)
@@ -7076,6 +7107,20 @@ function buildWater(){
   scene.add(m);
   Water.mesh = m;
   Water.basePositions = geo.attributes.position.array.slice();   // snapshot for ripple math
+  // ── Uniform seabed under the WHOLE ocean ──
+  // The translucent water shows whatever sits beneath it. Each island's
+  // ground plane has a dark seabed, but the open water BETWEEN islands had
+  // nothing below it — so it read as a different colour (the visible "gap").
+  // A single big flat plane in the same deep-water tint (0x102026, the same
+  // colour the island shores fade to) backs the entire sea, so it's one
+  // consistent colour everywhere. Sits just below the islands' deep edges.
+  const seabed = new THREE.Mesh(
+    new THREE.PlaneGeometry(size, size),
+    new THREE.MeshBasicMaterial({ color: 0x102026 })
+  );
+  seabed.rotation.x = -Math.PI / 2;
+  seabed.position.y = WATER_DEPTH - 0.6;
+  scene.add(seabed);
   return m;
 }
 buildWater();
@@ -8484,6 +8529,16 @@ function buildBeachRock(){
   }
   return grp;
 }
+// Brainrot base footprints — keep beach rocks/trees off the platforms.
+const BR_BASE_AVOID = [
+  {x:-72,z:36},{x:37,z:-9},{x:67,z:-21},{x:29,z:67},{x:-5,z:62},
+  {x:-1,z:-39},{x:-13,z:71},{x:29,z:-81},{x:62,z:-44},{x:41,z:64},
+  {x:-78,z:2},{x:-59,z:-45},{x:-29,z:-63},{x:1,z:15},
+];
+function nearBrainrotBase(x, z, r){
+  for(const b of BR_BASE_AVOID){ if(Math.hypot(x - b.x, z - b.z) < r) return true; }
+  return false;
+}
 function buildBeachDecorations(){
   const rng = _seededRand(13579);
   // Trees only on GREEN GRASS now (y >= 1.7 per the terrain ramp).
@@ -8495,6 +8550,7 @@ function buildBeachDecorations(){
       const x = Math.cos(ang) * rr;
       const z = Math.sin(ang) * rr;
       if(Math.hypot(x - DOCK_POS.x, z - DOCK_POS.z) < 10) break;
+      if(nearBrainrotBase(x, z, 9)) continue;
       const y = groundHeightAt(x, z);
       // Tree: requires grass (y >= 1.7); rock: stays on sand
       const isGrass = y >= 1.7 && y < 4.5;
@@ -11728,6 +11784,7 @@ window.handleDmMessage = function(m){
       // Opponent reported their own death, attribute the kill to whoever shot them
       if(m.killer === Net.peerId && Dm.phase === "active"){
         Dm.myKills += 1;
+        try { window.fwProfile?.addPvpKill(Dm.oppName); } catch(_){}
         window.fwSkillXp?.('weapon', 20);
         dmRefreshHud();
         dmAnnounce("KILL", true);
@@ -11753,6 +11810,7 @@ window.handleDmMessage = function(m){
 
 function respawnMe(){
   Dm.myHp = 100;
+  try { window.fwProfile?.addDeath(); } catch(_){}
   dmRefreshHud();
   // Tiny respawn flash + teleport to my corner
   const seed = Net.peerId < (Dm.oppId || "") ? 1 : -1;
@@ -12180,6 +12238,7 @@ function dmBotTakeHit(dmg){
     DmBot.respawnAt = performance.now() + 1300;
     DmBot.mesh.visible = false;
     Dm.myKills += 1;
+    try { window.fwProfile?.addPvpKill(DmBot.name || 'a rival'); } catch(_){}
     window.fwSkillXp?.('weapon', 15);
     dmRefreshHud();
     dmAnnounce("KILL", true);

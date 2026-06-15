@@ -564,6 +564,7 @@
       const got = Math.floor(b.pending);
       if(got <= 0){ floater('Nothing to claim yet', 'bad'); return; }
       b.pending -= got; addSilver(got);
+      try { window.fwProfile && window.fwProfile.addBrainrotSilver(got); } catch(_){}
       floater('💰 Claimed ' + got + ' 🥈 from your toilets', 'good');
       paintSign(b); syncStateBase(b); save();
     }
@@ -746,6 +747,16 @@
         // Don't expire/clear the base while the player is busy in the Fart
         // Slide — the lease keeps running and yielding silver in the background.
         if(b.owner === meId() && Date.now() >= b.until && !window.fwSlideActive){ clearPlayerBase(true); continue; }
+        // Any OTHER lease (rival squatter / printer-bot) that runs out also
+        // frees its brainrots and re-opens the base for renting.
+        if(b.owner !== meId() && b.until && Date.now() >= b.until){
+          for(let i = 0; i < 6; i++){ if(b.toilets[i]){ b.toilets[i] = null; setToiletHead(b, i, null); } }
+          b.owner = null; b.ownerName = null; b.until = 0; b.pending = 0; b.raidedSlots = null;
+          // Release any printer-bot that thought it owned this base.
+          try { if(Array.isArray(window.fwPrinterBots)) window.fwPrinterBots.forEach(bot => { if(bot && bot.baseIdx === b.idx){ bot.baseIdx = null; bot.task = null; } }); } catch(_){}
+          paintSign(b);
+          continue;
+        }
         const yps = occupiedYps(b);
         // Poop Orb bonus + Prestige bonus (+10%/prestige) multiply silver earnings.
         const presMult = (b.owner === meId() && window.fwPrestige) ? window.fwPrestige.silverMult() : 1;

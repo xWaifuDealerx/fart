@@ -95,6 +95,7 @@
       if(State.hp <= 0){ try { onDeath(); } catch(_){} }
     };
     function onDeath(){
+      try { window.fwProfile && window.fwProfile.addDeath(); } catch(_){}
       // Reset HP, ship to hospital, no inventory wipe (gunshot != bust).
       State.hp = State.maxHp;
       State.invulnUntil = Date.now() + 5000;   // 5s respawn protection

@@ -39,23 +39,56 @@
       const roof = new THREE.Mesh(new THREE.BoxGeometry(8.4, 0.4, 7.4),
         new THREE.MeshStandardMaterial({ color: 0x1a0c2a, roughness: 0.7 }));
       roof.position.y = 5.0; grp.add(roof);
-      // Door
+      // Door (with a lit gold frame)
       const door = new THREE.Mesh(new THREE.BoxGeometry(2, 3, 0.2),
-        new THREE.MeshStandardMaterial({ color: 0x140a20, emissive: 0xff3cac, emissiveIntensity: 0.25, roughness: 0.4 }));
+        new THREE.MeshStandardMaterial({ color: 0x140a20, emissive: 0xff3cac, emissiveIntensity: 0.3, roughness: 0.4 }));
       door.position.set(0, 1.5, 3.55); grp.add(door);
-      // Neon sign (canvas texture)
-      const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160;
+      const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(2.3, 3.3, 0.12),
+        new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffae00, emissiveIntensity: 0.45, metalness: 0.6, roughness: 0.3 }));
+      doorFrame.position.set(0, 1.55, 3.5); grp.add(doorFrame);
+
+      // ── Neon MARQUEE sign on the roof (text auto-fits so nothing spills) ──
+      const cv = document.createElement('canvas'); cv.width = 720; cv.height = 190;
       const ctx = cv.getContext('2d');
-      ctx.fillStyle = '#1a0c2a'; ctx.fillRect(0, 0, 512, 160);
-      ctx.font = 'bold 96px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.shadowColor = '#ff3cac'; ctx.shadowBlur = 28;
-      ctx.fillStyle = '#ff6ec7'; ctx.fillText('🎰 CASINO 🎰', 256, 84);
+      const RR = (x, y, w, h, r) => { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+      // panel
+      ctx.fillStyle = '#160a24'; RR(4, 4, 712, 182, 24); ctx.fill();
+      // neon border
+      ctx.lineWidth = 9; ctx.strokeStyle = '#ff3cac'; ctx.shadowColor = '#ff3cac'; ctx.shadowBlur = 22; RR(13, 13, 694, 164, 18); ctx.stroke();
+      // marquee bulbs along the top + bottom rails
+      for (let i = 0; i <= 20; i++) {
+        const x = 26 + (i / 20) * 668;
+        ctx.fillStyle = (i % 2) ? '#ffd64d' : '#fff1c2'; ctx.shadowColor = ctx.fillStyle; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(x, 22, 5, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(x, 168, 5, 0, 7); ctx.fill();
+      }
+      // title — shrink the font until the WHOLE string (emojis included) fits
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const title = '🎰 CASINO 🎰';
+      let fs = 110;
+      while (fs > 28) { ctx.font = '900 ' + fs + "px Arial, 'Apple Color Emoji', 'Segoe UI Emoji'"; if (ctx.measureText(title).width <= 620) break; fs -= 4; }
+      ctx.shadowColor = '#ff3cac'; ctx.shadowBlur = 26; ctx.fillStyle = '#ff6ec7';
+      ctx.fillText(title, 360, 99);
       const tex = new THREE.CanvasTexture(cv);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(7, 2.2),
-        new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-      sign.position.set(0, 3.3, 3.62); grp.add(sign);
+      const signW = 6.6, signH = signW * (190 / 720);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(signW, signH),
+        new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
+      sign.position.set(0, 5.0 + signH / 2 + 0.4, 2.4); grp.add(sign);
+      // two gold posts mounting the sign to the roof
+      const postMat = new THREE.MeshStandardMaterial({ color: 0xffd64d, emissive: 0xffae00, emissiveIntensity: 0.4, metalness: 0.6, roughness: 0.3 });
+      for (const sx of [-signW / 2 + 0.6, signW / 2 - 0.6]) {
+        const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.8, 6), postMat);
+        p.position.set(sx, 5.0 + 0.4, 2.4); grp.add(p);
+      }
+      // glowing neon strips running up the two front corners
+      const stripMat = new THREE.MeshBasicMaterial({ color: 0xff3cac });
+      for (const sx of [-3.96, 3.96]) {
+        const strip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 4.6, 0.12), stripMat);
+        strip.position.set(sx, 2.5, 3.5); grp.add(strip);
+      }
       // Glow
       const lt = new THREE.PointLight(0xff3cac, 1.8, 22); lt.position.set(0, 4, 5); grp.add(lt);
+      const lt2 = new THREE.PointLight(0xff3cac, 1.2, 16); lt2.position.set(0, 6.2, 3); grp.add(lt2);
       scene.add(grp);
       if(window.MinimapLandmarks){
         try { window.MinimapLandmarks.push({ x: POS.x, z: POS.z, label: 'Casino', color: '#ff3cac' }); } catch(_){}

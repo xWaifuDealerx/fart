@@ -22,9 +22,9 @@
   window.fwHungerEnergy = ENERGY;
 
   const MAX = 100;
-  const DECAY_S   = 16;   // -1 hunger every 16s of play
-  const RECOVER_S = 3;    // +1 hunger every 3s while sleeping
-  const STARVE_S  = 10;   // at 0 hunger, lose HP every 10s
+  const DECAY_S    = 45;   // -1 hunger every 45s of play (drains SLOWLY — full bar lasts ~75 min)
+  const RECOVER_S  = 3;    // +1 hunger every 3s while sleeping
+  const STARVE_DMG = 3;    // at 0 hunger, lose 3 HP/sec (fast) until you eat or rest
 
   function whenReady() {
     if (!window.State || !document.body) { setTimeout(whenReady, 400); return; }
@@ -110,25 +110,33 @@
     paint();
 
     // ── drain / recover / starve tick ──
-    let decAcc = 0, recAcc = 0, starveAcc = 0, warned = false;
+    let decAcc = 0, recAcc = 0, warned = false;
     setInterval(() => {
       if (window.fwInGame === false) { paint(); return; }
-      const sleeping = !!window.fwSleeping;
+      const sleeping = !!window.fwSleeping;   // resting in hotel / apartment
       const slide = !!window.fwSlideActive;
       if (sleeping) {
-        decAcc = 0; starveAcc = 0; warned = false;
+        // Resting stops the starvation drain AND slowly refills hunger.
+        decAcc = 0; warned = false;
         recAcc++; if (recAcc >= RECOVER_S) { recAcc = 0; State.hunger = Math.min(MAX, State.hunger + 1); }
       } else if (!slide) {
         recAcc = 0;
         decAcc++; if (decAcc >= DECAY_S) { decAcc = 0; State.hunger = Math.max(0, State.hunger - 1); }
         if (State.hunger <= 0) {
-          if (!warned) { warned = true; try { window.floater && window.floater('\u{1F34F} Starving! Right-click food in your inventory to eat', 'bad'); } catch (_) {} }
-          starveAcc++;
-          if (starveAcc >= STARVE_S) {
-            starveAcc = 0;
-            if (typeof State.hp === 'number') State.hp = Math.max(5, State.hp - 2);  // never fatal
+          if (!warned) { warned = true; try { window.floater && window.floater('\u{1F34F} Starving! Your health is dropping — eat something or rest at a hotel/apartment', 'bad'); } catch (_) {} }
+          // Health falls FAST while starving. The only way to stop it is to
+          // eat (hunger > 0) or rest (sleeping → this branch isn't reached).
+          if (Date.now() >= (State.invulnUntil || 0) && typeof State.hp === 'number') {
+            State.hp = Math.max(0, State.hp - STARVE_DMG);
+            const fl = document.getElementById('flash');
+            if (fl) { fl.classList.add('bad'); setTimeout(() => { try { fl.classList.remove('bad'); } catch (_) {} }, 110); }
+            try { window.saveState && window.saveState(); } catch (_) {}
+            // Out of health → trigger the normal death/respawn (heals + hospital).
+            if (State.hp <= 0 && typeof window.damagePlayer === 'function') {
+              window.damagePlayer(1, 'Starved to death');
+            }
           }
-        } else { starveAcc = 0; warned = false; }
+        } else { warned = false; }
       }
       paint();
     }, 1000);

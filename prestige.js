@@ -21,7 +21,7 @@
 
   const MAX_LEVEL = 55;
   const MAX_PRESTIGE = 10;
-  const ROCKET_MIN_LEVEL = 20;            // rocket relocks below this after prestige
+  const ROCKET_MIN_LEVEL = 30;            // rocket relocks below this after prestige
   window.FW_MAX_LEVEL = MAX_LEVEL;
   window.FW_ROCKET_MIN_LEVEL = ROCKET_MIN_LEVEL;
 
@@ -166,8 +166,9 @@
       '<stop offset="0" stop-color="#23262c"/><stop offset="1" stop-color="#0c0e12"/></radialGradient></defs>' +
       '<circle cx="50" cy="50" r="46" fill="url(#' + id + ')" stroke="' + p.ring + '" stroke-width="6"/>' +
       '<circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>' +
-      presGlyph(p.glyph, p.tint) +
-      '<text x="50" y="88" text-anchor="middle" font-family="Orbitron,sans-serif" font-weight="900" font-size="13" fill="' + p.ring + '">' + n + '</text>' +
+      // Shrink every glyph uniformly + lift it so nothing pokes past the ring.
+      '<g transform="translate(50 47) scale(0.74) translate(-50 -52)">' + presGlyph(p.glyph, p.tint) + '</g>' +
+      '<text x="50" y="86" text-anchor="middle" font-family="Orbitron,sans-serif" font-weight="900" font-size="12" fill="' + p.ring + '">' + n + '</text>' +
       '</svg>';
   }
 
@@ -178,6 +179,12 @@
     xpMult:     () => 1 + 0.10 * (((window.State && window.State.prestige) || 0)),
     rank:       () => rankForLevel((window.State && window.State.level) || 1),
     rankName:   () => rankForLevel((window.State && window.State.level) || 1).name,
+    rankFor:    (lv) => rankForLevel(lv || 1).name,   // rank name for any level (NPC tags etc.)
+    // Icon-only badge SVG for a level/prestige — prestige emblem if prestiged,
+    // otherwise the rank insignia. Used on player/NPC name tags.
+    iconFor:    (lv, pres, size) => ((pres || 0) > 0)
+                  ? prestigeSVG(pres, size || 20)
+                  : insigniaSVG(rankForLevel(lv || 1), size || 20),
     maxLevel:   MAX_LEVEL,
     maxPrestige:MAX_PRESTIGE,
   };

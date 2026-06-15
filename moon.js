@@ -63,6 +63,10 @@
     );
     halo.position.copy(moon.position);
     scene.add(halo);
+    // Hide the sky globe — it read as a big white blob on the sea horizon.
+    // The moon is still reached via the rocket (altitude → Enter Moon).
+    moon.visible = false;
+    halo.visible = false;
 
     // ── Walkable surface on top of the moon ──
     // Disc sits on the +Y pole. It's parented to its own world-anchored

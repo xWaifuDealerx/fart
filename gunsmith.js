@@ -993,6 +993,12 @@
     }
 
     const _raycaster = new THREE.Raycaster();
+    // Aim-assist cone. A target must be IN FRONT of where you're aiming to be
+    // hit — never behind or beside you. Tight at range, a little forgiving at
+    // point-blank (but still in front). cos() of the half-angle in radians.
+    const AIM_COS      = Math.cos(0.42);   // ~24° half-angle at normal range
+    const AIM_COS_NEAR = Math.cos(0.78);   // ~45° at point-blank (< 6 m)
+    function aimNeed(dist){ return dist < 6 ? AIM_COS_NEAR : AIM_COS; }
     function fire(){
       ensureActive();
       if(!owned(ACTIVE)){
@@ -1056,9 +1062,8 @@
           const ddx = s.x - Player.pos.x, ddz = s.z - Player.pos.z;
           const dist = Math.hypot(ddx, ddz);
           if(dist > 50) continue;
-          if(dist < 4){ if(dist < bestT){ bestT = dist; bestI = i; } continue; }
           const dot = (ddx * dx + ddz * dz) / Math.max(0.01, dist);
-          if(dot < Math.cos(0.70)) continue;
+          if(dot < aimNeed(dist)) continue;   // must be in front of your aim
           if(dist < bestT){ bestT = dist; bestI = i; }
         }
         killedI = bestI;
@@ -1111,9 +1116,8 @@
             const ddx = a.x - Player.pos.x, ddz = a.z - Player.pos.z;
             const dist = Math.hypot(ddx, ddz);
             if(dist > 50) continue;
-            if(dist < 4){ if(dist < bestT){ bestT = dist; hi = i; } continue; }
             const dot = (ddx * dx + ddz * dz) / Math.max(0.01, dist);
-            if(dot < Math.cos(0.70)) continue;
+            if(dot < aimNeed(dist)) continue;   // must be in front of your aim
             if(dist < bestT){ bestT = dist; hi = i; }
           }
         }
@@ -1143,9 +1147,8 @@
               const ddx = b.x - Player.pos.x, ddz = b.z - Player.pos.z;
               const dist = Math.hypot(ddx, ddz);
               if(dist > 60) continue;
-              if(dist < 4){ if(dist < bestT){ bestT = dist; hit = b; } continue; }
               const dot = (ddx * dx + ddz * dz) / Math.max(0.01, dist);
-              if(dot < Math.cos(0.70)) continue;
+              if(dot < aimNeed(dist)) continue;   // must be in front of your aim
               if(dist < bestT){ bestT = dist; hit = b; }
             }
           }
