@@ -24,8 +24,8 @@
   width:180px;
   height:30px;
   background:rgba(8,18,11,.94);
-  border:1.5px solid rgba(95,240,156,.55);
-  border-radius:14px;
+  border:2px solid rgba(95,240,156,.55);
+  border-radius:12px;
   overflow:hidden;
   z-index:35;
   pointer-events:none;
@@ -145,7 +145,9 @@
       try {
         const r2 = root.getBoundingClientRect();
         const ch = r2.height || 30;
-        const hp = document.querySelector('.hp-pill');
+        // Dock above the Hunger pill if present (compass → hunger → health),
+        // otherwise fall back to the health pill directly.
+        const hp = document.querySelector('.hunger-pill') || document.querySelector('.hp-pill');
         let anchor = null, lift = 8;
         if(hp){
           const r = hp.getBoundingClientRect();

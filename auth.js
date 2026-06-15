@@ -91,6 +91,8 @@
     document.head.appendChild(css);
 
     function injectLoginButtons(){
+      // Google sign-in is disabled — Phantom (or guest) only.
+      return;
       const card = document.querySelector('#login .login-card');
       const connectBtn = document.getElementById('connectBtn');
       if(!card || !connectBtn || document.getElementById('fwOauth')) return;

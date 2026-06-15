@@ -48,6 +48,13 @@
       { x:  60, z:  60, r: 5 },   // Pawn
       { x: -55, z:  32, r: 4 },   // Fart Stn
       { x: -10.5, z: -45, r: 4 }, // Alexandre
+      // Brainrot bases — keep the platforms (and their immediate surround)
+      // clear of grass / flowers / mushrooms.
+      { x:-72, z:36, r:7 }, { x:37, z:-9, r:7 }, { x:67, z:-21, r:7 },
+      { x:29, z:67, r:7 },  { x:-5, z:62, r:7 }, { x:-1, z:-39, r:7 },
+      { x:-13, z:71, r:7 }, { x:29, z:-81, r:7 },{ x:62, z:-44, r:7 },
+      { x:41, z:64, r:7 },  { x:-78, z:2, r:7 }, { x:-59, z:-45, r:7 },
+      { x:-29, z:-63, r:7 },{ x:1, z:15, r:7 },
     ];
     function blocked(x, z){
       const r = Math.hypot(x, z);

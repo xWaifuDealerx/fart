@@ -63,7 +63,8 @@
         + '.casino-bg.show, #lbBg.show, .fw-set-bg.show, #login:not(.hidden), '
         + '#seedChBg.show, #paySelBg.show, #labBg.show, #millBg.show, #goldBg.show, '
         + '#swapBg.show, #bowlBg.show, #launderBg.show, #pfBg.show, #junkBg.show, #bankBg.show, '
-        + '.fw-rest.show, .cas-bg.show, .fw-msn-bg.show, .fw-skill-bg.show, .church-bg.show'
+        + '.fw-rest.show, .cas-bg.show, .fw-msn-bg.show, .fw-skill-bg.show, .church-bg.show, '
+        + '.fw-rank-bg.show, .fw-warn-bg.show'
       )) return true;
       // Deathmatch waiting panel = a menu with buttons → release the mouse
       const dmw = document.getElementById('dmWaiting');
@@ -76,11 +77,28 @@
     canvas.addEventListener('mousedown', (e) => {
       if(S.scheme !== 'action') return;
       if(e.button !== 0) return;
-      if(locked() || anyModalOpen()) return;
+      if(locked() || anyModalOpen() || window.fwUiHover) return;
       const a = document.activeElement;
       if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
       try { canvas.requestPointerLock(); } catch(_){}
     });
+
+    // While the mouse is over a HUD control (the right-side button rail, or
+    // any button / input), free the cursor and flag fwUiHover so the gun stops
+    // grabbing the mouse / firing — armed players can always click the UI.
+    // (Esc still releases the aim too.)
+    const overUI = (t) => !!(t && t.closest && t.closest(
+      'button, a, input, select, textarea, label,'
+      + '.inv-toggle, .lb-toggle-btn, .fw-set-btn, [id$="Toggle"], [class*="toggle"], [class*="-btn"]'));
+    document.addEventListener('pointerover', (e) => {
+      if(overUI(e.target)){
+        window.fwUiHover = true;
+        if(locked()){ try { document.exitPointerLock(); } catch(_){} }
+      }
+    }, true);
+    document.addEventListener('pointerout', (e) => {
+      if(overUI(e.target)) window.fwUiHover = false;
+    }, true);
 
     // ── Virtual aim cursor ──
     // Third person: the mouse moves a DYNAMIC crosshair across the
@@ -128,6 +146,14 @@
         // keeping the dynamic aim. (First-person stays centred/static.)
         vAim.x = Math.max(0, Math.min(window.innerWidth,  vAim.x + mx));
         vAim.y = Math.max(0, Math.min(window.innerHeight, vAim.y + my));
+        // Pushing the aim cursor into the right-edge button rail releases the
+        // mouse so you can click Inventory / Leaderboard / Settings while armed
+        // (no need to fumble for Esc first). Only the rail zone, and not while
+        // holding RMB to aim, so it never interferes with shooting.
+        if(!aiming && vAim.x >= window.innerWidth - 60 && vAim.y < 380){
+          try { document.exitPointerLock(); } catch(_){}
+          return;
+        }
         const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
         const fx = (vAim.x - cx) / cx;   // -1 (left) .. 1 (right)
         const fy = (vAim.y - cy) / cy;   // -1 (up)   .. 1 (down)

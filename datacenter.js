@@ -66,6 +66,9 @@
         desc: "AI Mercury is in retrograde. Your career is doomed. SUBSCRIBE for the full reading at $19.99/mo.",
         durMin: 4, min: 80,  max: 700 },
     ];
+    // Expose the service list so the lunar data centers (moondc.js) can offer
+    // the exact same menu of operations that Data does here on Earth.
+    window.fwDataActivities = ACTIVITIES;
 
     // ─────────────────────────────────────────────────────────────
     // BUILD THE DATA CENTER + NPC

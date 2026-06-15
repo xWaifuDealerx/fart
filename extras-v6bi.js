@@ -323,11 +323,13 @@
       }
       sleeping = true;
       sleepApt = apt;
+      window.fwSleeping = true;   // also lets the Hunger bar recover (hunger.js)
       sleepBg.classList.add('show');
     }
     function exitSleep(){
       sleeping = false;
       sleepApt = null;
+      window.fwSleeping = false;
       sleepBg.classList.remove('show');
     }
     setInterval(() => {

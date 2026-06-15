@@ -262,7 +262,7 @@
       const tools = ['pickaxe', 'saw'];
       const lines = [];
       for(const id of tools){
-        const have = (State.inventory?.[id] || 0) > 0;
+        const have = (State.inventory?.[id] || 0) > 0 || !!(State.tools && State.tools[id]);
         if(!have){
           lines.push('<div class="est-row"><div class="ic">' + (ITEMS[id]?.icon || '\u{1F527}') + '</div><div class="meta"><div class="nm">' + (ITEMS[id]?.name || id) + '</div><div class="sub">You don\'t own this tool yet</div></div><div class="btns"><button class="est-btn" disabled>—</button></div></div>');
           continue;
@@ -273,20 +273,25 @@
         lines.push('<div class="est-row"><div class="ic">' + (ITEMS[id]?.icon || '\u{1F527}') + '</div><div class="meta"><div class="nm">' + (ITEMS[id]?.name || id) + '</div><div class="sub">Durability: ' + Math.round(dur) + '% · Cost: ' + cost + ' \u{1F948}</div></div><div class="btns"><button class="est-btn" data-tool="' + id + '" data-cost="' + cost + '" ' + (canSharpen ? '' : 'disabled') + '>' + (canSharpen ? 'Sharpen' : 'Sharp') + '</button></div></div>');
       }
       host.innerHTML = lines.join('');
-      host.querySelectorAll('.est-btn[data-tool]').forEach(b => b.addEventListener('click', () => {
-        const id = b.dataset.tool, cost = Number(b.dataset.cost) || 0;
-        if((State.credits || 0) < cost){ window.floater?.('Need ' + cost + ' \u{1F948}', 'bad'); return; }
-        State.credits -= cost;
-        if(!State.tools) State.tools = {};
-        if(!State.tools[id]) State.tools[id] = { durability: 100 };
-        State.tools[id].durability = 100;
-        State.xp = (State.xp || 0) + 5;
-        window.floater?.('Sharpened ' + ITEMS[id].name + ' to 100% · -' + cost + ' \u{1F948}', 'good');
-        window.playPurchaseSound?.();
-        window.saveState?.(); window.updateHUD?.();
-        renderSiim();
-      }));
     }
+    // ONE delegated click handler on the modal — survives every re-render and
+    // can't miss a freshly-built button (the old per-button binding sometimes
+    // didn't fire). Reads the tool + cost off the clicked button.
+    tsBg.addEventListener('click', (e) => {
+      const b = e.target.closest('.est-btn[data-tool]');
+      if(!b || b.disabled) return;
+      const id = b.dataset.tool, cost = Number(b.dataset.cost) || 0;
+      if((State.credits || 0) < cost){ window.floater?.('Need ' + cost + ' \u{1F948}', 'bad'); return; }
+      State.credits -= cost;
+      if(!State.tools) State.tools = {};
+      if(!State.tools[id]) State.tools[id] = { durability: 100 };
+      State.tools[id].durability = 100;
+      State.xp = (State.xp || 0) + 5;
+      window.floater?.('Sharpened ' + (ITEMS[id]?.name || id) + ' to 100% · -' + cost + ' \u{1F948}', 'good');
+      window.playPurchaseSound?.();
+      window.saveState?.(); window.updateHUD?.();
+      renderSiim();
+    });
     window.openSiim = () => { renderSiim(); tsBg.classList.add('show'); };
 
     // ── Miner's Exchange modal ──

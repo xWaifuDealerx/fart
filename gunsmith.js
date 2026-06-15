@@ -1119,6 +1119,39 @@
         }
         if(hi >= 0 && typeof H[hi].onKill === 'function'){ try { H[hi].onKill(); } catch(_){} }
       }
+      // ── Shoot a thief: a printer-bot raiding your base or fleeing with a
+      //    brainrot stolen from you can be gunned down with ANY weapon. ──
+      if(typeof window.fwShootableBots === 'function'){
+        const tb = window.fwShootableBots();
+        if(tb && tb.length){
+          let hit = null;
+          try {
+            const objs = tb.map(b => b.mesh).filter(Boolean);
+            const hits = _raycaster.intersectObjects(objs, true);
+            if(hits.length){
+              let o = hits[0].object;
+              while(o && !tb.find(b => b.mesh === o)) o = o.parent;
+              if(o) hit = tb.find(b => b.mesh === o);
+            }
+          } catch(_){}
+          if(!hit){
+            // aim-assist cone (same as spiders) so you don't need pixel-perfect aim
+            const fLen = Math.hypot(fwd.x, fwd.z) || 1;
+            const dx = fwd.x / fLen, dz = fwd.z / fLen;
+            let bestT = 1e9;
+            for(const b of tb){
+              const ddx = b.x - Player.pos.x, ddz = b.z - Player.pos.z;
+              const dist = Math.hypot(ddx, ddz);
+              if(dist > 60) continue;
+              if(dist < 4){ if(dist < bestT){ bestT = dist; hit = b; } continue; }
+              const dot = (ddx * dx + ddz * dz) / Math.max(0.01, dist);
+              if(dot < Math.cos(0.70)) continue;
+              if(dist < bestT){ bestT = dist; hit = b; }
+            }
+          }
+          if(hit){ try { window.fwKillThief(hit); window.fwSkillXp?.('weapon', 0); } catch(_){} }
+        }
+      }
       // (misses are silent — no "miss" text)
     }
 
@@ -1210,9 +1243,12 @@
       const _dmw = document.getElementById('dmWaiting');
       if(_dmw && _dmw.style.display !== 'none' &&
          document.getElementById('dmOverlay')?.classList.contains('show')) return;
+      // Mouse is over a HUD button (right-side rail etc.) → it's a UI click,
+      // never a shot. Let the button receive it.
+      if(window.fwUiHover) return;
       e.preventDefault();
       // Block if a modal is open
-      if(document.querySelector('.gs-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show, .fc-bg.show, .carlos-bg.show, .roki-bg.show')) return;
+      if(document.querySelector('.gs-bg.show, .bank-bg.show, .junk-bg.show, .est-bg.show, .stor-bg.show, .dc-bg.show, .alex-pop.show, .wave-bg.show, .gary-bg.show, #invBg.show, #marketBg.show, #poopBg.show, .fc-bg.show, .carlos-bg.show, .roki-bg.show, .fw-rank-bg.show, .fw-warn-bg.show')) return;
       // Block if click is on a button/UI element
       const tgt = e.target;
       if(tgt && tgt.tagName && /^(BUTTON|A|INPUT|TEXTAREA|SELECT|LABEL)$/.test(tgt.tagName)) return;

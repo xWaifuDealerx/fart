@@ -262,7 +262,7 @@
 .fw2-list::-webkit-scrollbar-thumb{background:rgba(120,140,128,.3);border-radius:4px}
 .fw2-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:7px;cursor:grab;
   background:rgba(255,255,255,.025);border:1px solid rgba(120,140,128,.18);transition:background .12s,border-color .12s,transform .12s}
-.fw2-row:hover{background:rgba(95,240,156,.08);border-color:rgba(95,240,156,.4);transform:translateX(2px)}
+.fw2-row:hover{background:rgba(95,240,156,.08);border-color:rgba(95,240,156,.4)}
 .fw2-row.dragging{opacity:.35}
 .fw2-row .ic{font-size:20px;width:24px;text-align:center;flex:0 0 auto}
 .fw2-row .nm{font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -270,11 +270,11 @@
 .fw2-empty{font-size:11.5px;color:rgba(230,239,233,.35);text-align:center;padding:18px 4px;font-style:italic}
 .fw2-col.dropglow{background:rgba(95,240,156,.06);border-radius:8px}
 /* EQUIPPED column */
-.fw2-figwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:0;position:relative}
+.fw2-figwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;min-height:0;position:relative}
 .fw2-fig{width:120px;height:auto;max-height:46%;opacity:.85;flex:0 1 auto}
-.fw2-fighost{flex:1 1 auto;width:100%;min-height:150px;display:flex;align-items:center;justify-content:center;position:relative}
+.fw2-fighost{flex:1 1 auto;width:100%;min-height:130px;display:flex;align-items:center;justify-content:center;position:relative}
 .fw2-figcanvas{width:100%;height:100%;display:block}
-.fw2-slot{width:84%;max-width:320px;min-height:62px;border-radius:9px;padding:9px 14px;cursor:pointer;
+.fw2-slot{width:88%;max-width:320px;min-height:46px;flex:0 0 auto;border-radius:9px;padding:7px 12px;cursor:pointer;
   border:1.5px dashed rgba(160,175,165,.35);background:rgba(255,255,255,.03);
   display:flex;flex-direction:column;justify-content:center;gap:2px;transition:border-color .12s,background .12s}
 .fw2-slot:hover{border-color:rgba(95,240,156,.5);background:rgba(95,240,156,.05)}
@@ -379,8 +379,9 @@
         +   '<div class="fw2-col fw2-eqcol">'
         +     '<div class="fw2-coltitle">Equipped</div>'
         +     '<div class="fw2-figwrap">'
-        +       '<div class="fw2-slot" id="fw2Hat" data-zone="hat"></div>'
         +       '<div class="fw2-fighost" id="fw2FigHost"></div>'
+        +       '<div class="fw2-slot" id="fw2Edible" data-zone="edible"></div>'
+        +       '<div class="fw2-slot" id="fw2Hat" data-zone="hat"></div>'
         +       '<div class="fw2-slot" id="fw2Weap" data-zone="weapon"></div>'
         +     '</div>'
         +     '<div class="fw2-eqhint">Drag a weapon or hat here to equip · drag it back to your bag to remove · drag to Vicinity to drop</div>'
@@ -440,6 +441,50 @@
       h.innerHTML = hatOn
         ? '<div class="fw2-slotlb">HAT</div><div class="fw2-slotitem"><span class="ic">🧢</span><span class="nm">Trucker Cap</span></div><div class="fw2-slothint">drag to bag to take off</div>'
         : '<div class="fw2-slotlb">HAT</div><div class="fw2-slotempty">🧢</div><div class="fw2-slothint">' + (hasCap ? 'drag a hat here to wear' : 'Carlos sells Trucker Caps') + '</div>';
+      // EDIBLE box — a single-item slot (like HAT/WEAPON). Drag ONE food in,
+      // drag it back out, or click/press H to eat from it.
+      // The slot holds exactly ONE unit, moved OUT of the bag — so we don't
+      // validate against inventory count (that single unit lives in the slot).
+      const ed = root.querySelector('#fw2Edible');
+      if(ed){
+        const E = window.fwHungerEnergy || {};
+        let sid = State.edibleSlot;
+        if(sid && !E[sid]) sid = State.edibleSlot = null;
+        ed.classList.toggle('filled', !!sid);
+        ed.dataset.filled = sid ? '1' : '';
+        ed.dataset.eid = sid || '';
+        if(sid){
+          const m = itemMeta(sid);
+          ed.innerHTML = '<div class="fw2-slotlb">EDIBLE · press H to eat</div>'
+            + '<div class="fw2-slotitem"><span class="ic">' + m.icon + '</span><span class="nm">' + esc(m.name) + '</span></div>'
+            + '<div class="fw2-slothint">click to eat · drag to bag to remove</div>';
+        } else {
+          ed.innerHTML = '<div class="fw2-slotlb">EDIBLE · press H to eat</div><div class="fw2-slotempty">🍏</div>'
+            + '<div class="fw2-slothint">drag one food here</div>';
+        }
+        ed.style.cursor = sid ? 'grab' : 'pointer';
+        ed.onclick = () => { if(State.edibleSlot) consumeOne(); };
+      }
+    }
+    function isEdible(id){ return !!((window.fwHungerEnergy || {})[id]); }
+    function consumeOne(){
+      const id = State.edibleSlot;
+      if(!id){ window.floater?.('🍏 No food in the Edible slot — drag some in', 'bad'); return; }
+      // The single held unit isn't in the bag, so eat its energy directly.
+      if(typeof window.fwEatEnergy === 'function') window.fwEatEnergy(id);
+      State.edibleSlot = null;
+      try { window.saveState?.(); } catch(_){}
+      refreshUI();
+    }
+    window.fwConsumeOne = consumeOne;
+    // Move exactly ONE unit of `id` from the bag into the edible slot. Any item
+    // already slotted is returned to the bag first (only one fits).
+    function slotEdible(id){
+      if(!isEdible(id)){ window.floater?.('Only food fits the EDIBLE slot', 'bad'); return; }
+      if((State.inventory[id] || 0) < 1){ window.floater?.('None left to slot', 'bad'); return; }
+      if(State.edibleSlot) window.addItem?.(State.edibleSlot, 1);
+      window.takeItem?.(id, 1);
+      State.edibleSlot = id;
     }
 
     function refreshUI(){
@@ -511,8 +556,7 @@
         _pv.scene.add(wrap);
         _pv.model = wrap;
         const maxDim = Math.max(size.x, size.y, size.z) || 2;
-        _pv.dist = maxDim * 2.1;
-        _pv.height = size.y * 0.10;
+        _pv.dist = maxDim * 2.6;   // zoomed out enough to show the whole body
         _pv.ref = window.printer;
       } catch(e){ console.error('[dropitem] preview clone', e); }
     }
@@ -528,14 +572,6 @@
         _pv.sig = sig; syncPreviewModel();
       }
       if(!_pv.model) return;
-      // Orbit the camera by the user-controlled yaw/pitch (no auto-spin).
-      const cp = Math.cos(_pv.pitch);
-      _pv.cam.position.set(
-        Math.sin(_pv.yaw) * cp * _pv.dist,
-        _pv.height + Math.sin(_pv.pitch) * _pv.dist,
-        Math.cos(_pv.yaw) * cp * _pv.dist
-      );
-      _pv.cam.lookAt(0, 0, 0);
       const w = Math.max(40, _pv.canvas.clientWidth || 220);
       const h = Math.max(40, _pv.canvas.clientHeight || 280);
       if(w !== _pv.w || h !== _pv.h){
@@ -543,6 +579,15 @@
         _pv.renderer.setSize(w, h, false);
         _pv.cam.aspect = w / h; _pv.cam.updateProjectionMatrix();
       }
+      // Orbit the camera by the user-controlled yaw/pitch (no auto-spin), aimed
+      // dead-centre on the model (centred at the origin) so the whole body shows.
+      const cp = Math.cos(_pv.pitch);
+      _pv.cam.position.set(
+        Math.sin(_pv.yaw) * cp * _pv.dist,
+        Math.sin(_pv.pitch) * _pv.dist,
+        Math.cos(_pv.yaw) * cp * _pv.dist
+      );
+      _pv.cam.lookAt(0, 0, 0);
       _pv.renderer.render(_pv.scene, _pv.cam);
     }
     requestAnimationFrame(previewLoop);
@@ -564,6 +609,8 @@
       if(w && w.dataset.filled === '1'){ const id = w.dataset.wid || 'deagle'; const m = itemMeta(id); return { src: 'weapon', id, el: w, icon: m.icon, name: m.name }; }
       const h = t.closest('#fw2Hat');
       if(h && h.dataset.filled === '1') return { src: 'hat', id: 'cap', el: h, icon: '🧢', name: 'Trucker Cap' };
+      const ed = t.closest('#fw2Edible');
+      if(ed && ed.dataset.filled === '1'){ const id = ed.dataset.eid; const m = itemMeta(id); return { src: 'edible', id, el: ed, icon: m.icon, name: m.name }; }
       return null;
     }
     function zoneAt(x, y){
@@ -649,15 +696,18 @@
     }
 
     function handleDrop(ds, zone){
+      const EDI = window.fwHungerEnergy || {};
       if(ds.src === 'inv'){
         if(zone === 'vicinity') dropToGround(ds.id, 1);
         else if(zone === 'weapon'){ if(equipKind(ds.id) === 'gun') equipWeapon(ds.id); else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
         else if(zone === 'hat'){ if(ds.id === 'cap') equipHat(true); else window.floater?.('Only headwear fits the HAT slot', 'bad'); }
+        else if(zone === 'edible'){ slotEdible(ds.id); }
         // 'inventory' or null = no-op
       } else if(ds.src === 'vic'){
         if(zone === 'inventory') pickUp(ds.drop);
         else if(zone === 'weapon'){ if(equipKind(ds.drop.id) === 'gun'){ pickUp(ds.drop); equipWeapon(ds.drop.id); } else window.floater?.('Only a weapon fits the WEAPON slot', 'bad'); }
         else if(zone === 'hat'){ if(ds.drop.id === 'cap'){ pickUp(ds.drop); equipHat(true); } else window.floater?.('Only headwear fits the HAT slot', 'bad'); }
+        else if(zone === 'edible'){ if(EDI[ds.drop.id]){ pickUp(ds.drop); slotEdible(ds.drop.id); } else window.floater?.('Only food fits the EDIBLE slot', 'bad'); }
         // 'vicinity' or null = leave it on the ground
       } else if(ds.src === 'weapon'){
         if(zone === 'inventory') holsterWeapon(ds.id);
@@ -666,6 +716,11 @@
       } else if(ds.src === 'hat'){
         if(zone === 'inventory') equipHat(false);
         else if(zone === 'vicinity'){ equipHat(false); dropToGround('cap', 1); }
+      } else if(ds.src === 'edible'){
+        // Slot holds one unit removed from the bag — return/drop that unit.
+        if(zone === 'inventory'){ window.addItem?.(ds.id, 1); State.edibleSlot = null; }
+        else if(zone === 'vicinity'){ window.addItem?.(ds.id, 1); dropToGround(ds.id, 1); State.edibleSlot = null; }
+        // null / 'weapon' / 'hat' / 'edible' = cancel (keep it slotted)
       }
       window.updateHUD?.();
       window.saveState?.();
@@ -683,6 +738,13 @@
       if(menu.style.display !== 'none' && !e.target.closest('#fw2Menu')) closeMenu();
     }, true);
     window.addEventListener('keydown', (e) => { if(e.code === 'Escape') closeMenu(); });
+    // H — eat one edible from your bag (works anytime while playing).
+    window.addEventListener('keydown', (e) => {
+      if(e.code !== 'KeyH') return;
+      const a = document.activeElement;
+      if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+      consumeOne();
+    });
 
     function openMenu(x, y, icon, name, actions){
       menu.innerHTML = '<div class="ttl"><span class="i">' + icon + '</span><span>' + esc(name) + '</span></div>'

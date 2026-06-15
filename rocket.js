@@ -169,6 +169,14 @@
     };
 
     function board(){
+      // Rocket is a progression unlock — locked below the level gate, so a
+      // fresh prestige (back to Level 1) loses moon access until re-earned.
+      const minLv = window.FW_ROCKET_MIN_LEVEL || 20;
+      if((window.State?.level || 1) < minLv){
+        window.floater?.("🚀 Rocket locked — reach Level " + minLv + " to launch", "bad");
+        pop.classList.remove('show');
+        return;
+      }
       state.onboard = true;
       state.altitude = 0;
       state.vy = 0;

@@ -75,6 +75,8 @@
 
   function levelNode(st, def, amount, isSub){
     if(!st || st.lvl >= MAX_LVL || !amount || amount <= 0) return;
+    // Prestige grants +10% skill XP per prestige (prestige.js).
+    amount *= (window.fwPrestige ? window.fwPrestige.xpMult() : 1);
     st.xp += amount;
     let leveled = false;
     while(st.lvl < MAX_LVL && st.xp >= needFor(st.lvl)){
@@ -89,7 +91,7 @@
       let m = Math.floor(st.lvl / 5) * 5;
       while(m > st.paid && st.paid + 5 >= 5){
         const lvl = st.paid + 5;
-        const bonus = milestoneBonus(lvl, isSub);
+        const bonus = Math.round(milestoneBonus(lvl, isSub) * (window.fwPrestige ? window.fwPrestige.silverMult() : 1));
         st.paid = lvl;
         const State = window.State;
         if(State){ State.credits = (State.credits || 0) + bonus; }
@@ -99,6 +101,16 @@
       try { window._fwSkillRenderIfOpen?.(); } catch(_){}
     }
   }
+
+  // Full reset of the skill tree — called by prestige.js when you prestige.
+  window.fwResetSkills = function(){
+    S = {};
+    for(const sk of SKILLS) ensure(S, sk.id);
+    S.__subs = {};
+    for(const k of Object.keys(SUBS)) for(const sub of SUBS[k]) ensure(S.__subs, sub.id);
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_){}
+    try { window._fwSkillRenderIfOpen?.(); } catch(_){}
+  };
 
   function grant(id, amount, sub){
     const def = SKILLS.find(s => s.id === id);

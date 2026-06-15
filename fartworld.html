@@ -39,55 +39,58 @@
 <script src="roki.js?v=8" defer></script>
 <script src="alexandre.js?v=8" defer></script>
 <script src="minimap.js?v=10" defer></script>
-<script src="compass.js?v=8" defer></script>
+<script src="compass.js?v=11" defer></script>
+<script src="hunger.js?v=10" defer></script>
 <script src="weed-timer.js?v=9" defer></script>
 <script src="weed-reveal.js?v=8" defer></script>
-<script src="nature.js?v=8" defer></script>
+<script src="nature.js?v=9" defer></script>
 <script src="ui-polish.js?v=8" defer></script>
 <script src="dev.js?v=8" defer></script>
 <script src="equip.js?v=8" defer></script>
 <script src="bank-fix.js?v=8" defer></script>
 <script src="house-walls.js?v=8" defer></script>
-<script src="rocket.js?v=9" defer></script>
+<script src="rocket.js?v=10" defer></script>
 <script src="moon.js?v=13" defer></script>
-<script src="moondc.js?v=2" defer></script>
+<script src="moondc.js?v=5" defer></script>
 <script src="social.js?v=10" defer></script>
 <script src="mobile.js?v=8" defer></script>
-<script src="dropitem.js?v=21" defer></script>
+<script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=17" defer></script>
-<script src="printerbots.js?v=2" defer></script>
+<script src="brainrot.js?v=21" defer></script>
+<script src="printerbots.js?v=4" defer></script>
 <script src="dailyhub.js?v=5" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=1" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
 <script src="slide.js?v=9" defer></script>
 -->
-<script src="establishments.js?v=8" defer></script>
+<script src="establishments.js?v=9" defer></script>
 <script src="streetlights.js?v=8" defer></script>
 <script src="bike.js?v=9" defer></script>
-<script src="datacenter.js?v=8" defer></script>
+<script src="datacenter.js?v=9" defer></script>
+<script src="bakery.js?v=3" defer></script>
 <script src="storage.js?v=8" defer></script>
 <script src="casino.js?v=9" defer></script>
 <!-- Visual & performance upgrade pack: rest screen, popup restyle,
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
-<script src="controls.js?v=14" defer></script>
+<script src="controls.js?v=16" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
-<script src="skills.js?v=8" defer></script>
+<script src="skills.js?v=9" defer></script>
+<script src="prestige.js?v=4" defer></script>
 <!-- Missions: Genesis (tutorial etc.) + limited-time Event missions -->
 <script src="missions.js?v=13" defer></script>
 <!-- Google sign-in + Phantom wallet linking -->
-<script src="auth.js?v=8" defer></script>
+<script src="auth.js?v=9" defer></script>
 <!-- Ambient sky traffic: airplane / airship / spaceship / hot air balloon -->
 <script src="skytraffic.js?v=8" defer></script>
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=21" defer></script>
+<script src="gunsmith.js?v=24" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=9" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -95,7 +98,7 @@
 <script src="extras-v6be.js?v=8" defer></script>
 <script src="extras-v6bg.js?v=8" defer></script>
 <script src="extras-v6bh.js?v=8" defer></script>
-<script src="extras-v6bi.js?v=9" defer></script>
+<script src="extras-v6bi.js?v=10" defer></script>
 <script src="loading.js?v=6bp"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -180,8 +183,8 @@
   }
   .login-card .tag b { color: #e6ffee; }
   .connect-btn {
-    background: linear-gradient(135deg, #2ee06b 0%, #5ff09c 100%);
-    color: #00220e;
+    background: linear-gradient(135deg, #AB9FF2 0%, #8E7BEF 100%);
+    color: #ffffff;
     border: 0;
     padding: 16px 28px;
     border-radius: 100px;
@@ -190,15 +193,16 @@
     text-transform: uppercase;
     cursor: pointer;
     transition: transform 0.15s ease;
-    box-shadow: 0 0 0 0 rgba(46,224,107,0.55), 0 14px 36px rgba(46,224,107,0.45);
+    box-shadow: 0 0 0 0 rgba(171,159,242,0.55), 0 14px 36px rgba(124,92,252,0.45);
     animation: pulseGlow 1.8s ease-in-out infinite;
     width: 100%;
     display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   }
+  .connect-btn img { display: block; }
   .connect-btn:hover { transform: translateY(-2px) scale(1.02); filter: brightness(1.06); }
   @keyframes pulseGlow {
-    0%,100% { box-shadow: 0 0 0 0 rgba(46,224,107,0.55), 0 14px 36px rgba(46,224,107,0.45); }
-    50%     { box-shadow: 0 0 0 12px rgba(46,224,107,0.00), 0 18px 44px rgba(46,224,107,0.65); }
+    0%,100% { box-shadow: 0 0 0 0 rgba(171,159,242,0.55), 0 14px 36px rgba(124,92,252,0.45); }
+    50%     { box-shadow: 0 0 0 12px rgba(171,159,242,0.00), 0 18px 44px rgba(124,92,252,0.65); }
   }
   .login-card .skip {
     margin-top: 12px;
@@ -1434,7 +1438,7 @@
     position: relative;
     min-height: 92px;
   }
-  .inv-grid-modal .inv-slot:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; transform: translateY(-2px); box-shadow: 0 8px 18px rgba(0,0,0,0.30); }
+  .inv-grid-modal .inv-slot:hover { background: rgba(46,224,107,0.14); border-color: #5ff09c; box-shadow: 0 8px 18px rgba(0,0,0,0.30); }
   .inv-grid-modal .inv-slot.empty { opacity: 0.32; cursor: default; }
   .inv-grid-modal .inv-slot.empty:hover { background: rgba(46,224,107,0.06); border-color: rgba(46,224,107,0.18); transform: none; box-shadow: none; }
   .inv-grid-modal .inv-slot .icon { font-size: 32px; line-height: 1; margin-bottom: 4px; text-shadow: 0 0 10px currentColor; }
@@ -3223,9 +3227,7 @@
       Complete daily tasks, level up and become a leader in the <b>Fartprint</b> economy.
     </p>
     <button class="connect-btn" id="connectBtn" type="button" onclick="(function tryGo(n){if(typeof window.connectWallet==='function'){window.connectWallet();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">
-      <svg width="18" height="18" viewBox="0 0 128 128" fill="currentColor" aria-hidden="true">
-        <path d="M64 0a64 64 0 1 0 64 64A64 64 0 0 0 64 0Zm22 64a22 22 0 0 1-22 22 22 22 0 0 1-22-22V42a14 14 0 0 1 14-14h16a14 14 0 0 1 14 14Z"/>
-      </svg>
+      <img src="https://mintcdn.com/phantom-e50e2e68/tU9g5MXFXgx4l6Em/resources/images/Phantom_SVG_Icon.svg?w=1100&fit=max&auto=format&n=tU9g5MXFXgx4l6Em&q=85&s=12df2ab67a3f97365549ab75eea306df" width="22" height="22" alt="" aria-hidden="true" onerror="this.style.display='none'"/>
       Connect Phantom
     </button>
     <button class="skip" id="skipBtn" type="button" onclick="(function tryGo(n){if(typeof window.enterLobby==='function'){window.enterLobby();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">Play as guest →</button>
@@ -3473,6 +3475,11 @@ function saveStateNow(){
       username: State.username,
       level:    State.level,
       xp:       State.xp,
+      prestige:     State.prestige || 0,
+      prestigeSkins:State.prestigeSkins || [],
+      moonJobs:     State.moonJobs || {},
+      hunger:       (typeof State.hunger === 'number' ? State.hunger : 100),
+      edibleSlot:   State.edibleSlot || null,
       credits:  State.credits,
       gold:     State.gold,
       paper:    State.paper,
@@ -3536,6 +3543,9 @@ function loadState(){
     // Bank vault — safe from death + jail. Holds silver and cash.
     if(State.vaultSilver == null) State.vaultSilver = 0;
     if(State.vaultCash   == null) State.vaultCash   = 0;
+    if(State.prestige == null) State.prestige = 0;
+    if(!Array.isArray(State.prestigeSkins)) State.prestigeSkins = [];
+    if(typeof State.hunger !== 'number') State.hunger = 100;
     if(State.elo == null)     State.elo = 1000;
     if(State.dmWins == null)  State.dmWins = 0;
     if(State.dmLosses == null)State.dmLosses = 0;
@@ -3722,6 +3732,7 @@ async function refreshFartprintBalance(){
 
 // XP needed for next level: 100 * level (so L2 = 100, L3 = 200, L4 = 300, etc.)
 function xpForLevel(lv){ return 100 * lv; }
+window.xpForLevel = xpForLevel;
 
 // ─── Three.js setup ─────────────────────────────────────────────
 const canvas   = document.getElementById('canvas');
@@ -4420,8 +4431,8 @@ window.Plots = Plots;
 // after the rental expires the plot returns to the marketplace and
 // any crop still planted on it is forfeited. This keeps the available
 // land turning over instead of accumulating to early players.
-const PLOT_PRICE   = 30;                      // silver per 24h rental
-const PLOT_RENT_MS = 24 * 60 * 60 * 1000;     // 24 hours in ms
+const PLOT_PRICE   = 30;                      // silver per rental
+const PLOT_RENT_MS = 60 * 60 * 1000;          // 1 hour in ms
 // PLOT_SIZE + PLOT_LOCATIONS are declared earlier (before makeGround)
 // so the ground-flatten pass can use them — see top of World section.
 
@@ -5478,13 +5489,24 @@ function triggerShame(){
   }, 50);
 }
 
+const FW_LEVEL_CAP = 55;   // ranks cap at 55; beyond that you PRESTIGE (prestige.js)
 function checkLevelUp(){
-  while(State.xp >= xpForLevel(State.level)){
+  while(State.level < FW_LEVEL_CAP && State.xp >= xpForLevel(State.level)){
     State.xp -= xpForLevel(State.level);
     State.level++;
-    State.credits += 25 + State.level * 5;
+    // Prestige grants a permanent +10%/prestige silver bonus on earnings.
+    const mult = (window.fwPrestige ? window.fwPrestige.silverMult() : 1);
+    State.credits += Math.round((25 + State.level * 5) * mult);
     showLevelUp();
     playLevelUpSound();
+  }
+  // At the cap, hold XP full and flag that Prestige is available (once).
+  if(State.level >= FW_LEVEL_CAP){
+    State.xp = Math.min(State.xp, xpForLevel(FW_LEVEL_CAP));
+    if(!State.fwSawMaxRank){
+      State.fwSawMaxRank = true;
+      try { window.floater?.('🎖️ MAX RANK reached! Open the medal menu to enter Prestige.', 'good'); } catch(_){}
+    }
   }
 }
 function showLevelUp(){
@@ -8836,9 +8858,9 @@ function updatePlotPrompt(){
   prompt.classList.remove('locked');
   if(!nearbyPlot.owner){
     title.textContent = `🏷 Plot for rent`;
-    sub.innerHTML = `Press <kbd>E</kbd> to rent for <b>${PLOT_PRICE} 🥈</b> · <b>24h</b>`;
+    sub.innerHTML = `Press <kbd>E</kbd> to rent for <b>${PLOT_PRICE} 🥈</b> · <b>1h</b> · one plot per player`;
   } else if(nearbyPlot.owner === ownerId){
-    const hoursLeft = nearbyPlot.rentedUntil ? Math.max(0, (nearbyPlot.rentedUntil - Date.now()) / 3600000) : 24;
+    const hoursLeft = nearbyPlot.rentedUntil ? Math.max(0, (nearbyPlot.rentedUntil - Date.now()) / 3600000) : 1;
     const rentTag = `· ${hoursLeft >= 1 ? hoursLeft.toFixed(1) + "h" : Math.ceil(hoursLeft * 60) + "m"} left`;
     if(!nearbyPlot.crop){
       const seeds = Object.keys(State.inventory).filter(id => ITEMS[id]?.type === "seed" && State.inventory[id] > 0);
@@ -8975,7 +8997,14 @@ function tryInteract(){
   if(!nearbyPlot) return;
   const ownerId = State.username || State.wallet || "guest";
   if(!nearbyPlot.owner){
-    // RENT (24h)
+    // RENT (1h) — only ONE plot per player at a time.
+    const now = Date.now();
+    const alreadyHasPlot = Array.isArray(Plots) && Plots.some(p =>
+      p !== nearbyPlot && p.owner === ownerId && p.rentedUntil && p.rentedUntil > now);
+    if(alreadyHasPlot){
+      floater("You can only rent ONE farming plot at a time", "bad");
+      return;
+    }
     if(State.credits < PLOT_PRICE){
       floater(`Need ${PLOT_PRICE} 🥈 Silver`, "bad");
       return;
@@ -8983,9 +9012,9 @@ function tryInteract(){
     State.credits -= PLOT_PRICE;
     nearbyPlot.owner = ownerId;
     nearbyPlot.ownerName = State.username || "anon";
-    nearbyPlot.rentedUntil = Date.now() + PLOT_RENT_MS;
+    nearbyPlot.rentedUntil = now + PLOT_RENT_MS;
     plotStateChanged(nearbyPlot);
-    floater(`PLOT RENTED · 24h  -${PLOT_PRICE} 🥈`, "good");
+    floater(`PLOT RENTED · 1h  -${PLOT_PRICE} 🥈`, "good");
     saveState(); updateHUD();
     broadcastPlot(nearbyPlot);
     return;
@@ -9291,6 +9320,28 @@ function completeMining(){
   }, 0);
 }
 
+// Generic timed-mining API so other systems (e.g. moon rocks in moondc.js)
+// reuse the SAME progress bar + player swing animation as ore mining.
+// opts: { emoji, name, durationMs, valid(), onComplete() }
+window.fwStartGenericMine = function(opts){
+  if(MiningState) return false;
+  opts = opts || {};
+  const d0 = State.tools?.pickaxe?.durability ?? 100;
+  const slowdown = 1 + (1 - d0 / 100) * 1.5;
+  const duration = (opts.durationMs || 2200) * slowdown;
+  MiningState = {
+    generic: true,
+    valid: (typeof opts.valid === 'function') ? opts.valid : (() => true),
+    onComplete: (typeof opts.onComplete === 'function') ? opts.onComplete : null,
+    startTs: performance.now(),
+    duration,
+    startPos: { x: Player.pos.x, z: Player.pos.z },
+  };
+  showMiningBar({ labelEmoji: opts.emoji || '⛏', labelName: opts.name || '' }, duration);
+  startMiningSwing();
+  return true;
+};
+
 function tickMining(dt){
   if(!MiningState) return;
   // Cancel if the player walks away
@@ -9298,6 +9349,19 @@ function tickMining(dt){
   const dz = Player.pos.z - MiningState.startPos.z;
   if(Math.hypot(dx, dz) > 1.5){
     cancelMining("Mining cancelled — you moved");
+    return;
+  }
+  // Generic mining (moon rocks, etc.) — drives the same bar + swing.
+  if(MiningState.generic){
+    if(!MiningState.valid()){ cancelMining(null); return; }
+    const elapsed = performance.now() - MiningState.startTs;
+    const t = Math.min(1, elapsed / MiningState.duration);
+    updateMiningBar(t, MiningState);
+    if(t >= 1){
+      const cb = MiningState.onComplete;
+      MiningState = null; hideMiningBar(); stopMiningSwing();
+      if(cb){ try { cb(); } catch(e){} }
+    }
     return;
   }
   // Cancel if the ore deposit disappeared (multiplayer, etc.)

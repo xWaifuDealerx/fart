@@ -262,6 +262,8 @@
       { x:-72, z:36 }, { x:37, z:-9 }, { x:67, z:-21 },
       { x:29, z:67 },  { x:-5, z:62 }, { x:-1, z:-39 },
       { x:-13, z:71 }, { x:29, z:-81 }, { x:62, z:-44 },
+      { x:41, z:64 },  { x:-78, z:2 }, { x:-59, z:-45 },
+      { x:-29, z:-63 },{ x:1, z:15 },
     ];
     const RENT_MS = 60 * 60 * 1000;     // 1 hour
     const RENT_COST = 1000;             // silver
@@ -370,7 +372,9 @@
       paintSign(b);
       syncStateBase(b);
     }
-    function occupiedYps(b){ return b.toilets.reduce((a, id) => a + (id && BRAINROTS[id] ? BRAINROTS[id].yps : 0), 0); }
+    // Global earnings multiplier for brainrots planted in your base (10× silver).
+    const EARN_MULT = 10;
+    function occupiedYps(b){ return b.toilets.reduce((a, id) => a + (id && BRAINROTS[id] ? BRAINROTS[id].yps : 0), 0) * EARN_MULT; }
     function syncStateBase(b){
       State.br = { idx: b.idx, until: b.until, toilets: b.toilets.slice(), pending: b.pending, lastTick: b.lastTick };
     }
@@ -544,7 +548,7 @@
       const b = nt.b, i = nt.i;
       b.toilets[i] = carry.t.id; setToiletHead(b, i, carry.t.id);
       b.lastTick = Date.now(); paintSign(b);
-      floater('🚽 Planted ' + carry.t.name + ' (' + Math.round(BRAINROTS[carry.t.id].yps * 60) + ' 🥈/min)', 'good');
+      floater('🚽 Planted ' + carry.t.name + ' (' + Math.round(BRAINROTS[carry.t.id].yps * 60 * EARN_MULT) + ' 🥈/min)', 'good');
       detachCarry(); syncStateBase(b); save();
     }
     function rentBase(b){
@@ -608,6 +612,11 @@
       if(!id) return;
       const t = BRAINROTS[id];
       b.toilets[i] = null; setToiletHead(b, i, null); paintSign(b);
+      // Keep the raid "stuck": the bot that owns this base must not instantly
+      // re-plant the slot we just emptied. printerbots.js reads raidedSlots and
+      // leaves a slot empty until its cooldown expires.
+      b.raidedSlots = b.raidedSlots || {};
+      b.raidedSlots[i] = Date.now() + 120000;   // 2 min before it can refill
       if(b.owner === meId()) syncStateBase(b);
       if(carry) detachCarry();
       attachCarry(t);
@@ -738,8 +747,9 @@
         // Slide — the lease keeps running and yielding silver in the background.
         if(b.owner === meId() && Date.now() >= b.until && !window.fwSlideActive){ clearPlayerBase(true); continue; }
         const yps = occupiedYps(b);
-        // Poop Orb bonus multiplies silver earnings for everyone's owned bases.
-        if(yps > 0){ b.pending += yps * bonusMult() * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
+        // Poop Orb bonus + Prestige bonus (+10%/prestige) multiply silver earnings.
+        const presMult = (b.owner === meId() && window.fwPrestige) ? window.fwPrestige.silverMult() : 1;
+        if(yps > 0){ b.pending += yps * bonusMult() * presMult * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
       }
       // keep the floating base signs facing the player (yaw billboard)
       if(window.camera){
@@ -789,6 +799,13 @@
       // base status pill
       if(mine){
         basePill.style.display = 'block';
+        // Sit ABOVE the Daily Quests panel (both live in the bottom-left
+        // corner) — clear its current height so they never overlap, whether
+        // the quest list is expanded or collapsed.
+        try {
+          const qp = document.getElementById('questsPanel');
+          basePill.style.bottom = (qp && qp.offsetHeight ? qp.offsetHeight + 24 : 14) + 'px';
+        } catch(_){}
         const occ = mine.toilets.filter(Boolean).length;
         let pill = '🚽 <b>Your base</b> · ' + occ + '/6 · <b>' + Math.floor(mine.pending) + ' 🥈</b> ready · ' + fmtMs(mine.until - Date.now()) + ' left';
         const bp = activeBonusPct();

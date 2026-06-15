@@ -57,7 +57,15 @@
     }
     function emptyToilet(b) {
       if (!b || !Array.isArray(b.toilets)) return -1;
-      for (let i = 0; i < 6; i++) if (!b.toilets[i]) return i;
+      const rc = b.raidedSlots || null;
+      const now = Date.now();
+      for (let i = 0; i < 6; i++) {
+        if (b.toilets[i]) continue;
+        // A slot the player just raided stays empty until its cooldown ends,
+        // so a stolen brainrot isn't instantly replaced by the owner bot.
+        if (rc && rc[i] && now < rc[i]) continue;
+        return i;
+      }
       return -1;
     }
     function occupiedToilet(b) {
@@ -104,6 +112,9 @@
         baseIdx: null, carry: null, carryMesh: null,
         task: null, linger: 1 + Math.random() * 2, walking: false, bob: Math.random() * 6.28,
         stealing: false, stealSlot: 0, stealId: null, stealUntil: 0,
+        stoleFromPlayer: false,   // carrying a brainrot taken from YOUR base
+        dead: false, deadUntil: 0, // shot down — hidden until it respawns
+        spawnX: sx, spawnZ: sz,
       };
     }
 
@@ -196,6 +207,7 @@
           try { BR.setToiletHead && BR.setToiletHead(b, slot, bot.carry); } catch (_) {}
           try { BR.paintSign && BR.paintSign(b); } catch (_) {}
           detachCarry(bot);
+          bot.stoleFromPlayer = false;
         }
         bot.linger = 2 + Math.random() * 2;
       } else if (t.kind === 'steal') {
@@ -230,6 +242,12 @@
       const inSlide = !!window.fwSlideActive;
 
       for (const bot of bots) {
+        // Shot down — stay hidden until the respawn timer elapses.
+        if (bot.dead) {
+          bot.tag.style.display = 'none';
+          if (now >= bot.deadUntil) respawnBot(bot);
+          continue;
+        }
         if (!inSlide) {
           if (bot.stealing) {
             // Standing at your base, raiding — takes as long as the brainrot's
@@ -246,7 +264,8 @@
               try { BR.syncStateBase && BR.syncStateBase(pb); } catch (_) {}
               const t2 = BR.BRAINROTS[bot.stealId];
               attachCarry(bot, t2 || randType());
-              try { window.floater && window.floater('\u{1F977} ' + bot.name + ' stole ' + (t2 ? t2.name : 'a brainrot') + ' from your base!', 'bad'); } catch (_) {}
+              bot.stoleFromPlayer = true;   // shoot it to get this back!
+              try { window.floater && window.floater('\u{1F977} ' + bot.name + ' stole ' + (t2 ? t2.name : 'a brainrot') + ' from your base! Shoot it to get it back', 'bad'); } catch (_) {}
               bot.stealing = false; bot.linger = 1.5;
             }
           } else if (bot.linger > 0) {
@@ -297,6 +316,60 @@
       requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+
+    // ── Respawn a downed bot somewhere fresh ──
+    function respawnBot(bot) {
+      let sx = bot.spawnX, sz = bot.spawnZ;
+      for (let i = 0; i < 30; i++) {
+        const a = Math.random() * Math.PI * 2, r = 12 + Math.random() * (ISLAND_R - 28);
+        const cx = Math.cos(a) * r, cz = Math.sin(a) * r;
+        if (landAt(cx, cz)) { sx = cx; sz = cz; break; }
+      }
+      bot.x = sx; bot.z = sz;
+      bot.dead = false; bot.stealing = false; bot.stoleFromPlayer = false;
+      detachCarry(bot);
+      bot.task = null; bot.linger = 1 + Math.random() * 2; bot.walking = false;
+      bot.mesh.position.set(sx, gH(sx, sz), sz);
+      try { if (!bot.mesh.parent) scene.add(bot.mesh); bot.mesh.visible = true; } catch (_) {}
+    }
+
+    // ── Kill a thief bot (called by gunsmith.js when a shot lands) ──
+    // If it had already grabbed YOUR brainrot, return it to your base.
+    function killThief(bot) {
+      if (!bot || bot.dead) return false;
+      const wasRaiding = bot.stealing;
+      // Return a stolen brainrot to the player's base if there's room.
+      if (bot.stoleFromPlayer && bot.carry) {
+        const pb = playerBase();
+        const slot = pb ? emptyToilet(pb) : -1;
+        if (pb && slot >= 0) {
+          pb.toilets[slot] = bot.carry;
+          try { BR.setToiletHead && BR.setToiletHead(pb, slot, bot.carry); } catch (_) {}
+          try { BR.paintSign && BR.paintSign(pb); } catch (_) {}
+          try { BR.syncStateBase && BR.syncStateBase(pb); } catch (_) {}
+          const t = BR.BRAINROTS[bot.carry];
+          try { window.floater && window.floater('\u{21A9}\u{FE0F} ' + (t ? t.name : 'Your brainrot') + ' recovered and returned to your base!', 'good'); } catch (_) {}
+        }
+      }
+      detachCarry(bot);
+      bot.stealing = false; bot.stoleFromPlayer = false;
+      bot.dead = true; bot.deadUntil = performance.now() + 35000;   // back in 35s
+      bot.tag.style.display = 'none';
+      try { scene.remove(bot.mesh); } catch (_) {}
+      // Reward the defender
+      try { window.State.credits = (window.State.credits || 0) + 50; } catch (_) {}
+      try { window.fwSkillXp && window.fwSkillXp('weapon', 20); } catch (_) {}
+      try { window.fwSfx && window.fwSfx('deagle', 0.4); } catch (_) {}
+      try { window.floater && window.floater('\u{1F480} You took down ' + bot.name + (wasRaiding ? ' raiding your base!' : '!') + ' +50 \u{1F948}', 'good'); } catch (_) {}
+      try { window.updateHUD && window.updateHUD(); window.saveState && window.saveState(); } catch (_) {}
+      return true;
+    }
+    window.fwKillThief = killThief;
+    // Bots that may currently be shot: raiding your base, or fleeing with loot
+    // taken from you. (Bots just running errands are not targetable.)
+    window.fwShootableBots = function () {
+      return bots.filter(b => !b.dead && (b.stealing || (b.carry && b.stoleFromPlayer)));
+    };
 
     window.fwPrinterBots = bots;
     console.log('[printerbots] ' + bots.map(b => b.name).join(' & ') + ' are roaming as fake players');
