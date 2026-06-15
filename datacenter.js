@@ -66,6 +66,8 @@
         desc: "AI Mercury is in retrograde. Your career is doomed. SUBSCRIBE for the full reading at $19.99/mo.",
         durMin: 4, min: 80,  max: 700 },
     ];
+    // Operations now take 10× longer to run (bigger, slower workloads).
+    ACTIVITIES.forEach(a => { a.durMin *= 10; });
     // Expose the service list so the lunar data centers (moondc.js) can offer
     // the exact same menu of operations that Data does here on Earth.
     window.fwDataActivities = ACTIVITIES;
@@ -313,14 +315,17 @@
       // Job can't finish AFTER rental expires
       const remaining = State.dcRentedUntil - Date.now();
       if(dur > remaining){ window.floater?.("Not enough rack time left for this job", "bad"); return; }
-      State.dcJobs[act.id] = { startTs: Date.now(), duration: dur };
+      // Roll the payout up-front so the Ongoing Operations panel can show
+      // exactly how much silver will be ready to claim.
+      const payout = Math.round(act.min + Math.random() * (act.max - act.min));
+      State.dcJobs[act.id] = { startTs: Date.now(), duration: dur, payout };
       window.saveState?.();
       renderAll();
     }
     function claimJob(act){
       const j = State.dcJobs[act.id];
       if(!j) return;
-      const reward = Math.round(act.min + Math.random() * (act.max - act.min));
+      const reward = (typeof j.payout === 'number') ? j.payout : Math.round(act.min + Math.random() * (act.max - act.min));
       delete State.dcJobs[act.id];
       State.credits = (State.credits || 0) + reward;
       window.fwSkillXp?.('data', 12);
@@ -345,7 +350,8 @@
         if(!isRented()){
           btn = '<button disabled>Rent rack first</button>';
         } else if(js?.status === "done"){
-          btn = '<button class="claim" data-claim="' + act.id + '">Claim payout</button>';
+          const pay = (typeof js.payout === 'number') ? (' ' + js.payout.toLocaleString() + ' \u{1F948}') : ' payout';
+          btn = '<button class="claim" data-claim="' + act.id + '">Claim' + pay + '</button>';
         } else if(js?.status === "running"){
           const ms = (1 - js.t) * js.duration;
           btn = '<button disabled>Running · ' + fmtMs(ms) + '</button>';

@@ -41,6 +41,7 @@
       { x: -64, z:  -8, c: '#ff7a7a', l: 'Hospital',  e: '🏥' },
       { x: -64, z:  18, c: '#ffd64d', l: 'Hotel',     e: '🏨' },
       { x: -67, z: -27, c: '#ff5ad6', l: 'Casino',    e: '🎰' },
+      { x:  39, z: -51, c: '#ff5a1f', l: 'Moo Kratha', e: '🥩' },
     ];
 
     // ── Three sizes: small, medium, large + optional fullscreen view ──
@@ -104,7 +105,7 @@
     // ── Offscreen pre-rendered world layer ──
     // World-space rect covered: ±WORLD_HALF metres. Re-rendered only
     // when the zoom (scale) changes — per frame we just blit it.
-    const WORLD_HALF = 170;
+    const WORLD_HALF = 420;   // covers the mainland AND the four outer islands (~321 out)
     let worldCvs = null;
     let worldScale = 0;     // px per metre of the cached layer
 
@@ -211,9 +212,35 @@
       w.fillText('S', ic0, ic1 + cr);
       w.fillText('W', ic0 - cr, ic1);
       w.fillText('E', ic0 + cr, ic1);
+
+      // ── Outer PVP islands (E/W/N/S) baked into the world layer ──
+      const PIS = window.FW_PVP_ISLANDS || [];
+      for(const C of PIS){
+        const [cx, cy] = W2P(C.x, C.z);
+        const rr = C.r * scale;
+        // shallow halo
+        const hg = w.createRadialGradient(cx, cy, rr * 0.7, cx, cy, rr * 1.25);
+        hg.addColorStop(0, 'rgba(110,208,214,.25)'); hg.addColorStop(1, 'rgba(110,208,214,0)');
+        w.fillStyle = hg; w.beginPath(); w.arc(cx, cy, rr * 1.25, 0, Math.PI * 2); w.fill();
+        // sand + grass
+        w.beginPath(); w.arc(cx, cy, rr, 0, Math.PI * 2); w.fillStyle = '#cdb289'; w.fill();
+        w.beginPath(); w.arc(cx, cy, rr * 0.86, 0, Math.PI * 2); w.fillStyle = '#2f6f3c'; w.fill();
+        // red PVP-zone ring at the expanded sea boundary (~ r + 30)
+        w.beginPath(); w.arc(cx, cy, (C.r + 30) * scale, 0, Math.PI * 2);
+        w.lineWidth = Math.max(1.5, scale * 0.7); w.strokeStyle = 'rgba(255,59,59,.8)';
+        w.setLineDash([scale * 3, scale * 2]); w.stroke(); w.setLineDash([]);
+        // guild-post dot
+        w.beginPath(); w.arc(cx, cy, Math.max(3, scale * 1.4), 0, Math.PI * 2); w.fillStyle = '#ffd64d'; w.fill();
+        // label
+        w.font = '800 ' + Math.max(11, 8 * scale) + 'px Outfit, sans-serif';
+        w.fillStyle = '#ff8a8a'; w.textAlign = 'center'; w.textBaseline = 'middle';
+        w.fillText('PVP ' + (C.dir || ''), cx, cy - rr - Math.max(9, scale * 3));
+      }
     }
 
-    function curSpan(){ return fullscreen ? 220 : SIZES[sizeIdx].span; }
+    // Fullscreen = whole-world overview (centred on origin) so you can see the
+    // mainland AND all four outer islands at once.
+    function curSpan(){ return fullscreen ? 920 : SIZES[sizeIdx].span; }
 
     function applySize(){
       const s = SIZES[sizeIdx];
@@ -226,6 +253,8 @@
       renderWorldLayer(cvs.width / curSpan());
     }
     applySize();
+    // The outer islands may not exist yet on first render — re-bake once they do.
+    setTimeout(applySize, 1500);
     document.getElementById('mmZoomIn').addEventListener('click', () => { sizeIdx = Math.min(SIZES.length - 1, sizeIdx + 1); applySize(); });
     document.getElementById('mmZoomOut').addEventListener('click', () => { sizeIdx = Math.max(0, sizeIdx - 1); applySize(); });
     function setFullscreen(on){
@@ -239,10 +268,12 @@
 
     // Smoothed player position so the map glides rather than jitters
     const sm = { x: 0, z: 0, yaw: 0, init: false };
+    // Current view centre (player while normal, origin while fullscreen)
+    let viewX = 0, viewZ = 0;
 
     function w2c(x, z){
       const scale = cvs.width / curSpan();
-      return [cvs.width / 2 + (x - sm.x) * scale, cvs.height / 2 + (z - sm.z) * scale];
+      return [cvs.width / 2 + (x - viewX) * scale, cvs.height / 2 + (z - viewZ) * scale];
     }
 
     let lastDraw = 0;
@@ -265,11 +296,16 @@
       while(dy < -Math.PI) dy += Math.PI * 2;
       sm.yaw += dy * 0.3;
 
-      // Blit cached world layer translated so the player sits centred
+      // View centre: follow the player normally, but frame the WHOLE world
+      // (centred on origin) in fullscreen so every island is visible.
+      viewX = fullscreen ? 0 : sm.x;
+      viewZ = fullscreen ? 0 : sm.z;
+
+      // Blit cached world layer translated to the view centre
       ctx.fillStyle = '#0b1f2d';
       ctx.fillRect(0, 0, w, h);
-      const ox = w / 2 - (sm.x + WORLD_HALF) * scale;
-      const oy = h / 2 - (sm.z + WORLD_HALF) * scale;
+      const ox = w / 2 - (viewX + WORLD_HALF) * scale;
+      const oy = h / 2 - (viewZ + WORLD_HALF) * scale;
       ctx.drawImage(worldCvs, ox, oy);
 
       // Animated water shimmer — two faint moving bands (cheap)

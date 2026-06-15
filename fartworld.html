@@ -35,15 +35,16 @@
 <!-- Sand collection, jar melt, Fart Filling Station building. -->
 <script src="crafting.js?v=8" defer></script>
 <!-- Wave's Sea Plane — buy at the port, take off and fly. -->
-<script src="seaplane.js?v=8" defer></script>
+<script src="seaplane.js?v=9" defer></script>
 <script src="roki.js?v=8" defer></script>
 <script src="alexandre.js?v=8" defer></script>
-<script src="minimap.js?v=10" defer></script>
+<script src="minimap.js?v=12" defer></script>
 <script src="compass.js?v=11" defer></script>
 <script src="hunger.js?v=11" defer></script>
-<script src="weed-timer.js?v=9" defer></script>
+<!-- weed-timer.js (CROPS GROWING popup) removed — crops now show in the Ongoing Operations panel -->
+<!-- <script src="weed-timer.js?v=9" defer></script> -->
 <script src="weed-reveal.js?v=8" defer></script>
-<script src="nature.js?v=9" defer></script>
+<script src="nature.js?v=10" defer></script>
 <script src="ui-polish.js?v=8" defer></script>
 <script src="dev.js?v=8" defer></script>
 <script src="equip.js?v=8" defer></script>
@@ -56,18 +57,18 @@
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=23" defer></script>
+<script src="brainrot.js?v=25" defer></script>
 <script src="printerbots.js?v=7" defer></script>
 <script src="dailyhub.js?v=5" defer></script>
 <script src="animals.js?v=1" defer></script>
-<script src="church.js?v=1" defer></script>
+<script src="church.js?v=2" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
 <script src="slide.js?v=9" defer></script>
 -->
 <script src="establishments.js?v=9" defer></script>
 <script src="streetlights.js?v=8" defer></script>
 <script src="bike.js?v=9" defer></script>
-<script src="datacenter.js?v=9" defer></script>
+<script src="datacenter.js?v=10" defer></script>
 <script src="bakery.js?v=3" defer></script>
 <script src="storage.js?v=8" defer></script>
 <script src="casino.js?v=10" defer></script>
@@ -90,7 +91,7 @@
 <script src="poop500.js" defer></script>
 <script src="tutorial.js?v=8" defer></script>
 <script src="fartcup.js?v=8" defer></script>
-<script src="gunsmith.js?v=25" defer></script>
+<script src="gunsmith.js?v=26" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=10" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -100,9 +101,15 @@
 <script src="extras-v6bh.js?v=9" defer></script>
 <script src="extras-v6bi.js?v=10" defer></script>
 <!-- Player profile window + lifetime stats + motto -->
-<script src="profile.js?v=1" defer></script>
-<!-- Second landmass: the PVP island (free-for-all zone) -->
-<script src="pvpzone.js?v=1" defer></script>
+<script src="profile.js?v=2" defer></script>
+<!-- Outer PVP islands (free-for-all zones) + guild posts -->
+<script src="pvpzone.js?v=4" defer></script>
+<!-- 🥩 Moo Kratha Shop (invest + sell pork for cash) -->
+<script src="mookratha.js?v=4" defer></script>
+<!-- ⚙ Ongoing Operations panel (left, below chat) -->
+<script src="ops.js?v=2" defer></script>
+<!-- 🛡 Guild system (client foundation) -->
+<script src="guild.js?v=4" defer></script>
 <script src="loading.js?v=6bq"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -3486,7 +3493,11 @@ function saveStateNow(){
       edibleSlot:   State.edibleSlot || null,
       profile:      State.profile || {},
       spidersKilled:State.spidersKilled || 0,
+      brainrotsStolen:State.brainrotsStolen || 0,
       deaths:       State.deaths || 0,
+      tutStep:      State.tutStep || 0,
+      tutDismissed: !!State.tutDismissed,
+      guild:        State.guild || null,
       credits:  State.credits,
       gold:     State.gold,
       paper:    State.paper,
@@ -4111,12 +4122,20 @@ function islandFalloff(r){
 // mainland sits at (276, 18); the island is half the mainland radius.
 // pvpzone.js builds the terrain mesh + dock to match these numbers
 // and flags the zone for free-for-all combat.
-const PVP_ISLAND = { x: 276 + 45, z: 18, r: 45, falloff: 20 };   // center, radius, shore falloff
-window.FW_PVP_ISLAND = PVP_ISLAND;
-function pvpIslandFalloff(d){
-  if(d <= PVP_ISLAND.r) return 1;
-  if(d >= PVP_ISLAND.r + PVP_ISLAND.falloff) return 0;
-  const t = (d - PVP_ISLAND.r) / PVP_ISLAND.falloff;
+// Four outer islands, one on each side of the mainland, all the same
+// size + distance. Nearest edge of each sits ~276 from the centre.
+const PVP_ISLANDS = [
+  { x:  321, z:   18, r: 45, falloff: 20, dir: 'E' },   // East  — the original
+  { x: -321, z:   18, r: 45, falloff: 20, dir: 'W' },   // West
+  { x:   18, z:  321, r: 45, falloff: 20, dir: 'N' },   // North
+  { x:   18, z: -321, r: 45, falloff: 20, dir: 'S' },   // South
+];
+window.FW_PVP_ISLANDS = PVP_ISLANDS;
+window.FW_PVP_ISLAND  = PVP_ISLANDS[0];   // back-compat
+function pvpIslandFalloff(d, isl){
+  if(d <= isl.r) return 1;
+  if(d >= isl.r + isl.falloff) return 0;
+  const t = (d - isl.r) / isl.falloff;
   return 1 - (t * t * (3 - 2 * t));     // smoothstep
 }
 
@@ -4251,13 +4270,15 @@ function groundHeightAt(x, z){
   // Island falloff — outside the shore, sink to WATER_DEPTH
   const isl = islandFalloff(r);
   let h = y * isl + WATER_DEPTH * (1 - isl);
-  // Second landmass: the PVP island to the east. Take whichever is higher
-  // so the player walks on it just like the mainland.
-  const pd = Math.hypot(x - PVP_ISLAND.x, z - PVP_ISLAND.z);
-  if(pd < PVP_ISLAND.r + PVP_ISLAND.falloff){
-    const pIsl = pvpIslandFalloff(pd);
-    const ph = (BASE_GROUND + n) * pIsl + WATER_DEPTH * (1 - pIsl);
-    if(ph > h) h = ph;
+  // Outer PVP islands: take whichever surface is higher so the player
+  // walks on them just like the mainland.
+  for(const isl of PVP_ISLANDS){
+    const pd = Math.hypot(x - isl.x, z - isl.z);
+    if(pd < isl.r + isl.falloff){
+      const pIsl = pvpIslandFalloff(pd, isl);
+      const ph = (BASE_GROUND + n) * pIsl + WATER_DEPTH * (1 - pIsl);
+      if(ph > h) h = ph;
+    }
   }
   return h;
 }
@@ -5298,6 +5319,7 @@ function playPurchaseSound(){
     o.stop(ctx.currentTime + i * 0.05 + 0.25);
   });
 }
+window.playPurchaseSound = playPurchaseSound;   // exposed for side modules (moo kratha, church)
 function playPrintSound(){
   const ctx = ensureAudio(); if(!ctx) return;
   const o = ctx.createOscillator();
@@ -5554,15 +5576,24 @@ function showLevelUp(){
 // ─── Quests ─────────────────────────────────────────────────────
 const Quests = [
   {
-    id: "visit_zones",
-    name: "Visit 5 Safe Zones",
-    target: 5,
-    progress: () => State.uniqueZonesVisited.size,
+    id: "steal_brainrot",
+    name: "Steal A Brainrot",
+    target: 1,
+    progress: () => {
+      // counts steals made TODAY (daily baseline like the jar quest)
+      const today = new Date().toISOString().slice(0, 10);
+      if(State.questStealDay !== today){
+        State.questStealDay = today;
+        State.questStealBase = Number(State.brainrotsStolen) || 0;
+      }
+      const cur = Number(State.brainrotsStolen) || 0;
+      return Math.max(0, Math.min(1, cur - (State.questStealBase || 0)));
+    },
     reward: { xp: 100, credits: 30 },
   },
   {
     id: "print_pages",
-    name: "Print 50 pages (E)",
+    name: "Print 50 pages",
     target: 50,
     progress: () => State.pagesPrinted,
     reward: { xp: 150, credits: 50 },
@@ -8346,6 +8377,7 @@ function silverPerGold(){
   const days = Math.max(0, Math.floor((Date.now() - FW_GENESIS_DATE_MS) / 86400000));
   return SILVER_PER_GOLD_BASE + days;
 }
+window.silverPerGold = silverPerGold;   // exposed for guild.js (create cost in gold)
 const GOLD_MIN_QTY     = 0.01;        // smallest gold purchase (so ≥0.01 gold)
 
 function buildBank(){
@@ -8991,6 +9023,7 @@ function tryInteract(){
   // you're standing at a base or a toilet (brainrot.js handles it).
   if(window.fwBrainrotInteract && window.fwBrainrotInteract()) return;
   if(window.fwChurchInteract && window.fwChurchInteract()) return;
+  if(window.fwMooKrathaInteract && window.fwMooKrathaInteract()) return;
   // Fart Slide portal on the beach (slide.js) — E rides the secret slide.
   if(window.fwSlideInteract && window.fwSlideInteract()) return;
   // Town Leaderboard board (dailyhub.js) — E opens the rankings.

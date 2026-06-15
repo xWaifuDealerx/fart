@@ -701,21 +701,17 @@
     // ─ EVENT DELEGATION ─ a single click listener on the modal bg
     // handles every Buy / Retrieve / Cancel button regardless of how
     const tryBuy = (cost, key, spawner, label) => {
-      if(State.waveOwn[key]){
-        window.floater?.("You already own that. Use Retrieve.", "bad");
-        renderWave();
-        return;
-      }
+      // Vessels are no longer retrieved for free — each launch is a fresh
+      // purchase, so the cost is charged every time.
       if((State.credits || 0) < cost){
         window.floater?.("Need " + cost + " \u{1F948}", "bad");
         return;
       }
       State.credits -= cost;
-      State.waveOwn[key] = true;
+      State.waveOwn[key] = true;   // recorded for stats only; doesn't skip the cost
       saveOwn();
       try { spawner(); } catch(err){
         console.error("[wave] spawn error", err);
-        window.floater?.("Spawn glitched — try Retrieve.", "bad");
       }
       window.playPurchaseSound?.();
       window.saveState?.();
@@ -745,14 +741,13 @@
       if(id === "waveGetYacht")  { tryGet(() => spawnYacht(), "\u{1F6A4} Yacht"); return; }
     });
     function renderWave(){
-      const own = State.waveOwn || {};
-      waveBg.innerHTML = '<div class="wave-card"><h2>\u{1F5A8} Wave’s Watercraft</h2><p>Pick your ride. Already bought one? Use Retrieve to bring it back.</p>'
+      waveBg.innerHTML = '<div class="wave-card"><h2>\u{1F5A8} Wave’s Watercraft</h2><p>Pick your ride. Each launch is a fresh purchase — no free retrievals.</p>'
         + '<div class="row"><div class="ico">\u{26F5}</div><div><div class="nm">Tree Boat</div><div class="sub">200 \u{1F948} · simple paddle boat</div></div>'
-        + (own.boat ? '<button class="btn" id="waveGetBoat">Retrieve</button>' : '<button class="btn" id="waveBuyBoat">Buy</button>') + '</div>'
+        + '<button class="btn" id="waveBuyBoat">Buy</button></div>'
         + '<div class="row"><div class="ico">\u{1F6E9}</div><div><div class="nm">Sea Plane</div><div class="sub">' + PLANE_PRICE + ' \u{1F948} · float-equipped — takes off + flies</div></div>'
-        + (own.plane ? '<button class="btn" id="waveGetPlane">Retrieve</button>' : '<button class="btn" id="waveBuyPlane">Buy</button>') + '</div>'
+        + '<button class="btn" id="waveBuyPlane">Buy</button></div>'
         + '<div class="row"><div class="ico">\u{1F6A4}</div><div><div class="nm">Yacht</div><div class="sub">' + YACHT_PRICE + ' \u{1F948} · floating palace</div></div>'
-        + (own.yacht ? '<button class="btn" id="waveGetYacht">Retrieve</button>' : '<button class="btn" id="waveBuyYacht">Buy</button>') + '</div>'
+        + '<button class="btn" id="waveBuyYacht">Buy</button></div>'
         + '<button class="cancel" id="waveCancel">Leave</button>'
         + '</div>';
       const cancelBtn = document.getElementById('waveCancel');

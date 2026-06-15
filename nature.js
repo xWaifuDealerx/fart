@@ -48,6 +48,7 @@
       { x:  60, z:  60, r: 5 },   // Pawn
       { x: -55, z:  32, r: 4 },   // Fart Stn
       { x: -10.5, z: -45, r: 4 }, // Alexandre
+      { x:  39,   z: -51, r: 6 }, // Moo Kratha Shop
       // Brainrot bases — keep the platforms (and their immediate surround)
       // clear of grass / flowers / mushrooms.
       { x:-72, z:36, r:7 }, { x:37, z:-9, r:7 }, { x:67, z:-21, r:7 },

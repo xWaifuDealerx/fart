@@ -612,6 +612,15 @@
       steal.active = false; stealUI.style.display = 'none';
       if(!id) return;
       const t = BRAINROTS[id];
+      // The stolen brainrot also carries off its share of the base's unclaimed
+      // silver — that earned silver goes to whoever stole it.
+      const occ = b.toilets.filter(Boolean).length;
+      const loot = Math.floor((b.pending || 0) / Math.max(1, occ));
+      if(loot > 0){
+        b.pending = Math.max(0, (b.pending || 0) - loot);
+        try { addSilver(loot); } catch(_){ State.credits = (State.credits || 0) + loot; }
+        if(b.owner === meId()) syncStateBase(b);
+      }
       b.toilets[i] = null; setToiletHead(b, i, null); paintSign(b);
       // Keep the raid "stuck": the bot that owns this base must not instantly
       // re-plant the slot we just emptied. printerbots.js reads raidedSlots and
@@ -621,7 +630,8 @@
       if(b.owner === meId()) syncStateBase(b);
       if(carry) detachCarry();
       attachCarry(t);
-      floater('🥷 Stole ' + t.name + '! Run to your base.', 'good');
+      try { State.brainrotsStolen = (State.brainrotsStolen || 0) + 1; window.saveState && window.saveState(); } catch(_){}
+      floater('🥷 Stole ' + t.name + (loot > 0 ? ' + ' + loot + ' 🥈' : '') + '! Run to your base.', 'good');
     }
 
     // ──────────────────────────────────────────────────────────────

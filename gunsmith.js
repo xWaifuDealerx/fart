@@ -772,7 +772,7 @@
         // Place in the printer's RIGHT hand (facing +Z, right = −X),
         // lifted to match the raised carrying arm.
         const yaw = printer.rotation.y || 0;
-        const off = { x: -0.85, y: 1.22, z: 0.72 };
+        const off = { x: -0.85, y: 0.95, z: 0.72 };   // lowered to sit at the printer's hands
         const cs = Math.cos(yaw), sn = Math.sin(yaw);
         const wx = off.x * cs + off.z * sn;
         const wz = -off.x * sn + off.z * cs;

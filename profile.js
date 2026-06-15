@@ -103,11 +103,19 @@
   font-family:'Orbitron',sans-serif;font-weight:900;font-size:11px;letter-spacing:.5px;padding:0 16px;cursor:pointer}
 .fwp-motto .hint{font-size:10.5px;color:rgba(230,255,238,.45);margin-top:7px;line-height:1.5}
 /* Motto banner that floats over your character on a PVP kill */
-.fwp-mottobanner{position:fixed;z-index:120;transform:translate(-50%,-50%);pointer-events:none;display:none;
-  padding:7px 16px;border-radius:100px;background:linear-gradient(135deg,rgba(255,90,77,.95),rgba(255,150,90,.95));
-  color:#fff;font-family:'Bangers','Orbitron',sans-serif;font-size:18px;letter-spacing:1px;white-space:nowrap;
-  border:2px solid rgba(255,255,255,.6);box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 26px rgba(255,90,77,.45);text-shadow:0 2px 4px rgba(0,0,0,.5)}
+.fwp-mottobanner{position:fixed;z-index:120;transform:translate(-50%,-50%);pointer-events:none;display:none}
 .fwp-mottobanner.show{display:block}
+.fwp-motto-inner{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  padding:9px 22px;border-radius:13px;
+  background:linear-gradient(135deg,rgba(22,2,2,.94),rgba(64,8,8,.94));
+  color:#fff;font-family:'Bangers','Orbitron',sans-serif;font-size:23px;letter-spacing:1.6px;
+  border:2px solid #ff5a4d;
+  box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 30px rgba(255,90,77,.6),inset 0 0 18px rgba(255,90,77,.25);
+  text-shadow:0 0 10px rgba(255,90,77,.9),0 2px 4px rgba(0,0,0,.7);
+  transform-origin:center;animation:fwpMottoIn .42s cubic-bezier(.2,1.5,.4,1),fwpMottoGlow 1.5s ease-in-out infinite .42s}
+.fwp-motto-inner .sk{font-size:19px;filter:drop-shadow(0 0 6px rgba(255,90,77,.8))}
+@keyframes fwpMottoIn{0%{opacity:0;transform:scale(.3) rotate(-10deg)}60%{opacity:1;transform:scale(1.12) rotate(2deg)}100%{transform:scale(1) rotate(-2deg)}}
+@keyframes fwpMottoGlow{0%,100%{box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 26px rgba(255,90,77,.5),inset 0 0 18px rgba(255,90,77,.25)}50%{box-shadow:0 8px 26px rgba(0,0,0,.6),0 0 46px rgba(255,150,90,.9),inset 0 0 22px rgba(255,90,77,.45)}}
 `;
     document.head.appendChild(css);
 
@@ -235,9 +243,9 @@
     function showMotto() {
       const motto = (P.motto || '').trim();
       if (!motto) return;                       // no motto set → nothing to show
-      banner.textContent = motto;
+      banner.innerHTML = '<span class="fwp-motto-inner"><span class="sk">☠</span>' + escapeHtml(motto) + '</span>';
       banner.classList.add('show');
-      bannerUntil = performance.now() + 3500;
+      bannerUntil = performance.now() + 10000;  // visible for 10 seconds
       if (!bannerRAF) { bannerRAF = true; requestAnimationFrame(trackBanner); }
     }
     const _v = (window.THREE ? new window.THREE.Vector3() : null);

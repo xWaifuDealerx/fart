@@ -273,6 +273,13 @@
       }
     }, 500);
 
+    // Exposed for the Ongoing Operations panel.
+    window.fwChurchInfo = function(){
+      sim();
+      return { pending: Math.floor(st.myPending), pct: (st.myShares / Math.max(1, st.s)) * 100,
+               shares: st.myShares, claimWaitMs: HOUR - (Date.now() - st.myLastClaim) };
+    };
+
     console.log('[church] ⛪ Fartology Church ready @', POS.x, POS.z, '· valuation', fmt(st.v));
   }
 })();

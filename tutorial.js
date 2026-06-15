@@ -46,6 +46,13 @@
     let _missionStarted = false;
     try {
       const _m = JSON.parse(localStorage.getItem('fw.missions.v1') || '{}');
+      // Already completed the Welcome mission? Never show the tutorial again.
+      if(_m.done && _m.done.welcome){
+        State.tutStep = TUTORIAL_STEPS;     // mark finished so it persists too
+        try { window.saveState?.(); } catch(_){}
+        console.log('[tutorial] skipped — Welcome mission already completed');
+        return;
+      }
       _missionStarted = !!(_m.started && _m.started.welcome);
     } catch(_){}
     if(!_missionStarted){
