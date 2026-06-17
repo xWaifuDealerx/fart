@@ -55,10 +55,10 @@
 <script src="moondc.js?v=5" defer></script>
 <script src="social.js?v=11" defer></script>
 <script src="mobile.js?v=8" defer></script>
-<script src="dropitem.js?v=26" defer></script>
+<script src="dropitem.js?v=27" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=27" defer></script>
-<script src="printerbots.js?v=9" defer></script>
+<script src="brainrot.js?v=28" defer></script>
+<script src="printerbots.js?v=10" defer></script>
 <script src="dailyhub.js?v=8" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=2" defer></script>
@@ -80,7 +80,7 @@
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
-<script src="skills.js?v=9" defer></script>
+<script src="skills.js?v=11" defer></script>
 <script src="prestige.js?v=6" defer></script>
 <!-- Missions: Genesis (tutorial etc.) + limited-time Event missions -->
 <script src="missions.js?v=14" defer></script>
@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=31" defer></script>
+<script src="gunsmith.js?v=32" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -110,6 +110,7 @@
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
 <script src="guild.js?v=8" defer></script>
+<script src="playerlist.js?v=1" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=3" defer></script>
 <!-- 👁 Spectator mode (watch other players + simulated players) -->
@@ -3218,6 +3219,7 @@
     <div class="lb-tabs" id="lbTabs">
       <button class="lb-tab active" data-cat="farts">💨 Farters</button>
       <button class="lb-tab" data-cat="earnings">🥈 Earners</button>
+      <button class="lb-tab" data-cat="elo">⚔️ PvP ELO</button>
       <button class="lb-tab" data-cat="refs">🤝 Referrers</button>
     </div>
     <div class="lb-body" id="lbBody">
@@ -3540,6 +3542,9 @@ function fwStateBlob(){
       gold:     State.gold,
       paper:    State.paper,
       fakeMoney:State.fakeMoney,
+      vaultSilver: State.vaultSilver || 0,
+      vaultCash:   State.vaultCash || 0,
+      skills:   (window.fwSkillsExport && window.fwSkillsExport()) || State.skills || null,
       pagesPrinted:        State.pagesPrinted,
       uniqueZonesVisited:  [...State.uniqueZonesVisited],
       cleanSeconds:        State.cleanSeconds,
@@ -3564,6 +3569,11 @@ function saveStateNow(){
 // crops the player owned before disconnecting. Re-runs are cheap
 // because we de-dupe by plot.x/z. Called lazily once Plots[] exists.
 window._restoreMyPlots = function _restoreMyPlots(){
+  // SERVER-AUTHORITATIVE NOW: plot ownership/crops are restored from the
+  // server's plots snapshot (welcome → fwApplyPlots), so the old local
+  // localStorage restore is disabled to avoid fighting the shared state.
+  return;
+  // eslint-disable-next-line no-unreachable
   try {
     if(!Array.isArray(window.Plots) || window.Plots.length === 0) return;
     const raw = localStorage.getItem(STORE_KEY);
@@ -3639,9 +3649,37 @@ function applyServerState(j){
     State.claimedFlags = new Set(Array.isArray(j.claimedFlags) ? j.claimedFlags : []);
     if(!State.flagImages) State.flagImages = {};
     if(State.wornFlag === undefined) State.wornFlag = null;
+    // Skill tree lives in skills.js — hand it the server copy (or stash it
+    // for skills.js to pick up if that file hasn't finished loading yet).
+    if(j.skills){
+      window._fwServerSkills = j.skills;
+      if(window.fwSkillsImport) window.fwSkillsImport(j.skills);
+    }
   } catch(_){}
 }
 window.applyServerState = applyServerState;
+// Wipe the LOCAL account back to fresh defaults. Used when a DIFFERENT wallet
+// connects than the one cached on this device, so wallet A's username/balances
+// can never bleed into wallet B. The server (keyed by wallet) then repopulates
+// this wallet's own data on 'welcome'.
+function resetLocalAccount(){
+  State.username = null;
+  State.level = 1; State.xp = 0; State.prestige = 0; State.prestigeSkins = [];
+  State.credits = 50; State.gold = 0; State.paper = 0; State.fakeMoney = 0;
+  State.vaultSilver = 0; State.vaultCash = 0;
+  State.inventory = {}; State.tools = {};
+  State.profile = {}; State.guild = null; State.goldListings = [];
+  State.spidersKilled = 0; State.brainrotsStolen = 0; State.deaths = 0;
+  State.elo = 1000; State.dmWins = 0; State.dmLosses = 0;
+  State.claimedFlags = new Set(); State.flagImages = {}; State.wornFlag = null;
+  State.tutStep = 0; State.tutDismissed = false; State.moonJobs = {};
+  State.hunger = 100; State.totalFarts = 0; State.pagesPrinted = 0;
+  State.uniqueZonesVisited = new Set(); State.cleanSeconds = 0; State.jailUntil = 0;
+  State.br = { idx:-1, until:0, toilets:[null,null,null,null,null,null], pending:0, lastTick:Date.now() };
+  try { localStorage.removeItem(STORE_KEY); } catch(_){}
+  try { window.fwSkillsImport && window.fwSkillsImport({}); } catch(_){}
+}
+window.resetLocalAccount = resetLocalAccount;
 loadState();
 
 // ─── Item catalog ───────────────────────────────────────────────
@@ -5928,7 +5966,12 @@ async function connectWallet(){
   }
   try {
     const resp = await phantom.connect();
-    State.wallet = resp.publicKey.toString();
+    const newWallet = resp.publicKey.toString();
+    // Different wallet than the one cached on this device? Wipe the local
+    // account so the previous wallet's username/progress can't carry over —
+    // this wallet's real data arrives from the server on 'welcome'.
+    if(State.wallet && State.wallet !== newWallet){ resetLocalAccount(); }
+    State.wallet = newWallet;
     saveState();
     // Pre-warm the Fart Cup balance cache the moment a wallet is connected
     // so flags are claim-ready by the time the player walks to the statue.
@@ -5946,10 +5989,11 @@ async function connectWallet(){
 // the HUD. Once in-game, we kick off the wallet-balance fetcher loop.
 async function enterLobby(){
   document.getElementById('login').classList.add('hidden');
-  // ── Permanent-username gate ──
-  await requireUsername();
   // DIRECT JOIN: the old host/join/solo lobby is retired. Everyone connects
-  // straight into the single hosted world. Saved data arrives via 'welcome'.
+  // straight into the single hosted world. The username gate is resolved in
+  // the 'welcome' handler AFTER the server tells us this wallet's saved name —
+  // so a wallet's username is authoritative and never inherited from another
+  // wallet cached on the device. (Guests / brand-new wallets get prompted.)
   enterGame();
   fwConnectServer();
 }
@@ -6550,7 +6594,7 @@ function removePeer(peerId){
 // =================================================================
 const FWServer = {
   ws: null, connected: false, welcomed: false,
-  url: null, you: null, slots: null,
+  url: null, you: null, slots: null, roster: [], lb: [],
   _posTimer: null, _saveTimer: null, _retry: 0,
 };
 window.FWServer = FWServer;
@@ -6572,6 +6616,20 @@ function fwSendServer(obj){
 window.fwSendServer = fwSendServer;
 // Guild ops travel to the server: window.fwServerGuild('create',{tag,name,public,...})
 window.fwServerGuild = (op, data) => fwSendServer(Object.assign({ t:'guild', op }, data || {}));
+// Killing a (server-owned) spider — tell the server so it vanishes for everyone.
+window.fwSpiderHit = (id) => fwSendServer({ t:'spiderHit', id });
+// Brainrot base ops (server-authoritative shared occupancy).
+window.fwBaseRent   = (idx) => fwSendServer({ t:'baseRent', idx });
+window.fwBaseToilet = (idx, slot, brainrot) => fwSendServer({ t:'baseToilet', idx, slot, brainrot });
+window.fwBaseSteal  = (idx, slot) => fwSendServer({ t:'baseSteal', idx, slot });
+// Ask the server for the latest leaderboard rows.
+window.fwLbReq = () => fwSendServer({ t:'lbReq' });
+// Sync a farming plot's state (rent/plant/harvest/release) to the server.
+window.fwPlotSync = (plot) => fwSendServer({ t:'plotSet', id: plot.id, owner: plot.owner || null,
+  ownerName: plot.ownerName || null, crop: plot.crop || null, plantedAt: plot.plantedAt || 0, rentedUntil: plot.rentedUntil || 0 });
+// Dropped items on the ground — shared so everyone sees/picks the same drops.
+window.fwDropSyncAdd  = (d) => fwSendServer({ t:'dropAdd', dropId: d.dropId, id: d.id, qty: d.qty || 1, x: d.x, z: d.z });
+window.fwDropSyncPick = (dropId) => fwSendServer({ t:'dropPick', dropId });
 
 function fwConnectServer(){
   if(FWServer.ws && (FWServer.ws.readyState === 0 || FWServer.ws.readyState === 1)) return;
@@ -6583,7 +6641,8 @@ function fwConnectServer(){
   FWServer.ws = ws;
   ws.onopen = () => {
     FWServer._retry = 0; FWServer.connected = true;
-    ws.send(JSON.stringify({ t:'auth', wallet: State.wallet || null, name: State.username || 'Printer' }));
+    ws.send(JSON.stringify({ t:'auth', wallet: State.wallet || null, name: State.username || null,
+      level: State.level || 0, prestige: State.prestige || 0, guildTag: (State.guild && State.guild.tag) || null }));
   };
   ws.onmessage = (ev) => { try { fwHandleServer(JSON.parse(ev.data)); } catch(_){} };
   ws.onclose = () => {
@@ -6598,6 +6657,45 @@ function fwConnectServer(){
   ws.onerror = () => {};
 }
 window.fwConnectServer = fwConnectServer;
+
+// ── Player appearance (gear/wearables) shared between players ─────
+// My current look: held gun + worn flag. Broadcast with my position so
+// peers can show my weapon and flag.
+function fwMyLook(){
+  let gun = null;
+  try { if(!window.fwGunHolstered && typeof window.fwActiveWeapon === 'function') gun = window.fwActiveWeapon() || null; } catch(_){}
+  return { gun: gun, flag: (State.wornFlag || null) };
+}
+function fwFlagEmoji(code){
+  if(!code) return '';
+  const cc = String(code).toLowerCase();
+  if(cc === 'gb-eng' || cc === 'gb-sct') return '🏴';
+  if(cc.length !== 2) return '';
+  try { const A = 0x1F1E6; return String.fromCodePoint(A + (cc.charCodeAt(0) - 97)) + String.fromCodePoint(A + (cc.charCodeAt(1) - 97)); } catch(_){ return ''; }
+}
+function buildPeerGun(){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshStandardMaterial({ color: 0x222226, metalness: 0.6, roughness: 0.4 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.14, 0.40), mat); body.position.z = 0.10; g.add(body);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), mat); barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.04, 0.38); g.add(barrel);
+  return g;
+}
+// Apply a peer's look to its printer mesh + name tag. Cheap; only rebuilds
+// the gun mesh when the held-weapon state actually flips.
+function applyPeerLook(p){
+  if(!p) return;
+  const look = p.look || {};
+  if(p.tag){ const emo = fwFlagEmoji(look.flag); p.tag.textContent = (emo ? emo + ' ' : '') + (p.name || 'guest'); }
+  const wantGun = !!look.gun;
+  if(wantGun && !p._gun){
+    p._gun = buildPeerGun();
+    p._gun.position.set(0.42, 0.95, 0.35);   // ~right hand, pointing forward
+    try { p.mesh.add(p._gun); } catch(_){}
+  } else if(!wantGun && p._gun){
+    try { p.mesh.remove(p._gun); } catch(_){}
+    p._gun = null;
+  }
+}
 
 function fwHandleServer(m){
   if(!m || !m.t) return;
@@ -6621,9 +6719,26 @@ function fwHandleServer(m){
           if(!p){ p = createPeer(r.id, r.name); Net.peers.set(r.id, p); }
           p.tx = +r.x||0; p.ty = +r.y||0; p.tz = +r.z||0; p.tyaw = +r.yaw||0;
           p.x = p.tx; p.y = p.ty; p.z = p.tz; p.yaw = p.tyaw; p.lastSeen = Date.now();
+          p.look = r.look || null; applyPeerLook(p);
         }
       }
       if(Array.isArray(m.guilds) && typeof window.fwApplyServerGuilds === 'function') window.fwApplyServerGuilds(m.guilds);
+      if(Array.isArray(m.bases) && typeof window.fwApplyBases === 'function') window.fwApplyBases(m.bases);
+      if(Array.isArray(m.plots) && typeof window.fwApplyPlots === 'function') window.fwApplyPlots(m.plots);
+      if(Array.isArray(m.drops) && typeof window.fwApplyDropList === 'function') window.fwApplyDropList(m.drops);
+      // Resolve the username NOW that we know this wallet's saved name.
+      // Server account name wins; a brand-new wallet or a guest gets prompted.
+      if(State.username){
+        Net.handle = State.username;
+      } else if(typeof requireUsername === 'function'){
+        requireUsername().then(() => {
+          Net.handle = State.username || Net.handle;
+          try { updateHUD(); } catch(_){}
+          // Persist the chosen name to this wallet's server account.
+          fwSendServer({ t:'save', username: State.username || null, state: fwStateBlob(),
+            level: State.level || 0, prestige: State.prestige || 0, guildTag: (State.guild && State.guild.tag) || null });
+        });
+      }
       FWServer.welcomed = true;
       // Reveal the chat panel (the retired host/join flow used to do this).
       try {
@@ -6648,7 +6763,10 @@ function fwHandleServer(m){
       p.lastSeen = Date.now();
       p.tx = +m.x||0; p.ty = +m.y||0; p.tz = +m.z||0; p.tyaw = +m.yaw||0;
       p.walking = !!m.walking;
-      if(m.name){ p.name = m.name; p.tag.textContent = m.name; }
+      if(m.name) p.name = m.name;
+      // Appearance (gear/flag) — only re-apply when it actually changed.
+      const lookSig = m.look ? (m.look.gun || '') + '|' + (m.look.flag || '') : '';
+      if(m.name || lookSig !== p._lookSig){ p.look = m.look || null; p._lookSig = lookSig; applyPeerLook(p); }
       break;
     }
     case 'leave': if(m.id) removePeer(m.id); break;
@@ -6663,6 +6781,39 @@ function fwHandleServer(m){
     case 'guildErr':
       try { floater(m.msg || 'Guild error', 'bad'); } catch(_){ addChat(null, m.msg || 'Guild error', true); }
       break;
+    case 'roster':
+      FWServer.roster = m.list || [];
+      if(typeof window.fwRenderPlayerList === 'function') window.fwRenderPlayerList();
+      break;
+    case 'bases':
+      if(typeof window.fwApplyBases === 'function') window.fwApplyBases(m.list || []);
+      break;
+    case 'plots':
+      if(typeof window.fwApplyPlots === 'function') window.fwApplyPlots(m.list || []);
+      break;
+    case 'plotErr':
+      if(typeof window.fwPlotRentFailed === 'function' && typeof m.id === 'string') window.fwPlotRentFailed(m.id);
+      break;
+    case 'dropAdd':
+      if(typeof window.fwApplyDrop === 'function') window.fwApplyDrop(m);
+      break;
+    case 'dropRemove':
+      if(typeof window.fwRemoveDrop === 'function') window.fwRemoveDrop(m.dropId);
+      break;
+    case 'lb':
+      FWServer.lb = Array.isArray(m.rows) ? m.rows : [];
+      if(typeof window.fwLeaderboardUpdated === 'function') window.fwLeaderboardUpdated();
+      break;
+    case 'baseErr':
+      if(typeof window.fwBaseRentFailed === 'function' && typeof m.idx === 'number') window.fwBaseRentFailed(m.idx);
+      else { try { floater(m.msg || 'Base unavailable', 'bad'); } catch(_){} }
+      break;
+    case 'spiders':
+      if(typeof window.fwApplySpiders === 'function') window.fwApplySpiders(m.list || []);
+      break;
+    case 'spiderKill':
+      if(typeof window.fwRemoveSpider === 'function') window.fwRemoveSpider(m.id, m.x, m.z);
+      break;
     case 'pong': break;
   }
 }
@@ -6674,14 +6825,15 @@ function fwStartNetLoops(){
       if(!FWServer.connected || !window.fwInGame || !Player || !Player.pos) return;
       fwSendServer({ t:'pos',
         x:+Player.pos.x.toFixed(2), y:+Player.pos.y.toFixed(2), z:+Player.pos.z.toFixed(2),
-        yaw:+Player.yaw.toFixed(3), walking:!!Player.walking });
+        yaw:+Player.yaw.toFixed(3), walking:!!Player.walking, look: fwMyLook() });
     }, 100);
   }
   if(!FWServer._saveTimer){
     // Persist the full State blob to the server every 8s (server throttles to 5s).
     FWServer._saveTimer = setInterval(() => {
       if(!FWServer.connected || !FWServer.welcomed) return;
-      fwSendServer({ t:'save', username: State.username || null, state: fwStateBlob() });
+      fwSendServer({ t:'save', username: State.username || null, state: fwStateBlob(),
+        level: State.level || 0, prestige: State.prestige || 0, guildTag: (State.guild && State.guild.tag) || null });
     }, 8000);
   }
 }
@@ -8626,10 +8778,24 @@ window.addEventListener('keydown', (e) => {
   const a = document.activeElement; if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
   const t = _nearTramp(); if(!t) return;
   e.stopImmediatePropagation();
-  try { scene.remove(t.mesh); } catch(_){}
-  const i = Trampolines.indexOf(t); if(i >= 0) Trampolines.splice(i, 1);
-  window.addItem?.('trampoline', 1);
-  try { floater('🤸 Picked up a trampoline', 'good'); } catch(_){}
+  // Wrap everything: an uncaught throw in a capture-phase keydown handler
+  // can wedge input and looks like a "crash". Also drop any bounce state
+  // tied to the trampoline we're removing so we don't keep integrating Y
+  // against a trampoline that no longer exists.
+  try {
+    const i = Trampolines.indexOf(t);
+    if(i >= 0) Trampolines.splice(i, 1);
+    if(Player.airborne){ Player.airborne = false; Player.vy = 0; }
+    if(t.mesh){
+      try { scene.remove(t.mesh); } catch(_){}
+      try { t.mesh.traverse(o => {
+        if(o.geometry) o.geometry.dispose();
+        if(o.material){ Array.isArray(o.material) ? o.material.forEach(m => m.dispose()) : o.material.dispose(); }
+      }); } catch(_){}
+    }
+    window.addItem?.('trampoline', 1);
+    floater('🤸 Picked up a trampoline', 'good');
+  } catch(err){ console.warn('[trampoline] pickup failed', err); }
 }, true);
 
 // =================================================================
@@ -9381,6 +9547,7 @@ function tryInteract(){
       return;
     }
     State.credits -= PLOT_PRICE;
+    _lastPlotRent = { id: nearbyPlot.id, cost: PLOT_PRICE };   // for server-reject refund
     nearbyPlot.owner = ownerId;
     nearbyPlot.ownerName = State.username || "anon";
     nearbyPlot.rentedUntil = now + PLOT_RENT_MS;
@@ -9521,7 +9688,6 @@ function tryFeedCat(){
   if(!nearest) return;
   takeItem("cat_food", 1);
   State.xp += 35;
-  window.fwSkillXp?.('petting', 20);
   floater(`Fed ${nearest.name} 🐈 +35 XP`, "good");
   showBuyToast(`${nearest.name} loved it! +35 XP`);
   playPurchaseSound();
@@ -10335,7 +10501,41 @@ function buyListing(id){
 // =================================================================
 // ─── NETWORK — extra message kinds (plot, listing, snapshot) ────
 // =================================================================
+// ── Server-authoritative plot occupancy ──
+// Every plot mutation (rent / plant / harvest / release) funnels through
+// broadcastPlot, so syncing it to the server here covers them all.
+let _lastPlotRent = null;   // { id, cost } — for refund if the server rejects a rent
+window.fwApplyPlots = function(list){
+  const seen = new Set();
+  for(const e of (list || [])){
+    const plot = Plots.find(p => p.id === e.id); if(!plot) continue;
+    seen.add(e.id);
+    plot.owner = e.owner || null;
+    plot.ownerName = e.ownerName || null;
+    plot.crop = e.crop || null;
+    plot.plantedAt = e.plantedAt || 0;
+    plot.rentedUntil = e.rentedUntil || 0;
+    plotStateChanged(plot);
+  }
+  // Free any plot the server no longer lists as occupied.
+  for(const plot of Plots){
+    if(!seen.has(plot.id) && plot.owner){
+      plot.owner = null; plot.ownerName = null; plot.crop = null; plot.plantedAt = 0; plot.rentedUntil = 0;
+      plotStateChanged(plot);
+    }
+  }
+};
+window.fwPlotRentFailed = function(id){
+  if(_lastPlotRent && _lastPlotRent.id === id){
+    State.credits = (State.credits || 0) + _lastPlotRent.cost;
+    try { floater('That plot was just taken — refunded ' + _lastPlotRent.cost + ' 🥈', 'bad'); } catch(_){}
+    try { updateHUD(); } catch(_){}
+    _lastPlotRent = null;
+  }
+};
+
 function broadcastPlot(plot){
+  try { window.fwPlotSync?.(plot); } catch(_){}   // server-authoritative sync
   if(Net.mode === "solo" || !Net.topicChat) return;
   try {
     fetch(`https://ntfy.sh/${Net.topicChat}`, {
@@ -11368,6 +11568,9 @@ function totalXp(level, xp){
 }
 
 async function publishScore(){
+  // On the authoritative server the leaderboard is derived from each player's
+  // saved State, so we don't self-report over ntfy anymore.
+  if(window.FWServer && window.FWServer.connected) return;
   if(!State.username) return;
   const now = Date.now();
   if(now - LB_State.lastPublish < 25_000) return;     // throttle to ~30s
@@ -11391,6 +11594,14 @@ async function publishScore(){
 }
 
 async function fetchLeaderboard(){
+  // Authoritative server: rows come straight from the server scoreboard.
+  if(window.FWServer && window.FWServer.connected){
+    return (window.FWServer.lb || []).map(p => ({
+      name: p.name, level: p.level || 1, totalXp: p.totalXp || 0,
+      farts: p.farts || 0, credits: p.credits || 0, elo: p.elo || 1000,
+      dmWins: p.dmWins || 0, refs: 0, guildTag: p.guildTag || null,
+    }));
+  }
   try {
     const r = await fetch(`https://ntfy.sh/${LB_TOPIC}/json?poll=1&since=7d`);
     if(!r.ok) return [];
@@ -11442,6 +11653,7 @@ window.handleScoreMessage = function(m){
 const LB_CATS = {
   farts:    { metric: r => r.farts,   fmt: v => v.toLocaleString() + ' 💨' },
   earnings: { metric: r => r.credits, fmt: v => v.toLocaleString() + ' 🥈' },
+  elo:      { metric: r => r.elo,     fmt: v => (v || 1000).toLocaleString() + ' ⚔️' },
   refs:     { metric: r => r.refs,    fmt: v => v.toLocaleString() + ' 🤝' },
 };
 
@@ -11487,23 +11699,31 @@ function toggleLeaderboard(){
     closeLeaderboard();
   } else {
     bg.classList.add('show');
+    if(window.fwLbReq) window.fwLbReq();   // ask the server for fresh rows
     renderLeaderboard();
-    publishScore();        // publish on open so my score is fresh
-    // Real-time: re-poll the worldwide topic every 12s while it's open.
+    publishScore();        // (ntfy fallback only — no-op on the server)
+    // Real-time: refresh every 12s while it's open.
     clearInterval(LB_State.timer);
     LB_State.timer = setInterval(() => {
-      if(document.getElementById('lbBg').classList.contains('show')) renderLeaderboard();
+      if(document.getElementById('lbBg').classList.contains('show')){ if(window.fwLbReq) window.fwLbReq(); renderLeaderboard(); }
       else closeLeaderboard();
     }, 12000);
   }
 }
+// Redraw immediately when the server pushes fresh leaderboard rows.
+window.fwLeaderboardUpdated = async function(){
+  const bg = document.getElementById('lbBg');
+  if(!bg || !bg.classList.contains('show')) return;
+  LB_State.rows = await fetchLeaderboard();
+  drawLeaderboard();
+};
 function closeLeaderboard(){
   document.getElementById('lbBg').classList.remove('show');
   clearInterval(LB_State.timer); LB_State.timer = null;
 }
 document.getElementById('lbToggle').addEventListener('click', toggleLeaderboard);
 document.getElementById('lbClose').addEventListener('click', closeLeaderboard);
-document.getElementById('lbRefresh').addEventListener('click', () => { renderLeaderboard(); publishScore(); });
+document.getElementById('lbRefresh').addEventListener('click', () => { if(window.fwLbReq) window.fwLbReq(); renderLeaderboard(); publishScore(); });
 document.getElementById('lbBg').addEventListener('click', (e) => {
   if(e.target.id === "lbBg") closeLeaderboard();
 });

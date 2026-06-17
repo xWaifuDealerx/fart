@@ -358,7 +358,12 @@
     }
 
     // ── restore the player's base from State + offline yield ──
+    // SERVER-AUTHORITATIVE NOW: the server restores which base you rent (and
+    // its toilets) via the welcome snapshot → fwApplyBases. This local
+    // State.br restore is retired so it can't fight the server copy.
     function restorePlayerBase(){
+      return;
+      // eslint-disable-next-line no-unreachable
       const s = State.br;
       if(!s || s.idx < 0) return;
       if(Date.now() >= s.until){ // lease expired while away
@@ -395,6 +400,51 @@
       save();
       if(notify) floater('🚽 Your base lease ended — toilets emptied', 'bad');
     }
+
+    // ──────────────────────────────────────────────────────────────
+    // SERVER-AUTHORITATIVE OCCUPANCY
+    //   The game server owns who rents each base, the lease, and the 6
+    //   brainrots inside — shared by every player. We render its snapshot
+    //   here; our OWN base's unclaimed-silver accrual stays local.
+    // ──────────────────────────────────────────────────────────────
+    let _lastRent = null;   // { idx, cost } — for refund if the server rejects
+    window.fwApplyBases = function(list){
+      const occupied = new Set();
+      for(const e of (list || [])){
+        const idx = e.idx | 0; const b = Bases[idx]; if(!b) continue;
+        occupied.add(idx);
+        const wasMine = (b.owner === meId());
+        const becomingMine = (e.owner === meId());
+        b.owner = e.owner || null;
+        b.ownerName = e.ownerName || null;
+        b.until = e.until || 0;
+        const t = Array.isArray(e.toilets) ? e.toilets : [];
+        for(let i = 0; i < 6; i++){
+          const id = t[i] || null;
+          if(b.toilets[i] !== id){ b.toilets[i] = id; setToiletHead(b, i, id); }
+        }
+        if(becomingMine && !wasMine){ b.pending = b.pending || 0; b.lastTick = Date.now(); _lastRent = null; }
+        paintSign(b);
+      }
+      // Free any base the server no longer lists as occupied.
+      for(const b of Bases){
+        if(!occupied.has(b.idx) && b.owner){
+          b.owner = null; b.ownerName = null; b.until = 0; b.pending = 0;
+          for(let i = 0; i < 6; i++){ if(b.toilets[i]){ b.toilets[i] = null; setToiletHead(b, i, null); } }
+          paintSign(b);
+        }
+      }
+    };
+    // The server rejected our rent (someone beat us to it) — refund + roll back.
+    window.fwBaseRentFailed = function(idx){
+      if(_lastRent && _lastRent.idx === idx){
+        try { addSilver(_lastRent.cost); } catch(_){ State.credits = (State.credits || 0) + _lastRent.cost; }
+        floater('That base was just taken — refunded ' + _lastRent.cost + ' 🥈', 'bad');
+        _lastRent = null;
+        const b = Bases[idx];
+        if(b && b.owner === meId()){ b.owner = null; b.ownerName = null; b.until = 0; for(let i = 0; i < 6; i++){ if(b.toilets[i]){ b.toilets[i] = null; setToiletHead(b, i, null); } } paintSign(b); }
+      }
+    };
 
     // ── seed a couple of rival (squatter) bases so raids are testable ──
     function seedSquatters(){
@@ -553,6 +603,9 @@
       const b = nt.b, i = nt.i;
       b.toilets[i] = carry.t.id; setToiletHead(b, i, carry.t.id);
       b.lastTick = Date.now(); paintSign(b);
+      // Tell the server so everyone sees the brainrot in this toilet.
+      try { window.fwBaseToilet?.(b.idx, i, carry.t.id); } catch(_){}
+      try { window.fwSkillXp?.('brainrot', 12, carry.t.id); } catch(_){}
       floater('🚽 Planted ' + carry.t.name + ' (' + Math.round(BRAINROTS[carry.t.id].yps * 60 * EARN_MULT) + ' 🥈/min)', 'good');
       detachCarry(); syncStateBase(b); save();
     }
@@ -560,8 +613,11 @@
       if(myBase()){ floater('You already rent a base — only one at a time', 'bad'); return; }
       if(b.owner){ floater('That base is already taken', 'bad'); return; }
       if(!spendSilver(RENT_COST)){ floater('Need ' + RENT_COST + ' 🥈 to rent', 'bad'); return; }
+      _lastRent = { idx: b.idx, cost: RENT_COST };
+      // Optimistic local claim; the server confirms (or refunds via baseErr).
       b.owner = meId(); b.ownerName = (State.username || 'You'); b.until = Date.now() + RENT_MS;
       b.lastTick = Date.now(); b.pending = 0; paintSign(b);
+      try { window.fwBaseRent?.(b.idx); } catch(_){}
       syncStateBase(b); save();
       floater('🚽 Rented this base for 1 hour! Fill the toilets with brainrots.', 'good');
     }
@@ -570,6 +626,7 @@
       if(got <= 0){ floater('Nothing to claim yet', 'bad'); return; }
       b.pending -= got; addSilver(got);
       try { window.fwProfile && window.fwProfile.addBrainrotSilver(got); } catch(_){}
+      try { window.fwSkillXp?.('brainrot', 8); } catch(_){}
       floater('💰 Claimed ' + got + ' 🥈 from your toilets', 'good');
       paintSign(b); syncStateBase(b); save();
     }
@@ -627,6 +684,8 @@
         if(b.owner === meId()) syncStateBase(b);
       }
       b.toilets[i] = null; setToiletHead(b, i, null); paintSign(b);
+      // Tell the server so the brainrot is gone from this base for everyone.
+      try { window.fwBaseSteal?.(b.idx, i); } catch(_){}
       // Keep the raid "stuck": the bot that owns this base must not instantly
       // re-plant the slot we just emptied. printerbots.js reads raidedSlots and
       // leaves a slot empty until its cooldown expires.
@@ -636,6 +695,7 @@
       if(carry) detachCarry();
       attachCarry(t);
       try { State.brainrotsStolen = (State.brainrotsStolen || 0) + 1; window.saveState && window.saveState(); } catch(_){}
+      try { window.fwSkillXp?.('brainrot', 15, id); } catch(_){}
       floater('🥷 Stole ' + t.name + (loot > 0 ? ' + ' + loot + ' 🥈' : '') + '! Run to your base.', 'good');
     }
 
@@ -759,19 +819,9 @@
       // yield accrual for all owned/squatter bases
       for(const b of Bases){
         if(!b.owner) continue;
-        // Don't expire/clear the base while the player is busy in the Fart
-        // Slide — the lease keeps running and yielding silver in the background.
-        if(b.owner === meId() && Date.now() >= b.until && !window.fwSlideActive){ clearPlayerBase(true); continue; }
-        // Any OTHER lease (rival squatter / printer-bot) that runs out also
-        // frees its brainrots and re-opens the base for renting.
-        if(b.owner !== meId() && b.until && Date.now() >= b.until){
-          for(let i = 0; i < 6; i++){ if(b.toilets[i]){ b.toilets[i] = null; setToiletHead(b, i, null); } }
-          b.owner = null; b.ownerName = null; b.until = 0; b.pending = 0; b.raidedSlots = null;
-          // Release any printer-bot that thought it owned this base.
-          try { if(Array.isArray(window.fwPrinterBots)) window.fwPrinterBots.forEach(bot => { if(bot && bot.baseIdx === b.idx){ bot.baseIdx = null; bot.task = null; } }); } catch(_){}
-          paintSign(b);
-          continue;
-        }
+        // Lease expiry is now owned by the SERVER, which frees the base and
+        // broadcasts the change (→ fwApplyBases). We no longer clear leases
+        // locally, so client clocks can't fight the shared world state.
         const yps = occupiedYps(b);
         // Poop Orb bonus + Prestige bonus (+10%/prestige) + Guild territory
         // bonus (+5%/Post your guild holds) multiply silver earnings.

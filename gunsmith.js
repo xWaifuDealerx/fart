@@ -496,6 +496,48 @@
       return { mesh: grp, legs };
     }
 
+    // ── Server-owned spiders ────────────────────────────────────────
+    // The game server now spawns and moves every spider so all players see
+    // the same ones. We render the server's snapshot and route our kills
+    // back to it. (Local spawning/AI below is disabled while connected.)
+    function findSpider(id){ for(const s of Spiders){ if(s.id === id) return s; } return null; }
+    window.fwApplySpiders = function(list){
+      if(!window.fwInGame) return;
+      const seen = new Set();
+      for(const it of (list || [])){
+        if(!it || it.id == null) continue;
+        seen.add(it.id);
+        let s = findSpider(it.id);
+        if(!s){
+          const b = buildSpider();
+          const gy = groundHeightAt(it.x, it.z);
+          b.mesh.position.set(it.x, gy, it.z);
+          scene.add(b.mesh);
+          s = { id: it.id, mesh: b.mesh, legs: b.legs,
+                x: it.x, z: it.z, y: gy, yaw: it.yaw || 0,
+                tx: it.x, tz: it.z, tyaw: it.yaw || 0,
+                legPhase: Math.random() * Math.PI * 2, dead: false };
+          Spiders.push(s);
+        } else {
+          s.tx = it.x; s.tz = it.z;
+          if(typeof it.yaw === 'number') s.tyaw = it.yaw;
+        }
+      }
+      // Drop any spider the server no longer lists (despawned / out of range).
+      for(let i = Spiders.length - 1; i >= 0; i--){
+        if(!seen.has(Spiders[i].id)){
+          try { scene.remove(Spiders[i].mesh); } catch(_){}
+          Spiders.splice(i, 1);
+        }
+      }
+    };
+    window.fwRemoveSpider = function(id){
+      const i = Spiders.findIndex(s => s.id === id);
+      if(i < 0) return;
+      try { scene.remove(Spiders[i].mesh); } catch(_){}
+      Spiders.splice(i, 1);
+    };
+
     function spiderSpawn(){
       if(!window.fwInGame) return;   // never spawn before the player has entered the world
       if(Spiders.length >= MAX_SPIDERS) return;
@@ -577,53 +619,20 @@
         Spiders.length = 0;
         requestAnimationFrame(tick); return;
       }
+      // The server owns spider POSITIONS now; we just smoothly interpolate
+      // each spider toward its latest server target and apply contact damage
+      // locally (so safe zones / sleeping / boats still protect THIS player).
       for(let i = Spiders.length - 1; i >= 0; i--){
         const s = Spiders[i];
         if(s.dead) continue;
-        // Decide this spider's movement intent:
-        //   flee         → inside a building's flee radius: bolt straight out
-        //   playerHidden → player is asleep / in a panic room / on a boat:
-        //                  give up the chase and roam AWAY, so it doesn't
-        //                  pace back and forth against the wall
-        //   otherwise    → chase the player
-        const flee = nearestSafeZone(s.x, s.z);
-        const playerHidden = !!window.fwSleeping || !!Player.boat
-          || !!nearestSafeZone(Player.pos.x, Player.pos.z);
-        let mvx, mvz, speed = SPIDER_SPEED;
-        if(flee){
-          mvx = s.x - flee.zn.x;
-          mvz = s.z - flee.zn.z;
-          speed = SPIDER_SPEED * 1.6;   // visibly bolt out of the zone
-          s._wander = null;             // re-roll a roam point once it's clear
-        } else if(playerHidden){
-          if(!s._wander) pickWander(s);
-          mvx = s._wander.x - s.x;
-          mvz = s._wander.z - s.z;
-          if(Math.hypot(mvx, mvz) < 2){ // reached the roam point — pick another
-            pickWander(s);
-            mvx = s._wander.x - s.x;
-            mvz = s._wander.z - s.z;
-          }
-          speed = SPIDER_SPEED * 0.8;   // a calm amble while you're safe
-        } else {
-          s._wander = null;
-          mvx = Player.pos.x - s.x;
-          mvz = Player.pos.z - s.z;
-          const dpd = Math.hypot(mvx, mvz);
-          speed = dpd < SPIDER_CONTACT_R ? 0 : SPIDER_SPEED;
-        }
-        const md = Math.hypot(mvx, mvz);
-        if(md > 0.0001 && speed > 0){
-          s.yaw = Math.atan2(mvx, mvz);
-          s.x += (mvx / md) * speed * dt;
-          s.z += (mvz / md) * speed * dt;
-        }
-        // clamp to island
-        if(Math.hypot(s.x, s.z) >= ISLAND_R - 2){
-          const a = Math.atan2(s.z, s.x);
-          s.x = Math.cos(a) * (ISLAND_R - 2);
-          s.z = Math.sin(a) * (ISLAND_R - 2);
-        }
+        const tx = (typeof s.tx === 'number') ? s.tx : s.x;
+        const tz = (typeof s.tz === 'number') ? s.tz : s.z;
+        s.x += (tx - s.x) * Math.min(1, 10 * dt);
+        s.z += (tz - s.z) * Math.min(1, 10 * dt);
+        let dyaw = (s.tyaw || 0) - s.yaw;
+        while(dyaw > Math.PI)  dyaw -= Math.PI * 2;
+        while(dyaw < -Math.PI) dyaw += Math.PI * 2;
+        s.yaw += dyaw * Math.min(1, 12 * dt);
         s.y = groundHeightAt(s.x, s.z);
         s.mesh.position.set(s.x, s.y, s.z);
         s.mesh.rotation.y = s.yaw;
@@ -632,10 +641,11 @@
         for(let li = 0; li < s.legs.length; li++){
           s.legs[li].rotation.y = Math.sin(s.legPhase + li * 0.7) * 0.25;
         }
-        // Contact knockback — use the real player-to-spider delta, not
-        // the flee delta we may have swapped in above. Skip entirely
-        // while the spider is fleeing or the player is hidden/asleep.
-        if(!flee && !playerHidden){
+        // Contact knockback + bite — skip while this player is hidden/asleep
+        // or standing inside a safe-zone building.
+        const playerHidden = !!window.fwSleeping || !!Player.boat
+          || !!nearestSafeZone(Player.pos.x, Player.pos.z);
+        if(!playerHidden){
           const pdx = Player.pos.x - s.x;
           const pdz = Player.pos.z - s.z;
           const pd  = Math.hypot(pdx, pdz);
@@ -643,8 +653,6 @@
             const k = SPIDER_KNOCKBACK * dt * 8;
             Player.pos.x += (-pdx / Math.max(0.01, pd)) * k;
             Player.pos.z += (-pdz / Math.max(0.01, pd)) * k;
-            // Red screen flash instead of the old "Bumped!" floater —
-            // throttled so continuous contact doesn't strobe.
             const nowFx = performance.now();
             if(!s._lastBumpFx || nowFx - s._lastBumpFx > 350){
               s._lastBumpFx = nowFx;
@@ -658,16 +666,10 @@
     }
     requestAnimationFrame(tick);
 
-    // Periodic spawn — only once the player owns at least 1 Desert Eagle.
-    setInterval(() => {
-      if(!window.fwInGame) return;   // no spiders until the player has signed in / entered
-      if(!(State.inventory?.deagle > 0)) return;
-      // Don't spawn while inside a vessel or modal — feels unfair.
-      if(Player.boat || Player.airborne) return;
-      if(document.querySelector('.gs-bg.show, .bank-bg.show, #invBg.show, #marketBg.show, .carlos-bg.show')) return;
-      // Random delay (this interval ticks every 5s, only fires ~once per attempt)
-      if(Math.random() < 0.18) spiderSpawn();
-    }, 5000);
+    // Local spawning is retired — the game SERVER now spawns spiders and
+    // broadcasts them to everyone (see window.fwApplySpiders). This keeps
+    // every player's spiders in sync. spiderSpawn() is kept only as a
+    // single-player fallback and is no longer called on a timer.
 
     // ── Held gun model ──
     let heldGun = null, heldGunFor = null;
@@ -1120,6 +1122,8 @@
         s.dead = true;
         try { scene.remove(s.mesh); } catch(_){}
         Spiders.splice(killedI, 1);
+        // Tell the server so this spider dies for every player too.
+        try { window.fwSpiderHit?.(s.id); } catch(_){}
         // Drop Spider Meat where it died — pick it up via Vicinity / G
         try { window.fwDropAt?.('spider_meat', 1, s.x, s.z); } catch(_){}
         State.spidersKilled = (State.spidersKilled || 0) + 1;
@@ -1212,6 +1216,8 @@
           s.dead = true;
           try { scene.remove(s.mesh); } catch(_){}
           Spiders.splice(i, 1);
+          // Tell the server so this spider dies for every player too.
+          try { window.fwSpiderHit?.(s.id); } catch(_){}
           // Fart kills drop Spider Meat too
           try { window.fwDropAt?.('spider_meat', 1, sx, sz); } catch(_){}
           killed++;

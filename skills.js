@@ -24,7 +24,7 @@
     { id: 'gamba',   name: 'Gamba Skills',   icon: '🎰', color: '#ff5ad6', desc: 'The reels remember your devotion.', how: 'Place cash bets at the Casino — bigger bets, more XP.' },
     { id: 'flying',  name: 'Flying Skills',  icon: '🛩️', color: '#a8e0ff', desc: 'Sky time makes the pilot.', how: 'Fly the Sea Plane — XP ticks while you’re moving in the air.' },
     { id: 'boating', name: 'Boating Skills', icon: '⛵', color: '#7ec8e3', desc: 'Salt, spray and throttle.', how: 'Drive the Tree Boat or Yacht — XP ticks while moving at sea.' },
-    { id: 'petting', name: 'Petting Skills', icon: '🐈', color: '#ffae5a', desc: 'The cats know who you are.', how: 'Feed cats with cat food (G near a cat).' },
+    { id: 'brainrot', name: 'Brainrot Skills', icon: '🚽', color: '#5ff09c', desc: 'Master the toilet empire.', how: 'Rent bases, plant brainrots, claim their silver, and raid rivals.' },
   ];
   const SUBS = {
     mining: [
@@ -38,6 +38,14 @@
       { id: 'weed_diesel',    name: 'Sour Diesel',       icon: '⛽', color: '#9bdcff', how: 'Harvest & sell Sour Diesel.' },
       { id: 'weed_cosmic',    name: 'Cosmic Kush',       icon: '🌌', color: '#c084fc', how: 'Harvest & sell Cosmic Kush.' },
       { id: 'weed_unicorn',   name: 'Unicorn Poop',      icon: '🦄', color: '#ff5ad6', how: 'Harvest & sell the legendary Unicorn Poop.' },
+    ],
+    brainrot: [
+      { id: 'fartbubu',  name: 'Fartbubu',          icon: '💖', color: '#ff7ae0', how: 'Plant & own Fartbubu (Legendary).' },
+      { id: 'baldur',    name: 'Fart Fart Baldur',  icon: '👑', color: '#ffc04a', how: 'Plant & own Fart Fart Baldur (Legendary).' },
+      { id: 'fartolero', name: 'Fartolero Fartela', icon: '🐟', color: '#4ad6ff', how: 'Plant & own Fartolero Fartela (Epic).' },
+      { id: 'fartitos',  name: 'Los Fartitos',      icon: '🌮', color: '#ff5a5a', how: 'Plant & own Los Fartitos (Epic).' },
+      { id: 'popofanto', name: 'Popofanto Elefarto',icon: '🐘', color: '#8aff9a', how: 'Plant & own Popofanto Elefarto (Rare).' },
+      { id: 'fartifito', name: 'Farti Fito',        icon: '🫧', color: '#5fe0d0', how: 'Plant & own Farti Fito (Common).' },
     ],
   };
   const MAX_LVL = 100;
@@ -111,6 +119,25 @@
     try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_){}
     try { window._fwSkillRenderIfOpen?.(); } catch(_){}
   };
+
+  // ── Server sync ──
+  // The skill tree used to live ONLY in this device's localStorage, so it
+  // never followed a player to another device / browser. These let the
+  // server-saved State blob carry it (see fwStateBlob / applyServerState).
+  window.fwSkillsExport = function(){
+    try { return JSON.parse(JSON.stringify(S)); } catch(_){ return null; }
+  };
+  window.fwSkillsImport = function(data){
+    if(!data || typeof data !== 'object') return;
+    S = data;
+    for(const sk of SKILLS) ensure(S, sk.id);
+    if(!S.__subs) S.__subs = {};
+    for(const k of Object.keys(SUBS)) for(const sub of SUBS[k]) ensure(S.__subs, sub.id);
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(_){}
+    try { window._fwSkillRenderIfOpen?.(); } catch(_){}
+  };
+  // If server state arrived before this file finished loading, apply it now.
+  try { if(window._fwServerSkills){ window.fwSkillsImport(window._fwServerSkills); } } catch(_){}
 
   function grant(id, amount, sub){
     const def = SKILLS.find(s => s.id === id);

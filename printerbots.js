@@ -155,40 +155,14 @@
     }
 
     // ── pick the bot's next goal ──
+    // Brainrot bases are SERVER-OWNED now: the bots' renting/filling/raiding
+    // happens on the server so every player sees the same occupancy. The
+    // client bots therefore no longer touch local bases — they just wander
+    // around town and grab a bite at the bakery when hungry.
     function decide(bot) {
-      // 1) no base yet → go rent a free one
-      if (bot.baseIdx == null) {
-        // Only rent MAIN-island bases — bots can't walk across the sea to the
-        // PVP-island bases (those are for players who sail/fly there).
-        const free = BASES.filter(b => !b.owner && Math.hypot(b.x, b.z) < 120);
-        if (free.length) {
-          const b = free[(Math.random() * free.length) | 0];
-          return { kind: 'rent', idx: b.idx, x: b.x, z: b.z };
-        }
-      }
-      // 2) carrying a brainrot → take it home and plant it
-      if (bot.carry && bot.baseIdx != null) {
-        const b = BASES[bot.baseIdx];
-        return { kind: 'plant', idx: bot.baseIdx, x: b.x, z: b.z };
-      }
-      // 2.5) hungry → wander over to Ben's Bakery for a bite (sometimes even
-      //      when not starving, just to grab a snack).
       if (bot.carry == null && ((bot.hunger != null && bot.hunger < 35) || Math.random() < 0.06)) {
         return { kind: 'eat', x: BAKERY.x, z: BAKERY.z };
       }
-      // 3) otherwise roll the dice
-      const roll = Math.random();
-      // try to steal from the player (only if your base has a brainrot to take)
-      const pb = playerBase();
-      if (roll < 0.20 && pb && occupiedToilet(pb) >= 0 && bot.carry == null) {
-        return { kind: 'steal', x: pb.x, z: pb.z };
-      }
-      // grab a roaming brainrot to bring home
-      if (roll < 0.55 && bot.baseIdx != null && emptyToilet(BASES[bot.baseIdx]) >= 0 && ROAMERS.length) {
-        const r = ROAMERS[(Math.random() * ROAMERS.length) | 0];
-        if (r) return { kind: 'grab', roamer: r, x: r.x, z: r.z };
-      }
-      // else just run errands in town
       const p = POIS[(Math.random() * POIS.length) | 0];
       return { kind: 'wander', x: p.x, z: p.z, name: p.name };
     }

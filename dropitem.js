@@ -78,19 +78,41 @@
 
     const Dropped = [];     // { mesh, x, z, y, id, qty }
 
-    function dropAt(id, qty, x, z){
+    function genDropId(){ return 'd_' + Math.random().toString(36).slice(2, 10); }
+    // Spawn a drop mesh locally (shared by local drops AND server-relayed ones).
+    function spawnDrop(id, qty, x, z, dropId){
       const item = ITEMS[id];
       if(!item) return null;
       const y = (groundHeightAt ? groundHeightAt(x, z) : 0) + 0.05;
       const mesh = buildDroppedMesh(item);
       mesh.position.set(x, y, z);
       scene.add(mesh);
-      const d = { mesh, x, z, y, id, qty: qty || 1 };
+      const d = { mesh, x, z, y, id, qty: qty || 1, dropId: dropId || genDropId() };
       Dropped.push(d);
+      return d;
+    }
+    function dropAt(id, qty, x, z){
+      const d = spawnDrop(id, qty, x, z, null);
+      // Tell the server so this drop appears on the ground for everyone.
+      if(d){ try { window.fwDropSyncAdd && window.fwDropSyncAdd(d); } catch(_){} }
       return d;
     }
     window.fwDropAt = dropAt;
     window.fwDropped = Dropped;
+    // Server → client: a drop another player created / the world snapshot.
+    window.fwApplyDrop = function(e){
+      if(!e || !e.dropId) return;
+      if(Dropped.some(d => d.dropId === e.dropId)) return;   // already have it
+      spawnDrop(e.id, e.qty, e.x, e.z, e.dropId);
+    };
+    window.fwApplyDropList = function(list){ for(const e of (list || [])) window.fwApplyDrop(e); };
+    window.fwRemoveDrop = function(dropId){
+      const i = Dropped.findIndex(d => d.dropId === dropId);
+      if(i < 0) return;
+      try { scene.remove(Dropped[i].mesh); } catch(_){}
+      Dropped.splice(i, 1);
+      try { refreshUI(); } catch(_){}
+    };
 
     function dropItem(id, qty){
       const item = ITEMS[id];
@@ -110,6 +132,8 @@
         window.addItem?.(d.id, d.qty || 1);
         window.floater?.('+' + (d.qty || 1) + ' ' + (it.name || d.id), 'good');
       }
+      // Tell the server so this drop is removed for every player.
+      try { if(d.dropId && window.fwDropSyncPick) window.fwDropSyncPick(d.dropId); } catch(_){}
       try { scene.remove(d.mesh); } catch(_){}
       const idx = Dropped.indexOf(d);
       if(idx >= 0) Dropped.splice(idx, 1);
