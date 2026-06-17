@@ -1117,6 +1117,7 @@
           if(blockD < primaryDist - 0.1) killedI = -1;
         } catch(_){}
       }
+      if(killedI >= 0 && window.fwSleeping){ killedI = -1; }   // no combat while asleep
       if(killedI >= 0){
         const s = Spiders[killedI];
         s.dead = true;
@@ -1205,6 +1206,7 @@
     // where the Spiders array + scene live. No weapon required — this is
     // the "fart on a spider and it dies" mechanic.
     window.killSpidersNear = function(x, z, radius){
+      if(window.fwSleeping) return 0;   // no fart-kills while asleep — spiders just amble off
       const r = radius || 4;
       let killed = 0;
       for(let i = Spiders.length - 1; i >= 0; i--){

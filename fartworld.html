@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=32" defer></script>
+<script src="gunsmith.js?v=33" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -109,7 +109,7 @@
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
-<script src="guild.js?v=8" defer></script>
+<script src="guild.js?v=9" defer></script>
 <script src="playerlist.js?v=1" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=3" defer></script>
@@ -3630,7 +3630,17 @@ function loadState(){
 function applyServerState(j){
   try {
     if(!j || typeof j !== 'object') return;
+    // Preserve the State.profile OBJECT reference (profile.js caches it).
+    // Object.assign would swap in j.profile as a new object, stranding the
+    // panel on the old one — so we merge profile fields in place instead.
+    const profRef = (State.profile && typeof State.profile === 'object') ? State.profile : (State.profile = {});
     Object.assign(State, j);
+    if(State.profile !== profRef){
+      const incoming = (State.profile && typeof State.profile === 'object') ? State.profile : {};
+      for(const k of Object.keys(profRef)) delete profRef[k];
+      Object.assign(profRef, incoming);
+      State.profile = profRef;
+    }
     State.uniqueZonesVisited = new Set(j.uniqueZonesVisited || []);
     if(!State.inventory) State.inventory = {};
     if(!State.tools)     State.tools = {};
@@ -3668,7 +3678,12 @@ function resetLocalAccount(){
   State.credits = 50; State.gold = 0; State.paper = 0; State.fakeMoney = 0;
   State.vaultSilver = 0; State.vaultCash = 0;
   State.inventory = {}; State.tools = {};
-  State.profile = {}; State.guild = null; State.goldListings = [];
+  // Clear profile IN PLACE — profile.js caches the object reference, so
+  // replacing it (State.profile = {}) would leave the panel reading stale
+  // stats from the previous account.
+  if(State.profile && typeof State.profile === 'object'){ for(const k of Object.keys(State.profile)) delete State.profile[k]; }
+  else State.profile = {};
+  State.guild = null; State.goldListings = [];
   State.spidersKilled = 0; State.brainrotsStolen = 0; State.deaths = 0;
   State.elo = 1000; State.dmWins = 0; State.dmLosses = 0;
   State.claimedFlags = new Set(); State.flagImages = {}; State.wornFlag = null;
@@ -6825,7 +6840,8 @@ function fwStartNetLoops(){
       if(!FWServer.connected || !window.fwInGame || !Player || !Player.pos) return;
       fwSendServer({ t:'pos',
         x:+Player.pos.x.toFixed(2), y:+Player.pos.y.toFixed(2), z:+Player.pos.z.toFixed(2),
-        yaw:+Player.yaw.toFixed(3), walking:!!Player.walking, look: fwMyLook() });
+        yaw:+Player.yaw.toFixed(3), walking:!!Player.walking, look: fwMyLook(),
+        hidden: (!!window.fwSleeping || !!Player.boat) });
     }, 100);
   }
   if(!FWServer._saveTimer){
@@ -6920,8 +6936,27 @@ document.getElementById('chatSend').addEventListener('click', () => {
   input.value = "";
 });
 document.getElementById('chatInput').addEventListener('keydown', (e) => {
-  if(e.code === "Enter"){ sendChat(e.target.value); e.target.value = ""; e.stopPropagation(); }
+  if(e.code === "Enter"){
+    sendChat(e.target.value); e.target.value = "";
+    e.target.blur();              // hand control straight back to the game
+    e.stopPropagation();
+  } else if(e.code === "Escape"){
+    e.target.value = ""; e.target.blur(); e.stopPropagation();   // cancel without sending
+  }
 });
+// Press Y to start chatting (focus the chat box); Enter sends + returns to game.
+window.addEventListener('keydown', (e) => {
+  if(e.code !== 'KeyY') return;
+  if(!window.fwInGame) return;
+  const a = document.activeElement;
+  if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;   // already typing somewhere
+  const inp = document.getElementById('chatInput');
+  const panel = document.getElementById('chatPanel');
+  if(!inp || !panel || panel.style.display === 'none') return;
+  e.preventDefault();              // don't type the "y" into the box
+  panel.classList.remove('collapsed');
+  inp.focus();
+}, true);
 document.getElementById('chatHead').addEventListener('click', () => {
   document.getElementById('chatPanel').classList.toggle('collapsed');
 });
@@ -11596,11 +11631,26 @@ async function publishScore(){
 async function fetchLeaderboard(){
   // Authoritative server: rows come straight from the server scoreboard.
   if(window.FWServer && window.FWServer.connected){
-    return (window.FWServer.lb || []).map(p => ({
+    const rate = (typeof window.silverPerGold === 'function') ? (window.silverPerGold() || 100000) : 100000;
+    const worthOf = (credits, gold, vault) => Math.floor((credits || 0) + (vault || 0) + (gold || 0) * rate);
+    const rows = (window.FWServer.lb || []).map(p => ({
       name: p.name, level: p.level || 1, totalXp: p.totalXp || 0,
-      farts: p.farts || 0, credits: p.credits || 0, elo: p.elo || 1000,
+      farts: p.farts || 0, credits: worthOf(p.credits, p.gold, p.vault), elo: p.elo || 1000,
       dmWins: p.dmWins || 0, refs: 0, guildTag: p.guildTag || null,
     }));
+    // Fold in MY own live numbers so I always see my real, current standing
+    // (even before my next periodic save reaches the server).
+    if(State.username){
+      const mine = rows.find(r => r.name === State.username);
+      const myWorth = worthOf(State.credits, State.gold, (State.vaultSilver||0)+(State.vaultCash||0));
+      const me = {
+        name: State.username, level: State.level || 1, totalXp: totalXp(State.level, State.xp),
+        farts: State.totalFarts || 0, credits: myWorth, elo: State.elo || 1000,
+        dmWins: State.dmWins || 0, refs: 0, guildTag: (State.guild && State.guild.tag) || null,
+      };
+      if(mine) Object.assign(mine, me); else rows.push(me);
+    }
+    return rows;
   }
   try {
     const r = await fetch(`https://ntfy.sh/${LB_TOPIC}/json?poll=1&since=7d`);

@@ -111,17 +111,14 @@
     function open() { render(); bg.classList.add('show'); try { document.exitPointerLock?.(); } catch (_) {} }
     btn.addEventListener('click', open);
 
-    // ── known guilds (demo rivals until the backend is live) ──
-    const RIVALS = [
-      { name: 'Skibidi Syndicate', tag: 'SKBD', xp: 18400, members: 63, public: true },
-      { name: 'Gyatt Goblins',     tag: 'GYAT', xp: 12750, members: 41, public: false },
-      { name: 'Rizz Republic',     tag: 'RIZZ', xp: 9100,  members: 28, public: true },
-      { name: 'Sigma Cartel',      tag: 'SIGM', xp: 6400,  members: 12, public: false },
-    ];
+    // Guild rankings are now REAL-ONLY — fed by the server's shared guild
+    // table (via window.fwApplyServerGuilds) plus your own guild. No demo
+    // rivals; an empty board just means no guilds have formed yet.
+    const RIVALS = [];
     const SEASON_POOL_GOLD = 100;   // total GOLD split among the top 10 guilds by season XP
 
-    // pending invites you've received (demo seed so the Invites tab is testable)
-    if (!Array.isArray(State.guildInvites)) State.guildInvites = [{ name: 'Rizz Republic', tag: 'RIZZ', demo: true }];
+    // pending invites you've received (real invites land here)
+    if (!Array.isArray(State.guildInvites)) State.guildInvites = [];
 
     let pendingLogo = null;     // dataURL chosen in the create form
     let createPublic = true;    // public vs invite-only toggle in the create form
@@ -222,7 +219,8 @@
         (!G && g.public ? '<button class="gd-btn" data-join="' + esc(g.tag) + '" style="margin-left:8px;padding:6px 12px">Join</button>'
           : (!G && !g.public ? '<span style="margin-left:8px;font-size:16px" title="invite-only">🔒</span>' : '')) +
         '</div>').join('');
-      return rows + '<div class="gd-note">Season prize: top 10 guilds share <b>' + SEASON_POOL_GOLD + ' 🪙</b> in proportion to season XP. Public guilds can be joined here; invite-only ones need an invite. (Rivals are demo data until guilds sync online.)</div>';
+      const emptyNote = list.length ? '' : '<div class="gd-note">No guilds yet — found the first one and top the board!</div>';
+      return rows + emptyNote + '<div class="gd-note">Season prize: top 10 guilds share <b>' + SEASON_POOL_GOLD + ' 🪙</b> in proportion to season XP. Public guilds can be joined here; invite-only ones need an invite.</div>';
     }
 
     function panePosts(G) {
