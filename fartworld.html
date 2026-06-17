@@ -6556,13 +6556,13 @@ const FWServer = {
 window.FWServer = FWServer;
 
 function fwServerUrl(){
-  // Local-test override: localStorage.setItem('fwServerUrl','ws://localhost:8080')
+  // The game client (GitHub Pages / fartprint.art) and the game SERVER (VPS)
+  // live on different hosts, so the socket points at the server's own
+  // subdomain — NOT the page host. Override for local testing with:
+  //   localStorage.setItem('fwServerUrl','ws://148.113.3.39:8080')
   try { const o = localStorage.getItem('fwServerUrl'); if(o) return o; } catch(_){}
   if(window.FW_SERVER_URL) return window.FW_SERVER_URL;
-  // When the page is served over https, the socket must be wss on the same host.
-  if(location.protocol === 'https:') return `wss://${location.host}/ws`;
-  if(location.protocol === 'http:'  && location.host) return `ws://${location.host}/ws`;
-  return 'wss://fartprint.art/ws';   // fallback (e.g. opened from file://)
+  return 'wss://server.fartprint.art/ws';
 }
 
 function fwSendServer(obj){
