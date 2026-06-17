@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=33" defer></script>
+<script src="gunsmith.js?v=34" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -109,7 +109,7 @@
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
-<script src="guild.js?v=9" defer></script>
+<script src="guild.js?v=10" defer></script>
 <script src="playerlist.js?v=1" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=3" defer></script>
@@ -5644,7 +5644,7 @@ function updateHUD(){
   // Paper + fake money pills appear only when you have any
   const paperCard = document.getElementById('hudPaperCard');
   const fakeCard  = document.getElementById('hudFakeCard');
-  if(paperCard){ paperCard.classList.toggle('show', (State.paper || 0) > 0); document.getElementById('hudPaper').textContent = State.paper || 0; }
+  if(paperCard){ paperCard.classList.toggle('show', (State.paper || 0) > 0); document.getElementById('hudPaper').textContent = Math.floor(State.paper || 0).toLocaleString(); }
   if(fakeCard) { fakeCard.classList.toggle('show',  (State.fakeMoney || 0) > 0); document.getElementById('hudFake').textContent  = State.fakeMoney || 0; }
   document.getElementById('hudWallet').textContent  = State.username || "guest";
   renderQuests();
@@ -6645,6 +6645,8 @@ window.fwPlotSync = (plot) => fwSendServer({ t:'plotSet', id: plot.id, owner: pl
 // Dropped items on the ground — shared so everyone sees/picks the same drops.
 window.fwDropSyncAdd  = (d) => fwSendServer({ t:'dropAdd', dropId: d.dropId, id: d.id, qty: d.qty || 1, x: d.x, z: d.z });
 window.fwDropSyncPick = (dropId) => fwSendServer({ t:'dropPick', dropId });
+// Guild flag capture → server (shared PVP-island post ownership).
+window.fwFlagCapture = (dir, tag, color, logo) => fwSendServer({ t:'flagCapture', dir, tag, color, logo });
 
 function fwConnectServer(){
   if(FWServer.ws && (FWServer.ws.readyState === 0 || FWServer.ws.readyState === 1)) return;
@@ -6677,9 +6679,10 @@ window.fwConnectServer = fwConnectServer;
 // My current look: held gun + worn flag. Broadcast with my position so
 // peers can show my weapon and flag.
 function fwMyLook(){
-  let gun = null;
+  let gun = null, carry = null;
   try { if(!window.fwGunHolstered && typeof window.fwActiveWeapon === 'function') gun = window.fwActiveWeapon() || null; } catch(_){}
-  return { gun: gun, flag: (State.wornFlag || null) };
+  try { const c = window.fwBrainrots && window.fwBrainrots.carry; if(c && c.t) carry = c.t.id; } catch(_){}
+  return { gun: gun, flag: (State.wornFlag || null), carry: carry };
 }
 function fwFlagEmoji(code){
   if(!code) return '';
@@ -6688,28 +6691,45 @@ function fwFlagEmoji(code){
   if(cc.length !== 2) return '';
   try { const A = 0x1F1E6; return String.fromCodePoint(A + (cc.charCodeAt(0) - 97)) + String.fromCodePoint(A + (cc.charCodeAt(1) - 97)); } catch(_){ return ''; }
 }
+// A small gun, barrel along +z (forward), sized to sit in a printer's hand.
 function buildPeerGun(){
   const g = new THREE.Group();
   const mat = new THREE.MeshStandardMaterial({ color: 0x222226, metalness: 0.6, roughness: 0.4 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.14, 0.40), mat); body.position.z = 0.10; g.add(body);
-  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 8), mat); barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.04, 0.38); g.add(barrel);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.30), mat); body.position.z = 0.10; g.add(body);
+  const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.34, 8), mat); barrel.rotation.x = Math.PI/2; barrel.position.set(0, 0.03, 0.30); g.add(barrel);
+  const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), mat); grip.position.set(0, -0.10, 0.0); g.add(grip);
   return g;
 }
-// Apply a peer's look to its printer mesh + name tag. Cheap; only rebuilds
-// the gun mesh when the held-weapon state actually flips.
+function buildPeerCarry(id){
+  let color = 0x5ff09c;
+  try { const B = window.fwBrainrots && window.fwBrainrots.BRAINROTS; if(B && B[id]) color = B[id].body || B[id].glow || color; } catch(_){}
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10),
+    new THREE.MeshStandardMaterial({ color: color, emissive: color, emissiveIntensity: 0.25, roughness: 0.5 }));
+  return ball;
+}
+// Apply a peer's look to its printer: flag emoji on the tag, gun in the right
+// hand, carried brainrot in the left hand. Attaches to the actual arm groups
+// so items track the hands (not float at the body).
 function applyPeerLook(p){
   if(!p) return;
   const look = p.look || {};
+  const ud = p.mesh.userData || {};
   if(p.tag){ const emo = fwFlagEmoji(look.flag); p.tag.textContent = (emo ? emo + ' ' : '') + (p.name || 'guest'); }
+  // Held gun → right hand (armR), hand sits at arm-local y≈-0.62.
   const wantGun = !!look.gun;
   if(wantGun && !p._gun){
     p._gun = buildPeerGun();
-    p._gun.position.set(0.42, 0.95, 0.35);   // ~right hand, pointing forward
-    try { p.mesh.add(p._gun); } catch(_){}
-  } else if(!wantGun && p._gun){
-    try { p.mesh.remove(p._gun); } catch(_){}
-    p._gun = null;
-  }
+    if(ud.armR){ p._gun.position.set(0, -0.62, 0.14); ud.armR.add(p._gun); }
+    else { p._gun.position.set(0.88, 0.48, 0.3); p.mesh.add(p._gun); }
+  } else if(!wantGun && p._gun){ try { p._gun.parent && p._gun.parent.remove(p._gun); } catch(_){} p._gun = null; }
+  // Carried brainrot → left hand (armL).
+  const wantCarry = !!look.carry;
+  if(wantCarry && p._carryId !== look.carry){
+    if(p._carry){ try { p._carry.parent && p._carry.parent.remove(p._carry); } catch(_){} }
+    p._carry = buildPeerCarry(look.carry); p._carryId = look.carry;
+    if(ud.armL){ p._carry.position.set(0, -0.68, 0.06); ud.armL.add(p._carry); }
+    else { p._carry.position.set(-0.88, 0.42, 0.2); p.mesh.add(p._carry); }
+  } else if(!wantCarry && p._carry){ try { p._carry.parent && p._carry.parent.remove(p._carry); } catch(_){} p._carry = null; p._carryId = null; }
 }
 
 function fwHandleServer(m){
@@ -6741,6 +6761,7 @@ function fwHandleServer(m){
       if(Array.isArray(m.bases) && typeof window.fwApplyBases === 'function') window.fwApplyBases(m.bases);
       if(Array.isArray(m.plots) && typeof window.fwApplyPlots === 'function') window.fwApplyPlots(m.plots);
       if(Array.isArray(m.drops) && typeof window.fwApplyDropList === 'function') window.fwApplyDropList(m.drops);
+      if(Array.isArray(m.flags) && typeof window.fwApplyFlags === 'function') window.fwApplyFlags(m.flags);
       // Resolve the username NOW that we know this wallet's saved name.
       // Server account name wins; a brand-new wallet or a guest gets prompted.
       if(State.username){
@@ -6780,7 +6801,7 @@ function fwHandleServer(m){
       p.walking = !!m.walking;
       if(m.name) p.name = m.name;
       // Appearance (gear/flag) — only re-apply when it actually changed.
-      const lookSig = m.look ? (m.look.gun || '') + '|' + (m.look.flag || '') : '';
+      const lookSig = m.look ? (m.look.gun || '') + '|' + (m.look.flag || '') + '|' + (m.look.carry || '') : '';
       if(m.name || lookSig !== p._lookSig){ p.look = m.look || null; p._lookSig = lookSig; applyPeerLook(p); }
       break;
     }
@@ -6806,6 +6827,9 @@ function fwHandleServer(m){
     case 'plots':
       if(typeof window.fwApplyPlots === 'function') window.fwApplyPlots(m.list || []);
       break;
+    case 'flags':
+      if(typeof window.fwApplyFlags === 'function') window.fwApplyFlags(m.list || []);
+      break;
     case 'plotErr':
       if(typeof window.fwPlotRentFailed === 'function' && typeof m.id === 'string') window.fwPlotRentFailed(m.id);
       break;
@@ -6815,6 +6839,17 @@ function fwHandleServer(m){
     case 'dropRemove':
       if(typeof window.fwRemoveDrop === 'function') window.fwRemoveDrop(m.dropId);
       break;
+    case 'peerShot': {
+      // Hear another player's gunshot, volume by distance (audible within ~70m).
+      if(m.id === Net.peerId) break;
+      try {
+        const dx = (+m.x||0) - Player.pos.x, dz = (+m.z||0) - Player.pos.z;
+        const dist = Math.hypot(dx, dz);
+        const vol = Math.max(0, 1 - dist / 70);
+        if(vol > 0 && typeof window.fwPeerGunshot === 'function') window.fwPeerGunshot(vol);
+      } catch(_){}
+      break;
+    }
     case 'lb':
       FWServer.lb = Array.isArray(m.rows) ? m.rows : [];
       if(typeof window.fwLeaderboardUpdated === 'function') window.fwLeaderboardUpdated();
@@ -8773,8 +8808,10 @@ function buildTrampoline(x, z, radius, power){
     leg.position.set(Math.cos(ang) * radius * 0.85, 0.28, Math.sin(ang) * radius * 0.85);
     grp.add(leg);
   }
-  const lt = new THREE.PointLight(0xff5ad6, 0.8, 8);
-  lt.position.y = 1.2; grp.add(lt);
+  // NOTE: no PointLight here. Adding/removing a light at runtime forces
+  // Three.js to recompile EVERY material's shader — that was the big lag
+  // spike when placing / picking up a trampoline. The emissive rim already
+  // gives it a glow without a real light.
   scene.add(grp);
   const t = { x, z, radius, power, mesh: grp };
   Trampolines.push(t);
@@ -11149,7 +11186,7 @@ async function refreshCoinGallery(){
 function openBank(){
   document.getElementById('bankBg').classList.add('show');
   document.getElementById('bankSilver').textContent = State.credits;
-  document.getElementById('bankPaper').textContent  = State.paper || 0;
+  document.getElementById('bankPaper').textContent  = Math.floor(State.paper || 0).toLocaleString();
   document.getElementById('bankGold').textContent   = (State.gold || 0);
   document.getElementById('bankPaperQty').value = "";
   document.getElementById('bankGoldQty').value = "";
@@ -11168,7 +11205,7 @@ function openBank(){
   const cashB = document.getElementById('bankCashRateB'); if(cashB) cashB.textContent = crB;
   // Vault balances
   const vS = document.getElementById('bankVaultSilver'); if(vS) vS.textContent = (State.vaultSilver || 0).toLocaleString();
-  const vC = document.getElementById('bankVaultCash');   if(vC) vC.textContent = (State.vaultCash   || 0).toLocaleString();
+  const vC = document.getElementById('bankVaultCash');   if(vC) vC.textContent = Math.floor(State.vaultCash || 0).toLocaleString();
   const vSI = document.getElementById('bankVaultSilverQty'); if(vSI) vSI.value = "";
   const vCI = document.getElementById('bankVaultCashQty');   if(vCI) vCI.value = "";
   // Vault tile sub-rows: wallet balances + gold + on-chain
