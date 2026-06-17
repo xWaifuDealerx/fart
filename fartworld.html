@@ -6625,7 +6625,12 @@ function fwHandleServer(m){
       }
       if(Array.isArray(m.guilds) && typeof window.fwApplyServerGuilds === 'function') window.fwApplyServerGuilds(m.guilds);
       FWServer.welcomed = true;
-      if(m.slots) addChat(null, `Connected to FartWorld — ${m.slots.used}/${m.slots.max} slots in use.`, true);
+      // Reveal the chat panel (the retired host/join flow used to do this).
+      try {
+        const cp = document.getElementById('chatPanel'); if(cp) cp.style.display = "";
+        const rl = document.getElementById('chatRoomLabel'); if(rl) rl.textContent = 'FartWorld';
+      } catch(_){}
+      if(m.slots) addChat(null, `Connected to FartWorld — ${m.slots.used}/${m.slots.max} players online.`, true);
       fwStartNetLoops();
       break;
     }
@@ -11730,7 +11735,7 @@ function dmEnter(){
   if(Net.mode === "solo"){
     // Solo arena has no opponents — still let you peek inside, but
     // tell them it's a multiplayer feature.
-    document.getElementById('dmWaitingMsg').textContent = "Solo mode — fight the practice bot, or invite a friend to a room.";
+    document.getElementById('dmWaitingMsg').textContent = "Waiting for another player to step into the arena…";
     dmShowOverlay(); dmSetMatchHud(false);
     Dm.phase = "waiting";
     Dm.inRing = true;
@@ -12488,7 +12493,7 @@ function dmStartBotMatch(){
     if(!DmBot.mesh) DmBot.mesh = dmBuildBotMesh();
   } catch(err){
     console.error('[dmbot] mesh build failed', err);
-    floater("Bot failed to spawn — check console", "bad");
+    floater("Opponent failed to spawn — check console", "bad");
     return;
   }
   Dm.isBot = true;
