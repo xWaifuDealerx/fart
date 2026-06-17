@@ -452,7 +452,9 @@
     ];
     function carlosShopList(){
       const ids = (window.SEED_SHOP || []).map(r => r.itemId).filter(id => window.ITEMS?.[id]) ;
-      return ids.length ? ids : CARLOS_SHOP_FALLBACK.filter(id => window.ITEMS?.[id]);
+      const base = ids.length ? ids.slice() : CARLOS_SHOP_FALLBACK.filter(id => window.ITEMS?.[id]);
+      if(window.ITEMS?.trampoline && !base.includes('trampoline')) base.push('trampoline');
+      return base;
     }
 
     let _carlosTab = "buy";

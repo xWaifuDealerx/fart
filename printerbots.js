@@ -44,6 +44,8 @@
       { name: 'Hotel',   x: -64, z: 18 },
       { name: 'Laundry', x: 0,   z: -55 },
     ];
+    // Ben's Bakery — the bots head here to eat when their hunger runs low.
+    const BAKERY = { name: 'Bakery', x: -35, z: -7 };
 
     const BASES = BR.Bases;
     const ROAMERS = BR.Roamers || [];
@@ -122,6 +124,8 @@
         stoleFromPlayer: false,   // carrying a brainrot taken from YOUR base
         dead: false, deadUntil: 0, // shot down — hidden until it respawns
         spawnX: sx, spawnZ: sz,
+        hunger: 60 + Math.random() * 40,   // drains over time → triggers a bakery run
+        eatingUntil: 0,
       };
     }
 
@@ -166,6 +170,11 @@
       if (bot.carry && bot.baseIdx != null) {
         const b = BASES[bot.baseIdx];
         return { kind: 'plant', idx: bot.baseIdx, x: b.x, z: b.z };
+      }
+      // 2.5) hungry → wander over to Ben's Bakery for a bite (sometimes even
+      //      when not starving, just to grab a snack).
+      if (bot.carry == null && ((bot.hunger != null && bot.hunger < 35) || Math.random() < 0.06)) {
+        return { kind: 'eat', x: BAKERY.x, z: BAKERY.z };
       }
       // 3) otherwise roll the dice
       const roll = Math.random();
@@ -235,6 +244,11 @@
         } else {
           bot.linger = 1 + Math.random();
         }
+      } else if (t.kind === 'eat') {
+        // At Ben's Bakery — grab a bite and refill the hunger bar.
+        bot.hunger = 100;
+        bot.eatingUntil = performance.now() + 3500;   // pause to munch
+        bot.linger = 3 + Math.random() * 2;
       } else {
         // wander — just hang out a moment
         bot.linger = 2 + Math.random() * 3;
@@ -251,6 +265,8 @@
       const inSlide = !!window.fwSlideActive;
 
       for (const bot of bots) {
+        // Hunger slowly drains, which periodically sends the bot to the bakery.
+        bot.hunger = Math.max(0, (bot.hunger == null ? 100 : bot.hunger) - dt * 0.4);
         // Shot down — stay hidden until the respawn timer elapses.
         if (bot.dead) {
           bot.tag.style.display = 'none';

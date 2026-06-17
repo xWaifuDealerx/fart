@@ -29,7 +29,7 @@
 <!-- 3 junkie printer NPCs that wander + buy fake weed + launder fake cash. -->
 <script src="junkies.js?v=8" defer></script>
 <!-- Static printer NPCs behind counters (Carlos / Moneycaller / Wave / Gary). -->
-<script src="static-npcs.js?v=8" defer></script>
+<script src="static-npcs.js?v=9" defer></script>
 <!-- Logout, crafting items, weed tiers, fart-jar tiers, Pawn Shop stub. -->
 <script src="extras-v6b.js" defer></script>
 <!-- Sand collection, jar melt, Fart Filling Station building. -->
@@ -55,10 +55,10 @@
 <script src="moondc.js?v=5" defer></script>
 <script src="social.js?v=11" defer></script>
 <script src="mobile.js?v=8" defer></script>
-<script src="dropitem.js?v=25" defer></script>
+<script src="dropitem.js?v=26" defer></script>
 <script src="sfx.js?v=2" defer></script>
 <script src="brainrot.js?v=27" defer></script>
-<script src="printerbots.js?v=8" defer></script>
+<script src="printerbots.js?v=9" defer></script>
 <script src="dailyhub.js?v=8" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=2" defer></script>
@@ -76,7 +76,7 @@
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
-<script src="controls.js?v=17" defer></script>
+<script src="controls.js?v=18" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=30" defer></script>
+<script src="gunsmith.js?v=31" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -109,9 +109,11 @@
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
-<script src="guild.js?v=7" defer></script>
+<script src="guild.js?v=8" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=3" defer></script>
+<!-- 👁 Spectator mode (watch other players + simulated players) -->
+<script src="spectate.js?v=1" defer></script>
 <script src="loading.js?v=6bq"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -3270,6 +3272,7 @@
       Connect Phantom
     </button>
     <button class="skip" id="skipBtn" type="button" onclick="(function tryGo(n){if(typeof window.enterLobby==='function'){window.enterLobby();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">Play as guest →</button>
+    <button class="skip" id="spectateBtn" type="button" onclick="(function tryGo(n){if(typeof window.fwStartSpectate==='function'){window.fwStartSpectate();return;}if(n<60){setTimeout(()=>tryGo(n+1),100);return;}alert('Game still loading — please wait a few seconds and try again.');})(0)">👁 Spectate →</button>
   </div>
 </div>
 
@@ -3497,23 +3500,24 @@ function saveState(){
   }, 1500 - since);
 }
 window.addEventListener('beforeunload', () => { try { saveStateNow(); } catch(_){} });
-function saveStateNow(){
+// Build the full persistable State blob. Shared by localStorage AND the
+// authoritative server save (server stores this same JSON per wallet).
+function fwStateBlob(){
+  // Snapshot the plots the player owns so their planted crops
+  // continue growing across sessions. We store ONLY plots where this
+  // player is the owner; everybody else's plots come from the room.
+  // `plantedAt` is a Date.now() millis stamp, so harvest readiness is
+  // always evaluated against real wall-clock time — a 10-minute weed
+  // crop is ready 10 real minutes after planting, even if the player
+  // closes the tab in between.
+  let plotSave = [];
   try {
-    // Snapshot the plots the player owns so their planted crops
-    // continue growing across sessions. We store ONLY plots where this
-    // player is the owner; everybody else's plots come from the room.
-    // `plantedAt` is a Date.now() millis stamp, so harvest readiness is
-    // always evaluated against real wall-clock time — a 10-minute weed
-    // crop is ready 10 real minutes after planting, even if the player
-    // closes the tab in between.
-    let plotSave = [];
-    try {
-      const me = State.username || State.wallet || "guest";
-      plotSave = (Array.isArray(window.Plots) ? window.Plots : [])
-        .filter(p => p && p.owner === me && p.crop && p.plantedAt)
-        .map(p => ({ x: p.x, z: p.z, crop: p.crop, plantedAt: p.plantedAt, rentedUntil: p.rentedUntil || 0 }));
-    } catch(_){}
-    localStorage.setItem(STORE_KEY, JSON.stringify({
+    const me = State.username || State.wallet || "guest";
+    plotSave = (Array.isArray(window.Plots) ? window.Plots : [])
+      .filter(p => p && p.owner === me && p.crop && p.plantedAt)
+      .map(p => ({ x: p.x, z: p.z, crop: p.crop, plantedAt: p.plantedAt, rentedUntil: p.rentedUntil || 0 }));
+  } catch(_){}
+  return {
       wallet:   State.wallet,
       username: State.username,
       level:    State.level,
@@ -3550,8 +3554,11 @@ function saveStateNow(){
       wornFlag:            State.wornFlag || null,
       jailUntil:           State.jailUntil || 0,
       myPlots:             plotSave,
-    }));
-  } catch(_){}
+  };
+}
+window.fwStateBlob = fwStateBlob;
+function saveStateNow(){
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(fwStateBlob())); } catch(_){}
 }
 // After the world's Plots array is populated, restore any planted
 // crops the player owned before disconnecting. Re-runs are cheap
@@ -3607,6 +3614,34 @@ function loadState(){
     if(State.wornFlag === undefined) State.wornFlag = null;
   } catch(_){}
 }
+// Apply a State blob received from the authoritative server (same shape as
+// fwStateBlob). Mirrors loadState's normalization but from a passed object
+// instead of localStorage. The server is authoritative for wallet accounts.
+function applyServerState(j){
+  try {
+    if(!j || typeof j !== 'object') return;
+    Object.assign(State, j);
+    State.uniqueZonesVisited = new Set(j.uniqueZonesVisited || []);
+    if(!State.inventory) State.inventory = {};
+    if(!State.tools)     State.tools = {};
+    if(State.credits == null) State.credits = 50;
+    if(State.gold == null)    State.gold = 0;
+    if(State.paper == null)   State.paper = 0;
+    if(State.fakeMoney == null) State.fakeMoney = 0;
+    if(State.vaultSilver == null) State.vaultSilver = 0;
+    if(State.vaultCash   == null) State.vaultCash   = 0;
+    if(State.prestige == null) State.prestige = 0;
+    if(!Array.isArray(State.prestigeSkins)) State.prestigeSkins = [];
+    if(typeof State.hunger !== 'number') State.hunger = 100;
+    if(State.elo == null)     State.elo = 1000;
+    if(State.dmWins == null)  State.dmWins = 0;
+    if(State.dmLosses == null)State.dmLosses = 0;
+    State.claimedFlags = new Set(Array.isArray(j.claimedFlags) ? j.claimedFlags : []);
+    if(!State.flagImages) State.flagImages = {};
+    if(State.wornFlag === undefined) State.wornFlag = null;
+  } catch(_){}
+}
+window.applyServerState = applyServerState;
 loadState();
 
 // ─── Item catalog ───────────────────────────────────────────────
@@ -4194,6 +4229,19 @@ const PLOT_LOCATIONS = [
   // +6 plots in the open grass east of spawn (clear of bases/buildings).
   [ 44,  6], [ 51,  6], [ 58,  6],
   [ 44, 16], [ 51, 16], [ 58, 16],
+  // +6 plots around (48,-28), threaded between the brainrot bases there.
+  [ 56, -28], [ 51, -18], [ 40, -22], [ 36, -30], [ 43, -38], [ 52, -37],
+  // +6 plots on EACH outer PVP island, in a hexagon ring (r28) around the
+  // island centre — clear of the 3 island bases, the centre guild post, and
+  // the dock (which sits out at the island's edge).
+  // East island (centre 321,18)
+  [ 349, 18], [ 335, 42], [ 307, 42], [ 293, 18], [ 307, -6], [ 335, -6],
+  // West island (centre -321,18)
+  [ -293, 18], [ -307, 42], [ -335, 42], [ -349, 18], [ -335, -6], [ -307, -6],
+  // North island (centre 18,321)
+  [ 46, 321], [ 32, 345], [ 4, 345], [ -10, 321], [ 4, 297], [ 32, 297],
+  // South island (centre 18,-321)
+  [ 46, -321], [ 32, -297], [ 4, -297], [ -10, -321], [ 4, -345], [ 32, -345],
 ];
 // Returns a 0..1 multiplier to apply to the noise height — 0 means
 // "totally flat (y=0)", 1 means "untouched rolling hills". Anywhere
@@ -5394,6 +5442,14 @@ function animatePrinter(dt){
     printer.rotation.z = w * 0.4;
     printer.scale.set(1 + Math.abs(w) * 0.06, 1 - Math.abs(w) * 0.04, 1 + Math.abs(w) * 0.06);
     if(ud.armL) { ud.armL.rotation.x = -0.6; ud.armR.rotation.x = -0.6; }
+  } else if(window.State && window.State.onBike){
+    // On the bike — feet stay planted on the pedals (no walk swing),
+    // hands rest on the handlebars.
+    if(ud.legL) { ud.legL.rotation.x = 0; ud.legR.rotation.x = 0; }
+    if(ud.armL) { ud.armL.rotation.x = -0.35; ud.armR.rotation.x = -0.35; }
+    printer.position.y = Player.pos.y + FOOT_OFFSET;
+    printer.scale.set(1, 1, 1);
+    printer.rotation.z = 0;
   } else if(Player.walking){
     const sp = Player.running ? 18 : 12;
     const swing = Math.sin(animTime * sp) * 0.65;
@@ -5892,23 +5948,10 @@ async function enterLobby(){
   document.getElementById('login').classList.add('hidden');
   // ── Permanent-username gate ──
   await requireUsername();
-  document.getElementById('lobby').classList.add('show');
-  // The lobby's display-name fields used to take freeform input; now that
-  // username is permanent, lock them to the username and disable editing.
-  const hh = document.getElementById('hostHandleInput');
-  const jh = document.getElementById('joinHandleInput');
-  if(hh){ hh.value = State.username; hh.readOnly = true; hh.style.opacity = 0.7; }
-  if(jh){ jh.value = State.username; jh.readOnly = true; jh.style.opacity = 0.7; }
-  // Start refreshing the rooms list so the Join tab is ready, and
-  // auto-poll it every ~5s so newly-hosted rooms show up without
-  // the user needing to click "Refresh" — that's the #1 reason
-  // "I can't find my friend's room" gets reported.
-  refreshRoomList();
-  startJoinAutoRefresh();
-  // Default lobby tab is "Host" — only count Join as active when the
-  // user clicks into it. The interval still runs but no-ops while
-  // _joinTabActive is false, then kicks back in the moment they switch.
-  _joinTabActive = false;
+  // DIRECT JOIN: the old host/join/solo lobby is retired. Everyone connects
+  // straight into the single hosted world. Saved data arrives via 'welcome'.
+  enterGame();
+  fwConnectServer();
 }
 
 function enterGame(){
@@ -5958,6 +6001,14 @@ document.getElementById('skipBtn').addEventListener('click', enterLobby);
 
 // ─── Movement update ────────────────────────────────────────────
 function updateMovement(dt){
+  // SPECTATING — the camera rides whichever player/bot we're watching. We
+  // pin our position to that target each frame (right before the camera reads
+  // it) and skip all normal input/physics.
+  if(window.fwSpectating && typeof window.fwSpectateTarget === 'function'){
+    const t = window.fwSpectateTarget();
+    if(t){ Player.pos.x = t.x; Player.pos.y = t.y; Player.pos.z = t.z; Player.yaw = t.yaw; Player.walking = !!t.walking; }
+    return;
+  }
   // If we're in a boat, the boat-update owns position + yaw entirely.
   // Sea Plane / Yacht physics are owned by seaplane.js — skip everything.
   if(Player.boat){
@@ -6005,7 +6056,7 @@ function updateMovement(dt){
     //   the moment the camera rotated.
     const dx =  nx * Math.cos(yaw) + nz * Math.sin(yaw);
     const dz = -nx * Math.sin(yaw) + nz * Math.cos(yaw);
-    const speed = Player.baseSpeed * (Player.running ? 1.7 : 1.0) * Math.min(1, mag);
+    const speed = Player.baseSpeed * (Player.running ? 1.7 : 1.0) * (Player.speedMul || 1) * Math.min(1, mag);
     Player.pos.x += dx * speed * dt;
     Player.pos.z += dz * speed * dt;
     // Face direction of movement (printer's default forward is +Z, so the
@@ -6304,7 +6355,8 @@ function joinRoom(room, handle){
 }
 
 function leaveRoom(){
-  if(Net.mode === "solo") return;
+  // Server mode + solo have no ntfy room to tear down.
+  if(Net.mode === "solo" || Net.mode === "server") return;
   // If we're mid-arena, tell the opponent we're bailing
   if(typeof dmBroadcastLeave === "function") dmBroadcastLeave();
   if(Net.topicChat){
@@ -6424,6 +6476,12 @@ async function sendChat(text){
   if(text.length > 200) text = text.slice(0, 200);
   // Always show my own bubble above the printer (works in solo too)
   setChatBubble("self", text);
+  // Server mode — relay chat through the authoritative server.
+  if(window.FWServer && window.FWServer.connected){
+    addChat(Net.handle, text, false, true);
+    fwSendServer({ t:'chat', text });
+    return;
+  }
   if(Net.mode === "solo"){
     addChat(null, "You're in solo mode — no one's listening (but your printer still says it).", true);
     return;
@@ -6482,6 +6540,152 @@ function removePeer(peerId){
   Net.peers.delete(peerId);
   addChat(null, `${p.name} left the room.`, true);
 }
+
+// =================================================================
+// ─── AUTHORITATIVE SERVER LINK (Phase 1) ─────────────────────────
+// Players connect directly to the single hosted world over WebSocket.
+// This replaces the old ntfy host/join lobby. The server owns presence,
+// chat relay, cross-player guilds, and persists each Phantom wallet's
+// whole State blob (guests play but aren't saved).
+// =================================================================
+const FWServer = {
+  ws: null, connected: false, welcomed: false,
+  url: null, you: null, slots: null,
+  _posTimer: null, _saveTimer: null, _retry: 0,
+};
+window.FWServer = FWServer;
+
+function fwServerUrl(){
+  // Local-test override: localStorage.setItem('fwServerUrl','ws://localhost:8080')
+  try { const o = localStorage.getItem('fwServerUrl'); if(o) return o; } catch(_){}
+  if(window.FW_SERVER_URL) return window.FW_SERVER_URL;
+  // When the page is served over https, the socket must be wss on the same host.
+  if(location.protocol === 'https:') return `wss://${location.host}/ws`;
+  if(location.protocol === 'http:'  && location.host) return `ws://${location.host}/ws`;
+  return 'wss://fartprint.art/ws';   // fallback (e.g. opened from file://)
+}
+
+function fwSendServer(obj){
+  const ws = FWServer.ws;
+  if(ws && ws.readyState === 1){ try { ws.send(JSON.stringify(obj)); } catch(_){} }
+}
+window.fwSendServer = fwSendServer;
+// Guild ops travel to the server: window.fwServerGuild('create',{tag,name,public,...})
+window.fwServerGuild = (op, data) => fwSendServer(Object.assign({ t:'guild', op }, data || {}));
+
+function fwConnectServer(){
+  if(FWServer.ws && (FWServer.ws.readyState === 0 || FWServer.ws.readyState === 1)) return;
+  Net.mode = 'server';            // disables the old ntfy relays (they need topicChat)
+  const url = FWServer.url = fwServerUrl();
+  let ws;
+  try { ws = new WebSocket(url); }
+  catch(e){ console.warn('[FWServer] bad url', url, e); return; }
+  FWServer.ws = ws;
+  ws.onopen = () => {
+    FWServer._retry = 0; FWServer.connected = true;
+    ws.send(JSON.stringify({ t:'auth', wallet: State.wallet || null, name: State.username || 'Printer' }));
+  };
+  ws.onmessage = (ev) => { try { fwHandleServer(JSON.parse(ev.data)); } catch(_){} };
+  ws.onclose = () => {
+    FWServer.connected = false; FWServer.welcomed = false;
+    for(const id of [...Net.peers.keys()]) removePeer(id);   // drop stale peer printers
+    if(window.fwInGame){
+      const d = Math.min(15000, 1000 * Math.pow(2, FWServer._retry++));
+      addChat(null, `Disconnected from server — reconnecting in ${Math.round(d/1000)}s…`, true);
+      setTimeout(fwConnectServer, d);
+    }
+  };
+  ws.onerror = () => {};
+}
+window.fwConnectServer = fwConnectServer;
+
+function fwHandleServer(m){
+  if(!m || !m.t) return;
+  switch(m.t){
+    case 'welcome': {
+      FWServer.you = m.you || null;
+      FWServer.slots = m.slots || null;
+      Net.peerId = (m.you && m.you.id) || Net.peerId;   // ignore our own echoes
+      Net.handle = (m.you && m.you.name) || Net.handle;
+      // Load this wallet's authoritative saved state (null = brand-new player).
+      if(m.state && typeof m.state === 'object'){
+        applyServerState(m.state);
+        if(window.renderInventory) renderInventory();
+        try { updateHUD(); } catch(_){}
+      }
+      // Seed peers already present in the world.
+      if(Array.isArray(m.roster)){
+        for(const r of m.roster){
+          if(!r || !r.id || r.id === Net.peerId) continue;
+          let p = Net.peers.get(r.id);
+          if(!p){ p = createPeer(r.id, r.name); Net.peers.set(r.id, p); }
+          p.tx = +r.x||0; p.ty = +r.y||0; p.tz = +r.z||0; p.tyaw = +r.yaw||0;
+          p.x = p.tx; p.y = p.ty; p.z = p.tz; p.yaw = p.tyaw; p.lastSeen = Date.now();
+        }
+      }
+      if(Array.isArray(m.guilds) && typeof window.fwApplyServerGuilds === 'function') window.fwApplyServerGuilds(m.guilds);
+      FWServer.welcomed = true;
+      if(m.slots) addChat(null, `Connected to FartWorld — ${m.slots.used}/${m.slots.max} slots in use.`, true);
+      fwStartNetLoops();
+      break;
+    }
+    case 'full':
+      addChat(null, `Server is full (${m.used}/${m.max}). Try again shortly.`, true);
+      try { floater('Server full — try again soon', 'bad'); } catch(_){}
+      break;
+    case 'join':
+      if(m.id && m.id !== Net.peerId) addChat(null, `${m.name || 'a printer'} joined.`, true);
+      break;
+    case 'peer': {
+      if(m.id === Net.peerId) break;
+      let p = Net.peers.get(m.id);
+      if(!p){ p = createPeer(m.id, m.name); Net.peers.set(m.id, p); }
+      p.lastSeen = Date.now();
+      p.tx = +m.x||0; p.ty = +m.y||0; p.tz = +m.z||0; p.tyaw = +m.yaw||0;
+      p.walking = !!m.walking;
+      if(m.name){ p.name = m.name; p.tag.textContent = m.name; }
+      break;
+    }
+    case 'leave': if(m.id) removePeer(m.id); break;
+    case 'chat':
+      if(m.id === Net.peerId) break;
+      addChat(m.name || 'anon', m.text || '', false);
+      if(typeof setChatBubble === 'function') setChatBubble(m.id, m.text || '');
+      break;
+    case 'guilds':
+      if(typeof window.fwApplyServerGuilds === 'function') window.fwApplyServerGuilds(m.guilds || []);
+      break;
+    case 'guildErr':
+      try { floater(m.msg || 'Guild error', 'bad'); } catch(_){ addChat(null, m.msg || 'Guild error', true); }
+      break;
+    case 'pong': break;
+  }
+}
+
+function fwStartNetLoops(){
+  if(!FWServer._posTimer){
+    // Stream position ~10Hz (unconditionally, so idle remote players don't go stale).
+    FWServer._posTimer = setInterval(() => {
+      if(!FWServer.connected || !window.fwInGame || !Player || !Player.pos) return;
+      fwSendServer({ t:'pos',
+        x:+Player.pos.x.toFixed(2), y:+Player.pos.y.toFixed(2), z:+Player.pos.z.toFixed(2),
+        yaw:+Player.yaw.toFixed(3), walking:!!Player.walking });
+    }, 100);
+  }
+  if(!FWServer._saveTimer){
+    // Persist the full State blob to the server every 8s (server throttles to 5s).
+    FWServer._saveTimer = setInterval(() => {
+      if(!FWServer.connected || !FWServer.welcomed) return;
+      fwSendServer({ t:'save', username: State.username || null, state: fwStateBlob() });
+    }, 8000);
+  }
+}
+// Last-gasp save when the tab closes (server also saves c.lastState on disconnect).
+window.addEventListener('beforeunload', () => {
+  if(FWServer.connected && FWServer.welcomed){
+    try { fwSendServer({ t:'save', username: State.username || null, state: fwStateBlob() }); } catch(_){}
+  }
+});
 
 // Per-frame: interpolate every peer's printer toward its latest target,
 // update their floating name tag's screen position, and clean up any
@@ -8380,13 +8584,48 @@ function buildTrampoline(x, z, radius, power){
   const lt = new THREE.PointLight(0xff5ad6, 0.8, 8);
   lt.position.y = 1.2; grp.add(lt);
   scene.add(grp);
-  Trampolines.push({ x, z, radius, power, mesh: grp });
+  const t = { x, z, radius, power, mesh: grp };
+  Trampolines.push(t);
+  return t;
 }
 // Three trampolines placed in clear ground — the original (20, 30) was
 // landing on top of a print station at (20, 32), so it's been relocated.
 buildTrampoline( 35, 18, 2.4, 10);   // east side, between Plot[14,18] + Arena
 buildTrampoline(-10, 25, 2.4, 10);   // northwest of spawn
 buildTrampoline( 10, 40, 2.4, 10);   // far north meadow
+
+// ── Trampoline as a carryable item (buy at Carlos · drag out to place ·
+//    press G to pick up anyone's) ──
+if(typeof ITEMS !== 'undefined' && !ITEMS.trampoline){
+  ITEMS.trampoline = { id:'trampoline', name:'Trampoline', icon:'\u{1F938}', color:'#ff5ad6', type:'gear', isNFT:false, marketPrice:1500, suggestedPrice:1300 };
+}
+// Place a real, bounceable trampoline (matches the world ones).
+window.fwPlaceTrampolineAt = function(x, z){ return buildTrampoline(x, z, 2.4, 10); };
+function _nearTramp(){
+  for(const t of Trampolines){
+    if(Math.hypot(t.x - Player.pos.x, t.z - Player.pos.z) < t.radius + 1.6) return t;
+  }
+  return null;
+}
+const _trampPrompt = document.createElement('div');
+_trampPrompt.style.cssText = 'position:fixed;left:50%;bottom:188px;transform:translateX(-50%);display:none;z-index:54;background:rgba(20,6,30,.92);border:2px solid rgba(255,90,214,.6);border-radius:12px;padding:8px 14px;color:#ffd6f4;font-family:Outfit,sans-serif;font-size:13px;pointer-events:none';
+_trampPrompt.innerHTML = 'Press <b style="color:#ff5ad6">G</b> to pick up the trampoline';
+document.body.appendChild(_trampPrompt);
+setInterval(() => {
+  const show = !!window.fwInGame && !Player.boat && !window.fwCarryBrainrot && !!_nearTramp();
+  _trampPrompt.style.display = show ? 'block' : 'none';
+}, 300);
+window.addEventListener('keydown', (e) => {
+  if(e.code !== 'KeyG') return;
+  if(Player.boat || window.fwCarryBrainrot) return;   // let the brainrot grab/drop use G first
+  const a = document.activeElement; if(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA')) return;
+  const t = _nearTramp(); if(!t) return;
+  e.stopImmediatePropagation();
+  try { scene.remove(t.mesh); } catch(_){}
+  const i = Trampolines.indexOf(t); if(i >= 0) Trampolines.splice(i, 1);
+  window.addItem?.('trampoline', 1);
+  try { floater('🤸 Picked up a trampoline', 'good'); } catch(_){}
+}, true);
 
 // =================================================================
 // ─── BANK — Silver → Paper / Silver → Gold conversions ─────────

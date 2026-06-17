@@ -126,12 +126,35 @@
     let pendingLogo = null;     // dataURL chosen in the create form
     let createPublic = true;    // public vs invite-only toggle in the create form
 
+    // ── server-synced guilds (authoritative, pushed from the game server via
+    // window.fwApplyServerGuilds). Real guilds override the demo RIVALS. ──
+    let SERVER_GUILDS = [];
+    window.fwApplyServerGuilds = function (list) {
+      SERVER_GUILDS = Array.isArray(list) ? list.map(g => ({
+        name: g.name, tag: g.tag, xp: g.xp || 0, season: g.season || 0,
+        members: Array.isArray(g.members) ? g.members.length : (g.members || 1),
+        public: !!g.public, logo: g.logo || null, color: g.color || 0, owner: g.owner || null,
+      })) : [];
+      // Keep my own guild's live numbers in sync with the authoritative record.
+      const G = State.guild;
+      if (G) {
+        const mine = SERVER_GUILDS.find(s => s.tag === G.tag);
+        if (mine) { G.xp = mine.xp; G._memberCount = mine.members; }
+      }
+      if (bg.classList.contains('show')) render();
+    };
+
     function allGuilds() {
       const G = State.guild;
-      const list = RIVALS.map(r => Object.assign({}, r));
+      // Real (server) guilds take precedence; demo rivals only fill tags the
+      // server hasn't got yet, so the board isn't empty before launch.
+      const byTag = new Map();
+      for (const r of RIVALS) byTag.set(r.tag, Object.assign({}, r));
+      for (const s of SERVER_GUILDS) byTag.set(s.tag, Object.assign({}, s));
+      const list = [...byTag.values()];
       if (G) {
         const ex = list.find(x => x.tag === G.tag);
-        if (ex) { ex.me = true; ex.xp = G.xp || 0; ex.name = G.name; ex.public = !!G.public; ex.members = (G.members || []).length || ex.members; }
+        if (ex) { ex.me = true; ex.xp = G.xp || ex.xp || 0; ex.name = G.name; ex.public = !!G.public; ex.members = (G.members || []).length || G._memberCount || ex.members; }
         else list.push({ name: G.name, tag: G.tag, xp: G.xp || 0, members: (G.members || []).length || 1, public: !!G.public, me: true });
       }
       return list.sort((a, b) => (b.xp || 0) - (a.xp || 0));
@@ -277,6 +300,7 @@
       if (lv && G) lv.addEventListener('click', () => {
         if (!confirm('Leave your guild?')) return;
         (window.fwGuildPosts || []).forEach(p => { if (p.heldByTag === G.tag) { p.heldByTag = null; p.setHolder(null, null); } });
+        window.fwServerGuild?.('leave', { tag: G.tag });
         State.guild = null; window.saveState?.(); render._tab = 'browse'; render();
       });
     }
@@ -300,6 +324,11 @@
         ownerName: myName(), members: [myName()], xp: 0, myXp: 0,
         season: season(), founded: Date.now(),
       };
+      // Register the guild on the authoritative server (cross-player table).
+      window.fwServerGuild?.('create', {
+        tag: State.guild.tag, name: State.guild.name, public: State.guild.public,
+        logo: State.guild.logo, color: State.guild.color, season: State.guild.season,
+      });
       pendingLogo = null;
       window.updateHUD?.(); window.saveState?.();
       window.floater?.('🛡️ Guild "' + name + '" founded!', 'good');
@@ -308,10 +337,12 @@
 
     function joinByTag(tag) {
       if (State.guild) { window.floater?.('Leave your current guild first', 'bad'); return; }
-      const g = RIVALS.find(r => r.tag === tag);
+      const g = allGuilds().find(r => r.tag === tag);
       if (!g) return;
       if (!g.public) { window.floater?.('That guild is invite-only', 'bad'); return; }
       if ((g.members || 0) >= MAX_MEMBERS) { window.floater?.('That guild is full (100/100)', 'bad'); return; }
+      // Tell the server to add us to this guild's roster (public guilds only).
+      window.fwServerGuild?.('join', { tag: g.tag });
       joinGuildObj(g);
     }
 
@@ -417,6 +448,7 @@
             const gain = POST_XP_MIN * held;
             G.xp = (G.xp || 0) + gain;
             G.myXp = (G.myXp || 0) + gain;
+            window.fwServerGuild?.('addxp', { tag: G.tag, xp: gain });
             window.saveState?.();
           }
         }
@@ -426,7 +458,7 @@
     // public hooks (backend wiring points)
     window.fwGuild = {
       get() { return State.guild; },
-      addXp(n) { if (State.guild) { State.guild.xp = (State.guild.xp || 0) + n; State.guild.myXp = (State.guild.myXp || 0) + n; } },
+      addXp(n) { if (State.guild) { State.guild.xp = (State.guild.xp || 0) + n; State.guild.myXp = (State.guild.myXp || 0) + n; window.fwServerGuild?.('addxp', { tag: State.guild.tag, xp: n }); } },
       open,
     };
     // Territory yield bonus — fraction added to your brainrot silver while your

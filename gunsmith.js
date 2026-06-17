@@ -772,7 +772,7 @@
     function tickFpsModels(){
       ensureFpsModels();
       const fps = window.Cam && typeof window.Cam.curDistance === 'number' && window.Cam.curDistance < 2.1;
-      const armed = owned(ACTIVE) && !window.fwGunHolstered && !window.fwSleeping && !(window.Player && window.Player.boat);
+      const armed = owned(ACTIVE) && !window.fwGunHolstered && !window.fwSleeping && !(window.Player && window.Player.boat) && !window.fwSpectating;
       const scoped = !!(window.fwScoped && window.fwScoped());
       if(fpsAK) fpsAK.visible = !!(fps && armed && ACTIVE === 'ak47');
       if(fpsM40) fpsM40.visible = !!(fps && armed && ACTIVE === 'm40' && !scoped);
@@ -996,7 +996,9 @@
         document.getElementById('dmOverlay')?.classList.contains('show');
       const inVehicle = !!(window.Player && window.Player.boat);   // seaplane/boat/yacht: no aim
       const invOpen = document.getElementById('invBg')?.classList.contains('show');
-      if(owned(ACTIVE) && !dmBusy && !dmPanel && !window.fwSleeping &&
+      // Any open menu/modal — never show the aim crosshair over a menu.
+      const menuOpen = !!document.querySelector('.fw-set-bg.show, .gold-bg.show, .mk-bg.show, .church-bg.show, .gd-bg.show, .fwp-bg.show, .bank-bg.show, .market-bg.show, .carlos-bg.show, .lab-bg.show, .cas-bg.show, .dc-bg.show, .est-bg.show, .lb-bg.show, .fw-rank-bg.show, .hot-bg.show, .gs-bg.show, .junk-bg.show, .wave-bg.show, #marketBg.show');
+      if(owned(ACTIVE) && !dmBusy && !dmPanel && !window.fwSleeping && !window.fwSpectating && !menuOpen &&
          !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc() && !window.fwScoped?.() && !overUiButton()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';

@@ -331,8 +331,9 @@
         return;
       }
       const fps = Cam.curDistance < FPS_AT;
-      // Printer visibility follows camera distance
-      try { if(window.printer) window.printer.visible = !fps; } catch(_){}
+      // Printer visibility follows camera distance — but stay hidden while
+      // spectating (we ride other players; our own body must never show).
+      try { if(window.printer) window.printer.visible = !fps && !window.fwSpectating; } catch(_){}
       // FPS gun viewmodel: visible when zoomed in AND armed (owning a
       // Deagle, or any active deathmatch where weapons are unlimited).
       // Prefer the real GLB model; the SVG is only a loading fallback.

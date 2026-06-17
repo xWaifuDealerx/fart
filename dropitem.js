@@ -681,6 +681,16 @@
     }, true);
 
     function dropToGround(id, qty){
+      // A trampoline isn't a generic ground pickup — drop it as a real,
+      // bounceable trampoline a few metres in front of you.
+      if(id === 'trampoline' && typeof window.fwPlaceTrampolineAt === 'function'){
+        const Pl = window.Player, yaw = (Pl && Pl.yaw) || 0;
+        const fx = Math.sin(yaw + Math.PI), fz = Math.cos(yaw + Math.PI);
+        window.fwPlaceTrampolineAt((Pl ? Pl.pos.x : 0) + fx * 2.4, (Pl ? Pl.pos.z : 0) + fz * 2.4);
+        window.takeItem?.(id, 1);
+        window.floater?.('🤸 Trampoline set down — jump on it!', 'good');
+        return;
+      }
       // A bike isn't a generic ground pickup — drop it as a real,
       // mountable bike (the same one you ride near Gary, press B).
       if(id === 'bike' && typeof window.fwParkBikeAt === 'function'){
