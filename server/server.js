@@ -176,7 +176,8 @@ function scoreFromState(name, st, guildTag) {
   st = st || {};
   return {
     name: name || 'Printer', level: st.level || 1, totalXp: totalXpOf(st.level, st.xp),
-    credits: st.credits || 0, farts: st.totalFarts || 0, elo: st.elo || 1000,
+    credits: st.credits || 0, gold: st.gold || 0, vault: (st.vaultSilver || 0) + (st.vaultCash || 0),
+    farts: st.totalFarts || 0, elo: st.elo || 1000,
     dmWins: st.dmWins || 0, dmLosses: st.dmLosses || 0, guildTag: guildTag || null,
   };
 }
@@ -279,6 +280,7 @@ wss.on('connection', (ws) => {
     switch (m.t) {
       case 'pos': {
         c.x = +m.x || 0; c.y = +m.y || 0; c.z = +m.z || 0; c.yaw = +m.yaw || 0; c.walking = !!m.walking;
+        c.hidden = !!m.hidden;         // sleeping / on a boat → spiders ignore + flee
         if (m.look) c.look = m.look;   // appearance: { gun, flag, vehicle }
         broadcast({ t: 'peer', id, name: c.name, x: c.x, y: c.y, z: c.z, yaw: c.yaw, walking: c.walking, look: c.look || null }, id);
         break;
@@ -443,6 +445,7 @@ setInterval(() => {
 function nearestPlayerOnIsland(x, z) {
   let best = null, bd = 1e9;
   for (const [, c] of clients) {
+    if (c.hidden) continue;                                      // sleeping / on a boat → not a target
     if (Math.hypot(c.x, c.z) > SPIDER_ISLAND_R + 12) continue;   // chase only main-island players
     const d = Math.hypot(c.x - x, c.z - z);
     if (d < bd) { bd = d; best = c; }
@@ -476,9 +479,16 @@ setInterval(() => {
         s.z += (mz / md) * SPIDER_SPEED * SPIDER_DT;
         s.yaw = Math.atan2(mx, mz);
       }
+    } else {
+      // No valid target (e.g. the only nearby player is sleeping) — amble off
+      // in a slowly-drifting random direction so spiders turn away and leave.
+      if (s.wAng == null || Math.random() < 0.02) s.wAng = Math.random() * Math.PI * 2;
+      s.x += Math.cos(s.wAng) * SPIDER_SPEED * 0.5 * SPIDER_DT;
+      s.z += Math.sin(s.wAng) * SPIDER_SPEED * 0.5 * SPIDER_DT;
+      s.yaw = Math.atan2(Math.cos(s.wAng), Math.sin(s.wAng));
     }
     const rr = Math.hypot(s.x, s.z);
-    if (rr > SPIDER_ISLAND_R) { s.x = s.x / rr * SPIDER_ISLAND_R; s.z = s.z / rr * SPIDER_ISLAND_R; }
+    if (rr > SPIDER_ISLAND_R) { s.x = s.x / rr * SPIDER_ISLAND_R; s.z = s.z / rr * SPIDER_ISLAND_R; s.wAng = Math.random() * Math.PI * 2; }
   }
   // Broadcast the snapshot.
   const list = [];
