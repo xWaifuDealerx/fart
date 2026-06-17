@@ -103,6 +103,7 @@
     dBg.className = 'fw-daily-bg';
     document.body.appendChild(dBg);
 
+    let pendingClaim = null;   // {streak, silver, milestone} while the crate is up
     function buildCrate() {
       const nextStreak = (D.last === yday) ? D.streak + 1 : 1;
       const silver = rewardFor(nextStreak);
@@ -123,10 +124,20 @@
             (milestone ? '<br><b>+ a Trucker Cap 🧢</b> (7-day milestone!)' : '') + '</div>' +
           '<button class="go" id="fwDailyClaim">Claim</button>' +
           '<button class="later" id="fwDailyLater">maybe later</button>' +
+          '<div style="font-size:11px;color:rgba(230,255,238,.55);margin-top:10px;letter-spacing:.4px">Press <b style="color:#ffd64d">Enter</b> to claim &amp; continue</div>' +
         '</div>';
+      pendingClaim = { streak: nextStreak, silver: silver, milestone: milestone };
       dBg.querySelector('#fwDailyClaim').addEventListener('click', () => claimDaily(nextStreak, silver, milestone));
-      dBg.querySelector('#fwDailyLater').addEventListener('click', () => dBg.classList.remove('show'));
+      dBg.querySelector('#fwDailyLater').addEventListener('click', () => { pendingClaim = null; dBg.classList.remove('show'); });
     }
+    // Enter claims the daily crate & continues.
+    window.addEventListener('keydown', (e) => {
+      if (!dBg.classList.contains('show')) return;
+      if (e.code === 'Enter' || e.code === 'NumpadEnter') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        if (pendingClaim) { const p = pendingClaim; pendingClaim = null; claimDaily(p.streak, p.silver, p.milestone); }
+      }
+    }, true);
 
     function claimDaily(streak, silver, milestone) {
       D.streak = streak; D.last = today; dsave();
@@ -235,7 +246,7 @@
 
     function openBoard() {
       const rows = rankings().map((r, i) => {
-        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
+        const medal = i === 0 ? '🪙' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1);
         return '<div class="row' + (r.you ? ' you' : '') + '">' +
           '<span class="rk">' + medal + '</span>' +
           '<span class="nm">' + escapeHtml(r.name) + (r.you ? ' (you)' : '') + '</span>' +

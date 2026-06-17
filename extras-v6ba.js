@@ -72,6 +72,9 @@
     // Damage API
     window.damagePlayer = function(amount, reason){
       if(!amount || amount <= 0) return;
+      // No damage (spiders, falls, anything) until the player has actually
+      // signed in / joined as guest and entered the world.
+      if(!window.fwInGame) return;
       // Asleep in the hotel — completely untouchable.
       if(window.fwSleeping) return;
       // Flying the seaplane — ONLY mid-air collisions (sky traffic)

@@ -19,13 +19,13 @@
      module script has exposed globals (State, ITEMS, etc) onto window. -->
 <!-- <script src="bowling.js?v=8" defer></script> -->
 <!-- Portfolio panel — shows all owned assets (off-chain + on-chain). -->
-<script src="portfolio.js?v=8" defer></script>
+<script src="portfolio.js?v=9" defer></script>
 <!-- Native in-app swap (Jupiter API + Phantom signing). -->
 <script src="swap.js?v=8" defer></script>
 <!-- World extras: jail cell mesh, extra trees + chop mechanic, paper mill. -->
 <script src="world-extras.js?v=8" defer></script>
 <!-- Fart Cup CSS + modal injection (moved out of main file for size). -->
-<script src="fartcup-ui.js?v=8" defer></script>
+<!-- Fart Cup removed <script src="fartcup-ui.js?v=8" defer></script> -->
 <!-- 3 junkie printer NPCs that wander + buy fake weed + launder fake cash. -->
 <script src="junkies.js?v=8" defer></script>
 <!-- Static printer NPCs behind counters (Carlos / Moneycaller / Wave / Gary). -->
@@ -37,10 +37,10 @@
 <!-- Wave's Sea Plane — buy at the port, take off and fly. -->
 <script src="seaplane.js?v=9" defer></script>
 <script src="roki.js?v=8" defer></script>
-<script src="alexandre.js?v=8" defer></script>
+<!-- Fart Cup salesman removed <script src="alexandre.js?v=8" defer></script> -->
 <script src="minimap.js?v=12" defer></script>
 <script src="compass.js?v=11" defer></script>
-<script src="hunger.js?v=11" defer></script>
+<script src="hunger.js?v=12" defer></script>
 <!-- weed-timer.js (CROPS GROWING popup) removed — crops now show in the Ongoing Operations panel -->
 <!-- <script src="weed-timer.js?v=9" defer></script> -->
 <script src="weed-reveal.js?v=8" defer></script>
@@ -57,9 +57,9 @@
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=25" defer></script>
+<script src="brainrot.js?v=26" defer></script>
 <script src="printerbots.js?v=7" defer></script>
-<script src="dailyhub.js?v=5" defer></script>
+<script src="dailyhub.js?v=7" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=2" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
@@ -76,29 +76,29 @@
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
-<script src="controls.js?v=16" defer></script>
+<script src="controls.js?v=17" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
 <script src="skills.js?v=9" defer></script>
 <script src="prestige.js?v=6" defer></script>
 <!-- Missions: Genesis (tutorial etc.) + limited-time Event missions -->
-<script src="missions.js?v=13" defer></script>
+<script src="missions.js?v=14" defer></script>
 <!-- Google sign-in + Phantom wallet linking -->
 <script src="auth.js?v=9" defer></script>
 <!-- Ambient sky traffic: airplane / airship / spaceship / hot air balloon -->
 <script src="skytraffic.js?v=8" defer></script>
-<script src="poop500.js" defer></script>
+<!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
-<script src="fartcup.js?v=8" defer></script>
+<!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
 <script src="gunsmith.js?v=26" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
-<script src="extras-v6ba.js?v=10" defer></script>
+<script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
 <script src="extras-v6bd.js?v=8" defer></script>
 <script src="extras-v6be.js?v=8" defer></script>
-<script src="extras-v6bg.js?v=8" defer></script>
-<script src="extras-v6bh.js?v=9" defer></script>
+<script src="extras-v6bg.js?v=9" defer></script>
+<script src="extras-v6bh.js?v=10" defer></script>
 <script src="extras-v6bi.js?v=10" defer></script>
 <!-- Player profile window + lifetime stats + motto -->
 <script src="profile.js?v=2" defer></script>
@@ -107,9 +107,11 @@
 <!-- 🥩 Moo Kratha Shop (invest + sell pork for cash) -->
 <script src="mookratha.js?v=4" defer></script>
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
-<script src="ops.js?v=2" defer></script>
+<script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
-<script src="guild.js?v=4" defer></script>
+<script src="guild.js?v=7" defer></script>
+<!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
+<script src="goldmarket.js?v=2" defer></script>
 <script src="loading.js?v=6bq"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -821,6 +823,22 @@
   @media (max-width: 720px) {
     .chat-panel { width: calc(50vw - 22px); top: 64px; }
     .chat-body { height: 120px; font-size: 10.5px; }
+  }
+  /* ── Laptops / shorter screens: keep the left stack (chat → ongoing ops →
+     daily quests) and the right-side buttons from colliding. Anything taller
+     than 860px (big monitors) is left exactly as-is. ── */
+  @media (max-height: 860px) {
+    .chat-panel { top: 64px; max-height: 30vh; }
+    .chat-body  { height: auto; max-height: 15vh; }
+    .quests-panel { bottom: 10px; }
+    .quests-list  { max-height: 26vh; overflow-y: auto; }
+    #fwRankBtn  { top: 300px !important; }
+    #fwGuildBtn { top: 354px !important; }
+  }
+  @media (max-height: 760px) {
+    .chat-panel { max-height: 24vh; }
+    .chat-body  { max-height: 10vh; }
+    .quests-list { max-height: 20vh; }
   }
 
   /* Cat hover tooltip — shows the cat's name when you hover over one */
@@ -2725,7 +2743,7 @@
       <span id="hudCredits">0</span>
     </div>
     <div class="hud-card hud-gold" id="hudGoldCard">
-      <span class="lbl">🥇 GOLD</span>
+      <span class="lbl">🪙 GOLD</span>
       <span id="hudGold">0</span>
     </div>
     <div class="hud-card hud-paper" id="hudPaperCard">
@@ -2812,7 +2830,7 @@
       </div>
       <div class="stats-row">
         <div class="stat silver">🥈 <b id="invSilver">0</b> Silver</div>
-        <div class="stat gold">🥇 <b id="invGold">0</b> Gold</div>
+        <div class="stat gold">🪙 <b id="invGold">0</b> Gold</div>
         <div class="stat" style="margin-left:auto;"><b id="invSlots">0/24</b> slots</div>
       </div>
       <div class="inv-grid-modal" id="invGrid"></div>
@@ -2911,10 +2929,10 @@
         <div class="bank-row">
           <div>
             <h3>Silver → Gold</h3>
-            <p>Today's rate at the teller: <b><span id="bankRateLiveA">100,000</span> 🥈 Silver per 🥇 Gold</b>. The peg drifts up over time — silver inflates faster than gold can be minted.</p>
+            <p>Today's rate at the teller: <b><span id="bankRateLiveA">100,000</span> 🥈 Silver per 🪙 Gold</b>. The peg drifts up over time — silver inflates faster than gold can be minted.</p>
             <div class="qty-row">
               <input id="bankGoldQty" type="number" min="1000" step="1000" placeholder="silver to spend"/>
-              <span class="preview" id="bankGoldPreview">→ 0.0000 🥇</span>
+              <span class="preview" id="bankGoldPreview">→ 0.0000 🪙</span>
             </div>
           </div>
           <button class="go" id="bankGoldGo">Convert</button>
@@ -2923,7 +2941,7 @@
         <div class="bank-row">
           <div>
             <h3>Gold → Silver</h3>
-            <p>Cash out a gold bar: <b>1 🥇 Gold = <span id="bankRateLiveB">100,000</span> 🥈 Silver</b> at today's rate. The bank quotes the same number both ways.</p>
+            <p>Cash out a gold bar: <b>1 🪙 Gold = <span id="bankRateLiveB">100,000</span> 🥈 Silver</b> at today's rate. The bank quotes the same number both ways.</p>
             <div class="qty-row">
               <input id="bankGoldToSilverQty" type="number" min="0.01" step="0.01" placeholder="gold to sell"/>
               <span class="preview" id="bankGoldToSilverPreview">→ 0 🥈</span>
@@ -2946,7 +2964,7 @@
             <div class="sub">Wallet: <b id="bankVaultWalletCash">0</b></div>
           </div>
           <div class="vault-tile gold">
-            <div class="hd"><span class="ic">🥇</span> Gold</div>
+            <div class="hd"><span class="ic">🪙</span> Gold</div>
             <div class="bal" id="bankVaultGold">0</div>
             <div class="sub">Always safe — no vault needed</div>
           </div>
@@ -3006,7 +3024,7 @@
 <div class="gold-bg" id="goldBg">
   <div class="gold-card">
     <div class="gold-head">
-      <h2>🥇 GOLD VAULT</h2>
+      <h2>🪙 GOLD VAULT</h2>
       <button class="close" id="goldClose">×</button>
     </div>
     <div class="gold-body">
@@ -3020,6 +3038,11 @@
           <div class="big" id="goldFpBalance">—</div>
         </div>
       </div>
+      <div class="gold-tabbar">
+        <button class="gold-tab on" id="goldTabBurn" data-gt="burn">🔥 Burn for Gold</button>
+        <button class="gold-tab" id="goldTabMarket" data-gt="market">💱 Trade for $FARTPRINT</button>
+      </div>
+      <div class="gold-pane" id="goldBurnPane">
       <p class="gold-intro">
         Gold is the premium currency. <b>1 GOLD = 10,000 $FARTPRINT burned on-chain.</b>
         Gold prices never go down — only up. Burning permanently removes those tokens
@@ -3031,19 +3054,19 @@
         <button class="gold-tier" data-burn="10000" data-gold="1">
           <div class="burn">10,000<span class="sub">$FARTPRINT</span></div>
           <div class="arrow">↓</div>
-          <div class="reward">🥇 1</div>
+          <div class="reward">🪙 1</div>
         </button>
         <button class="gold-tier featured" data-burn="50000" data-gold="6">
           <div class="badge">+20% BONUS</div>
           <div class="burn">50,000<span class="sub">$FARTPRINT</span></div>
           <div class="arrow">↓</div>
-          <div class="reward">🥇 6</div>
+          <div class="reward">🪙 6</div>
         </button>
         <button class="gold-tier" data-burn="250000" data-gold="35">
           <div class="badge gold">+40% BONUS</div>
           <div class="burn">250,000<span class="sub">$FARTPRINT</span></div>
           <div class="arrow">↓</div>
-          <div class="reward">🥇 35</div>
+          <div class="reward">🪙 35</div>
         </button>
       </div>
 
@@ -3052,6 +3075,8 @@
         anywhere. Your wallet signs every burn. $FARTPRINT never touches a centralised account.
       </div>
       <div class="gold-step" id="goldStep" style="display:none;"></div>
+      </div><!-- /goldBurnPane -->
+      <div class="gold-pane" id="goldMarketPane" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -3490,6 +3515,7 @@ function saveStateNow(){
       prestigeSkins:State.prestigeSkins || [],
       moonJobs:     State.moonJobs || {},
       hunger:       (typeof State.hunger === 'number' ? State.hunger : 100),
+      autoEat:      State.autoEat !== false,
       edibleSlot:   State.edibleSlot || null,
       profile:      State.profile || {},
       spidersKilled:State.spidersKilled || 0,
@@ -3498,6 +3524,7 @@ function saveStateNow(){
       tutStep:      State.tutStep || 0,
       tutDismissed: !!State.tutDismissed,
       guild:        State.guild || null,
+      goldListings: State.goldListings || [],
       credits:  State.credits,
       gold:     State.gold,
       paper:    State.paper,
@@ -7480,7 +7507,7 @@ function buildPoopHouse(){
   grp.add(lt);
   scene.add(grp);
 }
-buildPoopHouse();
+/* Poop House removed — buildPoopHouse(); */
 
 // ── $FARTPRINT stats billboard ──
 // A free-standing LED-style sign near spawn showing live price, market
@@ -8184,7 +8211,7 @@ function buildFootballStatue(){
   FootballStatue = grp;
 }
 let FootballStatue = null;
-buildFootballStatue();
+/* Fart Cup removed — buildFootballStatue(); */
 
 // =================================================================
 // ─── BOWLING ALLEY ──────────────────────────────────────────────
@@ -8842,6 +8869,7 @@ function updatePlotPrompt(){
   nearbyBowling   = !nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && Math.hypot(Player.pos.x - BOWLING_POS.x, Player.pos.z - BOWLING_POS.z) < BOWLING_RADIUS;
   nearbyBoardable = (!nearbyMarket && !nearbyBank && !nearbyLaunder && !nearbyRefinery && !nearbyLab && !nearbyPoop && !nearbyDock && !nearbyFootball && !nearbyBowling) ? findBoardableBoat() : null;
   nearbyPlot      = (nearbyMarket || nearbyBank || nearbyLaunder || nearbyRefinery || nearbyLab || nearbyPoop || nearbyDock || nearbyFootball || nearbyBowling || nearbyBoardable) ? null : findNearbyPlot();
+  nearbyPoop = false; nearbyFootball = false;   // Poop House + Fart Cup removed — no prompt/interaction
 
   // ── Boat-related prompts come first since they're the most actionable ──
   // Skip the "Sailing" prompt for sea-plane / yacht / rocket — those have
@@ -10639,7 +10667,7 @@ function openBank(){
   const c2s = document.getElementById('bankCashToSilverQty');  if(c2s) c2s.value = "";
   const g2s = document.getElementById('bankGoldToSilverQty');  if(g2s) g2s.value = "";
   document.getElementById('bankPaperPreview').textContent = "→ 0 💵";
-  document.getElementById('bankGoldPreview').textContent  = "→ 0.0000 🥇";
+  document.getElementById('bankGoldPreview').textContent  = "→ 0.0000 🪙";
   // Live silver↔gold rate (inflates +1 silver/day)
   const rate = silverPerGold().toLocaleString();
   const liveA = document.getElementById('bankRateLiveA'); if(liveA) liveA.textContent = rate;
@@ -10693,7 +10721,7 @@ document.getElementById('bankPaperQty').addEventListener('input', (e) => {
 document.getElementById('bankGoldQty').addEventListener('input', (e) => {
   const silver = Math.max(0, Math.floor(Number(e.target.value) || 0));
   const gold = silver / silverPerGold();
-  document.getElementById('bankGoldPreview').textContent = `→ ${gold.toFixed(4)} 🥇`;
+  document.getElementById('bankGoldPreview').textContent = `→ ${gold.toFixed(4)} 🪙`;
 });
 document.getElementById('bankPaperGo').addEventListener('click', () => {
   const n = Math.max(0, Math.floor(Number(document.getElementById('bankPaperQty').value) || 0));
@@ -10720,7 +10748,7 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
   State.gold = +((State.gold || 0) + gold).toFixed(4);
   // Missions hook (e.g. "Gold Rush": convert ALL silver in one transaction)
   try { window.dispatchEvent(new CustomEvent('fw:goldConvert', { detail: { spent: silver, before: _silverBefore } })); } catch(_){}
-  floater(`+${gold.toFixed(4)} 🥇 Gold · -${silver.toLocaleString()} 🥈`, "good");
+  floater(`+${gold.toFixed(4)} 🪙 Gold · -${silver.toLocaleString()} 🥈`, "good");
   showBuyToast(`Spent ${silver.toLocaleString()} Silver → ${gold.toFixed(4)} Gold`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
@@ -10753,12 +10781,12 @@ document.getElementById('bankGoldToSilverQty')?.addEventListener('input', (e) =>
 document.getElementById('bankGoldToSilverGo')?.addEventListener('click', () => {
   let g = Math.max(0, Number(document.getElementById('bankGoldToSilverQty').value) || 0);
   g = Math.round(g * 100) / 100;
-  if(g < GOLD_MIN_QTY){ floater(`Minimum ${GOLD_MIN_QTY} 🥇 Gold`, "bad"); return; }
-  if((State.gold || 0) < g){ floater(`Need ${g} 🥇 Gold`, "bad"); return; }
+  if(g < GOLD_MIN_QTY){ floater(`Minimum ${GOLD_MIN_QTY} 🪙 Gold`, "bad"); return; }
+  if((State.gold || 0) < g){ floater(`Need ${g} 🪙 Gold`, "bad"); return; }
   const silver = Math.round(g * silverPerGold());
   State.gold = +((State.gold || 0) - g).toFixed(2);
   State.credits += silver;
-  floater(`+${silver.toLocaleString()} 🥈 · -${g} 🥇`, "good");
+  floater(`+${silver.toLocaleString()} 🥈 · -${g} 🪙`, "good");
   showBuyToast(`Sold ${g} Gold → ${silver.toLocaleString()} Silver`);
   playPurchaseSound();
   saveState(); updateHUD(); openBank();
@@ -10938,19 +10966,19 @@ async function confirmGoldBurn(burnAmount, goldAmount){
     return;
   }
   if(!confirm(
-    `Burn ${burnAmount.toLocaleString()} $FARTPRINT forever to mint ${goldAmount} 🥇 GOLD?\n\n` +
+    `Burn ${burnAmount.toLocaleString()} $FARTPRINT forever to mint ${goldAmount} 🪙 GOLD?\n\n` +
     `This is permanent. Phantom will ask you to sign.`
   )) return;
 
   setGoldStep(`Building burn transaction for ${burnAmount.toLocaleString()} $FARTPRINT…`, true);
   try {
     const sig = await burnFartprint(burnAmount);
-    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). +${goldAmount} 🥇 GOLD added.`);
+    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). +${goldAmount} 🪙 GOLD added.`);
     State.gold += goldAmount;
     saveState();
     updateHUD();
     document.getElementById('goldBalanceLg').textContent = State.gold;
-    floater(`+${goldAmount} 🥇 GOLD`, "good");
+    floater(`+${goldAmount} 🪙 GOLD`, "good");
     playPurchaseSound();
     refreshFartprintBalance();
   } catch(e){

@@ -110,9 +110,9 @@
       reward: { xp: 260, label: '+260 XP' }, expires: null,
     },
     {
-      id: 'goldrush', type: 'event', icon: '🥇',
+      id: 'goldrush', type: 'event', icon: '🪙',
       name: 'Gold Rush',
-      desc: 'The vaults are open and the rate won’t wait. Prove your faith in gold: dump your ENTIRE silver stack into 🥇 in a single transaction.',
+      desc: 'The vaults are open and the rate won’t wait. Prove your faith in gold: dump your ENTIRE silver stack into 🪙 in a single transaction.',
       steps: [
         'Go to the Bank → Silver → Gold, type your FULL silver balance, and convert it all in ONE transaction',
       ],
@@ -179,7 +179,7 @@
       if(d.before > 0 && d.spent >= d.before){
         complete('goldrush');
       } else if(d.spent > 0){
-        window.floater?.('🥇 Gold Rush: that wasn’t ALL your silver — one full-balance transaction!', 'bad');
+        window.floater?.('🪙 Gold Rush: that wasn’t ALL your silver — one full-balance transaction!', 'bad');
       }
     });
     // Fallback detector — works even if the deployed bank build doesn't
@@ -653,7 +653,7 @@
       }
       goldCard.innerHTML =
         '<div class="hdr"><span class="pill">⏳ EVENT MISSION</span><span class="timer" id="fwGoldLeft">' + fmtLeft(ms.expires) + '</span></div>'
-        + '<h3>🥇 GOLD RUSH</h3>'
+        + '<h3>🪙 GOLD RUSH</h3>'
         + '<div class="what">Convert <b>ALL your silver</b> into Gold — in <b>ONE</b> transaction.</div>'
         + '<div class="how">Head to the <b>🏦 Bank</b> (west of the market) → <b>Silver → Gold</b> → type your <b>full silver balance</b> → convert. Partial swaps don’t count!</div>';
       goldCard.style.display = '';

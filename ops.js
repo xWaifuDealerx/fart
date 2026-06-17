@@ -48,6 +48,9 @@
 .ops-row.farm{border-color:rgba(124,224,120,.28)}
 .ops-row.invest{border-color:rgba(255,206,74,.3)}
 .ops-empty{font-size:11.5px;color:rgba(230,255,238,.5);text-align:center;padding:8px 4px;font-style:italic}
+/* shorter screens: cap the panel so it doesn't collide with chat/quests */
+@media (max-height:860px){.ops-body{max-height:22vh}}
+@media (max-height:760px){.ops-body{max-height:18vh}}
 `;
     document.head.appendChild(css);
 
@@ -81,8 +84,9 @@
     function collect(){
       const now = Date.now();
       const rows = [];
+      const brRows = [];   // brainrot base is appended LAST so it sits at the bottom
 
-      // ── Brainrot base ──
+      // ── Brainrot base (collected here, shown at the bottom) ──
       try {
         const BR = window.fwBrainrots;
         const me = BR && BR.meId ? BR.meId() : null;
@@ -91,11 +95,13 @@
           const occ = base.toilets.filter(Boolean).length;
           const ready = Math.floor(base.pending || 0);
           const left = (base.until || 0) - now;
-          rows.push({ cls: 'brainrot', ic: '🚽', nm: 'Brainrot Base', tag: occ + '/6',
+          const terr = (typeof window.fwGuildTerritoryBonus === 'function') ? window.fwGuildTerritoryBonus() : 0;
+          brRows.push({ cls: 'brainrot', ic: '🚽', nm: 'Brainrot Base', tag: occ + '/6',
             meta: [
               (ready > 0 ? '<span class="rdy">' + full(ready) + ' 🥈 ready</span>' : '<b>0 🥈</b> ready'),
               'rent <b>' + fmtMs(left) + '</b> left',
-            ] });
+              (terr > 0 ? '⚑ guild <b>+' + Math.round(terr * 100) + '%</b>' : ''),
+            ].filter(Boolean) });
         }
       } catch(_){}
 
@@ -163,7 +169,8 @@
       invRow(window.fwChurchInfo, '⛪', 'Fartology Church', 'INVEST', 'invest');
       invRow(window.fwMooKrathaInfo, '🥩', 'Moo Kratha Shop', 'INVEST', 'invest');
 
-      return rows;
+      // brainrot base goes at the very bottom
+      return rows.concat(brRows);
     }
 
     function render(){

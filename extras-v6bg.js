@@ -63,10 +63,10 @@
           const gold = +(silver / r).toFixed(4);
           State.credits = +(asNum(State.credits) - silver).toFixed(2);
           State.gold    = +((asNum(State.gold)) + gold).toFixed(4);
-          window.floater?.('+' + gold.toFixed(4) + ' 🥇 · -' + silver.toLocaleString() + ' 🥈', 'good');
+          window.floater?.('+' + gold.toFixed(4) + ' 🪙 · -' + silver.toLocaleString() + ' 🥈', 'good');
           window.playPurchaseSound?.();
           inp.value = '';
-          const prev = document.getElementById('bankGoldPreview'); if(prev) prev.textContent = '→ 0.0000 🥇';
+          const prev = document.getElementById('bankGoldPreview'); if(prev) prev.textContent = '→ 0.0000 🪙';
           refreshHud();
         } catch(err){
           console.error('[v6bg] silver→gold', err);
@@ -102,11 +102,11 @@
           if(!inp) return;
           const gold = +asNum(inp.value).toFixed(4);
           if(gold <= 0){ window.floater?.('Enter a Gold amount', 'bad'); return; }
-          if(asNum(State.gold) < gold){ window.floater?.('Need ' + gold + ' 🥇', 'bad'); return; }
+          if(asNum(State.gold) < gold){ window.floater?.('Need ' + gold + ' 🪙', 'bad'); return; }
           const silver = Math.round(gold * silverPerGold());
           State.gold    = +(asNum(State.gold) - gold).toFixed(4);
           State.credits = asNum(State.credits) + silver;
-          window.floater?.('+' + silver.toLocaleString() + ' 🥈 · -' + gold + ' 🥇', 'good');
+          window.floater?.('+' + silver.toLocaleString() + ' 🥈 · -' + gold + ' 🪙', 'good');
           window.playPurchaseSound?.();
           inp.value = '';
           const prev = document.getElementById('bankGoldToSilverPreview'); if(prev) prev.textContent = '→ 0 🥈';

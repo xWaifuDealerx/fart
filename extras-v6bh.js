@@ -177,10 +177,10 @@
         const gold = +(silver / rate).toFixed(6);
         State.credits = +((Number(State.credits) || 0) - silver).toFixed(2);
         State.gold    = +(((Number(State.gold) || 0) + gold).toFixed(6));
-        window.floater?.('+' + gold.toFixed(6) + ' 🥇 · -' + silver.toLocaleString() + ' 🥈', 'good');
+        window.floater?.('+' + gold.toFixed(6) + ' 🪙 · -' + silver.toLocaleString() + ' 🥈', 'good');
         window.playPurchaseSound?.();
         inp.value = '';
-        const prev = document.getElementById('bankGoldPreview'); if(prev) prev.textContent = '→ 0.000000 🥇';
+        const prev = document.getElementById('bankGoldPreview'); if(prev) prev.textContent = '→ 0.000000 🪙';
         try { window.updateHUD?.(); window.saveState?.(); } catch(_){}
         const s = document.getElementById('bankSilver'); if(s) s.textContent = Math.floor(State.credits).toLocaleString();
         const g = document.getElementById('bankGold');   if(g) g.textContent = Number(State.gold).toFixed(6);

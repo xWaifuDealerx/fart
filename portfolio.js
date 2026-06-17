@@ -97,7 +97,7 @@
     lines.push(currencyRow("🥈", "Silver",     fmtQty(silver), "in-game earnings"));
     lines.push(currencyRow("💵", "Cash",       fmtQty(cash),   "from Bank / Laundry"));
     lines.push(currencyRow("🪙", "Fake Cash",  fmtQty(fake),   "printed (illegal!)", "fake"));
-    lines.push(currencyRow("🥇", "Gold",       gold.toFixed(4), "scarce — never depreciates"));
+    lines.push(currencyRow("🪙", "Gold",       gold.toFixed(4), "scarce — never depreciates"));
     lines.push('</div>');
 
     // ── On-chain crypto ──

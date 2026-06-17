@@ -445,6 +445,11 @@
           <button data-v="on">🎮 Enabled<small>Sticks move &amp; look · A fart · X interact · RT shoot</small></button>
           <button data-v="off">🚫 Disabled<small>Keyboard + mouse only</small></button>
         </div>
+        <div class="lbl">AUTO EAT</div>
+        <div class="fw-set-seg" id="fwSetAutoEat">
+          <button data-v="on">🍖 On<small>Auto-consume food at 0% hunger to stay alive</small></button>
+          <button data-v="off">🚫 Off<small>Manage your hunger yourself</small></button>
+        </div>
       </div>
     </div>`;
     document.body.appendChild(bg);
@@ -466,7 +471,16 @@
       bg.querySelector('#fwSetGlowVal').textContent = (S.glow ?? 100) + '%';
       bg.querySelectorAll('#fwSetPad button').forEach(b =>
         b.classList.toggle('on', (b.dataset.v === 'on') === !!S.gamepad));
+      const ae = !(window.State && window.State.autoEat === false);   // default on
+      bg.querySelectorAll('#fwSetAutoEat button').forEach(b =>
+        b.classList.toggle('on', (b.dataset.v === 'on') === ae));
     }
+    bg.querySelector('#fwSetAutoEat').addEventListener('click', (e) => {
+      const v = e.target.closest('button')?.dataset.v; if(!v) return;
+      if(window.State){ window.State.autoEat = (v === 'on'); try { window.saveState && window.saveState(); } catch(_){} }
+      render();
+      window.floater?.(v === 'on' ? '🍖 Auto Eat ON — auto-consumes food at 0% hunger' : '🚫 Auto Eat OFF', 'good');
+    });
     bg.querySelector('#fwSetScheme').addEventListener('click', (e) => {
       const v = e.target.closest('button')?.dataset.v;
       if(!v) return;

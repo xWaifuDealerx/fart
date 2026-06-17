@@ -35,6 +35,7 @@
   function init() {
     const State = window.State;
     if (typeof State.hunger !== 'number') State.hunger = 100;
+    if (typeof State.autoEat !== 'boolean') State.autoEat = true;   // Auto Eat ON by default
 
     const css = document.createElement('style');
     css.textContent = `
@@ -123,23 +124,44 @@
         recAcc = 0;
         decAcc++; if (decAcc >= DECAY_S) { decAcc = 0; State.hunger = Math.max(0, State.hunger - 1); }
         if (State.hunger <= 0) {
-          if (!warned) { warned = true; try { window.floater && window.floater('\u{1F34F} Starving! Your health is dropping — eat something or rest at a hotel/apartment', 'bad'); } catch (_) {} }
-          // Health falls FAST while starving. The only way to stop it is to
-          // eat (hunger > 0) or rest (sleeping → this branch isn't reached).
-          if (Date.now() >= (State.invulnUntil || 0) && typeof State.hp === 'number') {
-            State.hp = Math.max(0, State.hp - STARVE_DMG);
-            const fl = document.getElementById('flash');
-            if (fl) { fl.classList.add('bad'); setTimeout(() => { try { fl.classList.remove('bad'); } catch (_) {} }, 110); }
-            try { window.saveState && window.saveState(); } catch (_) {}
-            // Out of health → trigger the normal death/respawn (heals + hospital).
-            if (State.hp <= 0 && typeof window.damagePlayer === 'function') {
-              window.damagePlayer(1, 'Starved to death');
+          // Auto Eat: if enabled, automatically consume an edible to stay alive
+          // instead of taking starvation damage.
+          if (autoEat()) {
+            warned = false;
+          } else {
+            if (!warned) { warned = true; try { window.floater && window.floater('\u{1F34F} Starving! Your health is dropping — eat something or rest at a hotel/apartment', 'bad'); } catch (_) {} }
+            // Health falls FAST while starving. The only way to stop it is to
+            // eat (hunger > 0) or rest (sleeping → this branch isn't reached).
+            if (Date.now() >= (State.invulnUntil || 0) && typeof State.hp === 'number') {
+              State.hp = Math.max(0, State.hp - STARVE_DMG);
+              const fl = document.getElementById('flash');
+              if (fl) { fl.classList.add('bad'); setTimeout(() => { try { fl.classList.remove('bad'); } catch (_) {} }, 110); }
+              try { window.saveState && window.saveState(); } catch (_) {}
+              // Out of health → trigger the normal death/respawn (heals + hospital).
+              if (State.hp <= 0 && typeof window.damagePlayer === 'function') {
+                window.damagePlayer(1, 'Starved to death');
+              }
             }
           }
         } else { warned = false; }
       }
       paint();
     }, 1000);
+
+    // ── Auto Eat: when starving, automatically consume an edible to survive.
+    //    Prefers the Edible slot, then any edible in the bag. ──
+    function autoEat() {
+      if (State.autoEat === false) return false;
+      const E = State.edibleSlot;
+      if (E && ENERGY[E] && typeof window.fwEatEnergy === 'function') {
+        if (window.fwEatEnergy(E)) { State.edibleSlot = null; try { window.saveState && window.saveState(); } catch (_) {} return true; }
+      }
+      const inv = State.inventory || {};
+      for (const id in ENERGY) {
+        if ((inv[id] || 0) > 0) { eat(id); return true; }
+      }
+      return false;
+    }
 
     // ── eat: RIGHT-CLICK a consumable in the inventory ──
     function eat(id) {

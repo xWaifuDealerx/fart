@@ -768,9 +768,11 @@
           continue;
         }
         const yps = occupiedYps(b);
-        // Poop Orb bonus + Prestige bonus (+10%/prestige) multiply silver earnings.
+        // Poop Orb bonus + Prestige bonus (+10%/prestige) + Guild territory
+        // bonus (+5%/Post your guild holds) multiply silver earnings.
         const presMult = (b.owner === meId() && window.fwPrestige) ? window.fwPrestige.silverMult() : 1;
-        if(yps > 0){ b.pending += yps * bonusMult() * presMult * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
+        const terrMult = (b.owner === meId() && typeof window.fwGuildTerritoryBonus === 'function') ? (1 + window.fwGuildTerritoryBonus()) : 1;
+        if(yps > 0){ b.pending += yps * bonusMult() * presMult * terrMult * dt; if(b.owner === meId()) { b.lastTick = Date.now(); } }
       }
       // keep the floating base signs facing the player (yaw billboard)
       if(window.camera){
