@@ -225,8 +225,8 @@
         // sand + grass
         w.beginPath(); w.arc(cx, cy, rr, 0, Math.PI * 2); w.fillStyle = '#cdb289'; w.fill();
         w.beginPath(); w.arc(cx, cy, rr * 0.86, 0, Math.PI * 2); w.fillStyle = '#2f6f3c'; w.fill();
-        // red PVP-zone ring at the expanded sea boundary (~ r + 30)
-        w.beginPath(); w.arc(cx, cy, (C.r + 30) * scale, 0, Math.PI * 2);
+        // red PVP-zone ring at the expanded sea boundary (~ r + 53)
+        w.beginPath(); w.arc(cx, cy, (C.r + 53) * scale, 0, Math.PI * 2);
         w.lineWidth = Math.max(1.5, scale * 0.7); w.strokeStyle = 'rgba(255,59,59,.8)';
         w.setLineDash([scale * 3, scale * 2]); w.stroke(); w.setLineDash([]);
         // guild-post dot

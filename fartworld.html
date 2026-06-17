@@ -38,7 +38,7 @@
 <script src="seaplane.js?v=9" defer></script>
 <script src="roki.js?v=8" defer></script>
 <!-- Fart Cup salesman removed <script src="alexandre.js?v=8" defer></script> -->
-<script src="minimap.js?v=12" defer></script>
+<script src="minimap.js?v=13" defer></script>
 <script src="compass.js?v=11" defer></script>
 <script src="hunger.js?v=12" defer></script>
 <!-- weed-timer.js (CROPS GROWING popup) removed — crops now show in the Ongoing Operations panel -->
@@ -50,7 +50,7 @@
 <script src="equip.js?v=8" defer></script>
 <script src="bank-fix.js?v=8" defer></script>
 <script src="house-walls.js?v=8" defer></script>
-<script src="rocket.js?v=10" defer></script>
+<script src="rocket.js?v=11" defer></script>
 <script src="moon.js?v=14" defer></script>
 <script src="moondc.js?v=5" defer></script>
 <script src="social.js?v=10" defer></script>
@@ -71,7 +71,7 @@
 <script src="datacenter.js?v=10" defer></script>
 <script src="bakery.js?v=3" defer></script>
 <script src="storage.js?v=8" defer></script>
-<script src="casino.js?v=10" defer></script>
+<script src="casino.js?v=11" defer></script>
 <!-- Visual & performance upgrade pack: rest screen, popup restyle,
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=26" defer></script>
+<script src="gunsmith.js?v=28" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -99,11 +99,11 @@
 <script src="extras-v6be.js?v=8" defer></script>
 <script src="extras-v6bg.js?v=9" defer></script>
 <script src="extras-v6bh.js?v=10" defer></script>
-<script src="extras-v6bi.js?v=10" defer></script>
+<script src="extras-v6bi.js?v=11" defer></script>
 <!-- Player profile window + lifetime stats + motto -->
 <script src="profile.js?v=2" defer></script>
 <!-- Outer PVP islands (free-for-all zones) + guild posts -->
-<script src="pvpzone.js?v=4" defer></script>
+<script src="pvpzone.js?v=5" defer></script>
 <!-- 🥩 Moo Kratha Shop (invest + sell pork for cash) -->
 <script src="mookratha.js?v=4" defer></script>
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
@@ -111,7 +111,7 @@
 <!-- 🛡 Guild system (client foundation) -->
 <script src="guild.js?v=7" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
-<script src="goldmarket.js?v=2" defer></script>
+<script src="goldmarket.js?v=3" defer></script>
 <script src="loading.js?v=6bq"></script>
 
 <!-- Three.js r168 via importmap (single-file game, no build step) -->
@@ -3124,6 +3124,9 @@
           Every coin shares the bloodline — the ticker must start with <b>FART</b>,
           everything after is yours.
         </p>
+        <p class="lab-intro" style="border:1px solid rgba(255,206,74,0.4);background:rgba(255,206,74,0.08);border-radius:10px;padding:9px 12px;color:#ffe39a;">
+          ⚠ This service <b>mints a real token on the Solana blockchain</b> and needs <b>SOL</b> in your wallet for the transaction fee. Phantom will ask you to sign.
+        </p>
 
         <div class="lab-form">
           <div class="lab-field">
@@ -3359,13 +3362,17 @@ const FWModels = (() => {
   // deployed site) caches models by URL — so when you replace a .glb with a
   // new upload under the SAME filename, the OLD cached model keeps loading.
   // Bump this number whenever you re-upload a model and the old one still shows.
-  const MVER = '?v=3';
+  const MVER = '?v=4';
   const CFG = {
     deserteagle: { url: 'deserteagle.glb', fit: 0.55, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
     pickaxe:     { url: 'pickaxe.glb',     fit: 0.85, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
     seaplane:    { url: 'seaplane.glb',    fit: 6.0,  rotYdeg: -90, rotXdeg: 0, anchor: 'bottom' },
     yacht:       { url: 'yacht.glb',       fit: 9.0,  rotYdeg: 90,  rotXdeg: 0, anchor: 'bottom' },
     treeboat:    { url: 'treeboat.glb',    fit: 3.2,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+    // Buildings + weapons added by the artist (assets/models/).
+    penthouse:   { url: 'penthouse.glb',   fit: 16.0, rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
+    ak47:        { url: 'ak47.glb',        fit: 0.72, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
+    tac50:       { url: 'tac50.glb',       fit: 0.95, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
   };
   // Some files committed from Windows show up with their 8.3 short name on
   // GitHub (e.g. deserteagle.glb -> DESERT~1.GLB). Try the long name first,
@@ -4181,6 +4188,9 @@ const PLOT_LOCATIONS = [
   // Last plot used to be at [-24, -4] but it overlapped the bank at
   // (-22, -8) — the FOR SALE sign was clipping the columns. Relocated
   // to the NW corner where it has plenty of breathing room.
+  // +6 plots in the open grass east of spawn (clear of bases/buildings).
+  [ 44,  6], [ 51,  6], [ 58,  6],
+  [ 44, 16], [ 51, 16], [ 58, 16],
 ];
 // Returns a 0..1 multiplier to apply to the noise height — 0 means
 // "totally flat (y=0)", 1 means "untouched rolling hills". Anywhere
@@ -8432,11 +8442,7 @@ function buildBank(){
   ped.position.set(0, 4.0, 0);
   ped.castShadow = true;
   grp.add(ped);
-  const pedTop = new THREE.Mesh(new THREE.ConeGeometry(3.6, 1.4, 3), trimMat);
-  pedTop.position.set(0, 4.95, 0);
-  pedTop.rotation.y = Math.PI / 2;
-  pedTop.castShadow = true;
-  grp.add(pedTop);
+  // (removed the dark triangular cap that sat on the roof — looked out of place)
   // Back wall
   const back = new THREE.Mesh(new THREE.BoxGeometry(6.8, 3.6, 0.3), colMat);
   back.position.set(0, 2.2, -2.3);

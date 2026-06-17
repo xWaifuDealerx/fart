@@ -33,7 +33,7 @@
 
     // PVP zone reaches well out into the sea around each island, so combat
     // is on the moment you approach by boat — not only once you're on land.
-    const ZONE_EXTRA = 30;
+    const ZONE_EXTRA = 53;   // sea reach of the PVP zone (≈30% larger than before)
     function reachOf(C) { return C.r + ZONE_EXTRA; }
     function inIsland(C, x, z) { return Math.hypot(x - C.x, z - C.z) <= reachOf(C); }
     function inAnyZone(x, z) { for (const C of ISLANDS) if (inIsland(C, x, z)) return C; return null; }
@@ -166,6 +166,34 @@
 
     for (const C of ISLANDS) buildIsland(C);
     window.fwGuildPosts = posts;
+
+    // ── 4 mountains in the sea between the islands (the diagonals) ──
+    (function buildMountains() {
+      const rockMat = new THREE.MeshStandardMaterial({ color: 0x6b6f78, roughness: 0.96, flatShading: true });
+      const snowMat = new THREE.MeshStandardMaterial({ color: 0xeaf2ff, roughness: 0.7, flatShading: true });
+      // [x, z, base radius, height, segments] — varied sizes + shapes
+      const MTS = [
+        [ 230,  230, 34, 70, 7 ],   // NE — tall sharp
+        [ 230, -230, 46, 48, 6 ],   // SE — broad squat
+        [-230, -230, 28, 58, 5 ],   // SW — jagged pyramid
+        [-230,  230, 40, 82, 8 ],   // NW — biggest
+      ];
+      for (const [x, z, r, h, seg] of MTS) {
+        const g = new THREE.Group();
+        const peak = new THREE.Mesh(new THREE.ConeGeometry(r, h, seg), rockMat);
+        peak.position.y = h / 2 - 3;            // base sunk a little under the sea
+        peak.castShadow = true; peak.receiveShadow = true; g.add(peak);
+        // a smaller offset secondary peak for a less perfect silhouette
+        const sub = new THREE.Mesh(new THREE.ConeGeometry(r * 0.55, h * 0.6, seg), rockMat);
+        sub.position.set(r * 0.5, h * 0.3 - 3, r * 0.3); g.add(sub);
+        // snow cap
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.42, h * 0.28, seg), snowMat);
+        cap.position.y = h - 3 - (h * 0.14); g.add(cap);
+        g.position.set(x, 0, z);
+        g.rotation.y = Math.random() * Math.PI;
+        scene.add(g);
+      }
+    })();
 
     // ── [PVP ZONE] warning above the compass ──
     const css = document.createElement('style');

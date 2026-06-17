@@ -243,6 +243,22 @@
       bg.classList.add('show');
     }
     function close(){ bg.classList.remove('show'); }
+    // sad descending buzzer when you lose a bet
+    function loseSound(){
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext; if(!Ctx) return;
+        const ctx = loseSound._c || (loseSound._c = new Ctx());
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(320, ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(90, ctx.currentTime + 0.38);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.42);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.44);
+      } catch(_){}
+    }
 
     function pick(){ return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)]; }
 
@@ -291,6 +307,7 @@
         window.playPurchaseSound?.();
       } else {
         setResult('No match — lost ' + bet + ' 💵. Spin again!', 'lose');
+        loseSound();
       }
       endRound();
     }
@@ -340,6 +357,7 @@
           window.playPurchaseSound?.();
         } else {
           setResult(em + ' — wrong call. Lost ' + bet + ' 💵', 'lose');
+          loseSound();
         }
         endRound();
       }, 1450);
@@ -434,6 +452,7 @@
           window.playPurchaseSound?.();
         } else {
           setResult(em + ' ' + n + ' — house takes ' + bet + ' 💵', 'lose');
+          loseSound();
         }
         endRound();
       }

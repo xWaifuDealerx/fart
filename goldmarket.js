@@ -156,6 +156,8 @@
     }
 
     function buyListing(id) {
+      // Guests can't buy gold — buying requires a Phantom wallet to pay $FARTPRINT.
+      if (!State.wallet) { window.floater?.('Connect Phantom to buy Gold — guests can’t purchase', 'bad'); return; }
       const l = DEMO.find(x => x.id === id);
       if (!l) return;
       const total = l.gold * l.pricePer;

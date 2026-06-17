@@ -76,14 +76,14 @@
     // must be reloaded (R) from your reserve ammo. Switch with 1/2/3.
     // ─────────────────────────────────────────────────────────────
     if(!ITEMS.ak47){ ITEMS.ak47 = { id:'ak47', name:'AK-47', icon:'\u{1F52B}', color:'#6a5a3a', type:'weapon', isNFT:false, marketPrice:2000, suggestedPrice:1800 }; }
-    if(!ITEMS.m40){ ITEMS.m40 = { id:'m40', name:'M40 Sniper', icon:'\u{1F3AF}', color:'#3a4a3a', type:'weapon', isNFT:false, marketPrice:3500, suggestedPrice:3200 }; }
+    if(!ITEMS.m40){ ITEMS.m40 = { id:'m40', name:'TAC-50 Sniper', icon:'\u{1F3AF}', color:'#3a4a3a', type:'weapon', isNFT:false, marketPrice:3500, suggestedPrice:3200 }; }
     if(!ITEMS.ammo_ak){ ITEMS.ammo_ak = { id:'ammo_ak', name:'7.62 Ammo (30)', icon:'\u{1F4A5}', color:'#9a7a4a', type:'ammo', isNFT:false, marketPrice:90, suggestedPrice:80, stackBundle:30 }; }
-    if(!ITEMS.ammo_m40){ ITEMS.ammo_m40 = { id:'ammo_m40', name:'.308 Ammo (10)', icon:'\u{1F4A5}', color:'#7a8a6a', type:'ammo', isNFT:false, marketPrice:150, suggestedPrice:130, stackBundle:10 }; }
+    if(!ITEMS.ammo_m40){ ITEMS.ammo_m40 = { id:'ammo_m40', name:'.50 BMG Ammo (10)', icon:'\u{1F4A5}', color:'#7a8a6a', type:'ammo', isNFT:false, marketPrice:150, suggestedPrice:130, stackBundle:10 }; }
 
     const WEAPONS = {
       deagle: { id:'deagle', name:'Desert Eagle .50AE', ammoId:'ammo_deagle', mag:7,  price:500,  ammoPrice:50,  ammoQty:12, icon:'\u{1F52B}', scope:false, auto:false, rof:0,   recoil:0.012, desc:'Hand cannon · one-shot kill' },
       ak47:   { id:'ak47',   name:'AK-47',              ammoId:'ammo_ak',     mag:30, price:2000, ammoPrice:90,  ammoQty:30, icon:'\u{1F52B}', scope:false, auto:true,  rof:95,  recoil:0.017, desc:'Assault rifle · full-auto · hold to spray' },
-      m40:    { id:'m40',    name:'M40 Sniper',         ammoId:'ammo_m40',    mag:5,  price:3500, ammoPrice:150, ammoQty:10, icon:'\u{1F3AF}', scope:true,  auto:false, rof:0,   recoil:0.034, desc:'Sniper · scope when you aim (FPS)' },
+      m40:    { id:'m40',    name:'TAC-50 Sniper',      ammoId:'ammo_m40',    mag:5,  price:3500, ammoPrice:150, ammoQty:10, icon:'\u{1F3AF}', scope:true,  auto:false, rof:0,   recoil:0.034, desc:'Sniper · scope when you aim (FPS)' },
     };
     const WORDER = ['deagle', 'ak47', 'm40'];
     const MAGKEY = 'fw.weap.v1';
@@ -678,6 +678,13 @@
       const mag = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.22, 0.1), metal); mag.position.set(0, -0.12, 0.16); mag.rotation.x = 0.4; g.add(mag);
       const stock = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.38), wood); stock.position.set(0, 0.01, -0.22); g.add(stock);
       const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.07), metal); grip.position.set(0, -0.1, 0.02); grip.rotation.x = 0.3; g.add(grip);
+      // Swap in the artist AK-47 GLB once it loads (procedural stays as fallback).
+      if(window.FWModels){
+        window.FWModels.get('ak47').then(model => {
+          while(g.children.length) g.remove(g.children[0]);
+          g.add(model);
+        }).catch(() => {});
+      }
       return g;
     }
     function buildM40Held(){
@@ -691,6 +698,13 @@
       const lens = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), glass); lens.rotation.x = Math.PI / 2; lens.position.set(0, 0.15, 0.29); g.add(lens);
       for(const z of [0.04, 0.24]){ const mnt = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.08, 0.02), metal); mnt.position.set(0, 0.1, z); g.add(mnt); }
       const grip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.15, 0.07), wood); grip.position.set(0, -0.09, 0.0); grip.rotation.x = 0.3; g.add(grip);
+      // Swap in the artist TAC-50 GLB once it loads (procedural stays as fallback).
+      if(window.FWModels){
+        window.FWModels.get('tac50').then(model => {
+          while(g.children.length) g.remove(g.children[0]);
+          g.add(model);
+        }).catch(() => {});
+      }
       return g;
     }
     function buildDeagleHeld(){
@@ -957,6 +971,13 @@
       return false;
     }
     window._isAimingAtNpc = isAimingAtNpc; // expose so fire() can check
+    // True when the cursor is over a HUD button (right-side stack, minimap,
+    // etc.) — we hide the aim crosshair there so it doesn't sit on the UI.
+    const UI_SEL = '[id$="Toggle"], .inv-toggle, .lb-toggle-btn, .fw-set-btn, .fw-ref-btn, #fwRankBtn, #fwRankBtn *, #fwGuildBtn, .mm-root, .mm-root *';
+    function overUiButton(){
+      try { const el = document.elementFromPoint(mouseX, mouseY); return !!(el && el.closest && el.closest(UI_SEL)); }
+      catch(_){ return false; }
+    }
     function crosshairTick(){
       // Hide the gun crosshair while a deathmatch owns the screen (the
       // DM HUD has its own) and while the arena waiting panel is open.
@@ -967,7 +988,7 @@
       const inVehicle = !!(window.Player && window.Player.boat);   // seaplane/boat/yacht: no aim
       const invOpen = document.getElementById('invBg')?.classList.contains('show');
       if(owned(ACTIVE) && !dmBusy && !dmPanel && !window.fwSleeping &&
-         !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc() && !window.fwScoped?.()){
+         !inVehicle && !invOpen && !window.fwGunHolstered && !isAimingAtNpc() && !window.fwScoped?.() && !overUiButton()){
         crosshair.style.display = 'block';
         crosshair.style.transform = 'translate(' + (mouseX - 17) + 'px,' + (mouseY - 17) + 'px)';
       } else {

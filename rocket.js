@@ -124,6 +124,14 @@
     flame.visible = false;
     rocketGrp.add(flame);
     scene.add(rocketGrp);
+    // The rocketship only appears once it's been UNLOCKED (level gate). Before
+    // that the pad sits empty — no ship is shown.
+    rocketGrp.visible = false;
+    setInterval(() => {
+      const minLv = window.FW_ROCKET_MIN_LEVEL || 30;
+      const unlocked = (window.State && window.State.level || 1) >= minLv;
+      rocketGrp.visible = unlocked || !!(window.Player && window.Player.boat && window.Player.boat.isRocket);
+    }, 700);
 
     // ── Controls overlay ──
     const css = document.createElement('style');

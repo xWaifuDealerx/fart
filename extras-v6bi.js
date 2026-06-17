@@ -114,19 +114,21 @@
       grp.add(base);
       window.WalkableSurfaces?.push(base);
 
-      // Two-story body
+      // Two-story body — wrapped in `body` so the luxury apartment can swap
+      // the whole procedural building for the artist penthouse GLB.
+      const body = new THREE.Group(); grp.add(body);
       const story1 = new THREE.Mesh(new THREE.BoxGeometry(7.4, 3.0, 6.4), wallMat);
-      story1.position.y = 1.8; story1.castShadow = true; grp.add(story1);
+      story1.position.y = 1.8; story1.castShadow = true; body.add(story1);
       const story2 = new THREE.Mesh(new THREE.BoxGeometry(7.0, 2.8, 6.0), wallMat);
-      story2.position.y = 4.6; story2.castShadow = true; grp.add(story2);
+      story2.position.y = 4.6; story2.castShadow = true; body.add(story2);
       const roof = new THREE.Mesh(new THREE.BoxGeometry(7.6, 0.3, 6.4), roofMat);
-      roof.position.y = 6.15; grp.add(roof);
+      roof.position.y = 6.15; body.add(roof);
 
       // Windows
       for(const fy of [1.7, 4.5]){
         for(const fx of [-2.4, -0.8, 0.8, 2.4]){
           const w = new THREE.Mesh(new THREE.BoxGeometry(0.65, 0.75, 0.05), windMat);
-          w.position.set(fx, fy, 3.21); grp.add(w);
+          w.position.set(fx, fy, 3.21); body.add(w);
         }
       }
 
@@ -139,14 +141,14 @@
           );
           crack.position.set(-3 + Math.random()*6, 1.5 + Math.random()*3, 3.22);
           crack.rotation.z = (Math.random()-0.5) * 0.6;
-          grp.add(crack);
+          body.add(crack);
         }
       }
 
       // Door
       const door = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.3, 0.05),
         new THREE.MeshStandardMaterial({ color: apt.kind === 'shabby' ? 0x4a3a2a : 0x6a3a18, roughness: 0.7 }));
-      door.position.set(0, 1.35, 3.22); grp.add(door);
+      door.position.set(0, 1.35, 3.22); body.add(door);
 
       // Sign on front
       const cvs = document.createElement('canvas');
@@ -172,6 +174,11 @@
       lt.position.set(0, 5.5, 0); grp.add(lt);
 
       scene.add(grp);
+
+      // The most expensive (luxury) apartment uses the artist penthouse.glb.
+      if(apt.kind === 'luxury' && window.FWModels){
+        window.FWModels.get('penthouse').then(m => { grp.remove(body); grp.add(m); }).catch(() => {});
+      }
     }
     for(const a of APARTMENTS){ try { buildApartment(a); } catch(e){ console.error('[v6bi] build', a.id, e); } }
 
