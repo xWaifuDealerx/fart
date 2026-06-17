@@ -264,6 +264,11 @@
       { x:-13, z:71 }, { x:29, z:-81 }, { x:62, z:-44 },
       { x:41, z:64 },  { x:-78, z:2 }, { x:-59, z:-45 },
       { x:-29, z:-63 },{ x:1, z:15 },
+      // 3 bases on each PVP island (centres E 321,18 · W -321,18 · N 18,321 · S 18,-321)
+      { x:307, z:12 }, { x:335, z:12 }, { x:321, z:36 },   // East island
+      { x:-335, z:12 },{ x:-307, z:12 },{ x:-321, z:36 },  // West island
+      { x:4, z:315 },  { x:32, z:315 }, { x:18, z:339 },   // North island
+      { x:4, z:-327 }, { x:32, z:-327 },{ x:18, z:-303 },  // South island
     ];
     const RENT_MS = 60 * 60 * 1000;     // 1 hour
     const RENT_COST = 1000;             // silver

@@ -57,8 +57,8 @@
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=26" defer></script>
-<script src="printerbots.js?v=7" defer></script>
+<script src="brainrot.js?v=27" defer></script>
+<script src="printerbots.js?v=8" defer></script>
 <script src="dailyhub.js?v=8" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=2" defer></script>
@@ -4113,6 +4113,9 @@ function buildPrinter() {
 }
 
 const printer = buildPrinter();
+// Lift the rig so its feet rest on the ground (foot mesh bottoms out ~0.62
+// below the rig's origin, which is pinned to the ground surface).
+const FOOT_OFFSET = 0.62;
 printer.position.set(0, 0, 0);
 scene.add(printer);
 
@@ -5396,15 +5399,16 @@ function animatePrinter(dt){
     const swing = Math.sin(animTime * sp) * 0.65;
     if(ud.legL) { ud.legL.rotation.x =  swing;  ud.legR.rotation.x = -swing; }
     if(ud.armL) { ud.armL.rotation.x = -swing * 0.55; ud.armR.rotation.x =  swing * 0.55; }
-    // body bob
-    printer.position.y = Player.pos.y + Math.abs(Math.sin(animTime * sp)) * 0.08;
+    // body bob (FOOT_OFFSET lifts the rig so its feet rest ON the ground,
+    // not buried — the foot mesh bottoms out ~0.62 below the rig origin)
+    printer.position.y = Player.pos.y + FOOT_OFFSET + Math.abs(Math.sin(animTime * sp)) * 0.08;
     printer.scale.set(1, 1, 1);
     printer.rotation.z = 0;
   } else {
     // Idle: gentle breath bob + paper waving
     if(ud.legL) { ud.legL.rotation.x = 0; ud.legR.rotation.x = 0; }
     if(ud.armL) { ud.armL.rotation.x = Math.sin(animTime * 1.6) * 0.05; ud.armR.rotation.x = -Math.sin(animTime * 1.6) * 0.05; }
-    printer.position.y = Player.pos.y + Math.sin(animTime * 2) * 0.06;
+    printer.position.y = Player.pos.y + FOOT_OFFSET + Math.sin(animTime * 2) * 0.06;
     printer.scale.set(1, 1, 1);
     printer.rotation.z = 0;
   }

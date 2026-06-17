@@ -154,7 +154,9 @@
     function decide(bot) {
       // 1) no base yet → go rent a free one
       if (bot.baseIdx == null) {
-        const free = BASES.filter(b => !b.owner);
+        // Only rent MAIN-island bases — bots can't walk across the sea to the
+        // PVP-island bases (those are for players who sail/fly there).
+        const free = BASES.filter(b => !b.owner && Math.hypot(b.x, b.z) < 120);
         if (free.length) {
           const b = free[(Math.random() * free.length) | 0];
           return { kind: 'rent', idx: b.idx, x: b.x, z: b.z };
