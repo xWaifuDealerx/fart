@@ -53,13 +53,13 @@
 <script src="rocket.js?v=11" defer></script>
 <script src="moon.js?v=14" defer></script>
 <script src="moondc.js?v=5" defer></script>
-<script src="social.js?v=10" defer></script>
+<script src="social.js?v=11" defer></script>
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=25" defer></script>
 <script src="sfx.js?v=2" defer></script>
 <script src="brainrot.js?v=26" defer></script>
 <script src="printerbots.js?v=7" defer></script>
-<script src="dailyhub.js?v=7" defer></script>
+<script src="dailyhub.js?v=8" defer></script>
 <script src="animals.js?v=1" defer></script>
 <script src="church.js?v=2" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
@@ -91,7 +91,7 @@
 <!-- Poop House removed <script src="poop500.js" defer></script> -->
 <script src="tutorial.js?v=8" defer></script>
 <!-- Fart Cup removed <script src="fartcup.js?v=8" defer></script> -->
-<script src="gunsmith.js?v=28" defer></script>
+<script src="gunsmith.js?v=29" defer></script>
 <script src="extras-v6ay.js?v=8" defer></script>
 <script src="extras-v6ba.js?v=11" defer></script>
 <script src="extras-v6bb.js?v=8" defer></script>
@@ -103,7 +103,7 @@
 <!-- Player profile window + lifetime stats + motto -->
 <script src="profile.js?v=2" defer></script>
 <!-- Outer PVP islands (free-for-all zones) + guild posts -->
-<script src="pvpzone.js?v=5" defer></script>
+<script src="pvpzone.js?v=6" defer></script>
 <!-- 🥩 Moo Kratha Shop (invest + sell pork for cash) -->
 <script src="mookratha.js?v=4" defer></script>
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
@@ -3371,8 +3371,8 @@ const FWModels = (() => {
     treeboat:    { url: 'treeboat.glb',    fit: 3.2,  rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
     // Buildings + weapons added by the artist (assets/models/).
     penthouse:   { url: 'penthouse.glb',   fit: 16.0, rotYdeg: 0, rotXdeg: 0, anchor: 'bottom' },
-    ak47:        { url: 'ak47.glb',        fit: 0.72, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
-    tac50:       { url: 'tac50.glb',       fit: 0.95, rotYdeg: 0, rotXdeg: 0, anchor: 'center' },
+    ak47:        { url: 'ak47.glb',        fit: 0.72, rotYdeg: 180, rotXdeg: 0, anchor: 'center' },
+    tac50:       { url: 'tac50.glb',       fit: 0.95, rotYdeg: 180, rotXdeg: 0, anchor: 'center' },
   };
   // Some files committed from Windows show up with their 8.3 short name on
   // GitHub (e.g. deserteagle.glb -> DESERT~1.GLB). Try the long name first,

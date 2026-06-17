@@ -123,12 +123,10 @@
           '<div class="reward">Today\'s reward: <b>+' + silver + ' 🥈 Silver</b>' +
             (milestone ? '<br><b>+ a Trucker Cap 🧢</b> (7-day milestone!)' : '') + '</div>' +
           '<button class="go" id="fwDailyClaim">Claim</button>' +
-          '<button class="later" id="fwDailyLater">maybe later</button>' +
           '<div style="font-size:11px;color:rgba(230,255,238,.55);margin-top:10px;letter-spacing:.4px">Press <b style="color:#ffd64d">Enter</b> to claim &amp; continue</div>' +
         '</div>';
       pendingClaim = { streak: nextStreak, silver: silver, milestone: milestone };
       dBg.querySelector('#fwDailyClaim').addEventListener('click', () => claimDaily(nextStreak, silver, milestone));
-      dBg.querySelector('#fwDailyLater').addEventListener('click', () => { pendingClaim = null; dBg.classList.remove('show'); });
     }
     // Enter claims the daily crate & continues.
     window.addEventListener('keydown', (e) => {

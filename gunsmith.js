@@ -1072,7 +1072,12 @@
       } catch(_){
         cam.getWorldDirection(fwd);
       }
-      if(killedI < 0){
+      // The aim-assist cone only uses the HORIZONTAL aim direction, so firing
+      // up into the sky (or steeply down) could still "snap" onto a ground
+      // animal far below the crosshair. Suppress the assist on steep shots —
+      // a real raycast hit still counts, but no more sky-shot pork kills.
+      const upAim = fwd.y > 0.32 || fwd.y < -0.6;
+      if(killedI < 0 && !upAim){
         const fx = fwd.x, fz = fwd.z;
         const fLen = Math.hypot(fx, fz) || 1;
         const dx = fx / fLen, dz = fz / fLen;
@@ -1127,7 +1132,7 @@
             if(o) hi = H.findIndex(a => a.mesh === o);
           }
         } catch(_){}
-        if(hi < 0){
+        if(hi < 0 && !upAim){
           // aim-assist cone (same as spiders) so you don't need pixel-perfect aim
           const fLen = Math.hypot(fwd.x, fwd.z) || 1;
           const dx = fwd.x / fLen, dz = fwd.z / fLen;
@@ -1159,7 +1164,7 @@
               if(o) hit = tb.find(b => b.mesh === o);
             }
           } catch(_){}
-          if(!hit){
+          if(!hit && !upAim){
             // aim-assist cone (same as spiders) so you don't need pixel-perfect aim
             const fLen = Math.hypot(fwd.x, fwd.z) || 1;
             const dx = fwd.x / fLen, dz = fwd.z / fLen;

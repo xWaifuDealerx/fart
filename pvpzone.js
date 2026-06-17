@@ -186,9 +186,6 @@
         // a smaller offset secondary peak for a less perfect silhouette
         const sub = new THREE.Mesh(new THREE.ConeGeometry(r * 0.55, h * 0.6, seg), rockMat);
         sub.position.set(r * 0.5, h * 0.3 - 3, r * 0.3); g.add(sub);
-        // snow cap
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(r * 0.42, h * 0.28, seg), snowMat);
-        cap.position.y = h - 3 - (h * 0.14); g.add(cap);
         g.position.set(x, 0, z);
         g.rotation.y = Math.random() * Math.PI;
         scene.add(g);
