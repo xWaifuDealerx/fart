@@ -497,6 +497,7 @@
     }
 
     function spiderSpawn(){
+      if(!window.fwInGame) return;   // never spawn before the player has entered the world
       if(Spiders.length >= MAX_SPIDERS) return;
       if(!(State.inventory?.deagle > 0)) return;
       // Spawn at random distance 30-50m from player, near grass.
@@ -569,6 +570,13 @@
     function tick(){
       const now = performance.now();
       let dt = (now - lastT) / 1000; if(dt > 0.1) dt = 0.1; lastT = now;
+      // Not in the world yet (title / sign-in screen) — never let spiders exist
+      // or touch the player. Clear any that spawned from a saved Desert Eagle.
+      if(!window.fwInGame){
+        for(let i = Spiders.length - 1; i >= 0; i--){ try { scene.remove(Spiders[i].mesh); } catch(_){} }
+        Spiders.length = 0;
+        requestAnimationFrame(tick); return;
+      }
       for(let i = Spiders.length - 1; i >= 0; i--){
         const s = Spiders[i];
         if(s.dead) continue;
@@ -652,6 +660,7 @@
 
     // Periodic spawn — only once the player owns at least 1 Desert Eagle.
     setInterval(() => {
+      if(!window.fwInGame) return;   // no spiders until the player has signed in / entered
       if(!(State.inventory?.deagle > 0)) return;
       // Don't spawn while inside a vessel or modal — feels unfair.
       if(Player.boat || Player.airborne) return;
