@@ -545,6 +545,10 @@
     let _sunHadShadow = null;
     function applyQuality(){
       const perf = S.quality === 'perf';
+      // Tell the render loop to SKIP the bloom composer entirely in perf mode —
+      // the biggest single FPS win (it was still running the full post-pipeline
+      // at zero bloom strength before).
+      window.fwPerfMode = perf;
       applyGlow();   // bloom on/off + strength follows quality AND glow
       try {
         const sun = findSun();

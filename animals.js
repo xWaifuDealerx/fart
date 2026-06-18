@@ -47,9 +47,9 @@
     function buildRat(){
       const g = new THREE.Group();
       const fur = new THREE.MeshStandardMaterial({ color: 0x6b5d53, roughness: 0.95 });
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), fur);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 6), fur);
       body.scale.set(1, 0.8, 1.5); body.position.y = 0.2; body.castShadow = true; g.add(body);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 10), fur);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 6), fur);
       head.position.set(0, 0.22, 0.26); g.add(head);
       for(const s of [-1, 1]){
         const ear = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), fur);
@@ -75,11 +75,11 @@
       const g = new THREE.Group();
       const skin = new THREE.MeshStandardMaterial({ color: 0xeeaab0, roughness: 0.85 });
       const dark = new THREE.MeshStandardMaterial({ color: 0xd98e96, roughness: 0.85 });
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 12), skin);
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), skin);
       body.scale.set(1, 0.85, 1.35); body.position.y = 0.42; body.castShadow = true; g.add(body);
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 12), skin);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.24, 10, 8), skin);
       head.position.set(0, 0.46, 0.42); g.add(head);
-      const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 12), dark);
+      const snout = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 8), dark);
       snout.position.set(0, 0.42, 0.64); snout.rotation.x = Math.PI / 2; g.add(snout);
       for(const s of [-1, 1]){
         const n = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), new THREE.MeshBasicMaterial({ color: 0x6a3a3a }));

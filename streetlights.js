@@ -59,7 +59,7 @@
 
       // Concrete-ish base
       const base = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.36, 0.42, 0.36, 14),
+        new THREE.CylinderGeometry(0.36, 0.42, 0.36, 8),
         new THREE.MeshStandardMaterial({ color: 0x3a3a3a, roughness: 0.85 })
       );
       base.position.y = 0.18;
@@ -67,7 +67,7 @@
 
       // Pole
       const poleH = 4.6;
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.13, poleH, 10), poleMat);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.13, poleH, 6), poleMat);
       pole.position.y = 0.36 + poleH / 2;
       pole.castShadow = false;
       grp.add(pole);
@@ -79,7 +79,7 @@
 
       // Lamp head shroud
       const shroud = new THREE.Mesh(
-        new THREE.ConeGeometry(0.42, 0.36, 12, 1, true),
+        new THREE.ConeGeometry(0.42, 0.36, 8, 1, true),
         headMat
       );
       shroud.position.set(0.85, 0.36 + poleH - 0.18, 0);
@@ -90,7 +90,7 @@
       // glows. We instance the material per-lamp so they can flicker
       // independently if we want to later.
       const glass = new THREE.Mesh(
-        new THREE.SphereGeometry(0.30, 14, 12),
+        new THREE.SphereGeometry(0.30, 8, 6),
         glassMat.clone()
       );
       glass.position.set(0.85, 0.36 + poleH - 0.42, 0);

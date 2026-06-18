@@ -57,16 +57,16 @@
 <script src="mobile.js?v=8" defer></script>
 <script src="dropitem.js?v=27" defer></script>
 <script src="sfx.js?v=2" defer></script>
-<script src="brainrot.js?v=29" defer></script>
+<script src="brainrot.js?v=30" defer></script>
 <script src="printerbots.js?v=10" defer></script>
 <script src="dailyhub.js?v=8" defer></script>
-<script src="animals.js?v=1" defer></script>
+<script src="animals.js?v=2" defer></script>
 <script src="church.js?v=2" defer></script>
 <!-- Fart Slide temporarily disabled (portal hidden) — re-enable by uncommenting:
 <script src="slide.js?v=9" defer></script>
 -->
 <script src="establishments.js?v=9" defer></script>
-<script src="streetlights.js?v=8" defer></script>
+<script src="streetlights.js?v=9" defer></script>
 <script src="bike.js?v=9" defer></script>
 <script src="datacenter.js?v=10" defer></script>
 <script src="bakery.js?v=3" defer></script>
@@ -3349,6 +3349,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 
 // ─── GLB model loader (assets/models/) ──────────────────────────
 // Loads artist GLB models and normalises each (auto-scaled to a target size,
@@ -4108,6 +4109,66 @@ setTimeout(() => {
   } catch(_){}
 }, 5000);
 
+// ── Mesh simplification LOD (geometry decimation) ─────────────────
+// Builds THREE.LOD objects that swap the original geometry for SimplifyModifier-
+// decimated copies at distance — fewer triangles for far meshes. Re-meshing is
+// heavy + can't be tuned blindly, so it's opt-in via ?meshlod=1 (default off).
+//   fwMeshLOD.make(mesh, levels)  → a THREE.LOD wrapping `mesh` with decimated
+//                                   levels; levels = [{dist, ratio}], ratio 0–1.
+//   fwMeshLOD.autoApply(root, levels, minVerts) → replace every high-poly mesh
+//                                   under `root` with such a LOD.
+window.fwMeshLOD = (() => {
+  const simplifier = new SimplifyModifier();
+  const registry = [];   // THREE.LOD instances to update each frame
+  function make(mesh, levels){
+    const pos = mesh && mesh.geometry && mesh.geometry.attributes && mesh.geometry.attributes.position;
+    if(!pos) return null;
+    const lod = new THREE.LOD();
+    const baseGeo = mesh.geometry, vcount = pos.count;
+    for(const lv of levels){
+      let geo = baseGeo;
+      if(lv.ratio && lv.ratio < 1 && vcount > 24){
+        try { geo = simplifier.modify(baseGeo, Math.floor(vcount * (1 - lv.ratio))); }
+        catch(_){ geo = baseGeo; }
+      }
+      const m = new THREE.Mesh(geo, mesh.material);
+      m.castShadow = mesh.castShadow; m.receiveShadow = mesh.receiveShadow;
+      lod.addLevel(m, lv.dist || 0);
+    }
+    lod.position.copy(mesh.position); lod.quaternion.copy(mesh.quaternion); lod.scale.copy(mesh.scale);
+    registry.push(lod);
+    return lod;
+  }
+  function autoApply(root, levels, minVerts){
+    const targets = [];
+    try { root.traverse(o => {
+      if(o.isMesh && !o.userData._lodDone && o.geometry && o.geometry.attributes && o.geometry.attributes.position
+         && o.geometry.attributes.position.count >= (minVerts || 80)) targets.push(o);
+    }); } catch(_){}
+    let done = 0;
+    for(const mesh of targets){
+      const parent = mesh.parent; if(!parent) continue;
+      const lod = make(mesh, levels); if(!lod) continue;
+      lod.userData._lodDone = true;
+      parent.add(lod); parent.remove(mesh); done++;
+    }
+    return done;
+  }
+  function update(){ const cam = window.camera; if(!cam) return; for(const l of registry) l.update(cam); }
+  return { make, autoApply, update, count: () => registry.length };
+})();
+// Opt-in: ?meshlod=1 decimates the world's high-poly meshes after load.
+(() => {
+  const q = (new URLSearchParams(location.search).get('meshlod') || '').toLowerCase();
+  if(!(q === '1' || q === 'true' || q === 'yes' || q === 'on')) return;
+  setTimeout(() => {
+    try {
+      const n = window.fwMeshLOD.autoApply(scene, [{ dist: 0, ratio: 1 }, { dist: 55, ratio: 0.5 }, { dist: 130, ratio: 0.22 }], 80);
+      console.log('[meshlod] enabled via ?meshlod=1 — simplified', n, 'meshes into LODs');
+    } catch(e){ console.warn('[meshlod] failed', e); }
+  }, 5000);
+})();
+
 // Expose render internals for the settings module (controls.js):
 // brightness/quality toggles need renderer + bloom + sun access.
 window.renderer = renderer;
@@ -4188,20 +4249,20 @@ function buildPrinter() {
 
   // Eyes (whites)
   const eyeR = 0.20;
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(eyeR, 18, 18), matEyeW);
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(eyeR, 12, 8), matEyeW);
   eyeL.position.set(-0.42, 1.32, 0.66);
   root.add(eyeL);
-  const eyeRm = new THREE.Mesh(new THREE.SphereGeometry(eyeR, 18, 18), matEyeW);
+  const eyeRm = new THREE.Mesh(new THREE.SphereGeometry(eyeR, 12, 8), matEyeW);
   eyeRm.position.set(0.42, 1.32, 0.66);
   root.add(eyeRm);
   root.userData.eyeL = eyeL;
   root.userData.eyeR = eyeRm;
 
   // Pupils
-  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.10, 14, 14), matEyeB);
+  const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), matEyeB);
   pupilL.position.set(-0.42, 1.32, 0.85);
   root.add(pupilL);
-  const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.10, 14, 14), matEyeB);
+  const pupilR = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), matEyeB);
   pupilR.position.set(0.42, 1.32, 0.85);
   root.add(pupilR);
   root.userData.pupilL = pupilL;
@@ -4209,7 +4270,7 @@ function buildPrinter() {
 
   // Cute smile (torus arc)
   const smile = new THREE.Mesh(
-    new THREE.TorusGeometry(0.12, 0.025, 8, 18, Math.PI),
+    new THREE.TorusGeometry(0.12, 0.025, 5, 12, Math.PI),
     matDark
   );
   smile.position.set(0, 1.00, 0.68);
@@ -4220,11 +4281,11 @@ function buildPrinter() {
   function makeArm(side){
     const grp = new THREE.Group();
     grp.position.set(0.88 * side, 1.1, 0);
-    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.55, 12), matLimbS);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.55, 7), matLimbS);
     upper.position.y = -0.28;
     upper.castShadow = true;
     grp.add(upper);
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 14), matBody);
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 6), matBody);
     hand.position.y = -0.62;
     hand.castShadow = true;
     grp.add(hand);
@@ -4240,7 +4301,7 @@ function buildPrinter() {
   function makeLeg(side){
     const grp = new THREE.Group();
     grp.position.set(0.32 * side, 0.55, 0);
-    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.55, 12), matLimbS);
+    const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.55, 8), matLimbS);
     upper.position.y = -0.28;
     upper.castShadow = true;
     grp.add(upper);
@@ -4261,7 +4322,7 @@ function buildPrinter() {
   antenna.position.set(0.55, 1.7, 0);
   root.add(antenna);
   const orb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.06, 12, 12),
+    new THREE.SphereGeometry(0.06, 8, 6),
     new THREE.MeshStandardMaterial({ color: 0xff5a4d, emissive: 0xff5a4d, emissiveIntensity: 1.2 })
   );
   orb.position.set(0.55, 1.86, 0);
@@ -13336,7 +13397,8 @@ function loop(now){
   // PERF controller (adaptive resolution + shadow cadence). Guarded so a
   // fault here can never break the render loop.
   try { Perf.update(now, dt); } catch(_){}
-  try { window.fwLOD && window.fwLOD.update(dt); } catch(_){}   // distance-cull far detail
+  try { window.fwLOD && window.fwLOD.update(dt); } catch(_){}        // distance-cull far detail
+  try { window.fwMeshLOD && window.fwMeshLOD.update(); } catch(_){}  // swap decimated LOD levels
 
   // Performance Mode renders straight to screen (skips the bloom post-pass,
   // the single most expensive thing each frame). Normal mode uses the composer.

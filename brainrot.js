@@ -81,7 +81,7 @@
     // Soft additive halo — NO dynamic light (lights would recompile shaders).
     function halo(r, color){
       return new THREE.Mesh(
-        new THREE.SphereGeometry(r, 16, 12),
+        new THREE.SphereGeometry(r, 10, 8),
         new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.14,
           blending: THREE.AdditiveBlending, depthWrite: false })
       );
@@ -90,9 +90,9 @@
       const w = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.4 });
       const b = new THREE.MeshStandardMaterial({ color: 0x101014, roughness: 0.4 });
       for(const s of [-1, 1]){
-        const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 12), w);
+        const e = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 6), w);
         e.position.set(s * sx, y, z); grp.add(e);
-        const p = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), b);
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), b);
         p.position.set(s * sx, y, z + 0.09); grp.add(p);
       }
     }
@@ -104,21 +104,21 @@
     // full standing creature (~1.4 tall, feet at y≈0).
     function headFartbubu(C){            // Labubu-ish: round fuzzy face, tall ears, jagged grin
       const g = new THREE.Group();
-      const face = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 14), mat(0xefe2cf, C, 0.35));
+      const face = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), mat(0xefe2cf, C, 0.35));
       g.add(face);
       for(const s of [-1, 1]){
-        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.42, 10), mat(0xefe2cf, C, 0.35));
+        const ear = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.42, 6), mat(0xefe2cf, C, 0.35));
         ear.position.set(s * 0.2, 0.42, 0); ear.rotation.z = s * -0.25; g.add(ear);
       }
       eyes(g, 0.05, 0.30, 0.14, C);
       // jagged grin
-      const grin = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.03, 8, 16, Math.PI), mat(0x402a2a, 0x000000, 0));
+      const grin = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.03, 5, 10, Math.PI), mat(0x402a2a, 0x000000, 0));
       grin.position.set(0, -0.08, 0.30); grin.rotation.z = Math.PI; g.add(grin);
       return g;
     }
     function headBaldur(C){               // Tung-Tung-Sahur-ish: wooden bat with a face
       const g = new THREE.Group();
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.30, 0.6, 14), mat(0x9b6a38, C, 0.3, 0.8));
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.30, 0.6, 8), mat(0x9b6a38, C, 0.3, 0.8));
       g.add(log);
       eyes(g, 0.08, 0.24, 0.11, C);
       const m = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.04), mat(0x2a1c10, 0x000000, 0));
@@ -127,7 +127,7 @@
     }
     function headFartolero(C){            // Tralalero shark head: blue, big toothy mouth
       const g = new THREE.Group();
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 16, 14), mat(0x3b7fc4, C, 0.4));
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.33, 10, 8), mat(0x3b7fc4, C, 0.4));
       head.scale.set(1, 0.85, 1.25); g.add(head);
       eyes(g, 0.12, 0.18, 0.16, C);
       const jaw = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.12, 0.3), mat(0xeef4ff, 0x000000, 0));
@@ -141,7 +141,7 @@
     function headFartitos(C){             // Los Fartitos: three little skulls
       const g = new THREE.Group();
       for(let i = 0; i < 3; i++){
-        const s = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 12), mat(0xeae6da, C, 0.5));
+        const s = new THREE.Mesh(new THREE.SphereGeometry(0.17, 8, 6), mat(0xeae6da, C, 0.5));
         s.position.set((i - 1) * 0.26, 0.02 + (i === 1 ? 0.08 : 0), 0); g.add(s);
         const b = new THREE.MeshStandardMaterial({ color: 0x101014 });
         for(const e of [-1, 1]){
@@ -153,10 +153,10 @@
     }
     function headPopofanto(C){            // elephant: grey head, ears, trunk, tusks
       const g = new THREE.Group();
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 16, 14), mat(0x9aa0aa, C, 0.3));
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), mat(0x9aa0aa, C, 0.3));
       g.add(head);
       for(const s of [-1, 1]){
-        const ear = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), mat(0x8a909a, C, 0.3));
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 6), mat(0x8a909a, C, 0.3));
         ear.scale.set(0.4, 1, 1); ear.position.set(s * 0.34, 0.04, -0.05); g.add(ear);
       }
       eyes(g, 0.1, 0.24, 0.14, C);
@@ -170,7 +170,7 @@
     }
     function headFartifito(C){            // plain shark: teal/grey
       const g = new THREE.Group();
-      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 14), mat(0x6f7f86, C, 0.4));
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), mat(0x6f7f86, C, 0.4));
       head.scale.set(1, 0.9, 1.3); g.add(head);
       const fin = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.26, 4), mat(0x6f7f86, C, 0.4));
       fin.position.set(0, 0.3, -0.05); g.add(fin);
@@ -182,7 +182,7 @@
 
     function bodyWith(headFn, C, bodyColor){
       const g = new THREE.Group();
-      const torso = new THREE.Mesh(new THREE.SphereGeometry(0.42, 16, 14), mat(bodyColor, C, 0.3));
+      const torso = new THREE.Mesh(new THREE.SphereGeometry(0.42, 10, 8), mat(bodyColor, C, 0.3));
       torso.scale.set(1, 1.15, 0.9); torso.position.y = 0.7; g.add(torso);
       // stubby legs
       for(const s of [-1, 1]){
@@ -293,10 +293,10 @@
       const g = new THREE.Group();
       g.position.set(b.x, b.y, b.z);
       // platform
-      const plat = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.9, 0.3, 24),
+      const plat = new THREE.Mesh(new THREE.CylinderGeometry(4.6, 4.9, 0.3, 16),
         new THREE.MeshStandardMaterial({ color: 0x2a2f3a, roughness: 0.9 }));
       plat.position.y = 0.15; plat.receiveShadow = true; g.add(plat);
-      const rim = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.12, 8, 32),
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(4.6, 0.12, 6, 20),
         new THREE.MeshStandardMaterial({ color: 0x5ff09c, emissive: 0x2ee06b, emissiveIntensity: 0.5, roughness: 0.5 }));
       rim.position.y = 0.32; rim.rotation.x = Math.PI / 2; g.add(rim);
       // 6 toilets in a ring
@@ -304,13 +304,13 @@
         const a = (i / 6) * Math.PI * 2;
         const tx = Math.cos(a) * 3.1, tz = Math.sin(a) * 3.1;
         const tg = new THREE.Group(); tg.position.set(tx, 0.3, tz); tg.rotation.y = -a + Math.PI / 2;
-        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.28, 0.4, 16),
+        const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.28, 0.4, 8),
           new THREE.MeshStandardMaterial({ color: 0xf3f6fb, roughness: 0.3 }));
         bowl.position.y = 0.2; tg.add(bowl);
         const tank = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.22),
           new THREE.MeshStandardMaterial({ color: 0xe8edf4, roughness: 0.3 }));
         tank.position.set(0, 0.42, -0.32); tg.add(tank);
-        const seat = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.06, 8, 18),
+        const seat = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.06, 5, 10),
           new THREE.MeshStandardMaterial({ color: 0xdfe6ef, roughness: 0.3 }));
         seat.position.y = 0.41; seat.rotation.x = Math.PI / 2; tg.add(seat);
         g.add(tg);
@@ -599,6 +599,22 @@
       }
       return best;
     }
+    // Nearest EMPTY toilet on a base YOU own — used so planting a carried
+    // brainrot always works as long as you're near one of your free toilets
+    // (even if a full toilet or the base centre happens to be closer).
+    function nearestOwnEmptyToilet(){
+      let best = null, bd = TOILET_R;
+      for(const b of Bases){
+        if(b.owner !== meId()) continue;
+        for(let i = 0; i < 6; i++){
+          if(b.toilets[i]) continue;            // skip filled toilets
+          const tm = b.toiletMeshes[i]; if(!tm) continue;
+          const d = Math.hypot(Player.pos.x - tm.userData.wx, Player.pos.z - tm.userData.wz);
+          if(d < bd){ bd = d; best = { b, i }; }
+        }
+      }
+      return best;
+    }
     function placeInToilet(nt){
       const b = nt.b, i = nt.i;
       b.toilets[i] = carry.t.id; setToiletHead(b, i, carry.t.id);
@@ -636,13 +652,14 @@
       const nt = nearestToilet();
       const nb = nearestBaseCentre();
       if(carry){
-        // 1) empty toilet at your base → plant the brainrot you're holding
-        if(nt && nt.b.owner === meId() && !nt.b.toilets[nt.i]){ placeInToilet(nt); return true; }
-        // 2) can't plant here, but you're at your own base → CLAIM your silver
-        //    (you should always be able to collect earnings, even while carrying)
+        // 1) PLANT takes priority — drop the brainrot into your nearest empty
+        //    toilet, even if a full toilet or the base centre is closer.
+        const slot = nearestOwnEmptyToilet();
+        if(slot){ placeInToilet(slot); return true; }
+        // 2) No empty toilet in reach but you're at your own base → CLAIM silver.
         if(nb && nb.owner === meId()){ claimBase(nb); return true; }
-        // 3) standing at one of your already-filled toilets, nowhere to plant
-        if(nt && nt.b.owner === meId() && nt.b.toilets[nt.i]){ floater('That toilet is full — stand by an empty toilet to plant', 'bad'); return true; }
+        // 3) At one of your bases but all nearby toilets are full.
+        if(nt && nt.b.owner === meId() && nt.b.toilets[nt.i]){ floater('All your toilets here are full — claim or steal to free one', 'bad'); return true; }
         return false;   // carrying but nothing to do here — let normal E run
       }
       // not carrying
@@ -862,7 +879,7 @@
       else {
         const nt = nearestToilet(), nb = nearestBaseCentre(), nr = nearestRoamer();
         if(carry){
-          if(nt && nt.b.owner === meId() && !nt.b.toilets[nt.i]) setPrompt('<span class="k">E</span> plant ' + carry.t.name + ' in this toilet');
+          if(nearestOwnEmptyToilet()) setPrompt('<span class="k">E</span> plant ' + carry.t.name + ' in your toilet');
           else setPrompt('<span class="k">G</span> set down ' + carry.t.name);
         } else if(nt && nt.b.toilets[nt.i] && nt.b.owner !== meId()){
           const t = BRAINROTS[nt.b.toilets[nt.i]];
