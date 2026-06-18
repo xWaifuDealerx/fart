@@ -16,6 +16,7 @@
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const Database = require('better-sqlite3');
+const createTrade = require('./trade');
 
 const PORT       = parseInt(process.env.PORT || '8080', 10);
 const DB_PATH    = process.env.DB_PATH || './fartprint.db';
@@ -27,6 +28,11 @@ const HUMAN_CAP  = Math.max(1, MAX_SLOTS - BOT_COUNT);
 const SPIDER_MAX      = parseInt(process.env.SPIDER_MAX || '6', 10);
 const SPIDER_SPEED    = 1.6;     // m/s
 const SPIDER_ISLAND_R = 86;      // main-island clamp radius (client ISLAND_RADIUS = 90)
+
+// GOLD ↔ $FARTPRINT marketplace (Phase 2 settlement, see trade.js)
+const FARTPRINT_MINT = process.env.FARTPRINT_MINT || 'AA1GFBvxU39PxnrCY5eiQPgsTH5vuA7zGQoxgP6LMEaY';
+const SOLANA_RPC     = process.env.SOLANA_RPC || 'https://api.mainnet-beta.solana.com';
+const TRADE_FEE_PCT  = parseInt(process.env.TRADE_FEE_PCT || '5', 10);
 
 // ── Database ─────────────────────────────────────────────────────
 const db = new Database(DB_PATH);
@@ -66,6 +72,9 @@ db.exec(`
     rentedUntil INTEGER
   );
 `);
+
+// GOLD ↔ $FARTPRINT marketplace settlement engine (own ledger + escrow + on-chain verify).
+const trade = createTrade(db, { mint: FARTPRINT_MINT, rpc: SOLANA_RPC, feePct: TRADE_FEE_PCT });
 
 const qLoad   = db.prepare('SELECT username, state FROM accounts WHERE wallet = ?');
 const qSave   = db.prepare(`INSERT INTO accounts (wallet, username, state, updated_at)
@@ -168,6 +177,15 @@ function dropsSnapshot() {
   return list;
 }
 
+// ── Guild flags / PVP-island posts (shared, in-memory per season) ──
+// dir → { tag, color, logo }
+const flags = new Map();
+function flagsSnapshot() {
+  const list = [];
+  for (const [dir, f] of flags) list.push({ dir, tag: f.tag, color: f.color, logo: f.logo });
+  return list;
+}
+
 // ── Leaderboard scoreboard (derived from saved + live State) ─────
 // id → { name, level, totalXp, credits, farts, elo, dmWins, dmLosses, guildTag }
 const scores = new Map();
@@ -267,6 +285,9 @@ wss.on('connection', (ws) => {
         bases: basesSnapshot(),
         plots: plotsSnapshot(),
         drops: dropsSnapshot(),
+        flags: flagsSnapshot(),
+        gold: wallet ? trade.getGold(wallet) : 0,   // authoritative gold ledger
+        listings: trade.listingsSnapshot(),
         slots: { used: totalSlots(), max: MAX_SLOTS, bots: BOT_COUNT },
       });
       broadcast({ t: 'join', id, name }, id);
@@ -276,6 +297,16 @@ wss.on('connection', (ws) => {
     }
     if (!authed) return;
     const c = clients.get(id); if (!c) return;
+
+    // ── GOLD ↔ $FARTPRINT marketplace (async, isolated in trade.js) ──
+    if (m.t === 'gmListings' || m.t === 'gmList' || m.t === 'gmCancel' || m.t === 'gmBuyLock' || m.t === 'gmSettle'
+        || m.t === 'goldBalance' || m.t === 'goldBurn' || m.t === 'goldSpend' || m.t === 'goldConvert') {
+      trade.handle(c, m, {
+        send: (o) => send(ws, o),
+        broadcastListings: () => broadcast({ t: 'gmListings', list: trade.listingsSnapshot() }, null),
+      }).catch((e) => { try { send(ws, { t: 'gmErr', msg: 'Trade error.' }); } catch (_) {} console.error('[trade]', e && e.message); });
+      return;
+    }
 
     switch (m.t) {
       case 'pos': {
@@ -382,6 +413,20 @@ wss.on('connection', (ws) => {
       case 'dropPick': {
         const dropId = String(m.dropId || '');
         if (dropId && drops.has(dropId)) { drops.delete(dropId); broadcast({ t: 'dropRemove', dropId }, null); }
+        break;
+      }
+      case 'flagCapture': {
+        const dir = String(m.dir || ''); if (!dir) break;
+        flags.set(dir, { tag: String(m.tag || '').slice(0, 5), color: m.color | 0, logo: m.logo || null });
+        broadcast({ t: 'flags', list: flagsSnapshot() }, null);
+        break;
+      }
+      case 'shot': {
+        // Relay gunfire so nearby players hear it. Throttle to curb auto-fire spam.
+        const now = Date.now();
+        if (now - (c.lastShot || 0) < 60) break;
+        c.lastShot = now;
+        broadcast({ t: 'peerShot', id, x: +m.x || 0, z: +m.z || 0 }, id);
         break;
       }
       case 'lbReq': send(ws, { t: 'lb', rows: leaderboardRows() }); break;

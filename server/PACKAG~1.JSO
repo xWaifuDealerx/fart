@@ -1,0 +1,14 @@
+{
+  "name": "fartprint-server",
+  "version": "1.0.0",
+  "description": "Authoritative game server for Fartprint — single world, 100 slots (bots included), SQLite-backed player persistence keyed by Phantom wallet.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "better-sqlite3": "^11.3.0",
+    "@solana/web3.js": "^1.95.0"
+  }
+}
