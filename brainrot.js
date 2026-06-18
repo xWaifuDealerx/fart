@@ -636,9 +636,14 @@
       const nt = nearestToilet();
       const nb = nearestBaseCentre();
       if(carry){
+        // 1) empty toilet at your base → plant the brainrot you're holding
         if(nt && nt.b.owner === meId() && !nt.b.toilets[nt.i]){ placeInToilet(nt); return true; }
-        if(nt && nt.b.owner === meId() && nt.b.toilets[nt.i]){ floater('That toilet is taken', 'bad'); return true; }
-        return false;   // carrying but nothing to plant here — let normal E run
+        // 2) can't plant here, but you're at your own base → CLAIM your silver
+        //    (you should always be able to collect earnings, even while carrying)
+        if(nb && nb.owner === meId()){ claimBase(nb); return true; }
+        // 3) standing at one of your already-filled toilets, nowhere to plant
+        if(nt && nt.b.owner === meId() && nt.b.toilets[nt.i]){ floater('That toilet is full — stand by an empty toilet to plant', 'bad'); return true; }
+        return false;   // carrying but nothing to do here — let normal E run
       }
       // not carrying
       if(nt && nt.b.toilets[nt.i] && nt.b.owner !== meId()){ startSteal(nt); return true; }
