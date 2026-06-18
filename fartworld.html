@@ -76,7 +76,7 @@
      terrain detail, vehicle wake/spray, carousel FX. -->
 <script src="nextlevel.js?v=8" defer></script>
 <!-- Action controls (pointer-lock mouse-look, FPS zoom) + settings menu -->
-<script src="controls.js?v=18" defer></script>
+<script src="controls.js?v=19" defer></script>
 <!-- World collision: no walking through buildings/signs (doorways stay open) -->
 <script src="collide.js?v=8" defer></script>
 <!-- Skill tree (9 grindable skills) + one-panel-at-a-time manager -->
@@ -4037,6 +4037,36 @@ const Perf = (() => {
   return { update, toggleOverlay, reapply: applyScale };
 })();
 window.Perf = Perf;
+// Performance Mode flag — when true the render loop renders straight to screen
+// (skips the bloom composer, the costliest pass). Driven by the Settings
+// "Quality" toggle in controls.js (applyQuality sets it).
+window.fwPerfMode = false;
+
+// ── Debug: wireframe rendering via ?wireframe=1 ───────────────────
+// Renders every material as wireframe for inspecting geometry / draw issues.
+// Re-applied on a short interval so meshes spawned later are covered too.
+// Runtime toggle from the console: window.fwWireframe()  (or pass true/false).
+(() => {
+  const q = (new URLSearchParams(location.search).get('wireframe') || '').toLowerCase();
+  let on = q === '1' || q === 'true' || q === 'yes' || q === 'on';
+  function apply(state){
+    try {
+      scene.traverse(o => {
+        if(o.isMesh && o.material){
+          const mats = Array.isArray(o.material) ? o.material : [o.material];
+          mats.forEach(m => { if(m && 'wireframe' in m) m.wireframe = state; });
+        }
+      });
+    } catch(_){}
+  }
+  window.fwWireframe = function(state){ on = (state === undefined) ? !on : !!state; apply(on); console.log('[wireframe]', on ? 'ON' : 'OFF'); return on; };
+  if(on){
+    apply(true);
+    setInterval(() => { if(on) apply(true); }, 2000);   // catch newly-spawned meshes
+    console.log('[wireframe] enabled via ?wireframe=1 — call window.fwWireframe(false) to turn off');
+  }
+})();
+
 // Expose render internals for the settings module (controls.js):
 // brightness/quality toggles need renderer + bloom + sun access.
 window.renderer = renderer;
@@ -13266,7 +13296,10 @@ function loop(now){
   // fault here can never break the render loop.
   try { Perf.update(now, dt); } catch(_){}
 
-  composer.render();
+  // Performance Mode renders straight to screen (skips the bloom post-pass,
+  // the single most expensive thing each frame). Normal mode uses the composer.
+  if(window.fwPerfMode) renderer.render(scene, camera);
+  else composer.render();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
