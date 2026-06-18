@@ -235,7 +235,10 @@ function roster() {
 // Lighter roster for the online-players list (name + rank/prestige/guild meta).
 function rosterFull() {
   const list = [];
-  for (const [id, c] of clients) list.push({ id, name: c.name, level: c.level | 0, prestige: c.prestige | 0, guildTag: c.guildTag || null });
+  for (const [id, c] of clients) list.push({
+    id, name: c.name, level: c.level | 0, prestige: c.prestige | 0, guildTag: c.guildTag || null,
+    ping: Math.round((c.ws && c.ws._lastPing) || 0),
+  });
   return list;
 }
 
@@ -255,6 +258,10 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws) => {
   let id = null;
   let authed = false;
+
+  // Measure round-trip latency: the ping interval stamps _pingSentAt, the
+  // pong reply lands here → _lastPing is shown in the player list.
+  ws.on('pong', () => { if (ws._pingSentAt) ws._lastPing = Date.now() - ws._pingSentAt; });
 
   ws.on('message', (raw) => {
     let m; try { m = JSON.parse(raw.toString()); } catch (_) { return; }
@@ -421,6 +428,12 @@ wss.on('connection', (ws) => {
         broadcast({ t: 'flags', list: flagsSnapshot() }, null);
         break;
       }
+      case 'dm': {
+        // Relay a deathmatch duel message to the other players (1v1 filtering
+        // happens client-side via phase/opponent id).
+        if (m.msg) broadcast({ t: 'dm', msg: m.msg }, id);
+        break;
+      }
       case 'shot': {
         // Relay gunfire so nearby players hear it. Throttle to curb auto-fire spam.
         const now = Date.now();
@@ -430,6 +443,7 @@ wss.on('connection', (ws) => {
         break;
       }
       case 'lbReq': send(ws, { t: 'lb', rows: leaderboardRows() }); break;
+      case 'rosterReq': send(ws, { t: 'roster', list: rosterFull() }); break;
       case 'ping': send(ws, { t: 'pong' }); break;
     }
   });
@@ -478,10 +492,15 @@ function handleGuild(c, m) {
   broadcast({ t: 'guilds', guilds: allGuilds() }, null);
 }
 
-// Heartbeat — drop dead sockets.
+// Heartbeat / latency probe (every 5s): stamp each socket, ping it (the pong
+// updates _lastPing), and re-broadcast the roster so the player list shows
+// everyone with fresh pings — this also guarantees the list never gets stuck
+// "Connecting…" if a join-time roster was missed.
 setInterval(() => {
-  for (const [, c] of clients) { try { c.ws.ping(); } catch (_) {} }
-}, 30000);
+  const now = Date.now();
+  for (const [, c] of clients) { try { c.ws._pingSentAt = now; c.ws.ping(); } catch (_) {} }
+  if (clients.size) broadcast({ t: 'roster', list: rosterFull() }, null);
+}, 5000);
 
 // ── Shared spiders ───────────────────────────────────────────────
 // The server spawns/moves spiders and broadcasts them so every player
