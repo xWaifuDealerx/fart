@@ -110,7 +110,7 @@
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
 <script src="guild.js?v=11" defer></script>
-<script src="playerlist.js?v=2" defer></script>
+<script src="playerlist.js?v=3" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=4" defer></script>
 <!-- 👁 Spectator mode (watch other players + simulated players) -->
@@ -6641,6 +6641,8 @@ window.fwBaseSteal  = (idx, slot) => fwSendServer({ t:'baseSteal', idx, slot });
 window.fwLbReq = () => fwSendServer({ t:'lbReq' });
 // Ask the server for the current online-players roster (with pings).
 window.fwRosterReq = () => fwSendServer({ t:'rosterReq' });
+// Ask the server for another player's profile stats (by their id).
+window.fwProfileReq = (id) => fwSendServer({ t:'profileReq', id });
 // Sync a farming plot's state (rent/plant/harvest/release) to the server.
 window.fwPlotSync = (plot) => fwSendServer({ t:'plotSet', id: plot.id, owner: plot.owner || null,
   ownerName: plot.ownerName || null, crop: plot.crop || null, plantedAt: plot.plantedAt || 0, rentedUntil: plot.rentedUntil || 0 });
@@ -6887,6 +6889,9 @@ function fwHandleServer(m){
       FWServer.roster = m.list || [];
       if(typeof window.fwRenderPlayerList === 'function') window.fwRenderPlayerList();
       break;
+    case 'profile':
+      if(typeof window.fwShowPlayerProfile === 'function') window.fwShowPlayerProfile(m);
+      break;
     case 'bases':
       if(typeof window.fwApplyBases === 'function') window.fwApplyBases(m.list || []);
       break;
@@ -6915,9 +6920,15 @@ function fwHandleServer(m){
       break;
     case 'goldBalance':
       if(typeof m.gold === 'number'){ State.gold = m.gold; try { updateHUD(); } catch(_){} }
+      if(m.credited){   // a verified burn just landed
+        try { document.getElementById('goldBalanceLg').textContent = State.gold; } catch(_){}
+        try { floater('+' + m.credited + ' 🪙 GOLD', 'good'); playPurchaseSound(); } catch(_){}
+        try { if(typeof setGoldStep === 'function') setGoldStep('✅ Burn verified — +' + m.credited + ' 🪙 GOLD credited.'); } catch(_){}
+      }
       break;
     case 'gmErr':
       try { floater(m.msg || 'Trade error', 'bad'); } catch(_){}
+      try { if(/burn/i.test(m.msg || '') && typeof setGoldStep === 'function') setGoldStep('❌ ' + m.msg); } catch(_){}
       break;
     case 'plotErr':
       if(typeof window.fwPlotRentFailed === 'function' && typeof m.id === 'string') window.fwPlotRentFailed(m.id);
@@ -11599,6 +11610,13 @@ async function confirmGoldBurn(burnAmount, goldAmount){
     setGoldStep(`Wallet only has ${fmtBalance(State.fartprintBalance)} $FARTPRINT — need at least ${burnAmount.toLocaleString()}.`);
     return;
   }
+  // Gold is server-authoritative: the server must VERIFY the burn on-chain
+  // before crediting. If we're not connected, refuse — never credit Gold for
+  // an unverified (or failed) burn.
+  if(!(window.FWServer && window.FWServer.connected && window.fwGoldBurnServer)){
+    setGoldStep("⚠ Not connected to the game server — can't credit Gold safely. Try again in a moment.");
+    return;
+  }
   if(!confirm(
     `Burn ${burnAmount.toLocaleString()} $FARTPRINT forever to mint ${goldAmount} 🪙 GOLD?\n\n` +
     `This is permanent. Phantom will ask you to sign.`
@@ -11607,22 +11625,16 @@ async function confirmGoldBurn(burnAmount, goldAmount){
   setGoldStep(`Building burn transaction for ${burnAmount.toLocaleString()} $FARTPRINT…`, true);
   try {
     const sig = await burnFartprint(burnAmount);
-    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). Crediting ${goldAmount} 🪙 GOLD…`);
-    // Server is authoritative for gold: it re-verifies the burn on-chain and
-    // credits the ledger (→ 'goldBalance' updates State.gold). Fall back to a
-    // local credit only if we're offline.
-    if(window.FWServer && window.FWServer.connected && window.fwGoldBurnServer){
-      window.fwGoldBurnServer(sig, burnAmount);
-    } else {
-      State.gold += goldAmount; saveState(); updateHUD();
-    }
-    try { document.getElementById('goldBalanceLg').textContent = State.gold; } catch(_){}
-    floater(`+${goldAmount} 🪙 GOLD`, "good");
-    playPurchaseSound();
+    // Hand the signature to the server. It checks on-chain that the burn
+    // actually happened, then credits the ledger (→ 'goldBalance' with a
+    // `credited` field) or rejects it (→ 'gmErr'). We do NOT credit here and
+    // do NOT claim success until the server confirms.
+    setGoldStep(`⛓️ Burn sent (${sig.slice(0,8)}…) — verifying on-chain & crediting Gold…`, true);
+    window.fwGoldBurnServer(sig, burnAmount);
     refreshFartprintBalance();
   } catch(e){
     console.warn("[Gold] burn failed", e);
-    setGoldStep(`❌ Burn failed: ${(e && e.message) || e}. Nothing was deducted.`);
+    setGoldStep(`❌ Burn cancelled or failed: ${(e && e.message) || e}. No Gold was credited.`);
   }
 }
 
@@ -11698,19 +11710,10 @@ async function burnFartprint(uiAmount){
     data,
   });
 
-  // Sanity-check the token account exists and holds enough. A missing or empty
-  // associated token account is the usual reason Phantom's simulation fails and
-  // shows a scary generic warning (often only a SOL fee change) instead of a
-  // clean "Burn FARTPRINT" preview.
-  try {
-    const bal = await conn.getTokenAccountBalance(ata);
-    if(!bal || !bal.value || BigInt(bal.value.amount) < rawAmount){
-      throw new Error("Your $FARTPRINT balance in the standard token account is too low to burn this amount (or it's held in a non-standard account).");
-    }
-  } catch(e){
-    if(e && /token account|too low/i.test(e.message || "")) throw e;
-    throw new Error("Couldn't read your $FARTPRINT token account: " + ((e && e.message) || e));
-  }
+  // (Removed the pre-flight getTokenAccountBalance read — it added another
+  // sequential RPC round-trip before Phantom popped up, which made the wallet
+  // prompt slow to appear. Phantom's own simulation + the server's on-chain
+  // verification both catch an insufficient balance, so it's redundant.)
 
   const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
   // Use a LEGACY transaction (not v0): wallet simulators decode a single SPL
