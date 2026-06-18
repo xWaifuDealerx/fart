@@ -3502,7 +3502,7 @@ function saveState(){
     saveStateNow();
   }, 1500 - since);
 }
-window.addEventListener('beforeunload', () => { try { saveStateNow(); } catch(_){} });
+window.addEventListener('beforeunload', () => { try { _writeStateNow(); } catch(_){} });   // sync on unload
 // Build the full persistable State blob. Shared by localStorage AND the
 // authoritative server save (server stores this same JSON per wallet).
 function fwStateBlob(){
@@ -3563,8 +3563,15 @@ function fwStateBlob(){
   };
 }
 window.fwStateBlob = fwStateBlob;
-function saveStateNow(){
+function _writeStateNow(){
   try { localStorage.setItem(STORE_KEY, JSON.stringify(fwStateBlob())); } catch(_){}
+}
+function saveStateNow(){
+  // Defer the JSON.stringify + localStorage write to browser idle time so it
+  // never blocks a render frame — a periodic mid-frame write was the cause of
+  // the tiny camera "skips" while looking around. Falls back to a direct write.
+  if(window.requestIdleCallback) requestIdleCallback(_writeStateNow, { timeout: 1500 });
+  else _writeStateNow();
 }
 // After the world's Plots array is populated, restore any planted
 // crops the player owned before disconnecting. Re-runs are cheap
