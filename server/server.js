@@ -121,7 +121,7 @@ try {
 } catch (_) {}
 function baseSave(idx) {
   const b = bases.get(idx); if (!b) return;
-  try { qBaseUpsert.run({ idx, owner: b.owner, ownerName: b.ownerName, until: b.until | 0, toilets: JSON.stringify(b.toilets || []) }); } catch (_) {}
+  try { qBaseUpsert.run({ idx, owner: b.owner, ownerName: b.ownerName, until: Math.floor(Number(b.until) || 0), toilets: JSON.stringify(b.toilets || []) }); } catch (_) {}
 }
 function basesSnapshot() {
   const list = [];
@@ -158,7 +158,7 @@ try {
 function plotSaveRow(id) {
   const p = plots.get(id);
   if (!p) { try { qPlotDel.run(id); } catch (_) {} return; }
-  try { qPlotUpsert.run({ id, owner: p.owner, ownerName: p.ownerName, crop: p.crop, plantedAt: p.plantedAt | 0, rentedUntil: p.rentedUntil | 0 }); } catch (_) {}
+  try { qPlotUpsert.run({ id, owner: p.owner, ownerName: p.ownerName, crop: p.crop, plantedAt: Math.floor(Number(p.plantedAt) || 0), rentedUntil: Math.floor(Number(p.rentedUntil) || 0) }); } catch (_) {}
 }
 function plotsSnapshot() {
   const list = [];
@@ -403,7 +403,7 @@ wss.on('connection', (ws) => {
           break;
         }
         if (!m.owner) { plots.delete(pid); }
-        else { plots.set(pid, { owner: m.owner, ownerName: m.ownerName || null, crop: m.crop || null, plantedAt: m.plantedAt | 0, rentedUntil: m.rentedUntil | 0 }); }
+        else { plots.set(pid, { owner: m.owner, ownerName: m.ownerName || null, crop: m.crop || null, plantedAt: Math.floor(Number(m.plantedAt) || 0), rentedUntil: Math.floor(Number(m.rentedUntil) || 0) }); }
         plotSaveRow(pid);
         broadcastPlots();
         break;
@@ -444,6 +444,24 @@ wss.on('connection', (ws) => {
       }
       case 'lbReq': send(ws, { t: 'lb', rows: leaderboardRows() }); break;
       case 'rosterReq': send(ws, { t: 'roster', list: rosterFull() }); break;
+      case 'profileReq': {
+        const tid = String(m.id || '');
+        const target = clients.get(tid);
+        let st = null, name = null, wallet = null;
+        if (target) { st = target.lastState || (target.wallet ? (loadAccount(target.wallet) || {}).state : null); name = target.name; wallet = target.wallet; }
+        else { const acc = loadAccount(tid); if (acc) { st = acc.state; name = acc.username; wallet = tid; } }
+        if (!st) { send(ws, { t: 'profile', id: tid, found: false }); break; }
+        const pf = st.profile || {};
+        send(ws, {
+          t: 'profile', id: tid, found: true, name: name || st.username || 'Printer', wallet: wallet || null,
+          stats: {
+            pvpKills: pf.pvpKills || 0, mobKills: st.spidersKilled || 0, deaths: st.deaths || 0,
+            playMs: pf.playMs || 0, xp: totalXpOf(st.level, st.xp), silver: st.credits || 0,
+            brainrotSilver: pf.brainrotSilver || 0, motto: pf.motto || '', level: st.level || 1, prestige: st.prestige || 0,
+          },
+        });
+        break;
+      }
       case 'ping': send(ws, { t: 'pong' }); break;
     }
   });
