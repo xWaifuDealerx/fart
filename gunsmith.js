@@ -894,6 +894,23 @@
       echo.connect(eFilt).connect(eGain).connect(ctx.destination);
       echo.start(now + 0.10); echo.stop(now + 0.38);
     }
+    // Lighter gunshot for OTHER players' shots — volume scaled by distance so
+    // you hear nearby gunfire clearly and distant shots faintly.
+    window.fwPeerGunshot = function(vol){
+      const ctx = getCtx(); if(!ctx) return;
+      vol = Math.max(0, Math.min(1, vol || 0)); if(vol < 0.02) return;
+      const now = ctx.currentTime, dur = 0.18;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const ch = buf.getChannelData(0);
+      for(let i = 0; i < ch.length; i++){ const t = i / ch.length; ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, 2.6); }
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filt = ctx.createBiquadFilter(); filt.type = 'bandpass'; filt.frequency.value = 900; filt.Q.value = 0.7;
+      const g = ctx.createGain(); g.gain.setValueAtTime(0.6 * vol, now); g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+      src.connect(filt).connect(g).connect(ctx.destination); src.start(now); src.stop(now + dur);
+      const osc = ctx.createOscillator(); osc.type = 'sine'; osc.frequency.setValueAtTime(90, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.18);
+      const og = ctx.createGain(); og.gain.setValueAtTime(0.5 * vol, now); og.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.connect(og).connect(ctx.destination); osc.start(now); osc.stop(now + 0.22);
+    };
     function dryFireSound(){
       const ctx = getCtx(); if(!ctx) return;
       const now = ctx.currentTime;
@@ -1056,6 +1073,8 @@
       } catch(_){}
       muzzleFlash();
       playWeaponSound();
+      // Let other players hear this shot at my location.
+      try { if(window.fwSendServer && window.Player) window.fwSendServer({ t:'shot', x:+window.Player.pos.x.toFixed(1), z:+window.Player.pos.z.toFixed(1) }); } catch(_){}
       const cam = window.camera;
       if(!cam) return;
       // ── Primary: raycast from camera through the crosshair pixel ──

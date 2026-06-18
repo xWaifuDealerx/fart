@@ -315,6 +315,7 @@
         const g = goldCost();
         if ((State.gold || 0) < g) { window.floater?.('Need ' + g.toFixed(3) + ' 🪙', 'bad'); return; }
         State.gold = +(((State.gold || 0) - g).toFixed(6));
+        try { window.fwGoldSpendServer && window.fwGoldSpendServer(g); } catch (_) {}   // sync ledger
       }
       State.guild = {
         name, tag, logo: pendingLogo || null, public: createPublic,
@@ -424,6 +425,8 @@
             near.setHolder(G.tag, G.color, G.logo);
             captureProg.set(near, 0);
             capPrompt.classList.remove('show');
+            // Sync the capture so every player sees this guild hold the flag.
+            try { window.fwFlagCapture && window.fwFlagCapture(near.dir, G.tag, G.color || 0, G.logo || null); } catch (_) {}
             window.floater?.('⚑ Captured the ' + near.dir + ' Guild Post for [' + G.tag + ']!', 'good');
           } else {
             const rem = Math.ceil((CAPTURE_MS - t) / 1000);
@@ -464,6 +467,27 @@
     window.fwGuildTerritoryBonus = function () {
       const G = State.guild;
       return G ? heldPosts(G) * TERRITORY_BONUS_PER_POST : 0;
+    };
+
+    // Server-authoritative flag holders: apply who holds each PVP-island Post
+    // so every player sees the same flags (fed by the server 'flags' broadcast).
+    window.fwApplyFlags = function (list) {
+      const posts = window.fwGuildPosts || [];
+      // Posts (pvpzone.js) may not be built yet when the welcome snapshot lands —
+      // stash and retry shortly so initial flag ownership isn't lost.
+      if (!posts.length) {
+        window._fwPendingFlags = list || [];
+        setTimeout(() => { if ((window.fwGuildPosts || []).length) window.fwApplyFlags(window._fwPendingFlags || []); }, 1500);
+        return;
+      }
+      const byDir = {};
+      for (const e of (list || [])) if (e && e.dir) byDir[e.dir] = e;
+      for (const p of posts) {
+        const e = byDir[p.dir];
+        if (e && e.tag) { p.heldByTag = e.tag; try { p.setHolder(e.tag, e.color || 0, e.logo || null); } catch (_) {} }
+        else if (p.heldByTag) { p.heldByTag = null; try { p.setHolder(null, null); } catch (_) {} }
+      }
+      try { if (bg.classList.contains('show')) render(); } catch (_) {}
     };
 
     // Referral link: ?guild=TAG drops a pending invite into the Invites tab.

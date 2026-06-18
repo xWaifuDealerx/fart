@@ -109,10 +109,10 @@
 <!-- ⚙ Ongoing Operations panel (left, below chat) -->
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
-<script src="guild.js?v=10" defer></script>
+<script src="guild.js?v=11" defer></script>
 <script src="playerlist.js?v=1" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
-<script src="goldmarket.js?v=3" defer></script>
+<script src="goldmarket.js?v=4" defer></script>
 <!-- 👁 Spectator mode (watch other players + simulated players) -->
 <script src="spectate.js?v=1" defer></script>
 <script src="loading.js?v=6bq"></script>
@@ -6609,7 +6609,7 @@ function removePeer(peerId){
 // =================================================================
 const FWServer = {
   ws: null, connected: false, welcomed: false,
-  url: null, you: null, slots: null, roster: [], lb: [],
+  url: null, you: null, slots: null, roster: [], lb: [], listings: [],
   _posTimer: null, _saveTimer: null, _retry: 0,
 };
 window.FWServer = FWServer;
@@ -6647,6 +6647,15 @@ window.fwDropSyncAdd  = (d) => fwSendServer({ t:'dropAdd', dropId: d.dropId, id:
 window.fwDropSyncPick = (dropId) => fwSendServer({ t:'dropPick', dropId });
 // Guild flag capture → server (shared PVP-island post ownership).
 window.fwFlagCapture = (dir, tag, color, logo) => fwSendServer({ t:'flagCapture', dir, tag, color, logo });
+// GOLD ↔ $FARTPRINT marketplace + authoritative gold ledger.
+window.fwGmListings = () => fwSendServer({ t:'gmListings' });
+window.fwGmList     = (gold, pricePer) => fwSendServer({ t:'gmList', gold, pricePer });
+window.fwGmCancel   = (id) => fwSendServer({ t:'gmCancel', id });
+window.fwGmBuyLock  = (id) => fwSendServer({ t:'gmBuyLock', id });
+window.fwGmSettle   = (id, txSig) => fwSendServer({ t:'gmSettle', id, txSig });
+window.fwGoldBurnServer    = (txSig, tier) => fwSendServer({ t:'goldBurn', txSig, tier });
+window.fwGoldSpendServer   = (n) => fwSendServer({ t:'goldSpend', n });
+window.fwGoldConvertServer = (gold) => fwSendServer({ t:'goldConvert', gold });
 
 function fwConnectServer(){
   if(FWServer.ws && (FWServer.ws.readyState === 0 || FWServer.ws.readyState === 1)) return;
@@ -6762,6 +6771,9 @@ function fwHandleServer(m){
       if(Array.isArray(m.plots) && typeof window.fwApplyPlots === 'function') window.fwApplyPlots(m.plots);
       if(Array.isArray(m.drops) && typeof window.fwApplyDropList === 'function') window.fwApplyDropList(m.drops);
       if(Array.isArray(m.flags) && typeof window.fwApplyFlags === 'function') window.fwApplyFlags(m.flags);
+      // Authoritative GOLD ledger from the server (overrides the saved blob).
+      if(typeof m.gold === 'number') State.gold = m.gold;
+      if(Array.isArray(m.listings)) FWServer.listings = m.listings;
       // Resolve the username NOW that we know this wallet's saved name.
       // Server account name wins; a brand-new wallet or a guest gets prompted.
       if(State.username){
@@ -6829,6 +6841,29 @@ function fwHandleServer(m){
       break;
     case 'flags':
       if(typeof window.fwApplyFlags === 'function') window.fwApplyFlags(m.list || []);
+      break;
+    case 'gmListings':
+      FWServer.listings = m.list || [];
+      if(typeof m.gold === 'number'){ State.gold = m.gold; try { updateHUD(); } catch(_){} }
+      if(typeof window.fwRenderGoldMarket === 'function') window.fwRenderGoldMarket();
+      break;
+    case 'gmGold':
+      if(typeof m.gold === 'number'){ State.gold = m.gold; try { updateHUD(); } catch(_){} }
+      if(typeof window.fwRenderGoldMarket === 'function') window.fwRenderGoldMarket();
+      break;
+    case 'gmQuote':
+      if(typeof window.fwGmOnQuote === 'function') window.fwGmOnQuote(m);
+      break;
+    case 'gmBought':
+      if(typeof m.balance === 'number'){ State.gold = m.balance; try { updateHUD(); } catch(_){} }
+      try { floater('🪙 Bought ' + m.gold + ' GOLD!', 'good'); } catch(_){}
+      if(window.fwGmListings) window.fwGmListings();
+      break;
+    case 'goldBalance':
+      if(typeof m.gold === 'number'){ State.gold = m.gold; try { updateHUD(); } catch(_){} }
+      break;
+    case 'gmErr':
+      try { floater(m.msg || 'Trade error', 'bad'); } catch(_){}
       break;
     case 'plotErr':
       if(typeof window.fwPlotRentFailed === 'function' && typeof m.id === 'string') window.fwPlotRentFailed(m.id);
@@ -11272,6 +11307,8 @@ document.getElementById('bankGoldGo').addEventListener('click', () => {
   const _silverBefore = State.credits;
   State.credits -= silver;
   State.gold = +((State.gold || 0) + gold).toFixed(4);
+  // Mirror the gold gain into the authoritative server ledger (silver→gold).
+  try { window.fwGoldConvertServer && window.fwGoldConvertServer(gold); } catch(_){}
   // Missions hook (e.g. "Gold Rush": convert ALL silver in one transaction)
   try { window.dispatchEvent(new CustomEvent('fw:goldConvert', { detail: { spent: silver, before: _silverBefore } })); } catch(_){}
   floater(`+${gold.toFixed(4)} 🪙 Gold · -${silver.toLocaleString()} 🥈`, "good");
@@ -11312,6 +11349,8 @@ document.getElementById('bankGoldToSilverGo')?.addEventListener('click', () => {
   const silver = Math.round(g * silverPerGold());
   State.gold = +((State.gold || 0) - g).toFixed(2);
   State.credits += silver;
+  // Mirror the gold spend into the authoritative server ledger (gold→silver).
+  try { window.fwGoldSpendServer && window.fwGoldSpendServer(g); } catch(_){}
   floater(`+${silver.toLocaleString()} 🥈 · -${g} 🪙`, "good");
   showBuyToast(`Sold ${g} Gold → ${silver.toLocaleString()} Silver`);
   playPurchaseSound();
@@ -11499,11 +11538,16 @@ async function confirmGoldBurn(burnAmount, goldAmount){
   setGoldStep(`Building burn transaction for ${burnAmount.toLocaleString()} $FARTPRINT…`, true);
   try {
     const sig = await burnFartprint(burnAmount);
-    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). +${goldAmount} 🪙 GOLD added.`);
-    State.gold += goldAmount;
-    saveState();
-    updateHUD();
-    document.getElementById('goldBalanceLg').textContent = State.gold;
+    setGoldStep(`✅ Confirmed on-chain (${sig.slice(0,8)}…). Crediting ${goldAmount} 🪙 GOLD…`);
+    // Server is authoritative for gold: it re-verifies the burn on-chain and
+    // credits the ledger (→ 'goldBalance' updates State.gold). Fall back to a
+    // local credit only if we're offline.
+    if(window.FWServer && window.FWServer.connected && window.fwGoldBurnServer){
+      window.fwGoldBurnServer(sig, burnAmount);
+    } else {
+      State.gold += goldAmount; saveState(); updateHUD();
+    }
+    try { document.getElementById('goldBalanceLg').textContent = State.gold; } catch(_){}
     floater(`+${goldAmount} 🪙 GOLD`, "good");
     playPurchaseSound();
     refreshFartprintBalance();
@@ -11618,6 +11662,72 @@ async function burnFartprint(uiAmount){
   } catch(e){ console.warn("[Gold] confirm timed out (tx may still land):", e?.message || e); }
   return sig;
 }
+
+// Send `uiAmount` $FARTPRINT from the player to another wallet (gold-market
+// purchases). Mirrors burnFartprint but uses transferChecked + creates the
+// recipient's associated token account if it doesn't exist yet.
+async function transferFartprint(uiAmount, toWalletStr){
+  const W3 = window.solanaWeb3;
+  if(!W3) throw new Error("solana web3 not loaded");
+  const phantom = window.phantom?.solana || (window.solana?.isPhantom ? window.solana : null);
+  if(!phantom) throw new Error("Phantom not detected");
+  try { await phantom.connect(); } catch(_){}
+  const conn = await _firstHealthyConnection(W3);
+  const owner = new W3.PublicKey(State.wallet);
+  const dest  = new W3.PublicKey(toWalletStr);
+  const mint  = new W3.PublicKey(FP_MINT_STR);
+  const info  = await conn.getAccountInfo(mint);
+  if(!info) throw new Error("Mint not found on RPC");
+  const tokenProg = new W3.PublicKey(info.owner.toBase58() === TOKEN_2022_ID ? TOKEN_2022_ID : TOKEN_PROGRAM_ID);
+  const assocProg = new W3.PublicKey(ASSOC_TOKEN_PROG);
+  const ataFor = (pk) => W3.PublicKey.findProgramAddressSync([pk.toBuffer(), tokenProg.toBuffer(), mint.toBuffer()], assocProg)[0];
+  const srcAta = ataFor(owner), dstAta = ataFor(dest);
+  const rawAmount = BigInt(Math.round(uiAmount)) * (10n ** BigInt(FP_DECIMALS));
+
+  const tx = new W3.Transaction();
+  tx.feePayer = owner;
+  // Create the seller's token account if missing (associated-token createIdempotent = ix 1).
+  const dstInfo = await conn.getAccountInfo(dstAta);
+  if(!dstInfo){
+    tx.add(new W3.TransactionInstruction({
+      programId: assocProg,
+      keys: [
+        { pubkey: owner,  isSigner: true,  isWritable: true  },
+        { pubkey: dstAta, isSigner: false, isWritable: true  },
+        { pubkey: dest,   isSigner: false, isWritable: false },
+        { pubkey: mint,   isSigner: false, isWritable: false },
+        { pubkey: W3.SystemProgram.programId, isSigner: false, isWritable: false },
+        { pubkey: tokenProg, isSigner: false, isWritable: false },
+      ],
+      data: new Uint8Array([1]),
+    }));
+  }
+  // transferChecked (SPL Token instruction 12): u64 amount LE + u8 decimals
+  const data = new Uint8Array(10);
+  data[0] = 12;
+  let x = rawAmount;
+  for(let i = 0; i < 8; i++){ data[1 + i] = Number(x & 0xffn); x >>= 8n; }
+  data[9] = FP_DECIMALS;
+  tx.add(new W3.TransactionInstruction({
+    programId: tokenProg,
+    keys: [
+      { pubkey: srcAta, isSigner: false, isWritable: true  },
+      { pubkey: mint,   isSigner: false, isWritable: false },
+      { pubkey: dstAta, isSigner: false, isWritable: true  },
+      { pubkey: owner,  isSigner: true,  isWritable: false },
+    ],
+    data,
+  }));
+
+  const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash();
+  tx.recentBlockhash = blockhash;
+  const res = await phantom.signAndSendTransaction(tx);
+  const sig = (typeof res === "string") ? res : (res?.signature || res?.publicKey);
+  if(!sig) throw new Error("Phantom returned no signature");
+  try { await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed"); } catch(_){}
+  return sig;
+}
+window.fwTransferFartprint = transferFartprint;
 
 // =================================================================
 // ─── GLOBAL LEADERBOARD ─────────────────────────────────────────

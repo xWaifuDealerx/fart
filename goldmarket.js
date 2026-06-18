@@ -27,14 +27,8 @@
     const State = window.State;
     if (!Array.isArray(State.goldListings)) State.goldListings = [];
 
-    // demo listings from "other players" (until the marketplace backend is live)
-    const DEMO = [
-      { id: 'd1', gold: 10, pricePer: 9800, seller: 'ToiletTycoon' },
-      { id: 'd2', gold: 3,  pricePer: 9500, seller: 'SkibidiWhale' },
-      { id: 'd3', gold: 25, pricePer: 10200, seller: 'RizzLord' },
-      { id: 'd4', gold: 1,  pricePer: 9000, seller: 'gyatt_god' },
-    ];
-
+    // Listings are authoritative from the server (window.FWServer.listings).
+    const serverListings = () => (window.FWServer && Array.isArray(window.FWServer.listings)) ? window.FWServer.listings : [];
     const fmt = (n) => Math.round(n).toLocaleString('en-US');
 
     // ── styles ──
@@ -81,26 +75,30 @@
       tabMkt.classList.toggle('on', market);
       burnPane.style.display = market ? 'none' : '';
       mktPane.style.display = market ? '' : 'none';
-      if (market) renderMarket();
+      if (market) { if (window.fwGmListings) window.fwGmListings(); renderMarket(); }
     }
+    // Let the server push re-render the market live when listings/gold change.
+    window.fwRenderGoldMarket = function(){ if (mktPane.style.display !== 'none') renderMarket(); };
     tabBurn.addEventListener('click', () => showTab('burn'));
     tabMkt.addEventListener('click', () => showTab('market'));
     // every time the vault opens, default back to the Burn tab
     document.getElementById('hudGoldCard').addEventListener('click', () => setTimeout(() => showTab('burn'), 0));
 
     function renderMarket() {
-      const mine = State.goldListings || [];
-      const others = DEMO.slice();
+      const all = serverListings();
+      const myWallet = State.wallet;
+      const mine = all.filter(l => l.sellerWallet && l.sellerWallet === myWallet);
+      const others = all.filter(l => !(l.sellerWallet && l.sellerWallet === myWallet));
       const myRows = mine.length ? mine.map(l =>
         '<div class="gm-row mine"><span class="g">🪙 ' + l.gold + '</span><span class="who">your listing</span>' +
         '<span class="pr">' + fmt(l.pricePer) + ' /g<br><b>' + fmt(l.gold * l.pricePer) + ' $FARTPRINT</b></span>' +
         '<button class="gm-btn sm ghost" data-cancel="' + l.id + '">Cancel</button></div>'
       ).join('') : '<div class="gm-note">You have no active listings.</div>';
-      const otherRows = others.map(l =>
-        '<div class="gm-row"><span class="g">🪙 ' + l.gold + '</span><span class="who">' + l.seller + '</span>' +
+      const otherRows = others.length ? others.map(l =>
+        '<div class="gm-row"><span class="g">🪙 ' + l.gold + '</span><span class="who">' + (l.sellerName || 'seller') + '</span>' +
         '<span class="pr">' + fmt(l.pricePer) + ' /g<br><b>' + fmt(l.gold * l.pricePer) + ' $FARTPRINT</b></span>' +
-        '<button class="gm-btn sm" data-buy="' + l.id + '">Buy</button></div>'
-      ).join('');
+        (l.locked ? '<button class="gm-btn sm ghost" disabled>locked</button>' : '<button class="gm-btn sm" data-buy="' + l.id + '">Buy</button>') + '</div>'
+      ).join('') : '<div class="gm-note">No listings yet — be the first to sell.</div>';
 
       mktPane.innerHTML =
         '<p class="gm-sub">Trade GOLD for <b>$FARTPRINT</b>. List your gold (it’s locked while listed); buyers pay $FARTPRINT straight to your wallet. Marketplace fee: <b>' + FEE_PCT + '%</b>.</p>' +
@@ -113,7 +111,7 @@
         '</div>' +
         '<div class="gm-sech">Your listings</div>' + myRows +
         '<div class="gm-sech">Buy GOLD · market listings</div>' + otherRows +
-        '<div class="gm-note">Listing locks your gold locally now. Buying another player’s gold requires a wallet $FARTPRINT payment + the marketplace backend to settle — wired at window.fwGoldMarketSettle.</div>';
+        '<div class="gm-note">Selling escrows your gold on the server. Buying pays $FARTPRINT straight to the seller from your wallet; the server verifies the payment on-chain before releasing the gold.</div>';
 
       const gIn = document.getElementById('gmGold'), pIn = document.getElementById('gmPrice'), q = document.getElementById('gmQuote');
       function quote() {
@@ -130,46 +128,46 @@
     }
 
     function listGold() {
+      if (!State.wallet) { window.floater?.('Connect Phantom to sell gold', 'bad'); return; }
       const g = Math.floor(+document.getElementById('gmGold').value || 0);
       const p = Math.floor(+document.getElementById('gmPrice').value || 0);
       if (g <= 0) { window.floater?.('Enter how much gold to sell', 'bad'); return; }
       if (p <= 0) { window.floater?.('Set a $FARTPRINT price per gold', 'bad'); return; }
       if ((State.gold || 0) < g) { window.floater?.('You only have ' + (State.gold || 0) + ' 🪙', 'bad'); return; }
-      State.gold = +(((State.gold || 0) - g).toFixed(6));   // lock the gold into the listing
-      State.goldListings.push({ id: 'L' + Date.now(), gold: g, pricePer: p });
-      window.updateHUD?.(); window.saveState?.();
-      try { document.getElementById('goldBalanceLg').textContent = State.gold; } catch (_) {}
-      window.floater?.('📜 Listed ' + g + ' 🪙 for ' + fmt(g * p) + ' $FARTPRINT', 'good');
-      renderMarket();
+      // Server escrows the gold from your authoritative ledger + creates the listing.
+      window.fwGmList?.(g, p);
+      window.floater?.('📜 Listing ' + g + ' 🪙 …', 'good');
     }
 
     function cancelListing(id) {
-      const i = State.goldListings.findIndex(l => l.id === id);
-      if (i < 0) return;
-      const l = State.goldListings[i];
-      State.gold = +(((State.gold || 0) + l.gold).toFixed(6));   // return the locked gold
-      State.goldListings.splice(i, 1);
-      window.updateHUD?.(); window.saveState?.();
-      try { document.getElementById('goldBalanceLg').textContent = State.gold; } catch (_) {}
-      window.floater?.('↩️ Listing cancelled · ' + l.gold + ' 🪙 returned', 'good');
-      renderMarket();
+      window.fwGmCancel?.(id);   // server returns the escrowed gold to your ledger
     }
 
     function buyListing(id) {
       // Guests can't buy gold — buying requires a Phantom wallet to pay $FARTPRINT.
       if (!State.wallet) { window.floater?.('Connect Phantom to buy Gold — guests can’t purchase', 'bad'); return; }
-      const l = DEMO.find(x => x.id === id);
-      if (!l) return;
-      const total = l.gold * l.pricePer;
-      // Integration point: this is where the buyer's wallet signs a single
-      // $FARTPRINT transfer to the seller and the backend credits the gold.
-      if (typeof window.fwGoldMarketSettle === 'function') {
-        window.fwGoldMarketSettle(l);   // backend/wallet handles payment + gold credit
-      } else {
-        window.floater?.('🔗 Approve ' + fmt(total) + ' $FARTPRINT in your wallet to buy ' + l.gold + ' 🪙 — marketplace settlement goes live with the backend', 'bad');
-      }
+      const l = serverListings().find(x => x.id === id);
+      if (!l) { window.floater?.('That listing is gone', 'bad'); return; }
+      if (l.sellerWallet === State.wallet) { window.floater?.("You can't buy your own listing", 'bad'); return; }
+      // Step 1: ask the server to lock the listing to us; it replies with a quote
+      // (seller wallet + total $FARTPRINT) → window.fwGmOnQuote runs the payment.
+      window.floater?.('🔒 Reserving listing…', 'good');
+      window.fwGmBuyLock?.(id);
     }
 
-    console.log('[goldmarket] GOLD ↔ $FARTPRINT marketplace tab ready');
+    // Server granted a buy-lock + quote → pay the seller on-chain, then settle.
+    window.fwGmOnQuote = async function (q) {
+      if (!q || !q.sellerWallet) return;
+      try {
+        window.floater?.('🔗 Approve ' + fmt(q.total) + ' $FARTPRINT in Phantom to buy ' + q.gold + ' 🪙', 'good');
+        const sig = await window.fwTransferFartprint(q.total, q.sellerWallet);
+        window.floater?.('⛓️ Payment sent — verifying…', 'good');
+        window.fwGmSettle?.(q.id, sig);
+      } catch (e) {
+        window.floater?.('Payment cancelled: ' + ((e && e.message) || e), 'bad');
+      }
+    };
+
+    console.log('[goldmarket] GOLD ↔ $FARTPRINT marketplace tab ready (server-settled)');
   }
 })();
