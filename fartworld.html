@@ -110,7 +110,7 @@
 <script src="ops.js?v=5" defer></script>
 <!-- 🛡 Guild system (client foundation) -->
 <script src="guild.js?v=11" defer></script>
-<script src="playerlist.js?v=1" defer></script>
+<script src="playerlist.js?v=2" defer></script>
 <!-- 💱 GOLD ↔ $FARTPRINT marketplace (Gold Vault tab) -->
 <script src="goldmarket.js?v=4" defer></script>
 <!-- 👁 Spectator mode (watch other players + simulated players) -->
@@ -6639,6 +6639,8 @@ window.fwBaseToilet = (idx, slot, brainrot) => fwSendServer({ t:'baseToilet', id
 window.fwBaseSteal  = (idx, slot) => fwSendServer({ t:'baseSteal', idx, slot });
 // Ask the server for the latest leaderboard rows.
 window.fwLbReq = () => fwSendServer({ t:'lbReq' });
+// Ask the server for the current online-players roster (with pings).
+window.fwRosterReq = () => fwSendServer({ t:'rosterReq' });
 // Sync a farming plot's state (rent/plant/harvest/release) to the server.
 window.fwPlotSync = (plot) => fwSendServer({ t:'plotSet', id: plot.id, owner: plot.owner || null,
   ownerName: plot.ownerName || null, crop: plot.crop || null, plantedAt: plot.plantedAt || 0, rentedUntil: plot.rentedUntil || 0 });

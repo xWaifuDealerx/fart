@@ -38,7 +38,8 @@
 .fw-pl-row.me{border-color:rgba(95,240,156,.5);box-shadow:0 0 10px rgba(95,240,156,.14)}
 .fw-pl-row .ico{width:18px;height:18px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center}
 .fw-pl-row .tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:#a8c8ff;font-weight:700;flex:0 0 auto}
-.fw-pl-row .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fw-pl-row .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+.fw-pl-row .png{margin-left:auto;flex:0 0 auto;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700}
 .fw-pl-empty{padding:14px 10px;text-align:center;color:rgba(220,235,255,.5);font-size:12px}
 `;
     document.head.appendChild(css);
@@ -53,7 +54,7 @@
     document.body.appendChild(card);
 
     function close() { card.classList.remove('show'); }
-    function toggle() { card.classList.toggle('show'); if (card.classList.contains('show')) render(); }
+    function toggle() { card.classList.toggle('show'); if (card.classList.contains('show')) { try { window.fwRosterReq && window.fwRosterReq(); } catch (_) {} render(); } }
     btn.addEventListener('click', toggle);
     card.querySelector('#fwPlX').addEventListener('click', close);
 
@@ -65,29 +66,40 @@
       return (prestige > 0) ? '⭐' : '🎖️';
     }
 
+    function pingColor(ms){ return ms <= 0 ? '#9fb3c8' : ms < 90 ? '#5ff09c' : ms < 180 ? '#ffd64d' : '#ff6a6a'; }
+
     function render() {
-      const roster = (window.FWServer && Array.isArray(window.FWServer.roster)) ? window.FWServer.roster : [];
-      const meId = (window.FWServer && window.FWServer.you && window.FWServer.you.id) || null;
+      const S = window.State || {};
+      const me = (window.FWServer && window.FWServer.you) || null;
+      const meId = me ? me.id : null;
+      let roster = (window.FWServer && Array.isArray(window.FWServer.roster)) ? window.FWServer.roster.slice() : [];
+      // Always include yourself, even before the first roster broadcast lands.
+      if (meId && !roster.some(r => r.id === meId)) {
+        roster.push({ id: meId, name: S.username || (me && me.name) || 'You', level: S.level || 1,
+          prestige: S.prestige || 0, guildTag: (S.guild && S.guild.tag) || null, ping: 0 });
+      }
       const cnt = document.getElementById('fwPlayersCnt');
       if (cnt) cnt.textContent = roster.length;
       if (!card.classList.contains('show')) return;
       const body = document.getElementById('fwPlBody');
-      if (!roster.length) { body.innerHTML = '<div class="fw-pl-empty">Connecting…</div>'; return; }
+      if (!roster.length) { body.innerHTML = '<div class="fw-pl-empty">No one online.</div>'; return; }
       // Sort: me first, then by prestige, then level, then name.
-      const list = roster.slice().sort((a, b) =>
+      const list = roster.sort((a, b) =>
         (b.id === meId) - (a.id === meId) ||
         (b.prestige || 0) - (a.prestige || 0) ||
         (b.level || 0) - (a.level || 0) ||
         String(a.name).localeCompare(String(b.name)));
       body.innerHTML = list.map(p => {
         const tag = p.guildTag ? '<span class="tag">[' + esc(p.guildTag) + ']</span>' : '';
+        const ms = p.ping | 0;
+        const png = '<span class="png" style="color:' + pingColor(ms) + '">' + (ms > 0 ? ms + 'ms' : '—') + '</span>';
         return '<div class="fw-pl-row' + (p.id === meId ? ' me' : '') + '">' +
           '<span class="ico">' + icon(p.level, p.prestige) + '</span>' + tag +
-          '<span class="nm">' + esc(p.name) + (p.id === meId ? ' (you)' : '') + '</span></div>';
+          '<span class="nm">' + esc(p.name) + (p.id === meId ? ' (you)' : '') + '</span>' + png + '</div>';
       }).join('');
     }
 
-    // Server pushes a fresh roster on every join/leave/meta-change.
+    // Server pushes a fresh roster every ~5s + on join/leave/meta-change.
     window.fwRenderPlayerList = render;
 
     console.log('[playerlist] ready — 👥 button installed');
