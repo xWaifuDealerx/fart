@@ -4067,6 +4067,47 @@ window.fwPerfMode = false;
   }
 })();
 
+// ── Mesh LOD (distance culling) ───────────────────────────────────
+// Geometry-swap LOD is impractical for this procedural world, so "LOD" here is
+// distance-based visibility culling: any object tagged
+//     obj.userData.lodHide = <metres>
+// is hidden when the camera is farther away than that (and shown when nearer),
+// removing its draw calls entirely. Side-modules just set the tag — fwLOD
+// discovers tagged objects automatically (re-swept ~1×/s).
+window.fwLOD = (() => {
+  let tagged = [];
+  let sweepAcc = 0, checkAcc = 0;
+  const _wp = new THREE.Vector3();
+  function sweep(){ tagged = []; try { scene.traverse(o => { if(o.userData && o.userData.lodHide > 0) tagged.push(o); }); } catch(_){} }
+  function update(dt){
+    sweepAcc += dt; if(sweepAcc > 1.0){ sweepAcc = 0; sweep(); }     // rediscover tags ~1 Hz
+    checkAcc += dt; if(checkAcc < 0.15) return; checkAcc = 0;        // cull check ~6 Hz
+    const cam = window.camera; if(!cam) return;
+    const cx = cam.position.x, cz = cam.position.z;
+    for(const o of tagged){
+      o.getWorldPosition(_wp);
+      const dx = _wp.x - cx, dz = _wp.z - cz, d = o.userData.lodHide;
+      o.visible = (dx * dx + dz * dz) <= d * d;
+    }
+  }
+  return {
+    update,
+    tag:   (obj, metres) => { if(obj){ obj.userData.lodHide = metres; } return obj; },
+    untag: (obj) => { if(obj && obj.userData){ delete obj.userData.lodHide; obj.visible = true; } },
+    forceSweep: sweep,
+    count: () => tagged.length,
+  };
+})();
+// Apply LOD to the heaviest distant detail we can reach: the brainrot bases on
+// the four PVP islands (each is a platform + 6 toilets + brainrot heads). They
+// only render when you're within 200m — i.e. when you actually sail/fly there.
+setTimeout(() => {
+  try {
+    const B = (window.fwBrainrots && window.fwBrainrots.Bases) || [];
+    B.forEach(b => { if(b && b.group && Math.hypot(b.x, b.z) > 150) window.fwLOD.tag(b.group, 200); });
+  } catch(_){}
+}, 5000);
+
 // Expose render internals for the settings module (controls.js):
 // brightness/quality toggles need renderer + bloom + sun access.
 window.renderer = renderer;
@@ -13295,6 +13336,7 @@ function loop(now){
   // PERF controller (adaptive resolution + shadow cadence). Guarded so a
   // fault here can never break the render loop.
   try { Perf.update(now, dt); } catch(_){}
+  try { window.fwLOD && window.fwLOD.update(dt); } catch(_){}   // distance-cull far detail
 
   // Performance Mode renders straight to screen (skips the bloom post-pass,
   // the single most expensive thing each frame). Normal mode uses the composer.
