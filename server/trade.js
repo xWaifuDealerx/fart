@@ -147,7 +147,7 @@ module.exports = function createTrade(db, opts) {
         if (!v.ok) { ctx.send({ t: 'gmErr', msg: 'Burn not verified: ' + v.reason }); return true; }
         qSigAdd.run(sig, Date.now());
         const bal = addGold(c.wallet, grant);
-        ctx.send({ t: 'goldBalance', gold: bal });
+        ctx.send({ t: 'goldBalance', gold: bal, credited: grant });
         console.log('[trade] burn-credit', c.wallet.slice(0, 6), '+' + grant, 'gold (', tier, 'burned )');
         return true;
       }
